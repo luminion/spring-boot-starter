@@ -1,4 +1,4 @@
-package io.github.luminion.starter.sp3.servlet.request;
+package io.github.luminion.starter.jakarta.request;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletRequestWrapper;

@@ -1,9 +1,5 @@
-package io.github.luminion.starter.sp3.servlet;
+package io.github.luminion.starter.jakarta;
 
-import io.github.luminion.starter.ConditionalOnListProperty;
-import io.github.luminion.starter.servlet.filter.RefererFilter;
-import io.github.luminion.starter.servlet.filter.RepeatableFilter;
-import io.github.luminion.starter.servlet.filter.XssFilter;
 import jakarta.servlet.DispatcherType;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;

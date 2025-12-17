@@ -1,5 +1,6 @@
 package io.github.luminion.starter.aop;
 
+import io.github.luminion.starter.ConfigKey;
 import io.github.luminion.starter.aop.aspectj.RateLimitAspect;
 import io.github.luminion.starter.aop.spi.RateLimiter;
 import io.github.luminion.starter.aop.spi.SignatureProvider;
@@ -25,7 +26,7 @@ import org.springframework.context.annotation.Bean;
 @Slf4j
 @AutoConfiguration
 @ConditionalOnClass({Advice.class})
-@ConditionalOnProperty(value = "turbo.aop.enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(value = ConfigKey.AOP_ENABLE, havingValue = "true", matchIfMissing = true)
 @EnableConfigurationProperties({AopProperties.class})
 public class AopAutoConfiguration {
 

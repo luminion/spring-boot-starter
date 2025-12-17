@@ -1,4 +1,4 @@
-package io.github.luminion.starter.sp3.servlet;
+package io.github.luminion.starter.jakarta;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;

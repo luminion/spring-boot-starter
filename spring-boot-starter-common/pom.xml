@@ -75,21 +75,20 @@
             <artifactId>spring-boot-starter-web</artifactId>
             <optional>true</optional>
         </dependency>
-
-        <!--base-->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-configuration-processor</artifactId>
             <optional>true</optional>
         </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
-        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-autoconfigure</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -98,20 +97,5 @@
             <scope>provided</scope>
         </dependency>
     </dependencies>
-    
-<!--    <build>-->
-<!--        <plugins>-->
-<!--            <plugin>-->
-<!--                <groupId>org.apache.maven.plugins</groupId>-->
-<!--                <artifactId>maven-compiler-plugin</artifactId>-->
-<!--                <configuration>-->
-<!--                    <annotationProcessors>-->
-<!--                        <annotationProcessor>org.projectlombok.LombokProcessor</annotationProcessor>-->
-<!--                        <annotationProcessor>org.springframework.boot.configurationprocessor.ConfigurationMetadataAnnotationProcessor</annotationProcessor>-->
-<!--                    </annotationProcessors>-->
-<!--                </configuration>-->
-<!--            </plugin>-->
-<!--        </plugins>-->
-<!--    </build>-->
 
 </project>
