@@ -1,5 +1,6 @@
 package io.github.luminion.starter.jakarta;
 
+import io.github.luminion.starter.jakarta.filter.XssFilter;
 import jakarta.servlet.DispatcherType;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;

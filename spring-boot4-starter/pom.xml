@@ -10,6 +10,8 @@
     </parent>
 
     <artifactId>spring-boot4-starter</artifactId>
+    <name>${project.groupId}:${project.artifactId}</name>
+    <version>${revision}</version>
 
     <dependencyManagement>
         <dependencies>

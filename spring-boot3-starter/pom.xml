@@ -10,8 +10,9 @@
         <version>${revision}</version>
     </parent>
 
-    <name>${project.groupId}:${project.artifactId}</name>
+ 
     <artifactId>spring-boot3-starter</artifactId>
+    <name>${project.groupId}:${project.artifactId}</name>
     <version>${revision}</version>
 
     <dependencyManagement>
