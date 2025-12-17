@@ -1,6 +1,6 @@
 package io.github.luminion.autoconfigure.aop.spi.signature;
 
-import io.github.luminion.autoconfigure.utils.WebContextHolder;
+import io.github.luminion.autoconfigure.servlet.WebContextHolder;
 
 import java.lang.reflect.Method;
 

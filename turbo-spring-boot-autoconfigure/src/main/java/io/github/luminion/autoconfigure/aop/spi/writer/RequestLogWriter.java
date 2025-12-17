@@ -1,6 +1,6 @@
 package io.github.luminion.autoconfigure.aop.spi.writer;
 
-import io.github.luminion.autoconfigure.utils.WebContextHolder;
+import io.github.luminion.autoconfigure.servlet.WebContextHolder;
 import org.slf4j.event.Level;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;

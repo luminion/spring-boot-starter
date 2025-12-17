@@ -1,4 +1,4 @@
-package io.github.luminion.autoconfigure.utils;
+package io.github.luminion.autoconfigure.servlet;
 
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,20 +16,6 @@ import java.io.UncheckedIOException;
 import java.util.Map;
 
 /**
- * 请求和响应工具类。
- * <p>
- * 该工具类封装了常用的 request 和 response 操作，旨在隔离 javax 和 jakarta 的包名冲突，
- * 以便当前项目在不同Servlet API版本间切换时，只需修改此类即可。
- * <p>
- * <b>注意：此类中的所有方法都必须在 Spring Web 的请求上下文中调用，否则会抛出 {@link IllegalStateException}。</b>
- * <p>
- * 提供了对Servlet API的便捷访问和封装，包括:
- * <ul>
- *   <li>获取当前请求相关的对象，如HttpServletRequest、HttpServletResponse等</li>
- *   <li>获取请求参数、请求头、URL等信息，方法名以request开头</li>
- *   <li>常用的响应操作方法，简化Web开发中的响应处理，方法名以response开头</li>
- * </ul>
- *
  * @author luminion
  */
 public abstract class WebContextHolder {
