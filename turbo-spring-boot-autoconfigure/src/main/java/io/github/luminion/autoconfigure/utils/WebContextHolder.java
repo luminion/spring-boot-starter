@@ -16,7 +16,7 @@ import java.io.UncheckedIOException;
 import java.util.Map;
 
 /**
- * Servlet工具类。
+ * 请求和响应工具类。
  * <p>
  * 该工具类封装了常用的 request 和 response 操作，旨在隔离 javax 和 jakarta 的包名冲突，
  * 以便当前项目在不同Servlet API版本间切换时，只需修改此类即可。
@@ -32,11 +32,7 @@ import java.util.Map;
  *
  * @author luminion
  */
-public final class ServletKit {
-
-    private ServletKit() {
-        // 私有构造函数，防止实例化
-    }
+public abstract class WebContextHolder {
 
     /**
      * 获取当前请求的属性对象。

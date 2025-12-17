@@ -1,6 +1,6 @@
 package io.github.luminion.autoconfigure.aop.spi.signature;
 
-import io.github.luminion.autoconfigure.utils.ServletKit;
+import io.github.luminion.autoconfigure.utils.WebContextHolder;
 
 import java.lang.reflect.Method;
 
@@ -15,7 +15,7 @@ public class SpelIpAddressSignatureProvider extends SpelSignatureProvider {
 
     @Override
     public String signature(Object target, Method method, Object[] args, String expression) {
-        String requestIp = ServletKit.getRequestIp();
+        String requestIp = WebContextHolder.getRequestIp();
         if (requestIp == null) {
             requestIp = "unknow-ip";
         }

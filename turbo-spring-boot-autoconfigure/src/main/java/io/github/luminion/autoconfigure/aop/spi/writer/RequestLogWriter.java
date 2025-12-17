@@ -1,6 +1,6 @@
 package io.github.luminion.autoconfigure.aop.spi.writer;
 
-import io.github.luminion.autoconfigure.utils.ServletKit;
+import io.github.luminion.autoconfigure.utils.WebContextHolder;
 import org.slf4j.event.Level;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -32,12 +32,12 @@ public class RequestLogWriter extends Slf4jLogWriter {
         if (!(attributes instanceof ServletRequestAttributes)) {
             return "[N/A]";
         }
-        String requestIp = ServletKit.getRequestIp();
+        String requestIp = WebContextHolder.getRequestIp();
         if (requestIp == null){
             requestIp = "unknown-ip";
         }
-        String requestMethod = ServletKit.getRequestMethod();
-        String uri = ServletKit.getRequestURI();
+        String requestMethod = WebContextHolder.getRequestMethod();
+        String uri = WebContextHolder.getRequestURI();
         return String.format("%s %s %s -", requestIp, requestMethod, uri);
     }
 }
