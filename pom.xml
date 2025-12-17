@@ -4,12 +4,12 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>io.github.luminion</groupId>
-    <artifactId>turbo-spring-boot-parent</artifactId>
+    <artifactId>spring-boot-starter-parent</artifactId>
     <version>${revision}</version>
     <packaging>pom</packaging>
 
     <name>${project.groupId}:${project.artifactId}</name>
-    <description>A Spring Boot Toolkit designed to simplify development by providing out-of-the-box configurations for common scenarios.</description>
+    <description>A spring-boot-starter designed to simplify development , providing out-of-the-box configurations for common scenarios.</description>
     <url>https://github.com/luminion</url>
 
     <licenses>
@@ -29,17 +29,15 @@
     </developers>
 
     <scm>
-        <connection>scm:git:git://github.com/luminion/turbo-boot.git</connection>
-        <developerConnection>scm:git:ssh://github.com:luminion/turbo-boot.git</developerConnection>
-        <url>https://github.com/luminion/turbo-boot/tree/master</url>
+        <connection>scm:git:git://github.com/luminion/spring-boot-starter.git</connection>
+        <developerConnection>scm:git:ssh://github.com:luminion/spring-boot-starter.git</developerConnection>
+        <url>https://github.com/luminion/spring-boot-starter/tree/master</url>
     </scm>
 
     <modules>
-        <module>turbo-spring-boot-autoconfigure</module>
-        <module>turbo-spring-boot2-starter</module>
-        <module>turbo-spring-boot2-parent</module>
-        <module>turbo-spring-boot3-parent</module>
-        <module>turbo-spring-boot-starter</module>
+        <module>spring-boot-starter-common</module>
+        <module>spring-boot2-starter</module>
+        <module>spring-boot3-starter</module>
     </modules>
 
     <properties>
@@ -73,13 +71,6 @@
                 <groupId>com.baomidou</groupId>
                 <artifactId>mybatis-plus-bom</artifactId>
                 <version>3.5.14</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-dependencies</artifactId>
-                <version>3.5.6</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>

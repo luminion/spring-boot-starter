@@ -6,17 +6,29 @@
 
     <parent>
         <groupId>io.github.luminion</groupId>
-        <artifactId>turbo-spring-boot-parent</artifactId>
+        <artifactId>spring-boot-starter-parent</artifactId>
         <version>${revision}</version>
     </parent>
 
     <name>${project.groupId}:${project.artifactId}</name>
-    <artifactId>turbo-spring-boot-autoconfigure</artifactId>
+    <artifactId>spring-boot-starter-common</artifactId>
     <version>${revision}</version>
 
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>2.7.18</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
-
-
+        
         <!-- RateLimiter implementations -->
         <dependency>
             <groupId>com.google.guava</groupId>
