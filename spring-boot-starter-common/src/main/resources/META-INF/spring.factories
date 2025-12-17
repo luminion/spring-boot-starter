@@ -1,10 +1,10 @@
 # only work in springboot 2.x
 #org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-#  io.github.luminion.autoconfigure.luminionAutoConfiguration,\
-#  aop.io.github.luminion.autoconfigure.AopAutoConfiguration,\
-#  converter.io.github.luminion.autoconfigure.ConverterAutoConfiguration,\
-#  excel.io.github.luminion.autoconfigure.ExcelAutoConfiguration,\
-#  jackson.io.github.luminion.autoconfigure.JacksonAutoConfiguration,\
-#  mybatisplus.io.github.luminion.autoconfigure.MybatisPlusAutoConfiguration,\
-#  redis.io.github.luminion.autoconfigure.RedisAutoConfiguration,\
-#  servlet.io.github.luminion.autoconfigure.ServletAutoConfiguration
+#  io.github.luminion.starter.luminionAutoConfiguration,\
+#  aop.io.github.luminion.starter.AopAutoConfiguration,\
+#  converter.io.github.luminion.starter.ConverterAutoConfiguration,\
+#  excel.io.github.luminion.starter.ExcelAutoConfiguration,\
+#  jackson.io.github.luminion.starter.JacksonAutoConfiguration,\
+#  mybatisplus.io.github.luminion.starter.MybatisPlusAutoConfiguration,\
+#  redis.io.github.luminion.starter.RedisAutoConfiguration,\
+#  servlet.io.github.luminion.starter.ServletAutoConfiguration
