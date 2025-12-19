@@ -12,6 +12,7 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.annotation.Order;
 
@@ -23,7 +24,8 @@ import org.springframework.core.annotation.Order;
  */
 @Slf4j
 @AutoConfiguration
-@ConditionalOnClass({Advice.class})
+@ConditionalOnClass(Advice.class)
+@ConditionalOnProperty(value = "luminion.aop.enabled", havingValue = "true", matchIfMissing = true)
 public class AopAutoConfiguration {
 
     @Bean
@@ -36,7 +38,7 @@ public class AopAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnMissingBean(MethodFingerprinter.class)
+    @ConditionalOnMissingBean
     public MethodFingerprinter spelSignatureProvider() {
         log.debug("SpELMethodFingerprinter Configured");
         return new SpELMethodFingerprinter("sp_e_l_method_fingerprinter");
@@ -45,8 +47,8 @@ public class AopAutoConfiguration {
     
     
     @Bean
-    @ConditionalOnMissingBean(RateLimiter.class)
     @Order(100)
+    @ConditionalOnMissingBean
     public RateLimiter redisRateLimiter() {
         log.debug("JdkRateLimiter Configured");
         return new JdkRateLimiter();

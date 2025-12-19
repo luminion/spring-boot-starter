@@ -25,6 +25,11 @@
     
     <dependencies>
         <dependency>
+            <groupId>io.github.luminion</groupId>
+            <artifactId>autoconfigure-core</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <scope>provided</scope>
@@ -39,10 +44,10 @@
             <artifactId>spring-boot-autoconfigure</artifactId>
             <scope>provided</scope>
         </dependency>
-        
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-json</artifactId>
+            <optional>true</optional>
         </dependency>
     </dependencies>
 

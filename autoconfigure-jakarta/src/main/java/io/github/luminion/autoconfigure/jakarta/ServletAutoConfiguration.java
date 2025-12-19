@@ -29,14 +29,14 @@ import java.util.function.Function;
 @AutoConfiguration
 @EnableConfigurationProperties({ServletFilterProperties.class})
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-@ConditionalOnProperty(value = "turbo.servlet.enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(value = "luminion.servlet.enabled", havingValue = "true", matchIfMissing = true)
 public class ServletAutoConfiguration {
     
     @ConditionalOnClass(Jsoup.class)
     @Configuration(proxyBeanMethods = false)
     static class XssFilterRegistrationConfiguration {
         @Bean
-        //@ConditionalOnListProperty(value = "turbo.servlet.filter.xss-includes")
+        //@ConditionalOnListProperty(value = "luminion.servlet.filter.xss-includes")
         @ConditionalOnMissingBean(name = "xssFilterRegistration")
         public FilterRegistrationBean<XssFilter> xssFilterRegistration(ServletFilterProperties filterProperties) {
             FilterRegistrationBean<XssFilter> registration = new FilterRegistrationBean<>();
@@ -80,7 +80,7 @@ public class ServletAutoConfiguration {
     }
 
     @Bean
-    //@ConditionalOnListProperty(value = "turbo.servlet.filter.referer-allow-domains")
+    //@ConditionalOnListProperty(value = "luminion.servlet.filter.referer-allow-domains")
     @ConditionalOnMissingBean(name = "refererFilterRegistration")
     public FilterRegistrationBean<RefererFilter> refererFilterRegistration(ServletFilterProperties properties) {
         FilterRegistrationBean<RefererFilter> registration = new FilterRegistrationBean<>();
@@ -96,7 +96,7 @@ public class ServletAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnProperty(value = "turbo.servlet.filter.repeatable", havingValue = "true")
+    @ConditionalOnProperty(value = "luminion.servlet.filter.repeatable", havingValue = "true")
     @ConditionalOnMissingBean(name = "repeatableFilterRegistration")
     public FilterRegistrationBean<RepeatableFilter> repeatableFilterRegistration() {
         FilterRegistrationBean<RepeatableFilter> registration = new FilterRegistrationBean<>();

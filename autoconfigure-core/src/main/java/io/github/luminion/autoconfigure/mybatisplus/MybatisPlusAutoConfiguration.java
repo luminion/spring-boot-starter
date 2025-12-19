@@ -24,6 +24,7 @@ import java.util.List;
 @Slf4j
 @AutoConfiguration
 @ConditionalOnClass({BaseMapper.class, MybatisPlusInterceptor.class})
+@ConditionalOnProperty(value = "luminion.mybatis-plus.enabled", havingValue = "true", matchIfMissing = true)
 public class MybatisPlusAutoConfiguration {
 
     @Bean

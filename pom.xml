@@ -39,7 +39,7 @@
         <module>spring-boot3-starter</module>
         <module>spring-boot4-starter</module>
         <module>autoconfigure-core</module>
-        <module>autoconfigure-jackson2</module>
+        <module>autoconfigure-jackson</module>
         <module>autoconfigure-jackson3</module>
         <module>autoconfigure-jakarta</module>
         <module>autoconfigure-javax</module>

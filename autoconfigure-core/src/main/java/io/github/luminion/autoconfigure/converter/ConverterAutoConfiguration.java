@@ -16,54 +16,54 @@ import org.springframework.context.annotation.Bean;
  */
 @Slf4j
 @AutoConfiguration
-@ConditionalOnProperty(value = "luminion.converter.enabled", havingValue = "true", matchIfMissing = true)
 @EnableConfigurationProperties(DateTimeFormatProperties.class)
+@ConditionalOnProperty(value = "luminion.converter.enabled", havingValue = "true", matchIfMissing = true)
 public class ConverterAutoConfiguration {
 
     @Bean
-    @ConditionalOnMissingBean(StringToDateConverter.class)
+    @ConditionalOnMissingBean
     public StringToDateConverter string2DateConverter(DateTimeFormatProperties properties) {
         log.debug("StringToDateConverter Configured");
         return new StringToDateConverter(properties.getDateTime(), properties.getTimeZone());
     }
 
     @Bean
-    @ConditionalOnMissingBean(StringToLocalDateTimeConverter.class)
+    @ConditionalOnMissingBean
     public StringToLocalDateTimeConverter string2LocalDateTimeConverter(DateTimeFormatProperties properties) {
         log.debug("StringToLocalDateTimeConverter Configured");
         return new StringToLocalDateTimeConverter(properties.getDateTime());
     }
 
     @Bean
-    @ConditionalOnMissingBean(StringToLocalDateConverter.class)
+    @ConditionalOnMissingBean
     public StringToLocalDateConverter string2LocalDateConverter(DateTimeFormatProperties properties) {
         log.debug("StringToLocalDateConverter configured");
         return new StringToLocalDateConverter(properties.getDate());
     }
 
     @Bean
-    @ConditionalOnMissingBean(StringToLocalTimeConverter.class)
+    @ConditionalOnMissingBean
     public StringToLocalTimeConverter string2LocalTimeConverter(DateTimeFormatProperties properties) {
         log.debug("StringToLocalTimeConverter Configured");
         return new StringToLocalTimeConverter(properties.getTime());
     }
 
     @Bean
-    @ConditionalOnMissingBean(StringToSqlDateConverter.class)
+    @ConditionalOnMissingBean
     public StringToSqlDateConverter string2SqlDateConverter(DateTimeFormatProperties properties) {
         log.debug("StringToSqlDateConverter Configured");
         return new StringToSqlDateConverter(properties.getDate());
     }
     
     @Bean
-    @ConditionalOnMissingBean(StringToSqlTimeConverter.class)
+    @ConditionalOnMissingBean
     public StringToSqlTimeConverter string2SqlTimeConverter(DateTimeFormatProperties properties) {
         log.debug("StringToSqlTimeConverter Configured");
         return new StringToSqlTimeConverter(properties.getTime());
     }
 
     @Bean
-    @ConditionalOnMissingBean(StringToSqlTimestampConverter.class)
+    @ConditionalOnMissingBean
     public StringToSqlTimestampConverter string2SqlTimestampConverter(DateTimeFormatProperties properties) {
         log.debug("StringToSqlTimestampConverter Configured");
         return new StringToSqlTimestampConverter(properties.getDateTime());
