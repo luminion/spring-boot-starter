@@ -1,4 +1,4 @@
-package io.github.luminion.starter.jakarta.request;
+package io.github.luminion.autoconfigure.jakarta.request;
 
 import jakarta.servlet.ReadListener;
 import jakarta.servlet.ServletInputStream;

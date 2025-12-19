@@ -1,4 +1,4 @@
-package io.github.luminion.starter.jakarta;
+package io.github.luminion.autoconfigure.jakarta;
 
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpServletRequest;

@@ -1,4 +1,4 @@
-package io.github.luminion.starter.jakarta;
+package io.github.luminion.autoconfigure.jakarta;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;

@@ -1,4 +1,4 @@
-package io.github.luminion.starter.jakarta.filter;
+package io.github.luminion.autoconfigure.jakarta.filter;
 
 
 import jakarta.servlet.*;

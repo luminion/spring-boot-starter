@@ -1,6 +1,8 @@
-package io.github.luminion.starter.jakarta;
+package io.github.luminion.autoconfigure.jakarta;
 
-import io.github.luminion.starter.jakarta.filter.XssFilter;
+import io.github.luminion.autoconfigure.jakarta.filter.RefererFilter;
+import io.github.luminion.autoconfigure.jakarta.filter.RepeatableFilter;
+import io.github.luminion.autoconfigure.jakarta.filter.XssFilter;
 import jakarta.servlet.DispatcherType;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
@@ -34,7 +36,7 @@ public class ServletAutoConfiguration {
     @Configuration(proxyBeanMethods = false)
     static class XssFilterRegistrationConfiguration {
         @Bean
-        @ConditionalOnListProperty(value = "turbo.servlet.filter.xss-includes")
+        //@ConditionalOnListProperty(value = "turbo.servlet.filter.xss-includes")
         @ConditionalOnMissingBean(name = "xssFilterRegistration")
         public FilterRegistrationBean<XssFilter> xssFilterRegistration(ServletFilterProperties filterProperties) {
             FilterRegistrationBean<XssFilter> registration = new FilterRegistrationBean<>();
@@ -78,7 +80,7 @@ public class ServletAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnListProperty(value = "turbo.servlet.filter.referer-allow-domains")
+    //@ConditionalOnListProperty(value = "turbo.servlet.filter.referer-allow-domains")
     @ConditionalOnMissingBean(name = "refererFilterRegistration")
     public FilterRegistrationBean<RefererFilter> refererFilterRegistration(ServletFilterProperties properties) {
         FilterRegistrationBean<RefererFilter> registration = new FilterRegistrationBean<>();

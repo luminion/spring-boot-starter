@@ -1,7 +1,8 @@
-package io.github.luminion.starter.jakarta.filter;
+package io.github.luminion.autoconfigure.jakarta.filter;
 
-import io.github.luminion.starter.servlet.request.CachedBodyRequestWrapper;
-import io.github.luminion.starter.servlet.request.XssRequestWrapper;
+
+import io.github.luminion.autoconfigure.jakarta.request.CachedBodyRequestWrapper;
+import io.github.luminion.autoconfigure.jakarta.request.XssRequestWrapper;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.Getter;

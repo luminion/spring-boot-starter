@@ -10,8 +10,6 @@
     </parent>
 
     <artifactId>autoconfigure-javax</artifactId>
-    <name>${project.groupId}:${project.artifactId}</name>
-    <version>${revision}</version>
 
     <dependencyManagement>
         <dependencies>
@@ -43,8 +41,13 @@
         </dependency>
 
         <dependency>
-            <groupId>org.springframework</groupId>
+            <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
             <optional>true</optional>
         </dependency>
     </dependencies>

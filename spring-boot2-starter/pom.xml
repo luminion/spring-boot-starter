@@ -11,8 +11,6 @@
     </parent>
     
     <artifactId>spring-boot2-starter</artifactId>
-    <name>${project.groupId}:${project.artifactId}</name>
-    <version>${revision}</version>
     
     <dependencyManagement>
         <dependencies>
