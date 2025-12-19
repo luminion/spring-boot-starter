@@ -16,7 +16,7 @@ import java.lang.annotation.*;
 public @interface RateLimit {
 
     /**
-     * 用于计算签名的表达式。指定的{@link #signatureProvider()}将根据此处指定的表达式计算一个唯一签名。
+     * 用于计算签名的表达式。指定的{@link #methodFingerprinter()}将根据此处指定的表达式计算一个唯一签名。
      * <p>
      * 默认使用SpEL (Spring表达式语言)
      * 表达式的计算上下文为方法的参数。例如: {@code "#userId"} 或 {@code "#request.getRemoteAddr()"}。
@@ -38,7 +38,7 @@ public @interface RateLimit {
      * 签名处理器
      * 注:需要将指定的处理器类注入到Spring容器中
      */
-    Class<? extends MethodFingerprinter> signatureProvider() default MethodFingerprinter.class;
+    Class<? extends MethodFingerprinter> methodFingerprinter() default MethodFingerprinter.class;
 
     /**
      * 速率限制器

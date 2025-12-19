@@ -3,12 +3,13 @@ package io.github.luminion.autoconfigure.aop.core;
 import java.lang.reflect.Method;
 
 /**
- * 方法调用唯一签名处理器接口。
+ * 方法指纹
  * <p>
  * 定义了如何为一个方法的调用生成一个唯一的“签名”或“键”。
  *
  * @author luminion
  */
+@FunctionalInterface
 public interface MethodFingerprinter {
 
     /**

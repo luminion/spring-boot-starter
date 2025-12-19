@@ -24,7 +24,7 @@ public class RateLimitAspect {
         MethodSignature methodSignature = (MethodSignature) joinPoint.getSignature();
         Method method = methodSignature.getMethod();
         String springExpression = rateLimit.value();
-        String signature = beanFactory.getBean(rateLimit.signatureProvider())
+        String signature = beanFactory.getBean(rateLimit.methodFingerprinter())
                 .signature(joinPoint.getTarget(), method, joinPoint.getArgs(), springExpression);
         boolean b = beanFactory.getBean(rateLimit.rateLimiter())
                 .tryAccess(signature, rateLimit);
