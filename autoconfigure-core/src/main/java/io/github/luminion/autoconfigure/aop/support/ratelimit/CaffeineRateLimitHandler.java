@@ -24,8 +24,7 @@ public class CaffeineRateLimitHandler implements RateLimitHandler {
     public boolean tryAccess(String signature, RateLimit rateLimit) {
         int seconds = rateLimit.seconds();
         int count = rateLimit.count();
-
-        // 根据不同的过期时间, 获取或创建一个专用的Caffeine Cache实例
+        
         Cache<String, AtomicLong> cache = caches.computeIfAbsent(seconds, sec ->
                 Caffeine.newBuilder()
                         .expireAfterWrite(sec, TimeUnit.SECONDS)
