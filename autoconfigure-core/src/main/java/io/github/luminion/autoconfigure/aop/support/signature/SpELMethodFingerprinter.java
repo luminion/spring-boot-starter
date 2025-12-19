@@ -1,6 +1,6 @@
-package io.github.luminion.autoconfigure.aop.spi.signature;
+package io.github.luminion.autoconfigure.aop.support.signature;
 
-import io.github.luminion.autoconfigure.aop.spi.SignatureProvider;
+import io.github.luminion.autoconfigure.aop.core.MethodFingerprinter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.expression.MethodBasedEvaluationContext;
 import org.springframework.core.DefaultParameterNameDiscoverer;
@@ -17,7 +17,7 @@ import java.lang.reflect.Method;
  * @author luminion
  */
 @RequiredArgsConstructor
-public class SpelSignatureProvider implements SignatureProvider {
+public class SpELMethodFingerprinter implements MethodFingerprinter {
     private static final ExpressionParser PARSER = new SpelExpressionParser();
     private static final ParameterNameDiscoverer PND = new DefaultParameterNameDiscoverer();
 
@@ -36,6 +36,16 @@ public class SpelSignatureProvider implements SignatureProvider {
             Object value = PARSER.parseExpression(expression).getValue(context);
             keyBuilder.append(':').append(value);
             return keyBuilder.toString();
+        }
+        // 如果表达式为空，则拼接所有参数作为键的一部分
+        if (StringUtils.hasText(expression) && args != null && args.length > 0) {
+            keyBuilder.append(':');
+            for (int i = 0; i < args.length; i++) {
+                if (i > 0) {
+                    keyBuilder.append(',');
+                }
+                keyBuilder.append(args[i]);
+            }
         }
         return keyBuilder.toString();
     }

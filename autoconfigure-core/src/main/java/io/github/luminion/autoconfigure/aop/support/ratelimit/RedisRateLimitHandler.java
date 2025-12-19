@@ -1,7 +1,7 @@
-package io.github.luminion.autoconfigure.aop.spi.limiter;
+package io.github.luminion.autoconfigure.aop.support.ratelimit;
 
 import io.github.luminion.autoconfigure.aop.annotation.RateLimit;
-import io.github.luminion.autoconfigure.aop.spi.RateLimiter;
+import io.github.luminion.autoconfigure.aop.core.RateLimitHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -12,14 +12,14 @@ import java.util.List;
 
 
 /**
- * RedisRateLimiter
+ * RedisRateLimitHandler
  * 需要引入redis依赖
  * 实现参考自RuoYi
  *
  * @author luminion
  */
 @RequiredArgsConstructor
-public class RedisRateLimiter implements RateLimiter {
+public class RedisRateLimitHandler implements RateLimitHandler {
     private final RedisTemplate<Object, Object> redisTemplate;
     private final RedisScript<Long> limitScript = limitScript();
 
@@ -29,6 +29,7 @@ public class RedisRateLimiter implements RateLimiter {
         redisScript.setResultType(Long.class);
         return redisScript;
     }
+
     private static String limitScriptText() {
         return "local key = KEYS[1]\n" +
                 "local count = tonumber(ARGV[1])\n" +
@@ -43,9 +44,9 @@ public class RedisRateLimiter implements RateLimiter {
                 "end\n" +
                 "return tonumber(current);";
     }
-    
+
     @Override
-    public boolean doLimit(String signature, RateLimit rateLimit) {
+    public boolean tryAccess(String signature, RateLimit rateLimit) {
         List<Object> keys = Collections.singletonList(signature);
         int count = rateLimit.count();
         int seconds = rateLimit.seconds();

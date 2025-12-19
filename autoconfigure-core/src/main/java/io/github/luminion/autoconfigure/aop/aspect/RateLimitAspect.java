@@ -1,4 +1,4 @@
-package io.github.luminion.autoconfigure.aop.aspectj;
+package io.github.luminion.autoconfigure.aop.aspect;
 
 import io.github.luminion.autoconfigure.aop.annotation.RateLimit;
 import io.github.luminion.autoconfigure.aop.exception.RateLimitException;
@@ -27,7 +27,7 @@ public class RateLimitAspect {
         String signature = beanFactory.getBean(rateLimit.signatureProvider())
                 .signature(joinPoint.getTarget(), method, joinPoint.getArgs(), springExpression);
         boolean b = beanFactory.getBean(rateLimit.rateLimiter())
-                .doLimit(signature, rateLimit);
+                .tryAccess(signature, rateLimit);
         if (!b) {
             String errorMessage = String.format(
                     "Method call frequency has exceeded the limit: no more than %d requests within %d seconds are allowed.",

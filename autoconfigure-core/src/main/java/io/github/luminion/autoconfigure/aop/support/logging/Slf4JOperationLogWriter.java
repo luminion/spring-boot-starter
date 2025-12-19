@@ -1,6 +1,6 @@
-package io.github.luminion.autoconfigure.aop.spi.writer;
+package io.github.luminion.autoconfigure.aop.support.logging;
 
-import io.github.luminion.autoconfigure.aop.spi.LogWriter;
+import io.github.luminion.autoconfigure.aop.core.OperationLogWriter;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.slf4j.event.Level;
@@ -8,20 +8,20 @@ import org.slf4j.event.Level;
 import java.util.stream.IntStream;
 
 /**
- * A LogWriter implementation that uses SLF4J for logging.
+ * A OperationLogWriter implementation that uses SLF4J for logging.
  *
  * @author luminion
  */
 @Slf4j
-public class Slf4jLogWriter implements LogWriter {
+public class Slf4JOperationLogWriter implements OperationLogWriter {
     protected final Level level;
 
     /**
-     * Constructs a new Slf4jLogWriter.
+     * Constructs a new Slf4JOperationLogWriter.
      *
      * @param level The logging level for before and after advice (e.g., Level.INFO, Level.DEBUG).
      */
-    public Slf4jLogWriter(Level level) {
+    public Slf4JOperationLogWriter(Level level) {
         this.level = level;
     }
 

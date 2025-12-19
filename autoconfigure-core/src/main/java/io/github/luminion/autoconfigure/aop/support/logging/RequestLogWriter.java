@@ -1,17 +1,17 @@
-//package io.github.luminion.starter.aop.spi.writer;
+//package io.github.luminion.autoconfigure.aop.support.logging;
 //
-//import io.github.luminion.starter.servlet.WebContextHolder;
+//import io.github.luminion.autoconfigure.servlet.WebContextHolder;
 //import org.slf4j.event.Level;
 //import org.springframework.web.context.request.RequestAttributes;
 //import org.springframework.web.context.request.RequestContextHolder;
 //import org.springframework.web.context.request.ServletRequestAttributes;
 //
 ///**
-// * An extension of Slf4jLogWriter that prepends request information (IP, Method, URI) to log messages.
+// * An extension of Slf4JOperationLogWriter that prepends request information (IP, Method, URI) to log messages.
 // *
 // * @author luminion
 // */
-//public class RequestLogWriter extends Slf4jLogWriter {
+//public class RequestLogWriter extends Slf4JOperationLogWriter {
 //
 //    public RequestLogWriter(Level level) {
 //        super(level);

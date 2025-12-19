@@ -1,7 +1,7 @@
-package io.github.luminion.autoconfigure.aop.spi.limiter;
+package io.github.luminion.autoconfigure.aop.support.ratelimit;
 
 import io.github.luminion.autoconfigure.aop.annotation.RateLimit;
-import io.github.luminion.autoconfigure.aop.spi.RateLimiter;
+import io.github.luminion.autoconfigure.aop.core.RateLimitHandler;
 
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -13,12 +13,12 @@ import java.util.concurrent.ConcurrentMap;
  * <p>此实现不依赖任何外部库, 但在高并发下可能会有更高的内存占用。
  * @author luminion
  */
-public class ConcurrentHashMapRateLimiter implements RateLimiter {
+public class ConcurrentHashMapRateLimitHandler implements RateLimitHandler {
 
     private final ConcurrentMap<String, Queue<Long>> windows = new ConcurrentHashMap<>();
 
     @Override
-    public boolean doLimit(String signature, RateLimit rateLimit) {
+    public boolean tryAccess(String signature, RateLimit rateLimit) {
         long now = System.currentTimeMillis();
         long windowSize = (long) rateLimit.seconds() * 1000;
         int count = rateLimit.count();

@@ -1,4 +1,4 @@
-package io.github.luminion.autoconfigure.aop.spi;
+package io.github.luminion.autoconfigure.aop.core;
 
 import java.lang.reflect.Method;
 
@@ -9,7 +9,7 @@ import java.lang.reflect.Method;
  *
  * @author luminion
  */
-public interface SignatureProvider {
+public interface MethodFingerprinter {
 
     /**
      * 根据方法调用信息生成一个唯一的签名字符串。

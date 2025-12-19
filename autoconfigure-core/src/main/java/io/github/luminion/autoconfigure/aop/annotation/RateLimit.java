@@ -1,7 +1,7 @@
 package io.github.luminion.autoconfigure.aop.annotation;
 
-import io.github.luminion.autoconfigure.aop.spi.RateLimiter;
-import io.github.luminion.autoconfigure.aop.spi.SignatureProvider;
+import io.github.luminion.autoconfigure.aop.core.RateLimitHandler;
+import io.github.luminion.autoconfigure.aop.core.MethodFingerprinter;
 
 import java.lang.annotation.*;
 
@@ -38,13 +38,13 @@ public @interface RateLimit {
      * 签名处理器
      * 注:需要将指定的处理器类注入到Spring容器中
      */
-    Class<? extends SignatureProvider> signatureProvider() default SignatureProvider.class;
+    Class<? extends MethodFingerprinter> signatureProvider() default MethodFingerprinter.class;
 
     /**
      * 速率限制器
      * 注:需要将指定的限制器类注入到Spring容器中
      */
-    Class<? extends RateLimiter> rateLimiter() default RateLimiter.class;
+    Class<? extends RateLimitHandler> rateLimiter() default RateLimitHandler.class;
 
 
 }

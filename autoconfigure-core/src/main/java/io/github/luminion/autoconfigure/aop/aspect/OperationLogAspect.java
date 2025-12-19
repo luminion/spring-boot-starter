@@ -1,6 +1,6 @@
-package io.github.luminion.autoconfigure.aop.aspectj;
+package io.github.luminion.autoconfigure.aop.aspect;
 
-import io.github.luminion.autoconfigure.aop.spi.LogWriter;
+import io.github.luminion.autoconfigure.aop.core.OperationLogWriter;
 import lombok.RequiredArgsConstructor;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -18,11 +18,11 @@ import java.util.Collection;
  */
 @Aspect
 @RequiredArgsConstructor
-public class LogAspect {
+public class OperationLogAspect {
     private final Collection<String> logExcludeProperties;
-    private final LogWriter logWriter;
+    private final OperationLogWriter operationLogWriter;
 
-    @Pointcut("@annotation(io.github.luminion.autoconfigure.aop.annotation.Log)")
+    @Pointcut("@annotation(io.github.luminion.autoconfigure.aop.annotation.OperationLog)")
     public void logPointcut() {
     }
 
@@ -32,18 +32,18 @@ public class LogAspect {
         MethodSignature signature = (MethodSignature) pjp.getSignature();
         Object[] args = pjp.getArgs();
         Object target = pjp.getTarget();
-        logWriter.before(target, signature, args);
+        operationLogWriter.before(target, signature, args);
         stopWatch.start();
         try {
             Object result = pjp.proceed(args);
             stopWatch.stop();
-            logWriter.after(target, signature, args, result, stopWatch.getTotalTimeMillis());
+            operationLogWriter.after(target, signature, args, result, stopWatch.getTotalTimeMillis());
             return result;
         } catch (Throwable e) {
             if (stopWatch.isRunning()) {
                 stopWatch.stop();
             }
-            logWriter.error(target, signature, args, e, stopWatch.getTotalTimeMillis());
+            operationLogWriter.error(target, signature, args, e, stopWatch.getTotalTimeMillis());
             throw e;
         }
     }

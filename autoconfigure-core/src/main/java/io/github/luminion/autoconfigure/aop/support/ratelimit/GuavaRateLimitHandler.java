@@ -1,7 +1,7 @@
-package io.github.luminion.autoconfigure.aop.spi.limiter;
+package io.github.luminion.autoconfigure.aop.support.ratelimit;
 
 import io.github.luminion.autoconfigure.aop.annotation.RateLimit;
-import io.github.luminion.autoconfigure.aop.spi.RateLimiter;
+import io.github.luminion.autoconfigure.aop.core.RateLimitHandler;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -12,12 +12,12 @@ import java.util.concurrent.ConcurrentMap;
  * @author luminion
  */
 @SuppressWarnings("UnstableApiUsage")
-public class GuavaRateLimiter implements RateLimiter {
+public class GuavaRateLimitHandler implements RateLimitHandler {
 
     private final ConcurrentMap<String, com.google.common.util.concurrent.RateLimiter> limiters = new ConcurrentHashMap<>();
 
     @Override
-    public boolean doLimit(String signature, RateLimit rateLimit) {
+    public boolean tryAccess(String signature, RateLimit rateLimit) {
         double permitsPerSecond = (double) rateLimit.count() / rateLimit.seconds();
 
         // 获取或创建限流器

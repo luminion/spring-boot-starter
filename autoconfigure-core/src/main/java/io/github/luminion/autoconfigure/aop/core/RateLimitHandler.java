@@ -1,4 +1,4 @@
-package io.github.luminion.autoconfigure.aop.spi;
+package io.github.luminion.autoconfigure.aop.core;
 
 import io.github.luminion.autoconfigure.aop.annotation.RateLimit;
 
@@ -7,7 +7,7 @@ import io.github.luminion.autoconfigure.aop.annotation.RateLimit;
  *
  * @author luminion
  */
-public interface RateLimiter {
+public interface RateLimitHandler {
 
     /**
      * 执行限流
@@ -16,6 +16,6 @@ public interface RateLimiter {
      * @param rateLimit 方法限流注解
      * @return 是否限流
      */
-    boolean doLimit(String signature, RateLimit rateLimit);
+    boolean tryAccess(String signature, RateLimit rateLimit);
 
 }

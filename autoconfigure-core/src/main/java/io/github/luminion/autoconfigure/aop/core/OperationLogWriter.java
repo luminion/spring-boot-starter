@@ -1,12 +1,11 @@
-package io.github.luminion.autoconfigure.aop.spi;
+package io.github.luminion.autoconfigure.aop.core;
 
 import org.aspectj.lang.reflect.MethodSignature;
 
 /**
- *
  * @author luminion
  */
-public interface LogWriter {
+public interface OperationLogWriter {
 
     void before(Object target, MethodSignature signature, Object[] args);
 

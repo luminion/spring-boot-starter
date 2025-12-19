@@ -1,4 +1,4 @@
-//package io.github.luminion.starter.aop.spi.writer;
+//package io.github.luminion.autoconfigure.aop.support.logging;
 //
 //import jakarta.mail.MessagingException;
 //import jakarta.mail.internet.MimeMessage;

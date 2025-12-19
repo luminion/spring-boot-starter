@@ -1,11 +1,11 @@
 package io.github.luminion.autoconfigure.aop;
 
 import io.github.luminion.autoconfigure.ConfigKey;
-import io.github.luminion.autoconfigure.aop.aspectj.RateLimitAspect;
-import io.github.luminion.autoconfigure.aop.spi.RateLimiter;
-import io.github.luminion.autoconfigure.aop.spi.SignatureProvider;
-import io.github.luminion.autoconfigure.aop.spi.limiter.ConcurrentHashMapRateLimiter;
-import io.github.luminion.autoconfigure.aop.spi.signature.SpelSignatureProvider;
+import io.github.luminion.autoconfigure.aop.aspect.RateLimitAspect;
+import io.github.luminion.autoconfigure.aop.support.ratelimit.ConcurrentHashMapRateLimitHandler;
+import io.github.luminion.autoconfigure.aop.core.RateLimitHandler;
+import io.github.luminion.autoconfigure.aop.core.MethodFingerprinter;
+import io.github.luminion.autoconfigure.aop.support.signature.SpELMethodFingerprinter;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.weaver.Advice;
 import org.springframework.beans.factory.BeanFactory;
@@ -32,7 +32,7 @@ public class AopAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean(RateLimitAspect.class)
-    @ConditionalOnBean({SignatureProvider.class, RateLimiter.class})
+    @ConditionalOnBean({MethodFingerprinter.class, RateLimitHandler.class})
     public RateLimitAspect methodLimitAspect(BeanFactory beanFactory) {
         RateLimitAspect rateLimitAspect = new RateLimitAspect(beanFactory);
         log.debug("RateLimitAspect Configured");
@@ -40,17 +40,17 @@ public class AopAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnMissingBean(SignatureProvider.class)
-    public SignatureProvider spelSignatureProvider(AopProperties aopProperties) {
-        log.debug("SpelSignatureProvider Configured");
-        return new SpelSignatureProvider(aopProperties.getMethodLimitPrefix());
+    @ConditionalOnMissingBean(MethodFingerprinter.class)
+    public MethodFingerprinter spelSignatureProvider(AopProperties aopProperties) {
+        log.debug("SpELMethodFingerprinter Configured");
+        return new SpELMethodFingerprinter(aopProperties.getMethodLimitPrefix());
     }
 
     @Bean
-    @ConditionalOnMissingBean(RateLimiter.class)
-    public RateLimiter redisRateLimiter() {
-        log.debug("ConcurrentHashMapRateLimiter Configured");
-        return new ConcurrentHashMapRateLimiter();
+    @ConditionalOnMissingBean(RateLimitHandler.class)
+    public RateLimitHandler redisRateLimiter() {
+        log.debug("ConcurrentHashMapRateLimitHandler Configured");
+        return new ConcurrentHashMapRateLimitHandler();
     }
 
 }
