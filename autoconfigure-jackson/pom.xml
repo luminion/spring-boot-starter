@@ -9,7 +9,7 @@
         <version>${revision}</version>
     </parent>
 
-    <artifactId>autoconfigure-jackson2</artifactId>
+    <artifactId>autoconfigure-jackson</artifactId>
     
     <dependencyManagement>
         <dependencies>

@@ -32,7 +32,7 @@
 //
 //    @Configuration(proxyBeanMethods = false)
 //    @ConditionalOnProperty("spring.mail.username")
-//    @ConditionalOnListProperty("turbo.log.mail.to")
+//    @ConditionalOnListProperty("luminion.log.mail.to")
 //    @ConditionalOnBean({JavaMailSender.class, LoggerContext.class})
 //    static class LogbackGlobalErrorEmailAppenderAutoConfiguration implements ApplicationListener<ApplicationFailedEvent>, ApplicationContextAware {
 //        private ApplicationContext  applicationContext;

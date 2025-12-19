@@ -1,4 +1,4 @@
-package io.github.luminion.autoconfigure.jackson;
+package io.github.luminion.autoconfigure.jackson3;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -39,7 +39,7 @@ import java.util.TimeZone;
 @Slf4j
 @AutoConfiguration
 @ConditionalOnClass(ObjectMapper.class)
-@ConditionalOnProperty(value = "turbo.jackson.enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(value = "luminion.jackson.enabled", havingValue = "true", matchIfMissing = true)
 @EnableConfigurationProperties({JacksonProperties.class, DateTimeFormatProperties.class})
 public class JacksonAutoConfiguration {
 

@@ -7,7 +7,7 @@
 // * @author luminion
 // */
 //@Data
-//@ConfigurationProperties("turbo.log")
+//@ConfigurationProperties("luminion.log")
 //public class logProperties {
 //    private final Email email = new Email();
 //    @Data
