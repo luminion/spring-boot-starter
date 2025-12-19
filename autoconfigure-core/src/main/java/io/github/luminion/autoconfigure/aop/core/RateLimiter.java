@@ -8,7 +8,7 @@ import io.github.luminion.autoconfigure.aop.annotation.RateLimit;
  * @author luminion
  */
 @FunctionalInterface
-public interface RateLimitHandler {
+public interface RateLimiter {
 
     /**
      * 执行限流

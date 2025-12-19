@@ -23,7 +23,7 @@ public class AopAutoConfiguration {
 
     //@Bean
     //@ConditionalOnMissingBean(RateLimitAspect.class)
-    //@ConditionalOnBean({MethodFingerprinter.class, RateLimitHandler.class})
+    //@ConditionalOnBean({MethodFingerprinter.class, RateLimiter.class})
     //public RateLimitAspect methodLimitAspect(BeanFactory beanFactory) {
     //    RateLimitAspect rateLimitAspect = new RateLimitAspect(beanFactory);
     //    log.debug("RateLimitAspect Configured");
@@ -38,8 +38,8 @@ public class AopAutoConfiguration {
     //}
     //
     //@Bean
-    //@ConditionalOnMissingBean(RateLimitHandler.class)
-    //public RateLimitHandler redisRateLimiter() {
+    //@ConditionalOnMissingBean(RateLimiter.class)
+    //public RateLimiter redisRateLimiter() {
     //    log.debug("ConcurrentHashMapRateLimitHandler Configured");
     //    return new ConcurrentHashMapRateLimitHandler();
     //}

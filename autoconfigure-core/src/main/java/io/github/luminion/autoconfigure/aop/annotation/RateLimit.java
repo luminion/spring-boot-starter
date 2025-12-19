@@ -1,6 +1,6 @@
 package io.github.luminion.autoconfigure.aop.annotation;
 
-import io.github.luminion.autoconfigure.aop.core.RateLimitHandler;
+import io.github.luminion.autoconfigure.aop.core.RateLimiter;
 import io.github.luminion.autoconfigure.aop.core.MethodFingerprinter;
 
 import java.lang.annotation.*;
@@ -44,7 +44,7 @@ public @interface RateLimit {
      * 速率限制器
      * 注:需要将指定的限制器类注入到Spring容器中
      */
-    Class<? extends RateLimitHandler> rateLimiter() default RateLimitHandler.class;
+    Class<? extends RateLimiter> rateLimiter() default RateLimiter.class;
 
 
 }
