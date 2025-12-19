@@ -6,12 +6,12 @@
 
     <parent>
         <groupId>io.github.luminion</groupId>
-        <artifactId>spring-boot-starter-parent</artifactId>
+        <artifactId>spring-boot-parent</artifactId>
         <version>${revision}</version>
     </parent>
 
     <name>${project.groupId}:${project.artifactId}</name>
-    <artifactId>spring-boot-starter-common</artifactId>
+    <artifactId>autoconfigure-common</artifactId>
     <version>${revision}</version>
 
 

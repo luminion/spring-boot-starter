@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>io.github.luminion</groupId>
-    <artifactId>spring-boot-starter-parent</artifactId>
+    <artifactId>spring-boot-parent</artifactId>
     <version>${revision}</version>
     <packaging>pom</packaging>
 
@@ -38,11 +38,11 @@
         <module>spring-boot2-starter</module>
         <module>spring-boot3-starter</module>
         <module>spring-boot4-starter</module>
-        <module>spring-boot-starter-common</module>
-        <module>spring-boot-starter-jackson2</module>
-        <module>spring-boot-starter-jackson3</module>
-        <module>spring-boot-starter-jakarta</module>
-        <module>spring-boot-starter-javax</module>
+        <module>autoconfigure-common</module>
+        <module>autoconfigure-jackson2</module>
+        <module>autoconfigure-jackson3</module>
+        <module>autoconfigure-jakarta</module>
+        <module>autoconfigure-javax</module>
     </modules>
 
     <properties>
