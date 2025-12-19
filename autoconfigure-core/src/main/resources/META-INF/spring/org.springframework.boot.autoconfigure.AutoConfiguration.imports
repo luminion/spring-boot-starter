@@ -1,0 +1,5 @@
+io.github.luminion.autoconfigure.aop.AopAutoConfiguration
+io.github.luminion.autoconfigure.converter.ConverterAutoConfiguration
+io.github.luminion.autoconfigure.jackson.JacksonAutoConfiguration
+io.github.luminion.autoconfigure.mybatisplus.MybatisPlusAutoConfiguration
+io.github.luminion.autoconfigure.sp3.io.github.luminion.autoconfigure.jakarta.ServletAutoConfiguration

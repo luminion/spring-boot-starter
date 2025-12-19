@@ -38,16 +38,11 @@
         <module>spring-boot2-starter</module>
         <module>spring-boot3-starter</module>
         <module>spring-boot4-starter</module>
-        <module>autoconfigure-common</module>
+        <module>autoconfigure-core</module>
         <module>autoconfigure-jackson2</module>
         <module>autoconfigure-jackson3</module>
         <module>autoconfigure-jakarta</module>
         <module>autoconfigure-javax</module>
-        <module>autoconfigure-aop</module>
-        <module>autoconfigure-converter</module>
-        <module>autoconfigure-mybatisplus</module>
-        <module>autoconfigure-redis</module>
-        <module>autoconfigure-log</module>
     </modules>
 
     <properties>
@@ -77,10 +72,11 @@
                 <artifactId>guava</artifactId>
                 <version>33.2.1-jre</version>
             </dependency>
+            <!--For Java 11 or above, use 3.x otherwise use 2.x.-->
             <dependency>
                 <groupId>com.github.ben-manes.caffeine</groupId>
                 <artifactId>caffeine</artifactId>
-                <version>3.1.8</version>
+                <version>2.9.3</version>
             </dependency>
             <dependency>
                 <groupId>com.baomidou</groupId>
