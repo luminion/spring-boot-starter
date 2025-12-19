@@ -40,8 +40,8 @@ public class AopAutoConfiguration {
     //@Bean
     //@ConditionalOnMissingBean(RateLimiter.class)
     //public RateLimiter redisRateLimiter() {
-    //    log.debug("ConcurrentHashMapRateLimitHandler Configured");
-    //    return new ConcurrentHashMapRateLimitHandler();
+    //    log.debug("JdkRateLimiter Configured");
+    //    return new JdkRateLimiter();
     //}
 
 }

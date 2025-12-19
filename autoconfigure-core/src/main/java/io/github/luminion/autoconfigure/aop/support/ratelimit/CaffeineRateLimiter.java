@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit;
  * 注意版本: For Java 11 or above, use 3.x otherwise use 2.x.
  * @author luminion
  */
-public class CaffeineRateLimitHandler implements RateLimiter {
+public class CaffeineRateLimiter implements RateLimiter {
 
     // 使用一个统一的Caffeine Cache实例来存储所有的时间戳队列。
     // 当一个限流器在10分钟内没有被访问时，它将被自动回收，从而防止内存泄漏。

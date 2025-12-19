@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit;
  * @author luminion
  */
 @SuppressWarnings("UnstableApiUsage")
-public class GuavaRateLimitHandler implements RateLimiter {
+public class GuavaRateLimiter implements RateLimiter {
 
     // 使用Guava的LoadingCache来存储和管理RateLimiter实例
     // 当一个限流器在10分钟内没有被访问时，它将被自动回收，从而防止内存泄漏。

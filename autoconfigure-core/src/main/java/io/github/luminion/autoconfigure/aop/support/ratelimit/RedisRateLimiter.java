@@ -18,7 +18,7 @@ import java.util.List;
  * @author luminion
  */
 @RequiredArgsConstructor
-public class RedisRateLimitHandler implements RateLimiter {
+public class RedisRateLimiter implements RateLimiter {
 
     private static final String KEY_PREFIX = "rate_limit:";
     private final RedisTemplate<Object, Object> redisTemplate;

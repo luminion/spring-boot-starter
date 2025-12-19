@@ -22,7 +22,7 @@ import java.util.concurrent.ConcurrentMap;
  *
  * @author luminion
  */
-public class ConcurrentHashMapRateLimitHandler implements RateLimiter {
+public class JdkRateLimiter implements RateLimiter {
 
     private final ConcurrentMap<String, Queue<Long>> windows = new ConcurrentHashMap<>();
 
