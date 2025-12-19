@@ -4,6 +4,7 @@ import io.github.luminion.autoconfigure.DateTimeFormatProperties;
 import io.github.luminion.autoconfigure.converter.support.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -15,57 +16,57 @@ import org.springframework.context.annotation.Bean;
  */
 @Slf4j
 @AutoConfiguration
-@ConditionalOnProperty(value = "turbo.converter.enabled", havingValue = "true", matchIfMissing = true)
-@EnableConfigurationProperties({ConverterProperties.class, DateTimeFormatProperties.class})
+@ConditionalOnProperty(value = "luminion.converter.enabled", havingValue = "true", matchIfMissing = true)
+@EnableConfigurationProperties(DateTimeFormatProperties.class)
 public class ConverterAutoConfiguration {
 
     @Bean
-    @ConditionalOnProperty(value = "turbo.converter.string-to-date", havingValue = "true", matchIfMissing = true)
-    public String2DateConverter string2DateConverter(DateTimeFormatProperties properties) {
-        log.debug("String2DateConverter Configured");
-        return new String2DateConverter(properties.getDateTime(), properties.getTimeZone());
+    @ConditionalOnMissingBean(StringToDateConverter.class)
+    public StringToDateConverter string2DateConverter(DateTimeFormatProperties properties) {
+        log.debug("StringToDateConverter Configured");
+        return new StringToDateConverter(properties.getDateTime(), properties.getTimeZone());
     }
 
     @Bean
-    @ConditionalOnProperty(value = "turbo.converter.string-to-local-date-time", havingValue = "true", matchIfMissing = true)
-    public String2LocalDateTimeConverter string2LocalDateTimeConverter(DateTimeFormatProperties properties) {
-        log.debug("String2LocalDateTimeConverter Configured");
-        return new String2LocalDateTimeConverter(properties.getDateTime());
+    @ConditionalOnMissingBean(StringToLocalDateTimeConverter.class)
+    public StringToLocalDateTimeConverter string2LocalDateTimeConverter(DateTimeFormatProperties properties) {
+        log.debug("StringToLocalDateTimeConverter Configured");
+        return new StringToLocalDateTimeConverter(properties.getDateTime());
     }
 
     @Bean
-    @ConditionalOnProperty(value = "turbo.converter.string-to-local-date", havingValue = "true", matchIfMissing = true)
-    public String2LocalDateConverter string2LocalDateConverter(DateTimeFormatProperties properties) {
-        log.debug("String2LocalDateConverter configured");
-        return new String2LocalDateConverter(properties.getDate());
+    @ConditionalOnMissingBean(StringToLocalDateConverter.class)
+    public StringToLocalDateConverter string2LocalDateConverter(DateTimeFormatProperties properties) {
+        log.debug("StringToLocalDateConverter configured");
+        return new StringToLocalDateConverter(properties.getDate());
     }
 
     @Bean
-    @ConditionalOnProperty(value = "turbo.converter.string-to-local-time", havingValue = "true", matchIfMissing = true)
-    public String2LocalTimeConverter string2LocalTimeConverter(DateTimeFormatProperties properties) {
-        log.debug("String2LocalTimeConverter Configured");
-        return new String2LocalTimeConverter(properties.getTime());
+    @ConditionalOnMissingBean(StringToLocalTimeConverter.class)
+    public StringToLocalTimeConverter string2LocalTimeConverter(DateTimeFormatProperties properties) {
+        log.debug("StringToLocalTimeConverter Configured");
+        return new StringToLocalTimeConverter(properties.getTime());
     }
 
     @Bean
-    @ConditionalOnProperty(value = "turbo.converter.string-to-sql-date", havingValue = "true", matchIfMissing = true)
-    public String2SqlDateConverter string2SqlDateConverter(DateTimeFormatProperties properties) {
-        log.debug("String2SqlDateConverter Configured");
-        return new String2SqlDateConverter(properties.getDate());
+    @ConditionalOnMissingBean(StringToSqlDateConverter.class)
+    public StringToSqlDateConverter string2SqlDateConverter(DateTimeFormatProperties properties) {
+        log.debug("StringToSqlDateConverter Configured");
+        return new StringToSqlDateConverter(properties.getDate());
     }
     
     @Bean
-    @ConditionalOnProperty(value = "turbo.converter.string-to-sql-time", havingValue = "true", matchIfMissing = true)
-    public String2SqlTimeConverter string2SqlTimeConverter(DateTimeFormatProperties properties) {
-        log.debug("String2SqlTimeConverter Configured");
-        return new String2SqlTimeConverter(properties.getTime());
+    @ConditionalOnMissingBean(StringToSqlTimeConverter.class)
+    public StringToSqlTimeConverter string2SqlTimeConverter(DateTimeFormatProperties properties) {
+        log.debug("StringToSqlTimeConverter Configured");
+        return new StringToSqlTimeConverter(properties.getTime());
     }
 
     @Bean
-    @ConditionalOnProperty(value = "turbo.converter.string-to-sql-timestamp", havingValue = "true", matchIfMissing = true)
-    public String2SqlTimestampConverter string2SqlTimestampConverter(DateTimeFormatProperties properties) {
-        log.debug("String2SqlTimestampConverter Configured");
-        return new String2SqlTimestampConverter(properties.getDateTime());
+    @ConditionalOnMissingBean(StringToSqlTimestampConverter.class)
+    public StringToSqlTimestampConverter string2SqlTimestampConverter(DateTimeFormatProperties properties) {
+        log.debug("StringToSqlTimestampConverter Configured");
+        return new StringToSqlTimestampConverter(properties.getDateTime());
     }
 
 }

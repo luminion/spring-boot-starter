@@ -2,26 +2,24 @@ package io.github.luminion.autoconfigure.converter.support;
 
 import io.github.luminion.autoconfigure.converter.DateTimeConverter;
 
-import java.sql.Time;
-import java.time.LocalTime;
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
 /**
  * @author luminion
  */
-public class String2SqlTimeConverter implements DateTimeConverter<String, Time> {
+public class StringToLocalDateConverter implements DateTimeConverter<String, LocalDate> {
     private final DateTimeFormatter formatter;
 
-    public String2SqlTimeConverter(String pattern) {
+    public StringToLocalDateConverter(String pattern) {
         this.formatter = DateTimeFormatter.ofPattern(pattern);
     }
 
     @Override
-    public Time convert(String source) {
+    public LocalDate convert(String source) {
         if (source.isEmpty()) {
             return null;
         }
-        return Time.valueOf(LocalTime.parse(source, formatter));
+        return LocalDate.parse(source, formatter);
     }
-
 }
