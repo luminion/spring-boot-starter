@@ -1,6 +1,6 @@
 package io.github.luminion.autoconfigure.ratelimit;
 
-import io.github.luminion.autoconfigure.core.spi.MethodFingerprinter;
+import io.github.luminion.autoconfigure.core.spi.KeyResolver;
 import io.github.luminion.autoconfigure.ratelimit.aspect.RateLimitAspect;
 import io.github.luminion.autoconfigure.ratelimit.spi.RateLimiter;
 import io.github.luminion.autoconfigure.ratelimit.support.JdkRateLimiter;
@@ -29,7 +29,7 @@ public class RateLimitAutoConfiguration {
     
     @Bean
     @ConditionalOnMissingBean(RateLimitAspect.class)
-    @ConditionalOnBean({MethodFingerprinter.class, RateLimiter.class})
+    @ConditionalOnBean({KeyResolver.class, RateLimiter.class})
     public RateLimitAspect methodLimitAspect(BeanFactory beanFactory) {
         RateLimitAspect rateLimitAspect = new RateLimitAspect(beanFactory);
         log.debug("RateLimitAspect Configured");

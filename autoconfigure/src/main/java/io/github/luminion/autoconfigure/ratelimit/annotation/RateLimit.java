@@ -1,7 +1,7 @@
 package io.github.luminion.autoconfigure.ratelimit.annotation;
 
 import io.github.luminion.autoconfigure.ratelimit.spi.RateLimiter;
-import io.github.luminion.autoconfigure.core.spi.MethodFingerprinter;
+import io.github.luminion.autoconfigure.core.spi.KeyResolver;
 
 import java.lang.annotation.*;
 
@@ -38,7 +38,7 @@ public @interface RateLimit {
      * 签名处理器
      * 注:需要将指定的处理器类注入到Spring容器中
      */
-    Class<? extends MethodFingerprinter> methodFingerprinter() default MethodFingerprinter.class;
+    Class<? extends KeyResolver> methodFingerprinter() default KeyResolver.class;
 
     /**
      * 速率限制器

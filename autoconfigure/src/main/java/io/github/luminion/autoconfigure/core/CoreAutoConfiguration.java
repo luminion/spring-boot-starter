@@ -1,7 +1,7 @@
 package io.github.luminion.autoconfigure.core;
 
-import io.github.luminion.autoconfigure.core.spi.MethodFingerprinter;
-import io.github.luminion.autoconfigure.core.support.SpelMethodFingerprinter;
+import io.github.luminion.autoconfigure.core.spi.KeyResolver;
+import io.github.luminion.autoconfigure.core.support.SpelKeyResolver;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -17,8 +17,8 @@ public class CoreAutoConfiguration {
     
     @Bean
     @ConditionalOnMissingBean
-    public MethodFingerprinter spelSignatureProvider() {
-        log.debug("spelSignatureProvider Configured");
-        return new SpelMethodFingerprinter("sp_e_l_method_fingerprinter");
+    public KeyResolver spelMethodFingerprinter() {
+        log.debug("SpelKeyResolver Configured");
+        return new SpelKeyResolver("spelFingerprinter");
     }
 }

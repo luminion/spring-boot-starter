@@ -26,7 +26,7 @@
     <dependencies>
         <dependency>
             <groupId>io.github.luminion</groupId>
-            <artifactId>autoconfigure-core</artifactId>
+            <artifactId>autoconfigure</artifactId>
             <version>${revision}</version>
         </dependency>
         <dependency>

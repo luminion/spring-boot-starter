@@ -9,7 +9,7 @@
         <version>${revision}</version>
     </parent>
 
-    <artifactId>autoconfigure-core</artifactId>
+    <artifactId>autoconfigure</artifactId>
 
 
     <dependencyManagement>

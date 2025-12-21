@@ -3,14 +3,14 @@ package io.github.luminion.autoconfigure.core.spi;
 import java.lang.reflect.Method;
 
 /**
- * 方法指纹
+ * 方法签名器
  * <p>
  * 定义了如何为一个方法的调用生成一个唯一的“签名”或“键”。
  *
  * @author luminion
  */
 @FunctionalInterface
-public interface MethodFingerprinter {
+public interface KeyResolver {
 
     /**
      * 根据方法调用信息生成一个唯一的签名字符串。
@@ -21,6 +21,6 @@ public interface MethodFingerprinter {
      * @param expression 用于计算签名的表达式 (例如, SpEL)
      * @return 一个代表该方法调用的唯一 {@link String} 签名
      */
-    String signature(Object target, Method method, Object[] args, String expression);
+    String resolve(Object target, Method method, Object[] args, String expression);
 
 }
