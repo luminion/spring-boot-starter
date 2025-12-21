@@ -1,22 +1,14 @@
 package io.github.luminion.autoconfigure.redis;
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.*;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
-import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 
 /**
  * Redis自动配置类
@@ -30,21 +22,22 @@ import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 @ConditionalOnProperty(value = "luminion.redis.enabled", havingValue = "true", matchIfMissing = true)
 public class RedisAutoConfiguration {
 
-    @Bean
-    @ConditionalOnBean(Jackson2ObjectMapperBuilder.class)
-    public RedisSerializer<Object> redisSerializer(Jackson2ObjectMapperBuilder builder) {
-        log.debug("RedisSerializer Configured");
-        ObjectMapper objectMapper = builder.build();
-        //启用反序列化所需的类型信息,在属性中添加@class
-        objectMapper.activateDefaultTyping(LaissezFaireSubTypeValidator.instance, ObjectMapper.DefaultTyping.NON_FINAL, JsonTypeInfo.As.PROPERTY);
-        //配置null值的序列化器
-        GenericJackson2JsonRedisSerializer.registerNullValueSerializer(objectMapper, null);
-        return new GenericJackson2JsonRedisSerializer(objectMapper);
-    }
+    //@Bean
+    //@ConditionalOnBean(Jackson2ObjectMapperBuilder.class)
+    //public RedisSerializer<Object> redisSerializer(Jackson2ObjectMapperBuilder builder) {
+    //    log.debug("RedisSerializer Configured");
+    //    ObjectMapper objectMapper = builder.build();
+    //    //启用反序列化所需的类型信息,在属性中添加@class
+    //    objectMapper.activateDefaultTyping(LaissezFaireSubTypeValidator.instance, ObjectMapper.DefaultTyping.NON_FINAL, JsonTypeInfo.As.PROPERTY);
+    //    //配置null值的序列化器
+    //    GenericJackson2JsonRedisSerializer.registerNullValueSerializer(objectMapper, null);
+    //    return new GenericJackson2JsonRedisSerializer(objectMapper);
+    //}
 
     @Bean
     @ConditionalOnMissingBean(name = "redisTemplate")
-    @ConditionalOnBean(RedisConnectionFactory.class)
+    @ConditionalOnBean({RedisConnectionFactory.class, RedisSerializer.class})
+    @ConditionalOnSingleCandidate(RedisConnectionFactory.class)
     public RedisTemplate<Object, Object> redisTemplate(RedisConnectionFactory redisConnectionFactory, RedisSerializer<Object> redisSerializer) {
         log.debug("RedisTemplate Configured");
         RedisTemplate<Object, Object> template = new RedisTemplate<>();
