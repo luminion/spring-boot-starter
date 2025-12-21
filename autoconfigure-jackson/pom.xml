@@ -10,7 +10,7 @@
     </parent>
 
     <artifactId>autoconfigure-jackson</artifactId>
-    
+
     <dependencyManagement>
         <dependencies>
             <dependency>
@@ -22,7 +22,7 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
-    
+
     <dependencies>
         <dependency>
             <groupId>io.github.luminion</groupId>
@@ -52,6 +52,7 @@
         <dependency>
             <groupId>org.springframework.data</groupId>
             <artifactId>spring-data-redis</artifactId>
+            <optional>true</optional>
         </dependency>
     </dependencies>
 
