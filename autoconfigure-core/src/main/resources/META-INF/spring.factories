@@ -1,6 +1,6 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
   io.github.luminion.autoconfigure.aop.AopAutoConfiguration,\
-  io.github.luminion.autoconfigure.converter.ConverterAutoConfiguration,\
+  io.github.luminion.autoconfigure.web.WebAutoConfiguration,\
   io.github.luminion.autoconfigure.mybatisplus.MybatisPlusAutoConfiguration,\
   io.github.luminion.autoconfigure.redis.RedisAutoConfiguration,\
   io.github.luminion.autoconfigure.cache.CacheAutoConfiguration.\
