@@ -5,11 +5,11 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>io.github.luminion</groupId>
-        <artifactId>spring-boot-parent</artifactId>
+        <artifactId>luminion-spring-boot-parent</artifactId>
         <version>${revision}</version>
     </parent>
 
-    <artifactId>autoconfigure-jackson3</artifactId>
+    <artifactId>luminion-spring-boot-autoconfigure-jackson3</artifactId>
 
     <dependencyManagement>
         <dependencies>

@@ -6,11 +6,11 @@
 
     <parent>
         <groupId>io.github.luminion</groupId>
-        <artifactId>spring-boot-parent</artifactId>
+        <artifactId>luminion-spring-boot-parent</artifactId>
         <version>${revision}</version>
     </parent>
     
-    <artifactId>spring-boot2-starter</artifactId>
+    <artifactId>luminion-spring-boot2-starter</artifactId>
     
     <dependencyManagement>
         <dependencies>
