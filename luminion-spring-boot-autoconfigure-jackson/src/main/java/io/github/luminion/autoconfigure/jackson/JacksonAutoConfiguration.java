@@ -50,16 +50,17 @@ import java.util.TimeZone;
 @AutoConfiguration
 @ConditionalOnClass(ObjectMapper.class)
 @ConditionalOnProperty(value = "luminion.jackson.enabled", havingValue = "true", matchIfMissing = true)
-@EnableConfigurationProperties({JacksonProperties.class, DateTimeFormatProperties.class})
+@EnableConfigurationProperties({DateTimeFormatProperties.class})
 public class JacksonAutoConfiguration {
 
     @Configuration(proxyBeanMethods = false)
-    @ConditionalOnClass(Jackson2ObjectMapperBuilder.class)
+    @ConditionalOnClass({Jackson2ObjectMapperBuilder.class})
     static class Jackson2ObjectMapperBuilderCustomizerConfiguration {
 
         @Bean
-        @Order(-1)// 使Jackson2ObjectMapperBuilder在获取Jackson2ObjectMapperBuilderCustomizer时, 获取该配置先于StandardJackson2ObjectMapperBuilderCustomizer
-        public Jackson2ObjectMapperBuilderCustomizer jackson2ObjectMapperBuilderCustomizer(DateTimeFormatProperties dateTimeFormatProperties, JacksonProperties jacksonProperties) {
+        @Order(-1)
+// 使Jackson2ObjectMapperBuilder在获取Jackson2ObjectMapperBuilderCustomizer时, 获取该配置先于StandardJackson2ObjectMapperBuilderCustomizer
+        public Jackson2ObjectMapperBuilderCustomizer jackson2ObjectMapperBuilderCustomizer(DateTimeFormatProperties dateTimeFormatProperties) {
             log.debug("Jackson2ObjectMapperBuilderCustomizer Configured");
             return builder -> {
                 String dateTimeFormat = dateTimeFormatProperties.getDateTime();
@@ -93,20 +94,12 @@ public class JacksonAutoConfiguration {
                     generator:
                       write_numbers_as_strings: true #序列化的时候，将数值类型全部转换成字符串返回
                  */
-                if (jacksonProperties.isLongToString()) {
-                    builder.serializerByType(Long.class, ToStringSerializer.instance);
-                    builder.serializerByType(Long.TYPE, ToStringSerializer.instance);
-                }
-                if (jacksonProperties.isDoubleToString()) {
-                    builder.serializerByType(Double.class, ToStringSerializer.instance);
-                    builder.serializerByType(Double.TYPE, ToStringSerializer.instance);
-                }
-                if (jacksonProperties.isBigIntegerToString()) {
-                    builder.serializerByType(BigInteger.class, ToStringSerializer.instance);
-                }
-                if (jacksonProperties.isBigDecimalToString()) {
-                    builder.serializerByType(BigDecimal.class, ToStringSerializer.instance);
-                }
+                builder.serializerByType(Long.class, ToStringSerializer.instance);
+                builder.serializerByType(Long.TYPE, ToStringSerializer.instance);
+                builder.serializerByType(Double.class, ToStringSerializer.instance);
+                builder.serializerByType(Double.TYPE, ToStringSerializer.instance);
+                builder.serializerByType(BigInteger.class, ToStringSerializer.instance);
+                builder.serializerByType(BigDecimal.class, ToStringSerializer.instance);
 
                 // 序列化器
                 DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern(dateTimeFormat);
@@ -125,14 +118,14 @@ public class JacksonAutoConfiguration {
             };
         }
     }
-    
+
     @Configuration(proxyBeanMethods = false)
-    @ConditionalOnClass(RedisTemplate.class)
-    static class JacksonRedisConfiguration{
+    @ConditionalOnClass({RedisTemplate.class, Jackson2ObjectMapperBuilder.class})
+    static class JacksonRedisConfiguration {
         @Bean
         @ConditionalOnMissingBean(name = "redisSerializer")
-        public RedisSerializer<Object> redisSerializer() {
-            ObjectMapper objectMapper = JsonMapper.builder().disable(MapperFeature.USE_ANNOTATIONS).build();
+        public RedisSerializer<Object> redisSerializer(Jackson2ObjectMapperBuilder jackson2ObjectMapperBuilder) {
+            ObjectMapper objectMapper = jackson2ObjectMapperBuilder.build();
             // 反序列化时候遇到不匹配的属性并不抛出异常
             objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
             // 序列化时候遇到空对象不抛出异常
@@ -144,8 +137,7 @@ public class JacksonAutoConfiguration {
             // 使用JSR310提供的序列化类,里面包含了大量的JDK8时间序列化类
             objectMapper.registerModule(new JavaTimeModule());
             // 启用反序列化所需的类型信息,在属性中添加@class
-            objectMapper.activateDefaultTyping(LaissezFaireSubTypeValidator.instance, ObjectMapper.DefaultTyping.NON_FINAL,
-                    JsonTypeInfo.As.PROPERTY);
+            objectMapper.activateDefaultTyping(LaissezFaireSubTypeValidator.instance, ObjectMapper.DefaultTyping.NON_FINAL, JsonTypeInfo.As.PROPERTY);
             // 配置null值的序列化器
             GenericJackson2JsonRedisSerializer.registerNullValueSerializer(objectMapper, null);
             return new GenericJackson2JsonRedisSerializer(objectMapper);
