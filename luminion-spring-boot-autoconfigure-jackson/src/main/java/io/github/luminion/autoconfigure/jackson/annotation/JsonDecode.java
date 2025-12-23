@@ -15,15 +15,8 @@ import java.util.function.Function;
 @Documented
 @JacksonAnnotationsInside
 @JsonDeserialize(using = JacksonDecodeDeserializer.class)
-public @interface JacksonDecode {
+public @interface JsonDecode {
 
-    Class<? extends Function<String, ?>> value() default Fallback.class;
-
-    class Fallback implements Function<String, Object> {
-        @Override
-        public Object apply(String s) {
-            return s;
-        }
-    }
+    Class<? extends Function<String, ?>> value();
 
 }

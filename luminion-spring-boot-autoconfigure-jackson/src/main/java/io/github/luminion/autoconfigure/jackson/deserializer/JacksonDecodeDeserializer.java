@@ -5,7 +5,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.deser.ContextualDeserializer;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
-import io.github.luminion.autoconfigure.jackson.annotation.JacksonDecode;
+import io.github.luminion.autoconfigure.jackson.annotation.JsonDecode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.GenericTypeResolver;
 
@@ -58,14 +58,14 @@ public class JacksonDecodeDeserializer<T> extends StdDeserializer<T> implements 
 
     @Override
     public JsonDeserializer<?> createContextual(DeserializationContext ctxt, BeanProperty property) throws JsonMappingException {
-        // 1. 既然你的 Deserializer 是绑定在 @JacksonDecode 上的
+        // 1. 既然你的 Deserializer 是绑定在 @JsonDecode 上的
         // 如果 property 为 null，说明没地方挂注解，直接跳过或者报错（视你的容忍度而定）
         if (property == null) {
             // 这里返回 null 或者默认 deserializer 都可以，通常不会进入这里
             return ctxt.findContextualValueDeserializer(ctxt.getContextualType(), null);
         }
 
-        JacksonDecode annotation = property.getAnnotation(JacksonDecode.class);
+        JsonDecode annotation = property.getAnnotation(JsonDecode.class);
 
         // 2. 只有一种情况需要“兼容”：
         // 那就是你把 JacksonDecodeDeserializer 注册到了全局 ObjectMapper 里，
@@ -95,7 +95,7 @@ public class JacksonDecodeDeserializer<T> extends StdDeserializer<T> implements 
         // 4. 类型匹配检查：不通过直接抛异常
         if (!String.class.equals(argClass)) {
             throw JsonMappingException.from(ctxt,
-                    String.format("@JacksonDecode 函数入参必须是 String。类: %s", functionClass.getName()));
+                    String.format("@JsonDecode 函数入参必须是 String。类: %s", functionClass.getName()));
         }
         if (!propertyType.isAssignableFrom(returnClass)) {
             throw JsonMappingException.from(ctxt,
@@ -114,7 +114,7 @@ public class JacksonDecodeDeserializer<T> extends StdDeserializer<T> implements 
             return new JacksonDecodeDeserializer<>((Function<String, T>) instance);
         } catch (Exception e) {
             throw JsonMappingException.from(ctxt,
-                    "无法实例化 @JacksonDecode 指定的函数类: " + functionClass.getName(), e);
+                    "无法实例化 @JsonDecode 指定的函数类: " + functionClass.getName(), e);
         }
     }
 }

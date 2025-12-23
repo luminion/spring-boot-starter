@@ -7,7 +7,7 @@ import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.ser.ContextualSerializer;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
-import io.github.luminion.autoconfigure.jackson.annotation.JacksonEncode;
+import io.github.luminion.autoconfigure.jackson.annotation.JsonEncode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.GenericTypeResolver;
 
@@ -18,7 +18,7 @@ import java.util.function.Function;
 /**
  * 杰克逊编码序列化器
  * <p>
- * 对应 JacksonEncode 注解，处理对象到字符串的自定义转换
+ * 对应 JsonEncode 注解，处理对象到字符串的自定义转换
  *
  * @author luminion
  */
@@ -87,7 +87,7 @@ public class JacksonEncodeSerializer extends StdSerializer<Object> implements Co
             return this;
         }
 
-        JacksonEncode annotation = property.getAnnotation(JacksonEncode.class);
+        JsonEncode annotation = property.getAnnotation(JsonEncode.class);
 
         // 2. 如果没有注解，说明不是我们要处理的字段
         // 交还给 Jackson，让它去查找该类型标准的序列化器
@@ -116,7 +116,7 @@ public class JacksonEncodeSerializer extends StdSerializer<Object> implements Co
         // 检查 A: 函数返回类型必须是 String
         if (!String.class.equals(argReturnClass)) {
             throw JsonMappingException.from(prov,
-                    String.format("@JacksonEncode function return type must be String. Class: %s", functionClass.getName()));
+                    String.format("@JsonEncode function return type must be String. Class: %s", functionClass.getName()));
         }
 
         // 检查 B: 字段类型必须能传给函数入参
@@ -145,7 +145,7 @@ public class JacksonEncodeSerializer extends StdSerializer<Object> implements Co
             return new JacksonEncodeSerializer((Function<Object, String>) instance);
         } catch (Exception e) {
             throw JsonMappingException.from(prov,
-                    "Cannot instantiate the function class specified by @JacksonEncode: " + functionClass.getName(), e);
+                    "Cannot instantiate the function class specified by @JsonEncode: " + functionClass.getName(), e);
         }
     }
 }

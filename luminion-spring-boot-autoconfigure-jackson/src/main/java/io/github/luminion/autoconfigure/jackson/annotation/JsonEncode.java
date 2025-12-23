@@ -15,15 +15,8 @@ import java.util.function.Function;
 @Documented
 @JacksonAnnotationsInside
 @JsonSerialize(using = JacksonEncodeSerializer.class)
-public @interface JacksonEncode {
+public @interface JsonEncode {
 
-    Class<? extends Function<?, String>> value() default Fallback.class;
-
-    class Fallback implements Function<Object, String> {
-        @Override
-        public String apply(Object s) {
-            return s.toString();
-        }
-    }
+    Class<? extends Function<?, String>> value();
 
 }
