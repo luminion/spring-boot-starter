@@ -8,8 +8,6 @@ import java.lang.annotation.*;
 import java.util.function.Function;
 
 /**
- * 反序列化解码
- *
  * @author luminion
  */
 @Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})
