@@ -26,8 +26,7 @@
     <dependencies>
         <dependency>
             <groupId>io.github.luminion</groupId>
-            <artifactId>spring-boot-autoconfigure-support</artifactId>
-            <version>${revision}</version>
+            <artifactId>spring-boot-autoconfigure-core</artifactId>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>

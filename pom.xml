@@ -38,12 +38,12 @@
         <module>spring-boot2-starter</module>
         <module>spring-boot3-starter</module>
         <module>spring-boot4-starter</module>
+        <module>spring-boot-autoconfigure-core</module>
         <module>spring-boot-autoconfigure-support</module>
         <module>spring-boot-autoconfigure-jackson</module>
         <module>spring-boot-autoconfigure-jackson3</module>
         <module>spring-boot-autoconfigure-jakarta</module>
         <module>spring-boot-autoconfigure-javax</module>
-        <module>spring-boot-autoconfigure-core</module>
     </modules>
 
     <properties>
@@ -58,6 +58,11 @@
 
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>io.github.luminion</groupId>
+                <artifactId>spring-boot-autoconfigure-core</artifactId>
+                <version>${revision}</version>
+            </dependency>
             <dependency>
                 <groupId>org.projectlombok</groupId>
                 <artifactId>lombok</artifactId>
