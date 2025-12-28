@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>io.github.luminion</groupId>
-    <artifactId>luminion-spring-boot-parent</artifactId>
+    <artifactId>spring-boot-parent</artifactId>
     <version>${revision}</version>
     <packaging>pom</packaging>
 
@@ -35,14 +35,15 @@
     </scm>
 
     <modules>
-        <module>luminion-spring-boot2-starter</module>
-        <module>luminion-spring-boot3-starter</module>
-        <module>luminion-spring-boot4-starter</module>
-        <module>luminion-spring-boot-autoconfigure</module>
-        <module>luminion-spring-boot-autoconfigure-jackson</module>
-        <module>luminion-spring-boot-autoconfigure-jackson3</module>
-        <module>luminion-spring-boot-autoconfigure-jakarta</module>
-        <module>luminion-spring-boot-autoconfigure-javax</module>
+        <module>spring-boot2-starter</module>
+        <module>spring-boot3-starter</module>
+        <module>spring-boot4-starter</module>
+        <module>spring-boot-autoconfigure-support</module>
+        <module>spring-boot-autoconfigure-jackson</module>
+        <module>spring-boot-autoconfigure-jackson3</module>
+        <module>spring-boot-autoconfigure-jakarta</module>
+        <module>spring-boot-autoconfigure-javax</module>
+        <module>spring-boot-autoconfigure-core</module>
     </modules>
 
     <properties>
