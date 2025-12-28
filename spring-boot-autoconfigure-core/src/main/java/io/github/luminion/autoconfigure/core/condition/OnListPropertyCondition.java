@@ -1,4 +1,4 @@
-package io.github.luminion.autoconfigure.base.condition;
+package io.github.luminion.autoconfigure.core.condition;
 
 import org.springframework.boot.autoconfigure.condition.ConditionMessage;
 import org.springframework.boot.autoconfigure.condition.ConditionOutcome;

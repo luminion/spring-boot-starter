@@ -1,6 +1,6 @@
 package io.github.luminion.autoconfigure.ratelimit;
 
-import io.github.luminion.autoconfigure.base.spi.KeyResolver;
+import io.github.luminion.autoconfigure.core.spi.KeyResolver;
 import io.github.luminion.autoconfigure.ratelimit.aspect.RateLimitAspect;
 import io.github.luminion.autoconfigure.ratelimit.spi.RateLimiter;
 import io.github.luminion.autoconfigure.ratelimit.support.CaffeineRateLimiter;

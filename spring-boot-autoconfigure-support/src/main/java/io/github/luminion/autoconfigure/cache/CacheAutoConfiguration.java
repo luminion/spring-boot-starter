@@ -27,9 +27,6 @@ import java.time.Duration;
  * @see org.springframework.boot.autoconfigure.cache.CacheAutoConfiguration
  * @since 1.0.0
  */
-@AutoConfiguration(
-        after = {CouchbaseDataAutoConfiguration.class, HazelcastAutoConfiguration.class, HibernateJpaAutoConfiguration.class, RedisAutoConfiguration.class}
-)
 @ConditionalOnClass({CacheManager.class})
 @ConditionalOnBean({CacheAspectSupport.class})
 @ConditionalOnMissingBean(

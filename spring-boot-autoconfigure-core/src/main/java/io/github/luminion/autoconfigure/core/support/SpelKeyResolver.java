@@ -1,6 +1,6 @@
-package io.github.luminion.autoconfigure.base.support;
+package io.github.luminion.autoconfigure.core.support;
 
-import io.github.luminion.autoconfigure.base.spi.KeyResolver;
+import io.github.luminion.autoconfigure.core.spi.KeyResolver;
 import org.springframework.context.expression.MethodBasedEvaluationContext;
 import org.springframework.core.DefaultParameterNameDiscoverer;
 import org.springframework.core.ParameterNameDiscoverer;

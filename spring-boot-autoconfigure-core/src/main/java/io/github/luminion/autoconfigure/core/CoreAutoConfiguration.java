@@ -1,7 +1,7 @@
-package io.github.luminion.autoconfigure.base;
+package io.github.luminion.autoconfigure.core;
 
-import io.github.luminion.autoconfigure.base.spi.KeyResolver;
-import io.github.luminion.autoconfigure.base.support.SpelKeyResolver;
+import io.github.luminion.autoconfigure.core.spi.KeyResolver;
+import io.github.luminion.autoconfigure.core.support.SpelKeyResolver;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;

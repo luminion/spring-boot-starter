@@ -1,6 +1,6 @@
 package io.github.luminion.autoconfigure.web;
 
-import io.github.luminion.autoconfigure.base.properties.DateTimeFormatProperties;
+import io.github.luminion.autoconfigure.core.properties.DateTimeFormatProperties;
 import io.github.luminion.autoconfigure.web.converter.support.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;

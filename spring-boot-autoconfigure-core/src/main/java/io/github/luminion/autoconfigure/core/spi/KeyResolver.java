@@ -1,4 +1,4 @@
-package io.github.luminion.autoconfigure.base.spi;
+package io.github.luminion.autoconfigure.core.spi;
 
 import java.lang.reflect.Method;
 

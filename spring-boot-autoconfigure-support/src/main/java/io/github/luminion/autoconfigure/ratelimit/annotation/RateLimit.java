@@ -1,7 +1,7 @@
 package io.github.luminion.autoconfigure.ratelimit.annotation;
 
 import io.github.luminion.autoconfigure.ratelimit.spi.RateLimiter;
-import io.github.luminion.autoconfigure.base.spi.KeyResolver;
+import io.github.luminion.autoconfigure.core.spi.KeyResolver;
 
 import java.lang.annotation.*;
 
