@@ -4,12 +4,13 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>io.github.luminion</groupId>
-    <artifactId>spring-boot-parent</artifactId>
-    <version>${revision}</version>
-    <packaging>pom</packaging>
+    <artifactId>spring-boot-starter</artifactId>
+    <version>1.0.0</version>
 
     <name>${project.groupId}:${project.artifactId}</name>
-    <description>A spring-boot-starter designed to simplify development , providing out-of-the-box configurations for common scenarios.</description>
+    <description>A spring-boot-starter designed to simplify development , providing out-of-the-box configurations for
+        common scenarios.
+    </description>
     <url>https://github.com/luminion</url>
 
     <licenses>
@@ -34,23 +35,11 @@
         <url>https://github.com/luminion/spring-boot-starter/tree/master</url>
     </scm>
 
-    <modules>
-        <module>spring-boot2-starter</module>
-        <module>spring-boot3-starter</module>
-        <module>spring-boot4-starter</module>
-        <module>spring-boot-autoconfigure-core</module>
-        <module>spring-boot-autoconfigure-support</module>
-        <module>spring-boot-autoconfigure-jackson</module>
-        <module>spring-boot-autoconfigure-jackson3</module>
-        <module>spring-boot-autoconfigure-jakarta</module>
-        <module>spring-boot-autoconfigure-javax</module>
-    </modules>
-
     <properties>
-        <revision>1.0.0-SNAPSHOT</revision>
-        <java.version>8</java.version>
-        <maven.compiler.source>8</maven.compiler.source>
-        <maven.compiler.target>8</maven.compiler.target>
+        <version>1.0.0</version>
+        <java.version>17</java.version>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -59,14 +48,18 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>io.github.luminion</groupId>
-                <artifactId>spring-boot-autoconfigure-core</artifactId>
-                <version>${revision}</version>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>3.5.8</version>
+                <type>pom</type>
+                <scope>import</scope>
             </dependency>
             <dependency>
-                <groupId>org.projectlombok</groupId>
-                <artifactId>lombok</artifactId>
-                <version>1.18.42</version>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-bom</artifactId>
+                <version>3.5.14</version>
+                <type>pom</type>
+                <scope>import</scope>
             </dependency>
             <dependency>
                 <groupId>org.jsoup</groupId>
@@ -84,44 +77,76 @@
                 <artifactId>caffeine</artifactId>
                 <version>2.9.3</version>
             </dependency>
-            <dependency>
-                <groupId>com.baomidou</groupId>
-                <artifactId>mybatis-plus-bom</artifactId>
-                <version>3.5.14</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
         </dependencies>
+
     </dependencyManagement>
+
+
+    <dependencies>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aop</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-cache</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <!--<dependency>-->
+        <!--    <groupId>org.springframework.boot</groupId>-->
+        <!--    <artifactId>spring-boot-starter-mail</artifactId>-->
+        <!--    <optional>true</optional>-->
+        <!--</dependency>-->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-boot-starter</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+            <optional>true</optional>
+        </dependency>
+    </dependencies>
     
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>flatten-maven-plugin</artifactId>
-                <version>1.7.2</version>
-                <executions>
-                    <execution>
-                        <id>flatten</id>
-                        <phase>process-resources</phase>
-                        <goals>
-                            <goal>flatten</goal>
-                        </goals>
-                    </execution>
-                    <execution>
-                        <id>flatten.clean</id>
-                        <phase>clean</phase>
-                        <goals>
-                            <goal>clean</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <inherited>true</inherited>
-                <configuration>
-                    <updatePomFile>true</updatePomFile>
-                    <flattenMode>resolveCiFriendliesOnly</flattenMode>
-                </configuration>
-            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
