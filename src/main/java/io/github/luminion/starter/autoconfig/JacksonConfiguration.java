@@ -14,11 +14,17 @@ import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalTimeSerializer;
 import io.github.luminion.starter.Prop;
+import io.github.luminion.starter.support.jackson.deserializer.JacksonXssDeserializer;
 import lombok.extern.slf4j.Slf4j;
+import org.jsoup.Jsoup;
+import org.jsoup.safety.Safelist;
+import org.springframework.beans.BeansException;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.jackson.Jackson2ObjectMapperBuilderCustomizer;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -49,14 +55,14 @@ public class JacksonConfiguration {
 
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnClass({Jackson2ObjectMapperBuilder.class})
-    static class Jackson2ObjectMapperBuilderCustomizerConfiguration {
+    static class Jackson2ObjectMapperBuilderCustomizerConfiguration implements ApplicationContextAware {
 
         /**
          * jackson2对象映射器生成器定制器
-         * 
+         *
          * @param prop 配置属性
-         * @see org.springframework.core.Ordered 使Jackson2ObjectMapperBuilder在获取Jackson2ObjectMapperBuilderCustomizer时, 获取该配置先于StandardJackson2ObjectMapperBuilderCustomizer
          * @return jackson对象映射器生成器定制器
+         * @see org.springframework.core.Ordered 使Jackson2ObjectMapperBuilder在获取Jackson2ObjectMapperBuilderCustomizer时, 获取该配置先于StandardJackson2ObjectMapperBuilderCustomizer
          */
         @Bean
         @Order(-1)
@@ -116,6 +122,37 @@ public class JacksonConfiguration {
                 builder.serializers(new LocalTimeSerializer(timeFormatter));
             };
         }
+
+        @Override
+        public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+            Prop prop = applicationContext.getBean(Prop.class);
+            try {
+                Class<?> clazz = Class.forName("org.jsoup.Jsoup");
+                Jackson2ObjectMapperBuilder builder = applicationContext.getBean(Jackson2ObjectMapperBuilder.class);
+                // xss过滤
+                switch (prop.getXssCleanLevel()) {
+                    case NONE:
+                        break;
+                    case SIMPLE_TEXT:
+                        builder.deserializerByType(String.class, new JacksonXssDeserializer(s -> Jsoup.clean(s, Safelist.simpleText())));
+                        break;
+                    case BASIC:
+                        builder.deserializerByType(String.class, new JacksonXssDeserializer(s -> Jsoup.clean(s, Safelist.basic())));
+                        break;
+                    case BASIC_WITH_IMAGES:
+                        builder.deserializerByType(String.class, new JacksonXssDeserializer(s -> Jsoup.clean(s, Safelist.basicWithImages())));
+                        break;
+                    case RELAXED:
+                        builder.deserializerByType(String.class, new JacksonXssDeserializer(s -> Jsoup.clean(s, Safelist.relaxed())));
+                        break;
+                    default:
+                        builder.deserializerByType(String.class, new JacksonXssDeserializer(s -> Jsoup.clean(s, Safelist.relaxed())));
+                        log.info("Unsupported value '{}' for property 'xss-clean-level'", prop.getXssCleanLevel());
+                }
+            } catch (Exception e) {
+                log.info("Jsoup not found, xss filter disabled");
+            }
+        }
     }
 
     /**
@@ -127,7 +164,7 @@ public class JacksonConfiguration {
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnClass({RedisTemplate.class, Jackson2ObjectMapperBuilder.class})
     static class JacksonRedisConfiguration {
-    
+
         /**
          * redis序列化程序
          *

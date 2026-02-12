@@ -32,7 +32,6 @@ import org.springframework.data.redis.core.RedisTemplate;
 @Slf4j
 @AutoConfiguration
 @ConditionalOnClass(Advice.class)
-@ConditionalOnProperty(value = "luminion.repeat-submit.enabled", havingValue = "true", matchIfMissing = true)
 public class RepeatSubmitConfiguration {
     
     /**

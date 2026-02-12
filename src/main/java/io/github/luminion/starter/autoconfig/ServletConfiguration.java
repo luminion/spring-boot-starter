@@ -16,6 +16,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplicat
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.filter.CommonsRequestLoggingFilter;
 
 import java.util.function.Function;
 
@@ -28,7 +29,25 @@ import java.util.function.Function;
 @Slf4j
 @AutoConfiguration
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+@Deprecated
 public class ServletConfiguration {
+
+
+    /**
+     * 请求日志记录筛选器
+     *
+     * @return commons请求日志记录筛选器
+     */
+    @Bean
+    public CommonsRequestLoggingFilter requestLoggingFilter() {
+        CommonsRequestLoggingFilter loggingFilter = new CommonsRequestLoggingFilter();
+        loggingFilter.setIncludeClientInfo(true);
+        loggingFilter.setIncludeQueryString(true);
+        loggingFilter.setIncludePayload(true);
+        loggingFilter.setMaxPayloadLength(2000);
+        return loggingFilter;
+    }
+
 
     @ConditionalOnClass(Jsoup.class)
     @Configuration(proxyBeanMethods = false)
@@ -41,7 +60,7 @@ public class ServletConfiguration {
             FilterRegistrationBean<XssFilter> registration = new FilterRegistrationBean<>();
             registration.setDispatcherTypes(DispatcherType.REQUEST);
             Function<String, String> sanitizer;
-            switch (prop.getServletFilter().getXssSanitizer()) {
+            switch (prop.getXssCleanLevel()) {
                 case NONE:
                     sanitizer = s -> Jsoup.clean(s, Safelist.none());
                     break;
@@ -61,7 +80,7 @@ public class ServletConfiguration {
                     sanitizer = s -> Jsoup.clean(s, Safelist.relaxed());
                     log.warn("Unsupported value '{}' for property 'luminion.servlet.filter.xss-sanitizer', " +
                                     "using 'RELAXED' instead. Supported values: [NONE, SIMPLE_TEXT, BASIC, BASIC_WITH_IMAGES, RELAXED]",
-                            prop.getServletFilter().getXssSanitizer());
+                            prop.getXssCleanLevel());
 
             }
             XssFilter xssFilter = new XssFilter(prop.getServletFilter().getXssIncludes(),
