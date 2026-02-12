@@ -31,7 +31,7 @@ public class RedisCacheTimeMapProvider {
         for (Map.Entry<String, Integer> entry : cacheTimeMap.entrySet()) {
             RedisCacheConfiguration redisCacheConfiguration = RedisCacheConfiguration.defaultCacheConfig();
             redisCacheConfiguration = redisCacheConfiguration
-                    .prefixCacheNameWith("ct:crm:")
+                    .computePrefixWith(cacheName -> cacheName)
                     .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(redisSerializer))
                     .entryTtl(Duration.ofMinutes(5));
             cacheConfigurationHashMap.put(entry.getKey(), redisCacheConfiguration.entryTtl(Duration.ofSeconds(entry.getValue())));

@@ -21,6 +21,7 @@ import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.RedisSerializer;
 
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -41,35 +42,21 @@ public class CacheAutoConfiguration {
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnClass({RedisCacheManager.class, RedisConnectionFactory.class, RedisSerializer.class})
     static class RedisCacheManagerConfiguration {
-        /**
-         * redis缓存管理器
-         *
-         * @param redisConnectionFactory  redis连接工厂
-         * @param redisCacheConfiguration redis缓存配置
-         * @return 缓存管理器
-         */
-        @Bean
-        @ConditionalOnMissingBean(CacheManager.class)
-        @ConditionalOnBean({RedisConnectionFactory.class, RedisCacheConfiguration.class, RedisCacheTimeMapProvider.class, RedisSerializer.class})
-        public CacheManager cacheManager(RedisConnectionFactory redisConnectionFactory,
-                                         RedisCacheConfiguration redisCacheConfiguration,
-                                         RedisCacheTimeMapProvider redisCacheTimeMapProvider,
-                                         RedisSerializer<Object> redisSerializer
-        ) {
-            Map<String, RedisCacheConfiguration> redisCacheConfigurationMap = redisCacheTimeMapProvider.cacheConfigurationHashMap(redisSerializer);
-            RedisCacheManager redisCacheManager = new RedisCacheManager(
-                    RedisCacheWriter.nonLockingRedisCacheWriter(redisConnectionFactory),
-                    // 默认策略，未配置的 key 会使用这个
-                    redisCacheConfiguration,
-                    // 指定 key 策略
-                    redisCacheConfigurationMap
-            );
-            redisCacheManager.setTransactionAware(true);
-            return redisCacheManager;
-        }
 
         /**
-         * redis缓存配置
+         * Redis缓存时间映射提供程序
+         *
+         * @return redis缓存时间映射提供程序
+         */
+        @Bean
+        @ConditionalOnMissingBean(RedisCacheTimeMapProvider.class)
+        public RedisCacheTimeMapProvider redisCacheTimeMapProvider() {
+            return new RedisCacheTimeMapProvider(new HashMap<>());
+        }
+        
+
+        /**
+         * 默认redis缓存配置
          *
          * @param redisSerializer redis序列化程序
          * @return redis缓存配置
@@ -90,6 +77,33 @@ public class CacheAutoConfiguration {
                     .entryTtl(Duration.ofSeconds(3000));
             return redisCacheConfiguration;
         }
+
+        /**
+         * redis缓存管理器
+         *
+         * @param redisConnectionFactory  redis连接工厂
+         * @param redisCacheConfiguration redis缓存配置
+         * @return 缓存管理器
+         */
+        @Bean
+        @ConditionalOnMissingBean(CacheManager.class)
+        @ConditionalOnBean({RedisConnectionFactory.class, RedisCacheConfiguration.class, RedisCacheTimeMapProvider.class, RedisSerializer.class})
+        public CacheManager cacheManager(RedisConnectionFactory redisConnectionFactory,
+                                         RedisCacheConfiguration redisCacheConfiguration,
+                                         RedisCacheTimeMapProvider redisCacheTimeMapProvider,
+                                         RedisSerializer<Object> redisSerializer
+        ) {
+            RedisCacheManager redisCacheManager = new RedisCacheManager(
+                    RedisCacheWriter.nonLockingRedisCacheWriter(redisConnectionFactory),
+                    // 默认策略，未配置的 key 会使用这个
+                    redisCacheConfiguration,
+                    // 指定 key 策略
+                    redisCacheTimeMapProvider.cacheConfigurationHashMap(redisSerializer)
+            );
+            redisCacheManager.setTransactionAware(true);
+            return redisCacheManager;
+        }
+        
     }
 
 }
