@@ -1,7 +1,9 @@
 package io.github.luminion.starter.support.ratelimit.aspect;
 
+import io.github.luminion.starter.core.spi.KeyResolver;
 import io.github.luminion.starter.support.ratelimit.annotation.RateLimit;
 import io.github.luminion.starter.support.ratelimit.exception.RateLimitException;
+import io.github.luminion.starter.support.ratelimit.spi.RateLimiter;
 import lombok.RequiredArgsConstructor;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.Aspect;
@@ -17,24 +19,24 @@ import java.lang.reflect.Method;
 @Aspect
 @RequiredArgsConstructor
 public class RateLimitAspect {
-    private final BeanFactory beanFactory;
+    private final KeyResolver keyResolver;
+    private final RateLimiter rateLimiter;
 
+    /**
+     * 限流
+     *
+     * @param joinPoint 连接点
+     * @param rateLimit 速率限制
+     */
     @Before("@annotation(rateLimit)")
-    public void around(JoinPoint joinPoint, RateLimit rateLimit) {
+    public void doRateLimit(JoinPoint joinPoint, RateLimit rateLimit) {
         MethodSignature methodSignature = (MethodSignature) joinPoint.getSignature();
         Method method = methodSignature.getMethod();
         String springExpression = rateLimit.value();
-        String signature = beanFactory.getBean(rateLimit.methodFingerprinter())
-                .resolve(joinPoint.getTarget(), method, joinPoint.getArgs(), springExpression);
-        boolean b = beanFactory.getBean(rateLimit.rateLimiter())
-                .tryAccess(signature, rateLimit);
+        String signature = keyResolver.resolve(joinPoint.getTarget(), method, joinPoint.getArgs(), springExpression);
+        boolean b = rateLimiter.tryAccess(signature, rateLimit);
         if (!b) {
-            String errorMessage = String.format(
-                    "Method call frequency has exceeded the limit: no more than %d requests within %d seconds are allowed.",
-                    rateLimit.count(),
-                    rateLimit.seconds()
-            );
-            throw new RateLimitException(errorMessage, rateLimit.seconds(), rateLimit.count());
+            throw new RateLimitException(rateLimit.message());
         }
     }
 

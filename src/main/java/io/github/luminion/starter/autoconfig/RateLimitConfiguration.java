@@ -1,5 +1,6 @@
 package io.github.luminion.starter.autoconfig;
 
+import io.github.luminion.starter.Prop;
 import io.github.luminion.starter.core.spi.KeyResolver;
 import io.github.luminion.starter.support.ratelimit.aspect.RateLimitAspect;
 import io.github.luminion.starter.support.ratelimit.spi.RateLimiter;
@@ -21,22 +22,16 @@ import org.springframework.data.redis.core.RedisTemplate;
 
 /**
  * 限流自动配置
- * <p>
- * 自动配置限流相关的Bean，包括：
- * 1. RateLimitAspect：限流切面，处理@RateLimit注解
- * 2. RateLimiter实现：根据类路径自动选择最优的限流器实现
- *    优先级：RedisRateLimiter > CaffeineRateLimiter > GuavaRateLimiter > JdkRateLimiter
  *
  * @author luminion
- * @since 1.0.0
  * @see org.springframework.boot.autoconfigure.aop.AopAutoConfiguration
+ * @since 1.0.0
  */
 @Slf4j
 @AutoConfiguration
 @ConditionalOnClass(Advice.class)
-@ConditionalOnProperty(value = "luminion.ratelimit.enabled", havingValue = "true", matchIfMissing = true)
 public class RateLimitConfiguration {
-    
+
     /**
      * 配置限流切面
      * <p>
@@ -48,17 +43,15 @@ public class RateLimitConfiguration {
     @Bean
     @ConditionalOnMissingBean(RateLimitAspect.class)
     @ConditionalOnBean({KeyResolver.class, RateLimiter.class})
-    public RateLimitAspect rateLimitAspect(BeanFactory beanFactory) {
+    public RateLimitAspect rateLimitAspect(KeyResolver keyResolver, RateLimiter rateLimiter) {
         log.debug("RateLimitAspect Configured");
-        return new RateLimitAspect(beanFactory);
+        return new RateLimitAspect(keyResolver, rateLimiter);
     }
     
     /**
      * 配置Redis限流器（优先级最高，适用于分布式环境）
      * <p>
      * 需要RedisTemplate Bean存在才会创建
-     * 注意：RedisTemplate的泛型应该是<Object, Object>以匹配RedisRateLimiter的要求
-     * 这里使用@SuppressWarnings("rawtypes")来避免泛型检查问题，因为Spring Boot的RedisTemplate通常是类型擦除的
      *
      * @param redisTemplate Redis模板（Spring会自动注入类型匹配的Bean）
      * @return Redis限流器
@@ -67,12 +60,9 @@ public class RateLimitConfiguration {
     @Order(100)
     @ConditionalOnMissingBean(RateLimiter.class)
     @ConditionalOnBean(name = "redisTemplate")
-    @SuppressWarnings("unchecked")
-    public RateLimiter redisRateLimiter(org.springframework.data.redis.core.RedisTemplate<?, ?> redisTemplate) {
+    public RateLimiter redisRateLimiter(RedisTemplate<Object, Object> redisTemplate, Prop prop) {
         log.debug("RedisRateLimiter Configured");
-        // 强制转换为RedisTemplate<Object, Object>，因为RedisRateLimiter需要这个类型
-        // 在运行时，RedisTemplate的实际类型是擦除的，所以这个转换是安全的
-        return new RedisRateLimiter((RedisTemplate<Object, Object>) redisTemplate);
+        return new RedisRateLimiter(prop.getRedisLimitPrefix(), redisTemplate);
     }
 
     /**
@@ -124,5 +114,5 @@ public class RateLimitConfiguration {
                 "Please consider using RedisRateLimiter, CaffeineRateLimiter, or GuavaRateLimiter instead.");
         return new JdkRateLimiter();
     }
-    
+
 }

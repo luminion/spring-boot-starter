@@ -28,23 +28,10 @@ public @interface RateLimit {
      * 限流周期, 单位为秒, 默认1秒
      */
     int seconds() default 1;
-
+    
     /**
-     * 周期内的访问次数, 默认1次
+     * 提示信息
      */
-    int count() default 1;
-
-    /**
-     * 签名处理器
-     * 注:需要将指定的处理器类注入到Spring容器中
-     */
-    Class<? extends KeyResolver> methodFingerprinter() default KeyResolver.class;
-
-    /**
-     * 速率限制器
-     * 注:需要将指定的限制器类注入到Spring容器中
-     */
-    Class<? extends RateLimiter> rateLimiter() default RateLimiter.class;
-
+    String message() default "Method call frequency has exceeded the limit";
 
 }

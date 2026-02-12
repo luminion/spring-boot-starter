@@ -30,8 +30,7 @@ import java.util.function.Function;
 @AutoConfiguration
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 @Deprecated
-public class ServletConfiguration {
-
+public class ServletConfigurationBack {
 
     /**
      * 请求日志记录筛选器

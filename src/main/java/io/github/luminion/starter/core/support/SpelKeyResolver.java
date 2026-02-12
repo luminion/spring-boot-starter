@@ -1,6 +1,7 @@
 package io.github.luminion.starter.core.support;
 
 import io.github.luminion.starter.core.spi.KeyResolver;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.expression.MethodBasedEvaluationContext;
 import org.springframework.core.DefaultParameterNameDiscoverer;
 import org.springframework.core.ParameterNameDiscoverer;
@@ -17,20 +18,12 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * 基于 SpEL 的键解析器
  */
+@RequiredArgsConstructor
 public class SpelKeyResolver implements KeyResolver {
-
     private static final ExpressionParser PARSER = new SpelExpressionParser();
     private static final ParameterNameDiscoverer PND = new DefaultParameterNameDiscoverer();
-
-    // 1. 增加缓存，提升高并发性能
     private static final Map<String, Expression> EXPRESSION_CACHE = new ConcurrentHashMap<>(64);
-
     private final String prefix;
-
-    public SpelKeyResolver(String prefix) {
-        // 保证前缀不为 null，方便拼接
-        this.prefix = prefix != null ? prefix : "";
-    }
 
     @Override
     public String resolve(Object target, Method method, Object[] args, String expression) {

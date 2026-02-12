@@ -12,12 +12,15 @@ import org.springframework.context.annotation.Import;
  */
 @EnableConfigurationProperties(Prop.class)
 @Import({
-        AopAutoConfiguration.class,
-        ConverterConfiguration.class,
-        MybatisPlusConfiguration.class,
-        RedisConfiguration.class,
         CacheConfiguration.class,
-        LogConfiguration.class
+        ConverterConfiguration.class,
+        CoreConfiguration.class,
+        JacksonConfiguration.class,
+        LogConfiguration.class,
+        MybatisPlusConfiguration.class,
+        RateLimitConfiguration.class,
+        RedisConfiguration.class,
+        RepeatSubmitConfiguration.class
 })
 public class LuminionAutoConfiguration {
 }

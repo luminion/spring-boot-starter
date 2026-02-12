@@ -20,7 +20,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class RedisRateLimiter implements RateLimiter {
 
-    private static final String KEY_PREFIX = "rate_limit:";
+    private final String KEY_PREFIX;
     private final RedisTemplate<Object, Object> redisTemplate;
     private final RedisScript<Long> limitScript = limitScript();
 

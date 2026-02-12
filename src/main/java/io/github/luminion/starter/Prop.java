@@ -1,6 +1,5 @@
 package io.github.luminion.starter;
 
-import io.github.luminion.starter.support.jakarta.ServletFilterProperties;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
@@ -16,6 +15,12 @@ import java.util.Set;
 @Data
 public class Prop {
 
+
+    /**
+     * redis限流前缀key
+     */
+    private String redisLimitPrefix;
+    
     /**
      * XSS过滤等级
      */
@@ -55,9 +60,6 @@ public class Prop {
          */
         private String timeZone = "GMT+8";
     }
-
-
-
 
     /**
      * servlet筛选器属性

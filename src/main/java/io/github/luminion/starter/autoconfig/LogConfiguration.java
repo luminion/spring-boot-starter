@@ -11,18 +11,9 @@ import org.springframework.web.filter.CommonsRequestLoggingFilter;
  * @since 1.0.0
  */
 @AutoConfiguration
+@ConditionalOnMissingBean
 public class LogConfiguration {
 
-    @Bean
-    @ConditionalOnMissingBean
-    @ConditionalOnProperty(value = "luminion.log.request.enabled", havingValue = "true", matchIfMissing = false)
-    public CommonsRequestLoggingFilter requestLoggingFilter() {
-        CommonsRequestLoggingFilter loggingFilter = new CommonsRequestLoggingFilter();
-        loggingFilter.setIncludeClientInfo(true);
-        loggingFilter.setIncludeQueryString(true);
-        loggingFilter.setIncludePayload(true);
-        loggingFilter.setMaxPayloadLength(2000);
-        return loggingFilter;
-    }
+
 
 }
