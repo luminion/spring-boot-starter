@@ -13,6 +13,7 @@ import com.fasterxml.jackson.datatype.jsr310.deser.LocalTimeDeserializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalTimeSerializer;
+import io.github.luminion.starter.Prop;
 import io.github.luminion.starter.core.properties.DateTimeFormatProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -47,25 +48,28 @@ import java.util.TimeZone;
 @Slf4j
 @AutoConfiguration
 @ConditionalOnClass(ObjectMapper.class)
-@ConditionalOnProperty(value = "luminion.jackson.enabled", havingValue = "true", matchIfMissing = true)
-@EnableConfigurationProperties({DateTimeFormatProperties.class})
 public class JacksonAutoConfiguration {
 
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnClass({Jackson2ObjectMapperBuilder.class})
     static class Jackson2ObjectMapperBuilderCustomizerConfiguration {
 
+        /**
+         * jackson2对象映射器生成器定制器
+         * 
+         * @param prop 配置属性
+         * @see org.springframework.core.Ordered 使Jackson2ObjectMapperBuilder在获取Jackson2ObjectMapperBuilderCustomizer时, 获取该配置先于StandardJackson2ObjectMapperBuilderCustomizer
+         * @return jackson对象映射器生成器定制器
+         */
         @Bean
         @Order(-1)
-// 使Jackson2ObjectMapperBuilder在获取Jackson2ObjectMapperBuilderCustomizer时, 获取该配置先于StandardJackson2ObjectMapperBuilderCustomizer
-        public Jackson2ObjectMapperBuilderCustomizer jackson2ObjectMapperBuilderCustomizer(DateTimeFormatProperties dateTimeFormatProperties) {
+        public Jackson2ObjectMapperBuilderCustomizer jackson2ObjectMapperBuilderCustomizer(Prop prop) {
             log.debug("Jackson2ObjectMapperBuilderCustomizer Configured");
             return builder -> {
-                String dateTimeFormat = dateTimeFormatProperties.getDateTime();
-                String dateFormat = dateTimeFormatProperties.getDate();
-                String timeFormat = dateTimeFormatProperties.getTime();
-                String timeZoneId = dateTimeFormatProperties.getTimeZone();
-//                ZoneId zoneId = ZoneId.of(timeZoneId);
+                String dateTimeFormat = prop.getDateTimeFormat().getDateTime();
+                String dateFormat = prop.getDateTimeFormat().getDate();
+                String timeFormat = prop.getDateTimeFormat().getTime();
+                String timeZoneId = prop.getDateTimeFormat().getTimeZone();
                 TimeZone timeZone = TimeZone.getTimeZone(timeZoneId);
                 SimpleDateFormat simpleDateFormat = new SimpleDateFormat(dateTimeFormat);
                 simpleDateFormat.setTimeZone(timeZone);
@@ -117,13 +121,28 @@ public class JacksonAutoConfiguration {
         }
     }
 
+    /**
+     * jackson redis配置
+     *
+     * @author luminion
+     * @since 1.0.0
+     */
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnClass({RedisTemplate.class, Jackson2ObjectMapperBuilder.class})
     static class JacksonRedisConfiguration {
+    
+        /**
+         * redis序列化程序
+         *
+         * @return redis序列化程序 <object>
+         */
         @Bean
         @ConditionalOnMissingBean(name = "redisSerializer")
-        public RedisSerializer<Object> redisSerializer(Jackson2ObjectMapperBuilder jackson2ObjectMapperBuilder) {
-            ObjectMapper objectMapper = jackson2ObjectMapperBuilder.build();
+        public RedisSerializer<Object> redisSerializer() {
+//        public RedisSerializer<Object> redisSerializer(Jackson2ObjectMapperBuilder jackson2ObjectMapperBuilder) {
+//            ObjectMapper objectMapper = jackson2ObjectMapperBuilder.build();
+            // 不使用jackson2ObjectMapperBuilder.build(), 该配置器会覆盖自定义的ObjectMapper配置, 比如数据脱敏之类的
+            ObjectMapper objectMapper = new ObjectMapper();
             // 反序列化时候遇到不匹配的属性并不抛出异常
             objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
             // 序列化时候遇到空对象不抛出异常
