@@ -1,8 +1,1 @@
-io.github.luminion.autoconfigure.aop.AopAutoConfiguration
-io.github.luminion.autoconfigure.web.WebAutoConfiguration
-io.github.luminion.autoconfigure.mybatisplus.MybatisPlusAutoConfiguration
-io.github.luminion.autoconfigure.redis.RedisAutoConfiguration
-io.github.luminion.autoconfigure.cache.CacheAutoConfiguration
-io.github.luminion.autoconfigure.log.LogAutoConfiguration
-io.github.luminion.autoconfigure.ratelimit.RateLimitAutoConfiguration
-io.github.luminion.autoconfigure.repeat.RepeatSubmitAutoConfiguration
+io.github.luminion.starter.LuminionAutoConfiguration

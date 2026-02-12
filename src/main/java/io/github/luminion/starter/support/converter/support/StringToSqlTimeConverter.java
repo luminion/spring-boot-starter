@@ -1,0 +1,27 @@
+package io.github.luminion.starter.support.converter.support;
+
+import io.github.luminion.starter.support.converter.DateTimeConverter;
+
+import java.sql.Time;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+
+/**
+ * @author luminion
+ */
+public class StringToSqlTimeConverter implements DateTimeConverter<String, Time> {
+    private final DateTimeFormatter formatter;
+
+    public StringToSqlTimeConverter(String pattern) {
+        this.formatter = DateTimeFormatter.ofPattern(pattern);
+    }
+
+    @Override
+    public Time convert(String source) {
+        if (source.isEmpty()) {
+            return null;
+        }
+        return Time.valueOf(LocalTime.parse(source, formatter));
+    }
+
+}
