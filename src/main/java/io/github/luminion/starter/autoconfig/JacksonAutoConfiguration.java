@@ -1,4 +1,4 @@
-package io.github.luminion.starter.config;
+package io.github.luminion.starter.autoconfig;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.DeserializationFeature;

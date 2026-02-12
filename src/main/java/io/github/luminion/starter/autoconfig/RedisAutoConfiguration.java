@@ -1,4 +1,4 @@
-package io.github.luminion.starter.config;
+package io.github.luminion.starter.autoconfig;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;

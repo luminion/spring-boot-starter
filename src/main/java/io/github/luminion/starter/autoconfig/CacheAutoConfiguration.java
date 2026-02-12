@@ -1,4 +1,4 @@
-package io.github.luminion.starter.config;
+package io.github.luminion.starter.autoconfig;
 
 import io.github.luminion.starter.support.cache.RedisCacheTimeMapProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -21,7 +21,6 @@ import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.RedisSerializer;
 
 import java.time.Duration;
-import java.util.HashMap;
 import java.util.Map;
 
 /**

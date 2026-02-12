@@ -1,4 +1,4 @@
-package io.github.luminion.starter.config;
+package io.github.luminion.starter.autoconfig;
 
 import io.github.luminion.starter.core.spi.KeyResolver;
 import io.github.luminion.starter.support.repeat.aspect.RepeatSubmitAspect;

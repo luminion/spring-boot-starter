@@ -1,4 +1,4 @@
-package io.github.luminion.starter.config;
+package io.github.luminion.starter.autoconfig;
 
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
