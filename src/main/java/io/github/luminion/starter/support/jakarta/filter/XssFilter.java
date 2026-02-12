@@ -1,8 +1,8 @@
 package io.github.luminion.starter.support.jakarta.filter;
 
 
-import io.github.luminion.autoconfigure.jakarta.request.CachedBodyRequestWrapper;
-import io.github.luminion.autoconfigure.jakarta.request.XssRequestWrapper;
+import io.github.luminion.starter.support.jakarta.request.CachedBodyRequestWrapper;
+import io.github.luminion.starter.support.jakarta.request.XssRequestWrapper;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.util.AntPathMatcher;
