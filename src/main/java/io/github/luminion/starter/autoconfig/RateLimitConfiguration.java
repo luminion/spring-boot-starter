@@ -35,7 +35,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 @AutoConfiguration
 @ConditionalOnClass(Advice.class)
 @ConditionalOnProperty(value = "luminion.ratelimit.enabled", havingValue = "true", matchIfMissing = true)
-public class RateLimitAutoConfiguration {
+public class RateLimitConfiguration {
     
     /**
      * 配置限流切面

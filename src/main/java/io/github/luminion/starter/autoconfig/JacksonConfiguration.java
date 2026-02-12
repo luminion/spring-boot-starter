@@ -14,14 +14,11 @@ import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalTimeSerializer;
 import io.github.luminion.starter.Prop;
-import io.github.luminion.starter.core.properties.DateTimeFormatProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.jackson.Jackson2ObjectMapperBuilderCustomizer;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -48,7 +45,7 @@ import java.util.TimeZone;
 @Slf4j
 @AutoConfiguration
 @ConditionalOnClass(ObjectMapper.class)
-public class JacksonAutoConfiguration {
+public class JacksonConfiguration {
 
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnClass({Jackson2ObjectMapperBuilder.class})

@@ -20,7 +20,7 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 @AutoConfiguration
 @ConditionalOnClass(RedisOperations.class)
 @ConditionalOnProperty(value = "luminion.redis.enabled", havingValue = "true", matchIfMissing = true)
-public class RedisAutoConfiguration {
+public class RedisConfiguration {
 
     //
     //@Bean

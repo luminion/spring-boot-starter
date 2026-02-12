@@ -13,7 +13,7 @@ import org.springframework.context.annotation.Bean;
  */
 @Slf4j
 @AutoConfiguration
-public class CoreAutoConfiguration {
+public class CoreConfiguration {
     
     @Bean
     @ConditionalOnMissingBean

@@ -11,7 +11,7 @@ import org.springframework.web.filter.CommonsRequestLoggingFilter;
  * @since 1.0.0
  */
 @AutoConfiguration
-public class LogAutoConfiguration {
+public class LogConfiguration {
 
     @Bean
     @ConditionalOnMissingBean

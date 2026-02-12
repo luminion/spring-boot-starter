@@ -33,7 +33,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 @AutoConfiguration
 @ConditionalOnClass(Advice.class)
 @ConditionalOnProperty(value = "luminion.repeat-submit.enabled", havingValue = "true", matchIfMissing = true)
-public class RepeatSubmitAutoConfiguration {
+public class RepeatSubmitConfiguration {
     
     /**
      * 配置防重复提交切面

@@ -14,7 +14,7 @@ import org.springframework.context.annotation.Bean;
  */
 @Slf4j
 @AutoConfiguration
-public class ConverterAutoConfiguration {
+public class ConverterConfiguration {
 
     @Bean
     @ConditionalOnMissingBean

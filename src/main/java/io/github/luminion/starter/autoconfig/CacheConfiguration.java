@@ -22,7 +22,6 @@ import org.springframework.data.redis.serializer.RedisSerializer;
 
 import java.time.Duration;
 import java.util.HashMap;
-import java.util.Map;
 
 /**
  * spring缓存自动配置
@@ -36,7 +35,7 @@ import java.util.Map;
 @ConditionalOnClass(CacheManager.class)
 @ConditionalOnBean(CacheAspectSupport.class)
 @ConditionalOnMissingBean(value = CacheManager.class, name = "cacheResolver")
-public class CacheAutoConfiguration {
+public class CacheConfiguration {
 
 
     @Configuration(proxyBeanMethods = false)
