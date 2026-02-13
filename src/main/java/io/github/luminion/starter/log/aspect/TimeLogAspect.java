@@ -7,9 +7,9 @@ import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.util.StopWatch;
 
 import java.lang.reflect.Method;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author luminion
@@ -28,32 +28,31 @@ public class TimeLogAspect {
             Method method = methodSignature.getMethod();
             value = method.getDeclaringClass().getName() + "." + methodSignature.getName() + "()";
         }
-        StopWatch stopWatch = new StopWatch();
-        stopWatch.start();
+        long start = System.nanoTime();
         try {
             return joinPoint.proceed();
         } finally {
-            stopWatch.stop();
-            long timeMillis = stopWatch.getTotalTimeMillis();
-            if (timeMillis > timeLog.threshold()){
-                switch (timeLog.level()){
-                    case TRACE :{
+            // 转换为毫秒，保留更精确的小数或取整
+            long timeMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
+            if (timeMillis > timeLog.threshold()) {
+                switch (timeLog.level()) {
+                    case TRACE: {
                         log.trace("{} => Time Cost: {} ms", value, timeMillis);
                         break;
                     }
-                    case DEBUG :{
+                    case DEBUG: {
                         log.debug("{} => Time Cost: {} ms", value, timeMillis);
                         break;
                     }
-                    case INFO :{
+                    case INFO: {
                         log.info("{} => Time Cost: {} ms", value, timeMillis);
                         break;
                     }
-                    case WARN :{
+                    case WARN: {
                         log.warn("{} => Time Cost: {} ms", value, timeMillis);
                         break;
                     }
-                    case ERROR :{
+                    case ERROR: {
                         log.error("{} => Time Cost: {} ms", value, timeMillis);
                         break;
                     }
