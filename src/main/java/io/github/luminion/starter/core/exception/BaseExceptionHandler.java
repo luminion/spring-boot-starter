@@ -36,6 +36,12 @@ public class BaseExceptionHandler<R> implements Ordered {
     protected final Function<Throwable, R> error;
     protected final Class<? extends RuntimeException> bizExceptionClass;
 
+    public BaseExceptionHandler(Function<String, R> failed, Function<Throwable, R> error) {
+        this.failed = failed;
+        this.error = error;
+        this.bizExceptionClass = null;
+    }
+
     private String getBindingResultMessage(BindingResult bindingResult) {
         return bindingResult.getAllErrors().stream()
                 .map(DefaultMessageSourceResolvable::getDefaultMessage)
