@@ -38,7 +38,6 @@ public class IdempotentConfiguration {
     @ConditionalOnMissingBean(IdempotentHandler.class)
     @ConditionalOnBean(name = "redisTemplate")
     public IdempotentHandler redisIdempotentHandler(RedisTemplate<Object, Object> redisTemplate) {
-        log.debug("IdempotentHandler: RedisIdempotentHandler configured.");
         return new RedisIdempotentHandler(redisTemplate);
     }
 
@@ -47,7 +46,6 @@ public class IdempotentConfiguration {
     @ConditionalOnMissingBean(IdempotentHandler.class)
     @ConditionalOnClass(name = "com.github.benmanes.caffeine.cache.Cache")
     public IdempotentHandler localIdempotentHandler() {
-        log.debug("IdempotentHandler: LocalIdempotentHandler (Caffeine) configured.");
         return new LocalIdempotentHandler();
     }
 }

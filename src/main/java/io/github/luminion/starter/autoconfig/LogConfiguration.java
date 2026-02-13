@@ -1,12 +1,14 @@
 package io.github.luminion.starter.autoconfig;
 
+import io.github.luminion.starter.log.LogWriter;
+import io.github.luminion.starter.log.aspect.LogAspect;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
-import org.springframework.web.filter.CommonsRequestLoggingFilter;
 
 /**
+ * 日志配置
  * @author luminion
  * @since 1.0.0
  */
@@ -14,6 +16,12 @@ import org.springframework.web.filter.CommonsRequestLoggingFilter;
 @ConditionalOnMissingBean
 public class LogConfiguration {
 
+    @Bean
+    @ConditionalOnMissingBean(LogAspect.class)
+    @ConditionalOnBean(LogWriter.class)
+    public LogAspect logAspect(LogWriter logWriter) {
+        return new LogAspect(logWriter);
+    }
 
 
 }

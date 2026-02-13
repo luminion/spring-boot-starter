@@ -19,13 +19,15 @@ import org.springframework.context.annotation.Import;
         CacheConfiguration.class,
 //        ConverterConfiguration.class,
         CoreConfiguration.class,
+        IdempotentConfiguration.class,
         JacksonConfiguration.class,
         LogConfiguration.class,
+        MaskConfiguration.class,
         MybatisPlusConfiguration.class,
         RateLimitConfiguration.class,
         RedisConfiguration.class,
-        RepeatSubmitConfiguration.class,
-        WebMvcConfiguration.class
+        WebMvcConfiguration.class,
+        XssConfiguration.class
 })
 public class LuminionAutoConfiguration {
 }

@@ -1,7 +1,7 @@
 package io.github.luminion.starter.converter;
 
-import io.github.luminion.starter.core.annotation.Mask;
-import io.github.luminion.starter.core.annotation.Unmask;
+import io.github.luminion.starter.mask.annotation.Mask;
+import io.github.luminion.starter.mask.annotation.Unmask;
 import io.github.luminion.starter.xss.XssCleaner;
 import io.github.luminion.starter.xss.XssIgnore;
 import lombok.RequiredArgsConstructor;
