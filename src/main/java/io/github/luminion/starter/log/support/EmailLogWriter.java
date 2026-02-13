@@ -1,7 +1,6 @@
 
 // package io.github.luminion.autoconfigure.aop.support.logging;
 //
-import io.github.luminion.starter.log.LogWriter;
 // import jakarta.mail.MessagingException;
 // import jakarta.mail.internet.MimeMessage;
 // import org.aspectj.lang.reflect.MethodSignature;
@@ -87,7 +86,7 @@ import io.github.luminion.starter.log.LogWriter;
 // helper.setText(body, true);
 // mailSender.send(mimeMessage);
 // } catch (MessagingException e) {
-// // Log the exception that occurred while sending email
+// // MethodLog the exception that occurred while sending email
 // System.err.println("Error sending email notification: " + e.getMessage());
 // }
 // }

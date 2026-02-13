@@ -1,7 +1,7 @@
 package io.github.luminion.starter.log.aspect;
 
-import io.github.luminion.starter.log.annotation.Log;
-import io.github.luminion.starter.log.LogWriter;
+import io.github.luminion.starter.log.annotation.MethodLog;
+import io.github.luminion.starter.log.MethodLogWriter;
 import lombok.RequiredArgsConstructor;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -14,17 +14,17 @@ import org.aspectj.lang.reflect.MethodSignature;
  */
 @Aspect
 @RequiredArgsConstructor
-public class LogAspect {
-    private final LogWriter logWriter;
+public class MethodLogAspect {
+    private final MethodLogWriter methodLogWriter;
 
-    @Around("@annotation(log)")
-    public Object doAround(ProceedingJoinPoint pjp, Log log) throws Throwable {
+    @Around("@annotation(methodLog)")
+    public Object doAround(ProceedingJoinPoint pjp, MethodLog methodLog) throws Throwable {
         MethodSignature signature = (MethodSignature) pjp.getSignature();
         Object[] args = pjp.getArgs();
         Object target = pjp.getTarget();
-        logWriter.before(target, signature, args);
+        methodLogWriter.before(target, signature, args);
         Object result = pjp.proceed(args);
-        logWriter.after(target, signature, args, result);
+        methodLogWriter.after(target, signature, args, result);
         return result;
     }
 

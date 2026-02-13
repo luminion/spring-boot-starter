@@ -63,9 +63,7 @@ public class JacksonConfig {
          */
         @Bean
         @Order(-1)
-        public Jackson2ObjectMapperBuilderCustomizer jackson2ObjectMapperBuilderCustomizer(Prop prop,
-                ApplicationContext applicationContext) {
-            log.debug("Jackson2ObjectMapperBuilderCustomizer Configured");
+        public Jackson2ObjectMapperBuilderCustomizer jackson2ObjectMapperBuilderCustomizer(Prop prop, ApplicationContext applicationContext) {
             return builder -> {
                 String dateTimeFormat = prop.getDateTimeFormat().getDateTime();
                 String dateFormat = prop.getDateTimeFormat().getDate();

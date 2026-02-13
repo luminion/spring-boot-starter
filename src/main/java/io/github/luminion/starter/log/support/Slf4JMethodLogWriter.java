@@ -5,21 +5,21 @@ import org.aspectj.lang.reflect.MethodSignature;
 import org.slf4j.event.Level;
 
 /**
- * A LogWriter implementation that uses SLF4J for logging.
+ * A MethodLogWriter implementation that uses SLF4J for logging.
  *
  * @author luminion
  */
 @Slf4j
-public class Slf4jLogWriter extends AbstractLogWriter {
+public class Slf4JMethodLogWriter extends AbstractMethodLogWriter {
     protected final Level level;
 
     /**
-     * Constructs a new Slf4jLogWriter.
+     * Constructs a new Slf4JMethodLogWriter.
      *
      * @param level The logging level for before and after advice (e.g., Level.INFO,
      *              Level.DEBUG).
      */
-    public Slf4jLogWriter(Level level) {
+    public Slf4JMethodLogWriter(Level level) {
         this.level = level;
     }
 

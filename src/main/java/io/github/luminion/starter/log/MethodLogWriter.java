@@ -5,7 +5,7 @@ import org.aspectj.lang.reflect.MethodSignature;
 /**
  * @author luminion
  */
-public interface LogWriter {
+public interface MethodLogWriter {
 
     void before(Object target, MethodSignature signature, Object[] args);
 
