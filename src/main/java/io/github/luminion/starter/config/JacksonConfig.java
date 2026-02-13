@@ -1,4 +1,4 @@
-package io.github.luminion.starter.autoconfig;
+package io.github.luminion.starter.config;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -48,7 +48,7 @@ import java.util.TimeZone;
 @Slf4j
 @AutoConfiguration
 @ConditionalOnClass(ObjectMapper.class)
-public class JacksonConfiguration {
+public class JacksonConfig {
 
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnClass({ Jackson2ObjectMapperBuilder.class })
@@ -58,7 +58,6 @@ public class JacksonConfiguration {
          * jackson2对象映射器生成器定制器
          *
          * @param prop               配置属性
-         * @param xssCleanerProvider XSS清理器提供者
          * @param applicationContext Spring 上下文
          * @return jackson对象映射器生成器定制器
          */

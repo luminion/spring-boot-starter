@@ -1,4 +1,4 @@
-package io.github.luminion.starter.autoconfig;
+package io.github.luminion.starter.config;
 
 import io.github.luminion.starter.log.LogWriter;
 import io.github.luminion.starter.log.aspect.LogAspect;
@@ -14,7 +14,7 @@ import org.springframework.context.annotation.Bean;
  */
 @AutoConfiguration
 @ConditionalOnMissingBean
-public class LogConfiguration {
+public class LogConfig {
 
     @Bean
     @ConditionalOnMissingBean(LogAspect.class)

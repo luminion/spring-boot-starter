@@ -1,4 +1,4 @@
-package io.github.luminion.starter.autoconfig;
+package io.github.luminion.starter.config;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -20,7 +20,7 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 @AutoConfiguration
 @ConditionalOnClass(RedisOperations.class)
 @ConditionalOnProperty(value = "luminion.redis.enabled", havingValue = "true", matchIfMissing = true)
-public class RedisConfiguration {
+public class RedisConfig {
 
     //
     //@Bean

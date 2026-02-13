@@ -1,4 +1,4 @@
-package io.github.luminion.starter.autoconfig;
+package io.github.luminion.starter.config;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
@@ -24,7 +24,7 @@ import java.util.List;
 @AutoConfiguration
 @ConditionalOnClass({BaseMapper.class, MybatisPlusInterceptor.class})
 @ConditionalOnProperty(value = "luminion.mybatis-plus.enabled", havingValue = "true", matchIfMissing = true)
-public class MybatisPlusConfiguration {
+public class MybatisPlusConfig {
 
     @Bean
     @ConditionalOnMissingBean

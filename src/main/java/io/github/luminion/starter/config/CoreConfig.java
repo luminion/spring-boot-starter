@@ -1,4 +1,4 @@
-package io.github.luminion.starter.autoconfig;
+package io.github.luminion.starter.config;
 
 import io.github.luminion.starter.core.fingerprint.MethodFingerprinter;
 import io.github.luminion.starter.core.fingerprint.SpelMethodFingerprinter;
@@ -13,7 +13,7 @@ import org.springframework.context.annotation.Bean;
  */
 @Slf4j
 @AutoConfiguration
-public class CoreConfiguration {
+public class CoreConfig {
 
     @Bean
     @ConditionalOnMissingBean

@@ -1,4 +1,4 @@
-package io.github.luminion.starter.autoconfig;
+package io.github.luminion.starter.config;
 
 import io.github.luminion.starter.cache.RedisCacheTimeMapProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -35,7 +35,7 @@ import java.util.HashMap;
 @ConditionalOnClass(CacheManager.class)
 @ConditionalOnBean(CacheAspectSupport.class)
 @ConditionalOnMissingBean(value = CacheManager.class, name = "cacheResolver")
-public class CacheConfiguration {
+public class CacheConfig {
 
 
     @Configuration(proxyBeanMethods = false)

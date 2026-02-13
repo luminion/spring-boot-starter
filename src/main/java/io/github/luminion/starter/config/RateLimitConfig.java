@@ -1,4 +1,4 @@
-package io.github.luminion.starter.autoconfig;
+package io.github.luminion.starter.config;
 
 import io.github.luminion.starter.Prop;
 import io.github.luminion.starter.ratelimit.aspect.RateLimitAspect;
@@ -24,7 +24,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 @Slf4j
 @AutoConfiguration
 @ConditionalOnClass(Advice.class)
-public class RateLimitConfiguration {
+public class RateLimitConfig {
 
     @Bean
     @ConditionalOnMissingBean(RateLimitAspect.class)

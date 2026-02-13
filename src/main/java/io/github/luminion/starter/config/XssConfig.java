@@ -1,4 +1,4 @@
-package io.github.luminion.starter.autoconfig;
+package io.github.luminion.starter.config;
 
 import io.github.luminion.starter.Prop;
 import io.github.luminion.starter.xss.XssCleaner;
@@ -16,7 +16,7 @@ import org.springframework.context.annotation.Configuration;
  * @since 1.0.0
  */
 @AutoConfiguration
-public class XssConfiguration {
+public class XssConfig {
 
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnClass(Jsoup.class)

@@ -1,4 +1,4 @@
-package io.github.luminion.starter.autoconfig;
+package io.github.luminion.starter.config;
 
 import io.github.luminion.starter.Prop;
 import io.github.luminion.starter.idempotent.aspect.IdempotentAspect;
@@ -24,7 +24,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 @Slf4j
 @AutoConfiguration
 @ConditionalOnClass(Advice.class)
-public class IdempotentConfiguration {
+public class IdempotentConfig {
 
     @Bean
     @ConditionalOnMissingBean(IdempotentAspect.class)

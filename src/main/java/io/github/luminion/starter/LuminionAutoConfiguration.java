@@ -1,8 +1,7 @@
 package io.github.luminion.starter;
 
-import io.github.luminion.starter.autoconfig.*;
-import io.github.luminion.starter.autoconfig.CacheConfiguration;
-import org.springframework.boot.autoconfigure.aop.AopAutoConfiguration;
+import io.github.luminion.starter.config.*;
+import io.github.luminion.starter.config.CacheConfig;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Import;
 
@@ -16,18 +15,18 @@ import org.springframework.context.annotation.Import;
  */
 @EnableConfigurationProperties(Prop.class)
 @Import({
-        CacheConfiguration.class,
-//        ConverterConfiguration.class,
-        CoreConfiguration.class,
-        IdempotentConfiguration.class,
-        JacksonConfiguration.class,
-        LogConfiguration.class,
-        MaskConfiguration.class,
-        MybatisPlusConfiguration.class,
-        RateLimitConfiguration.class,
-        RedisConfiguration.class,
-        WebMvcConfiguration.class,
-        XssConfiguration.class
+        CacheConfig.class,
+//        ConverterConfig.class,
+        CoreConfig.class,
+//        IdempotentConfig.class,
+        JacksonConfig.class,
+        LogConfig.class,
+        MaskConfig.class,
+        MybatisPlusConfig.class,
+//        RateLimitConfig.class,
+        RedisConfig.class,
+        WebMvcConfig.class,
+        XssConfig.class
 })
 public class LuminionAutoConfiguration {
 }
