@@ -1,5 +1,6 @@
 package io.github.luminion.starter.autoconfig;
 
+import io.github.luminion.starter.Prop;
 import io.github.luminion.starter.idempotent.aspect.IdempotentAspect;
 import io.github.luminion.starter.idempotent.IdempotentHandler;
 import io.github.luminion.starter.core.fingerprint.MethodFingerprinter;
@@ -27,10 +28,9 @@ public class IdempotentConfiguration {
 
     @Bean
     @ConditionalOnMissingBean(IdempotentAspect.class)
-    @ConditionalOnBean({ MethodFingerprinter.class, IdempotentHandler.class })
-    public IdempotentAspect idempotentAspect(MethodFingerprinter methodFingerprinter,
-            IdempotentHandler idempotentHandler) {
-        return new IdempotentAspect(methodFingerprinter, idempotentHandler);
+    @ConditionalOnBean({MethodFingerprinter.class, IdempotentHandler.class})
+    public IdempotentAspect idempotentAspect(Prop prop, MethodFingerprinter methodFingerprinter, IdempotentHandler idempotentHandler) {
+        return new IdempotentAspect(prop.getIdempotentPrefix(), methodFingerprinter, idempotentHandler);
     }
 
     @Bean

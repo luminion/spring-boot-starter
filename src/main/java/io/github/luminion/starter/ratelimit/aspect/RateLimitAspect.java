@@ -23,7 +23,7 @@ import java.lang.reflect.Method;
 @Aspect
 @RequiredArgsConstructor
 public class RateLimitAspect {
-
+    private final String prefix;
     private final MethodFingerprinter methodFingerprinter;
     private final RateLimiter rateLimiter;
 
@@ -33,7 +33,7 @@ public class RateLimitAspect {
         Method method = signature.getMethod();
 
         // 1. 生成基础 Key
-        String key = generateKey(joinPoint, method, rateLimit);
+        String key = prefix + generateKey(joinPoint, method, rateLimit);
 
         // 2. 确定速率和桶容量
         double rate = rateLimit.rate();

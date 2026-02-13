@@ -1,5 +1,6 @@
 package io.github.luminion.starter.autoconfig;
 
+import io.github.luminion.starter.Prop;
 import io.github.luminion.starter.ratelimit.aspect.RateLimitAspect;
 import io.github.luminion.starter.core.fingerprint.MethodFingerprinter;
 import io.github.luminion.starter.ratelimit.RateLimiter;
@@ -27,9 +28,9 @@ public class RateLimitConfiguration {
 
     @Bean
     @ConditionalOnMissingBean(RateLimitAspect.class)
-    @ConditionalOnBean({ MethodFingerprinter.class, RateLimiter.class })
-    public RateLimitAspect rateLimitAspect(MethodFingerprinter methodFingerprinter, RateLimiter rateLimiter) {
-        return new RateLimitAspect(methodFingerprinter, rateLimiter);
+    @ConditionalOnBean({MethodFingerprinter.class, RateLimiter.class})
+    public RateLimitAspect rateLimitAspect(Prop prop, MethodFingerprinter methodFingerprinter, RateLimiter rateLimiter) {
+        return new RateLimitAspect(prop.getRateLimitPrefix(), methodFingerprinter, rateLimiter);
     }
 
     @Bean

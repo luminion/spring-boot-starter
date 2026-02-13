@@ -11,5 +11,4 @@ public interface LogWriter {
 
     void after(Object target, MethodSignature signature, Object[] args, Object result);
 
-    void error(Object target, MethodSignature signature, Object[] args, Throwable throwable);
 }

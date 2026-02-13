@@ -23,14 +23,9 @@ public class LogAspect {
         Object[] args = pjp.getArgs();
         Object target = pjp.getTarget();
         logWriter.before(target, signature, args);
-        try {
-            Object result = pjp.proceed(args);
-            logWriter.after(target, signature, args, result);
-            return result;
-        } catch (Throwable e) {
-            logWriter.error(target, signature, args, e);
-            throw e;
-        }
+        Object result = pjp.proceed(args);
+        logWriter.after(target, signature, args, result);
+        return result;
     }
 
 }

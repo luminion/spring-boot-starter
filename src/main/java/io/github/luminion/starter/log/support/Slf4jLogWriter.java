@@ -1,6 +1,5 @@
 package io.github.luminion.starter.log.support;
 
-import io.github.luminion.starter.log.LogWriter;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.slf4j.event.Level;
@@ -35,13 +34,6 @@ public class Slf4jLogWriter extends AbstractLogWriter {
     public void after(Object target, MethodSignature signature, Object[] args, Object result) {
         String methodName = getMethodName(signature);
         log(level, "<== Exit: {}. Result: [{}]. Duration: {}ms", methodName, result);
-    }
-
-    @Override
-    public void error(Object target, MethodSignature signature, Object[] args, Throwable throwable) {
-        String methodName = getMethodName(signature);
-        String formattedArgs = getFormatArgs(signature.getParameterNames(), args);
-        log.error("<== Exception in {} with args: {}", methodName, formattedArgs, throwable);
     }
 
     protected void log(Level level, String format, Object... arguments) {

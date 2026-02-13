@@ -20,7 +20,12 @@ public class Prop {
     /**
      * redis限流前缀key
      */
-    private String redisLimitPrefix;
+    private String rateLimitPrefix = "rateLimit:";
+
+    /**
+     * 幂等校验前缀key
+     */
+    private String idempotentPrefix = "idempotent:";
     
     /**
      * XSS处理策略
@@ -31,10 +36,6 @@ public class Prop {
      * 日期时间格式
      */
     private DateTimeFormatProperties dateTimeFormat;
-    /**
-     * servlet过滤器配置
-     */
-    private ServletFilterProperties servletFilter;
 
     /**
      * 日期时间格式属性
@@ -60,29 +61,6 @@ public class Prop {
          * 时区ID
          */
         private String timeZone = "GMT+8";
-    }
-
-    /**
-     * servlet筛选器属性
-     *
-     * @author luminion
-     * @since 1.0.0
-     */
-    @Data
-    public class ServletFilterProperties {
-        /**
-         * XSS过滤器过滤的URL(Ant样式匹配)
-         */
-        private Set<String> xssIncludes;
-        /**
-         * XSS过滤器排除的URL (Ant样式匹配)
-         */
-        private Set<String> xssExcludes;
-   
-        /**
-         * 防盗链过滤器过滤的URL (Ant样式匹配)
-         */
-        private Set<String> refererAllowDomains;
     }
 
 }

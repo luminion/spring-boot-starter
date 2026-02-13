@@ -20,7 +20,7 @@ import java.lang.reflect.Method;
 @Aspect
 @RequiredArgsConstructor
 public class IdempotentAspect {
-
+    private final String prefix;
     private final MethodFingerprinter methodFingerprinter;
     private final IdempotentHandler idempotentHandler;
 
@@ -30,7 +30,7 @@ public class IdempotentAspect {
         Method method = signature.getMethod();
 
         // 1. 生成幂等 Key
-        String key = "idempotent:" + methodFingerprinter.resolveMethodFingerprint(
+        String key = prefix + ":" + methodFingerprinter.resolveMethodFingerprint(
                 joinPoint.getTarget(),
                 method,
                 joinPoint.getArgs(),
