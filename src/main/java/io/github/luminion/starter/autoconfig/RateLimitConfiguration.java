@@ -1,7 +1,7 @@
 package io.github.luminion.starter.autoconfig;
 
 import io.github.luminion.starter.Prop;
-import io.github.luminion.starter.core.spi.KeyResolver;
+import io.github.luminion.starter.core.spi.MethodFingerprinter;
 import io.github.luminion.starter.ratelimit.aspect.RateLimitAspect;
 import io.github.luminion.starter.ratelimit.spi.RateLimiter;
 import io.github.luminion.starter.ratelimit.support.CaffeineRateLimiter;
@@ -40,10 +40,10 @@ public class RateLimitConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean(RateLimitAspect.class)
-    @ConditionalOnBean({KeyResolver.class, RateLimiter.class})
-    public RateLimitAspect rateLimitAspect(KeyResolver keyResolver, RateLimiter rateLimiter) {
+    @ConditionalOnBean({MethodFingerprinter.class, RateLimiter.class})
+    public RateLimitAspect rateLimitAspect(MethodFingerprinter methodFingerprinter, RateLimiter rateLimiter) {
         log.debug("RateLimitAspect Configured");
-        return new RateLimitAspect(keyResolver, rateLimiter);
+        return new RateLimitAspect(methodFingerprinter, rateLimiter);
     }
     
     /**

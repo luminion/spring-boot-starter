@@ -17,14 +17,15 @@ import org.springframework.context.annotation.Import;
 @EnableConfigurationProperties(Prop.class)
 @Import({
         CacheConfiguration.class,
-        ConverterConfiguration.class,
+//        ConverterConfiguration.class,
         CoreConfiguration.class,
         JacksonConfiguration.class,
         LogConfiguration.class,
         MybatisPlusConfiguration.class,
         RateLimitConfiguration.class,
         RedisConfiguration.class,
-        RepeatSubmitConfiguration.class
+        RepeatSubmitConfiguration.class,
+        WebMvcConfiguration.class
 })
 public class LuminionAutoConfiguration {
 }

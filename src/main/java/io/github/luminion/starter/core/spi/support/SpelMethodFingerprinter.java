@@ -1,6 +1,6 @@
 package io.github.luminion.starter.core.spi.support;
 
-import io.github.luminion.starter.core.spi.KeyResolver;
+import io.github.luminion.starter.core.spi.MethodFingerprinter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.expression.MethodBasedEvaluationContext;
 import org.springframework.core.DefaultParameterNameDiscoverer;
@@ -19,13 +19,13 @@ import java.util.concurrent.ConcurrentHashMap;
  * 基于 SpEL 的键解析器
  */
 @RequiredArgsConstructor
-public class SpelKeyResolver implements KeyResolver {
+public class SpelMethodFingerprinter implements MethodFingerprinter {
     private static final ExpressionParser PARSER = new SpelExpressionParser();
     private static final ParameterNameDiscoverer PND = new DefaultParameterNameDiscoverer();
     private static final Map<String, Expression> EXPRESSION_CACHE = new ConcurrentHashMap<>(64);
 
     @Override
-    public String resolve(Object target, Method method, Object[] args, String expression) {
+    public String resolveMethodFingerprint(Object target, Method method, Object[] args, String expression) {
         // 2. 优化 Key 结构：使用 "类名#方法名"，比 toGenericString 更短更清晰
         StringBuilder keyBuilder = new StringBuilder();
         keyBuilder.append(method.getDeclaringClass().getName())

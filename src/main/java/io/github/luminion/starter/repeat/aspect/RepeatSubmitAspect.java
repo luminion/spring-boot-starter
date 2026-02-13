@@ -32,7 +32,7 @@ public class RepeatSubmitAspect {
         
         // 使用KeyResolver解析唯一签名
         String signature = beanFactory.getBean(repeatSubmit.keyResolver())
-                .resolve(joinPoint.getTarget(), method, joinPoint.getArgs(), springExpression);
+                .resolveMethodFingerprint(joinPoint.getTarget(), method, joinPoint.getArgs(), springExpression);
         
         // 使用RepeatSubmitHandler检查是否为重复提交
         boolean isRepeat = beanFactory.getBean(repeatSubmit.handler())

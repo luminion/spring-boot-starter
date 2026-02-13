@@ -1,6 +1,6 @@
 package io.github.luminion.starter.autoconfig;
 
-import io.github.luminion.starter.core.spi.KeyResolver;
+import io.github.luminion.starter.core.spi.MethodFingerprinter;
 import io.github.luminion.starter.repeat.aspect.RepeatSubmitAspect;
 import io.github.luminion.starter.repeat.spi.RepeatSubmitHandler;
 import io.github.luminion.starter.repeat.support.GuavaRepeatSubmitHandler;
@@ -43,7 +43,7 @@ public class RepeatSubmitConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean(RepeatSubmitAspect.class)
-    @ConditionalOnBean({KeyResolver.class, RepeatSubmitHandler.class})
+    @ConditionalOnBean({MethodFingerprinter.class, RepeatSubmitHandler.class})
     public RepeatSubmitAspect repeatSubmitAspect(BeanFactory beanFactory) {
         log.debug("RepeatSubmitAspect Configured");
         return new RepeatSubmitAspect(beanFactory);

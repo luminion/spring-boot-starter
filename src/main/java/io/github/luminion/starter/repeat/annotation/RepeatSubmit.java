@@ -1,6 +1,6 @@
 package io.github.luminion.starter.repeat.annotation;
 
-import io.github.luminion.starter.core.spi.KeyResolver;
+import io.github.luminion.starter.core.spi.MethodFingerprinter;
 import io.github.luminion.starter.repeat.spi.RepeatSubmitHandler;
 
 import java.lang.annotation.*;
@@ -38,7 +38,7 @@ public @interface RepeatSubmit {
      * 签名处理器
      * 注:需要将指定的处理器类注入到Spring容器中
      */
-    Class<? extends KeyResolver> keyResolver() default KeyResolver.class;
+    Class<? extends MethodFingerprinter> keyResolver() default MethodFingerprinter.class;
 
     /**
      * 重复提交处理器

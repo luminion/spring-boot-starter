@@ -1,8 +1,8 @@
 package io.github.luminion.starter.autoconfig;
 
 import io.github.luminion.starter.Prop;
-import io.github.luminion.starter.core.spi.KeyResolver;
-import io.github.luminion.starter.core.spi.support.SpelKeyResolver;
+import io.github.luminion.starter.core.spi.MethodFingerprinter;
+import io.github.luminion.starter.core.spi.support.SpelMethodFingerprinter;
 import io.github.luminion.starter.core.mask.*;
 import io.github.luminion.starter.xss.XssCleaner;
 import io.github.luminion.starter.xss.support.JsoupXssCleaner;
@@ -24,50 +24,43 @@ public class CoreConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public KeyResolver spelMethodFingerprinter() {
-        return new SpelKeyResolver();
+    public MethodFingerprinter spelMethodFingerprinter() {
+        return new SpelMethodFingerprinter();
     }
 
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnClass(Jsoup.class)
-    public XssCleaner xssCleaner(Prop prop) {
-        return new JsoupXssCleaner(prop.getXssStrategy());
-    }
-
-    @Bean
-    @ConditionalOnMissingBean
-    public BankCardMasker bankCardNoEncoder() {
+    public BankCardMasker bankCardMasker() {
         return new BankCardMasker();
     }
 
     @Bean
     @ConditionalOnMissingBean
-    public EmailMasker emailEncoder() {
+    public EmailMasker emailMasker() {
         return new EmailMasker();
     }
 
     @Bean
     @ConditionalOnMissingBean
-    public IdCardMasker idCardEncoder() {
+    public IdCardMasker idCardMasker() {
         return new IdCardMasker();
     }
 
     @Bean
     @ConditionalOnMissingBean
-    public NameMasker nameEncoder() {
+    public NameMasker nameMasker() {
         return new NameMasker();
     }
 
     @Bean
     @ConditionalOnMissingBean
-    public PhoneMasker phoneEncoder() {
+    public PhoneMasker phoneMasker() {
         return new PhoneMasker();
     }
 
     @Bean
     @ConditionalOnMissingBean
-    public SimpleMasker simpleEncoder() {
+    public SimpleMasker simpleMasker() {
         return new SimpleMasker();
     }
     

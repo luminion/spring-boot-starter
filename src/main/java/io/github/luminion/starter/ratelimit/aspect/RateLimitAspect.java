@@ -1,6 +1,6 @@
 package io.github.luminion.starter.ratelimit.aspect;
 
-import io.github.luminion.starter.core.spi.KeyResolver;
+import io.github.luminion.starter.core.spi.MethodFingerprinter;
 import io.github.luminion.starter.ratelimit.annotation.RateLimit;
 import io.github.luminion.starter.ratelimit.exception.RateLimitException;
 import io.github.luminion.starter.ratelimit.spi.RateLimiter;
@@ -18,7 +18,7 @@ import java.lang.reflect.Method;
 @Aspect
 @RequiredArgsConstructor
 public class RateLimitAspect {
-    private final KeyResolver keyResolver;
+    private final MethodFingerprinter methodFingerprinter;
     private final RateLimiter rateLimiter;
 
     /**
@@ -32,7 +32,7 @@ public class RateLimitAspect {
         MethodSignature methodSignature = (MethodSignature) joinPoint.getSignature();
         Method method = methodSignature.getMethod();
         String springExpression = rateLimit.value();
-        String signature = keyResolver.resolve(joinPoint.getTarget(), method, joinPoint.getArgs(), springExpression);
+        String signature = methodFingerprinter.resolveMethodFingerprint(joinPoint.getTarget(), method, joinPoint.getArgs(), springExpression);
         boolean b = rateLimiter.tryAccess(signature, rateLimit);
         if (!b) {
             throw new RateLimitException(rateLimit.message());

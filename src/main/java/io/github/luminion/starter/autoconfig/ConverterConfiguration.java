@@ -3,11 +3,14 @@ package io.github.luminion.starter.autoconfig;
 import io.github.luminion.starter.Prop;
 import io.github.luminion.starter.converter.XssCleanerConverter;
 import io.github.luminion.starter.converter.support.*;
+import io.github.luminion.starter.web.formatter.MaskAnnotationFormatterFactory;
+import io.github.luminion.starter.web.formatter.UnmaskAnnotationFormatterFactory;
 import io.github.luminion.starter.xss.XssCleaner;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 
 /**
@@ -16,13 +19,15 @@ import org.springframework.context.annotation.Bean;
  * @author luminion
  */
 @Slf4j
-@AutoConfiguration
+//@AutoConfiguration
+@Deprecated
 public class ConverterConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
     public StringToDateConverter stringToDateConverter(Prop properties) {
-        return new StringToDateConverter(properties.getDateTimeFormat().getDateTime(), properties.getDateTimeFormat().getTimeZone());
+        return new StringToDateConverter(properties.getDateTimeFormat().getDateTime(),
+                properties.getDateTimeFormat().getTimeZone());
     }
 
     @Bean
@@ -48,7 +53,7 @@ public class ConverterConfiguration {
     public StringToSqlDateConverter stringToSqlDateConverter(Prop properties) {
         return new StringToSqlDateConverter(properties.getDateTimeFormat().getDate());
     }
-    
+
     @Bean
     @ConditionalOnMissingBean
     public StringToSqlTimeConverter stringToSqlTimeConverter(Prop properties) {
@@ -60,12 +65,24 @@ public class ConverterConfiguration {
     public StringToSqlTimestampConverter stringToSqlTimestampConverter(Prop properties) {
         return new StringToSqlTimestampConverter(properties.getDateTimeFormat().getDateTime());
     }
-    
+
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnBean(XssCleaner.class)
     public XssCleanerConverter stringToHtmlConverter(XssCleaner xssCleaner) {
         return new XssCleanerConverter(xssCleaner);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public MaskAnnotationFormatterFactory maskAnnotationFormatterFactory(ApplicationContext applicationContext) {
+        return new MaskAnnotationFormatterFactory(applicationContext);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public UnmaskAnnotationFormatterFactory unmaskAnnotationFormatterFactory(ApplicationContext applicationContext) {
+        return new UnmaskAnnotationFormatterFactory(applicationContext);
     }
 
 }
