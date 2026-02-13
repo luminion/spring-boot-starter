@@ -1,6 +1,6 @@
 package io.github.luminion.starter.core.xss.support;
 
-import io.github.luminion.starter.core.xss.XssCleaner;
+import io.github.luminion.starter.core.xss.XssHandler;
 import io.github.luminion.starter.core.xss.XssStrategy;
 import lombok.RequiredArgsConstructor;
 import org.jsoup.Jsoup;
@@ -16,12 +16,12 @@ import org.springframework.web.util.HtmlUtils;
  * @since 1.0.0
  */
 @RequiredArgsConstructor
-public class JsoupXssCleaner implements XssCleaner {
+public class JsoupXssHandler implements XssHandler {
 
     private final XssStrategy strategy;
 
     @Override
-    public String clean(String html) {
+    public String handle(String html) {
         if (html == null || strategy == XssStrategy.NONE) {
             return html;
         }
@@ -34,7 +34,7 @@ public class JsoupXssCleaner implements XssCleaner {
             case SIMPLE_TEXT -> Safelist.simpleText();
             case BASIC -> Safelist.basic();
             case BASIC_WITH_IMAGES -> Safelist.basicWithImages();
-            case RELAXED -> Safelist.relaxed();
+//            case RELAXED -> Safelist.relaxed();
             default -> Safelist.relaxed();
         };
 
@@ -51,6 +51,6 @@ public class JsoupXssCleaner implements XssCleaner {
         if (html == null || strategy == XssStrategy.NONE) {
             return false;
         }
-        return !clean(html).equals(html);
+        return !handle(html).equals(html);
     }
 }

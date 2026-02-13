@@ -14,14 +14,16 @@ import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalTimeSerializer;
 import io.github.luminion.starter.Prop;
-import io.github.luminion.starter.core.xss.XssCleaner;
-import io.github.luminion.starter.jackson.deserializer.JacksonXssDeserializer;
+import io.github.luminion.starter.core.xss.XssHandler;
+import io.github.luminion.starter.jackson.deserializer.JacksonStringDeserializer;
+import io.github.luminion.starter.jackson.serializer.JacksonStringSerializer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.jackson.Jackson2ObjectMapperBuilderCustomizer;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -59,11 +61,13 @@ public class JacksonConfiguration {
          *
          * @param prop               配置属性
          * @param xssCleanerProvider XSS清理器提供者
+         * @param applicationContext Spring 上下文
          * @return jackson对象映射器生成器定制器
          */
         @Bean
         @Order(-1)
-        public Jackson2ObjectMapperBuilderCustomizer jackson2ObjectMapperBuilderCustomizer(Prop prop, ObjectProvider<XssCleaner> xssCleanerProvider) {
+        public Jackson2ObjectMapperBuilderCustomizer jackson2ObjectMapperBuilderCustomizer(Prop prop, ObjectProvider<XssHandler> xssCleanerProvider,
+                ApplicationContext applicationContext) {
             log.debug("Jackson2ObjectMapperBuilderCustomizer Configured");
             return builder -> {
                 String dateTimeFormat = prop.getDateTimeFormat().getDateTime();
@@ -106,12 +110,11 @@ public class JacksonConfiguration {
                         .serializers(new LocalDateSerializer(dateFormatter))
                         .serializers(new LocalTimeSerializer(timeFormatter));
 
-                // XSS 过滤处理（当容器中存在 XssCleaner Bean 时自动启用）
-                XssCleaner xssCleaner = xssCleanerProvider.getIfAvailable();
-                if (xssCleaner != null) {
-                    log.debug("Jackson XSS filter enabled using {}", xssCleaner.getClass().getSimpleName());
-                    builder.deserializerByType(String.class, new JacksonXssDeserializer(xssCleaner::clean));
-                }
+                XssHandler xssHandler = xssCleanerProvider.getIfAvailable();
+                builder.deserializerByType(String.class, new JacksonStringDeserializer(xssHandler, applicationContext));
+
+                // 统一字符串处理（StringEncode）
+                builder.serializerByType(String.class,new JacksonStringSerializer(applicationContext));
             };
         }
     }

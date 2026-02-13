@@ -5,6 +5,7 @@ import io.github.luminion.starter.repeat.exception.RepeatSubmitException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
+import org.springframework.core.Ordered;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;
@@ -30,17 +31,10 @@ import java.util.stream.Collectors;
 @Slf4j
 @RestControllerAdvice
 @RequiredArgsConstructor
-public class BaseExceptionHandler<R> {
+public class BaseExceptionHandler<R> implements Ordered {
     protected final Function<String, R> failed;
     protected final Function<Throwable, R> error;
     protected final Class<? extends RuntimeException> bizExceptionClass;
-
-
-    public BaseExceptionHandler(Function<String, R> failed, Function<Throwable, R> error) {
-        this.failed = failed;
-        this.error = error;
-        bizExceptionClass = null;
-    }
 
     private String getBindingResultMessage(BindingResult bindingResult) {
         return bindingResult.getAllErrors().stream()
@@ -176,9 +170,15 @@ public class BaseExceptionHandler<R> {
     @ExceptionHandler(Exception.class)
     public R handleGlobalException(Exception e) {
         if (bizExceptionClass != null && bizExceptionClass.isAssignableFrom(e.getClass())) {
+            log.info("自定义业务异常:{}", e.getMessage());
             return failed.apply(e.getMessage());
         }
         log.error("[系统内部异常] 未捕获的系统级异常: ", e);
         return error.apply(e);
+    }
+
+    @Override
+    public int getOrder() {
+        return Ordered.LOWEST_PRECEDENCE;
     }
 }

@@ -3,8 +3,8 @@ package io.github.luminion.starter.autoconfig;
 import io.github.luminion.starter.Prop;
 import io.github.luminion.starter.core.aop.KeyResolver;
 import io.github.luminion.starter.core.aop.SpelKeyResolver;
-import io.github.luminion.starter.core.xss.XssCleaner;
-import io.github.luminion.starter.core.xss.support.JsoupXssCleaner;
+import io.github.luminion.starter.core.xss.XssHandler;
+import io.github.luminion.starter.core.xss.support.JsoupXssHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -30,8 +30,8 @@ public class CoreConfiguration {
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnClass(Jsoup.class)
-    public XssCleaner xssCleaner(Prop prop) {
-        log.debug("JsoupXssCleaner Configured with strategy: {}", prop.getXssStrategy());
-        return new JsoupXssCleaner(prop.getXssStrategy());
+    public XssHandler xssCleaner(Prop prop) {
+        log.debug("JsoupXssHandler Configured with strategy: {}", prop.getXssStrategy());
+        return new JsoupXssHandler(prop.getXssStrategy());
     }
 }

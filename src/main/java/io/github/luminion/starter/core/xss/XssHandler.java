@@ -4,14 +4,14 @@ package io.github.luminion.starter.core.xss;
  * @author luminion
  * @since 1.0.0
  */
-public interface XssCleaner {
+public interface XssHandler {
 
     /**
      * 清理 html
      * @param html html
      * @return 清理后的数据
      */
-    String clean(String html);
+    String handle(String html);
 
 
     /**
