@@ -30,16 +30,16 @@ public class Slf4jLogWriter extends AbstractLogWriter {
     }
 
     @Override
-    public void after(Object target, MethodSignature signature, Object[] args, Object result, long duration) {
+    public void after(Object target, MethodSignature signature, Object[] args, Object result) {
         String methodName = getMethodName(signature);
-        log(level, "<== Exit: {}. Result: [{}]. Duration: {}ms", methodName, result, duration);
+        log(level, "<== Exit: {}. Result: [{}]. Duration: {}ms", methodName, result);
     }
 
     @Override
-    public void error(Object target, MethodSignature signature, Object[] args, Throwable throwable, long duration) {
+    public void error(Object target, MethodSignature signature, Object[] args, Throwable throwable) {
         String methodName = getMethodName(signature);
         String formattedArgs = getFormatArgs(signature.getParameterNames(), args);
-        log.error("<== Exception in {} with args: {}. Duration: {}ms", methodName, formattedArgs, duration, throwable);
+        log.error("<== Exception in {} with args: {}", methodName, formattedArgs, throwable);
     }
 
     protected void log(Level level, String format, Object... arguments) {

@@ -1,7 +1,5 @@
 package io.github.luminion.starter.core.exception;
 
-import io.github.luminion.starter.ratelimit.exception.RateLimitException;
-import io.github.luminion.starter.repeat.exception.RepeatSubmitException;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import lombok.RequiredArgsConstructor;
@@ -174,11 +172,11 @@ public class BaseExceptionHandler<R> implements Ordered {
     }
 
     /**
-     * 业务异常：防重提交
+     * 业务异常：幂等性
      */
-    @ExceptionHandler(RepeatSubmitException.class)
-    public R handleRepeatSubmitException(RepeatSubmitException e) {
-        log.warn("[防重提交] 触发重复提交拦截: {}", e.getMessage());
+    @ExceptionHandler(IdempotentException.class)
+    public R handleIdempotentException(IdempotentException e) {
+        log.warn("[幂等异常] 触发重复请求拦截: {}", e.getMessage());
         return failed.apply(e.getMessage());
     }
 

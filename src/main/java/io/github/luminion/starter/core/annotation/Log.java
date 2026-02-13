@@ -1,4 +1,4 @@
-package io.github.luminion.starter.log.annotation;
+package io.github.luminion.starter.core.annotation;
 
 import java.lang.annotation.*;
 
