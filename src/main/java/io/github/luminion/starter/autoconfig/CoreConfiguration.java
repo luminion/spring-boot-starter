@@ -3,6 +3,7 @@ package io.github.luminion.starter.autoconfig;
 import io.github.luminion.starter.Prop;
 import io.github.luminion.starter.core.aop.KeyResolver;
 import io.github.luminion.starter.core.aop.SpelKeyResolver;
+import io.github.luminion.starter.core.mask.*;
 import io.github.luminion.starter.core.xss.XssHandler;
 import io.github.luminion.starter.core.xss.support.JsoupXssHandler;
 import lombok.extern.slf4j.Slf4j;
@@ -34,4 +35,41 @@ public class CoreConfiguration {
         log.debug("JsoupXssHandler Configured with strategy: {}", prop.getXssStrategy());
         return new JsoupXssHandler(prop.getXssStrategy());
     }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public BankCardNoEncoder bankCardNoEncoder() {
+        return new BankCardNoEncoder();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public EmailEncoder emailEncoder() {
+        return new EmailEncoder();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public IdCardEncoder idCardEncoder() {
+        return new IdCardEncoder();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public NameEncoder nameEncoder() {
+        return new NameEncoder();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public PhoneEncoder phoneEncoder() {
+        return new PhoneEncoder();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public SimpleEncoder simpleEncoder() {
+        return new SimpleEncoder();
+    }
+
 }
