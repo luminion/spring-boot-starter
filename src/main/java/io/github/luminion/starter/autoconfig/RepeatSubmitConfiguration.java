@@ -1,11 +1,11 @@
 package io.github.luminion.starter.autoconfig;
 
-import io.github.luminion.starter.core.spi.KeyResolver;
-import io.github.luminion.starter.support.repeat.aspect.RepeatSubmitAspect;
-import io.github.luminion.starter.support.repeat.spi.RepeatSubmitHandler;
-import io.github.luminion.starter.support.repeat.support.GuavaRepeatSubmitHandler;
-import io.github.luminion.starter.support.repeat.support.MemoryRepeatSubmitHandler;
-import io.github.luminion.starter.support.repeat.support.RedisRepeatSubmitHandler;
+import io.github.luminion.starter.core.aop.KeyResolver;
+import io.github.luminion.starter.repeat.aspect.RepeatSubmitAspect;
+import io.github.luminion.starter.repeat.spi.RepeatSubmitHandler;
+import io.github.luminion.starter.repeat.support.GuavaRepeatSubmitHandler;
+import io.github.luminion.starter.repeat.support.MemoryRepeatSubmitHandler;
+import io.github.luminion.starter.repeat.support.RedisRepeatSubmitHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.weaver.Advice;
 import org.springframework.beans.factory.BeanFactory;
@@ -13,7 +13,6 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.annotation.Order;
 import org.springframework.data.redis.core.RedisTemplate;

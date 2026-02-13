@@ -1,9 +1,9 @@
 package io.github.luminion.starter.autoconfig;
 
 import io.github.luminion.starter.Prop;
-import io.github.luminion.starter.support.jakarta.filter.RefererFilter;
-import io.github.luminion.starter.support.jakarta.filter.RepeatableFilter;
-import io.github.luminion.starter.support.jakarta.filter.XssFilter;
+import io.github.luminion.starter.web.filter.RefererFilter;
+import io.github.luminion.starter.web.filter.RepeatableFilter;
+import io.github.luminion.starter.web.filter.XssFilter;
 import jakarta.servlet.DispatcherType;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
@@ -59,7 +59,7 @@ public class ServletConfigurationBack {
             FilterRegistrationBean<XssFilter> registration = new FilterRegistrationBean<>();
             registration.setDispatcherTypes(DispatcherType.REQUEST);
             Function<String, String> sanitizer;
-            switch (prop.getXssCleanLevel()) {
+            switch (prop.getXssStrategy()) {
                 case NONE:
                     sanitizer = s -> Jsoup.clean(s, Safelist.none());
                     break;
@@ -79,7 +79,7 @@ public class ServletConfigurationBack {
                     sanitizer = s -> Jsoup.clean(s, Safelist.relaxed());
                     log.warn("Unsupported value '{}' for property 'luminion.servlet.filter.xss-sanitizer', " +
                                     "using 'RELAXED' instead. Supported values: [NONE, SIMPLE_TEXT, BASIC, BASIC_WITH_IMAGES, RELAXED]",
-                            prop.getXssCleanLevel());
+                            prop.getXssStrategy());
 
             }
             XssFilter xssFilter = new XssFilter(prop.getServletFilter().getXssIncludes(),

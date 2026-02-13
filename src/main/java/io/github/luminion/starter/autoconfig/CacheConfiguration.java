@@ -1,6 +1,6 @@
 package io.github.luminion.starter.autoconfig;
 
-import io.github.luminion.starter.support.cache.RedisCacheTimeMapProvider;
+import io.github.luminion.starter.cache.RedisCacheTimeMapProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
