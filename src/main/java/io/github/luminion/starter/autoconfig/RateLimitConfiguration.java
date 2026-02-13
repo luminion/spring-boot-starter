@@ -42,7 +42,6 @@ public class RateLimitConfiguration {
     @ConditionalOnMissingBean(RateLimitAspect.class)
     @ConditionalOnBean({MethodFingerprinter.class, RateLimiter.class})
     public RateLimitAspect rateLimitAspect(MethodFingerprinter methodFingerprinter, RateLimiter rateLimiter) {
-        log.debug("RateLimitAspect Configured");
         return new RateLimitAspect(methodFingerprinter, rateLimiter);
     }
     
@@ -59,7 +58,6 @@ public class RateLimitConfiguration {
     @ConditionalOnMissingBean(RateLimiter.class)
     @ConditionalOnBean(name = "redisTemplate")
     public RateLimiter redisRateLimiter(RedisTemplate<Object, Object> redisTemplate, Prop prop) {
-        log.debug("RedisRateLimiter Configured");
         return new RedisRateLimiter(prop.getRedisLimitPrefix(), redisTemplate);
     }
 
@@ -76,7 +74,6 @@ public class RateLimitConfiguration {
     @ConditionalOnMissingBean(RateLimiter.class)
     @ConditionalOnClass(name = "com.github.benmanes.caffeine.cache.Cache")
     public RateLimiter caffeineRateLimiter() {
-        log.debug("CaffeineRateLimiter Configured");
         return new CaffeineRateLimiter();
     }
 
@@ -92,7 +89,6 @@ public class RateLimitConfiguration {
     @ConditionalOnMissingBean(RateLimiter.class)
     @ConditionalOnClass(name = "com.google.common.util.concurrent.RateLimiter")
     public RateLimiter guavaRateLimiter() {
-        log.debug("GuavaRateLimiter Configured");
         return new GuavaRateLimiter();
     }
 

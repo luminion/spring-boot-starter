@@ -31,7 +31,6 @@ public class MybatisPlusConfiguration {
     public MybatisPlusInterceptor mybatisPlusInterceptor(List<InnerInterceptor> interceptors) {
         MybatisPlusInterceptor mybatisPlusInterceptor = new MybatisPlusInterceptor();
         mybatisPlusInterceptor.setInterceptors(interceptors);
-        log.debug("MybatisPlusInterceptor Configured with {} InnerInterceptors.", interceptors != null ? interceptors.size() : 0);
         return mybatisPlusInterceptor;
     }
 
@@ -44,7 +43,6 @@ public class MybatisPlusConfiguration {
         public InnerInterceptor paginationInnerInterceptor() {
             Class<?> clazz = Class.forName("com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor");
             InnerInterceptor interceptor = (InnerInterceptor) clazz.getConstructor().newInstance();
-            log.debug("PaginationInnerInterceptor created");
             return interceptor;
         }
     }
@@ -58,7 +56,6 @@ public class MybatisPlusConfiguration {
         public InnerInterceptor optimisticLockerInnerInterceptor() {
             Class<?> clazz = Class.forName("com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor");
             InnerInterceptor interceptor = (InnerInterceptor) clazz.getConstructor().newInstance();
-            log.debug("OptimisticLockerInnerInterceptor created");
             return interceptor;
         }
     }
@@ -72,7 +69,6 @@ public class MybatisPlusConfiguration {
         public InnerInterceptor blockAttackInnerInterceptor() {
             Class<?> clazz = Class.forName("com.baomidou.mybatisplus.extension.plugins.inner.BlockAttackInnerInterceptor");
             InnerInterceptor interceptor = (InnerInterceptor) clazz.getConstructor().newInstance();
-            log.debug("BlockAttackInnerInterceptor created");
             return interceptor;
         }
     }

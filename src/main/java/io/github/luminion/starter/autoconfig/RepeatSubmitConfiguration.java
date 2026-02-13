@@ -45,7 +45,6 @@ public class RepeatSubmitConfiguration {
     @ConditionalOnMissingBean(RepeatSubmitAspect.class)
     @ConditionalOnBean({MethodFingerprinter.class, RepeatSubmitHandler.class})
     public RepeatSubmitAspect repeatSubmitAspect(BeanFactory beanFactory) {
-        log.debug("RepeatSubmitAspect Configured");
         return new RepeatSubmitAspect(beanFactory);
     }
     
@@ -63,7 +62,6 @@ public class RepeatSubmitConfiguration {
     @ConditionalOnBean(name = "redisTemplate")
     @SuppressWarnings("unchecked")
     public RepeatSubmitHandler redisRepeatSubmitHandler(org.springframework.data.redis.core.RedisTemplate<?, ?> redisTemplate) {
-        log.debug("RedisRepeatSubmitHandler Configured");
         return new RedisRepeatSubmitHandler((RedisTemplate<Object, Object>) redisTemplate);
     }
 
@@ -80,7 +78,6 @@ public class RepeatSubmitConfiguration {
     @ConditionalOnMissingBean(RepeatSubmitHandler.class)
     @ConditionalOnClass(name = "com.github.benmanes.caffeine.cache.Cache")
     public RepeatSubmitHandler memoryRepeatSubmitHandler() {
-        log.debug("MemoryRepeatSubmitHandler Configured");
         return new MemoryRepeatSubmitHandler();
     }
 
@@ -96,7 +93,6 @@ public class RepeatSubmitConfiguration {
     @ConditionalOnMissingBean(RepeatSubmitHandler.class)
     @ConditionalOnClass(name = "com.google.common.cache.Cache")
     public RepeatSubmitHandler guavaRepeatSubmitHandler() {
-        log.debug("GuavaRepeatSubmitHandler Configured");
         return new GuavaRepeatSubmitHandler();
     }
     
