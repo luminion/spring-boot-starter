@@ -14,11 +14,9 @@ import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalTimeSerializer;
 import io.github.luminion.starter.Prop;
-import io.github.luminion.starter.xss.XssCleaner;
 import io.github.luminion.starter.jackson.deserializer.JacksonStringDeserializer;
 import io.github.luminion.starter.jackson.serializer.JacksonStringSerializer;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -66,7 +64,7 @@ public class JacksonConfiguration {
          */
         @Bean
         @Order(-1)
-        public Jackson2ObjectMapperBuilderCustomizer jackson2ObjectMapperBuilderCustomizer(Prop prop, ObjectProvider<XssCleaner> xssCleanerProvider,
+        public Jackson2ObjectMapperBuilderCustomizer jackson2ObjectMapperBuilderCustomizer(Prop prop,
                 ApplicationContext applicationContext) {
             log.debug("Jackson2ObjectMapperBuilderCustomizer Configured");
             return builder -> {
@@ -110,11 +108,10 @@ public class JacksonConfiguration {
                         .serializers(new LocalDateSerializer(dateFormatter))
                         .serializers(new LocalTimeSerializer(timeFormatter));
 
-                XssCleaner xssCleaner = xssCleanerProvider.getIfAvailable();
-                builder.deserializerByType(String.class, new JacksonStringDeserializer(xssCleaner, applicationContext));
+                builder.deserializerByType(String.class, new JacksonStringDeserializer(applicationContext));
 
                 // 统一字符串处理（Mask）
-                builder.serializerByType(String.class,new JacksonStringSerializer(applicationContext));
+                builder.serializerByType(String.class, new JacksonStringSerializer(applicationContext));
             };
         }
     }

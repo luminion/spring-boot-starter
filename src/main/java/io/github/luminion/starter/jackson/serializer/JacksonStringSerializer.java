@@ -15,24 +15,17 @@ import java.io.IOException;
 import java.util.function.Function;
 
 /**
- * 统一字符串序列化处理器
- * 仅处理 String 字段。用于处理 @Mask 注解（如脱敏）
+ * 统一字符串序列化处理器（工厂分发器）
  *
  * @author luminion
  */
 @Slf4j
 public class JacksonStringSerializer extends StdSerializer<String> implements ContextualSerializer {
 
-    private final Function<String, String> encodeFunc;
     private final ApplicationContext applicationContext;
 
     public JacksonStringSerializer(ApplicationContext applicationContext) {
-        this(null, applicationContext);
-    }
-
-    private JacksonStringSerializer(Function<String, String> encodeFunc, ApplicationContext applicationContext) {
         super(String.class);
-        this.encodeFunc = encodeFunc;
         this.applicationContext = applicationContext;
     }
 
@@ -42,44 +35,52 @@ public class JacksonStringSerializer extends StdSerializer<String> implements Co
             gen.writeNull();
             return;
         }
+        gen.writeString(value);
+    }
 
-        if (encodeFunc != null) {
-            String result = encodeFunc.apply(value);
+    @Override
+    public JsonSerializer<?> createContextual(SerializerProvider prov, BeanProperty property) throws JsonMappingException {
+        if (property == null) {
+            return this;
+        }
+        Mask maskAnn = property.getAnnotation(Mask.class);
+        if (maskAnn != null) {
+            Class<? extends Function<String, String>> funcClass = maskAnn.value();
+            try {
+                Function<String, String> masker = applicationContext.getBean(funcClass);
+                return new JsonStringFunctionSerializer(masker);
+            } catch (Exception e) {
+                String errorMsg = String.format("未发现 @Mask 指定的函数类 [%s] 的 Bean 实例。", funcClass.getName());
+                log.error(errorMsg);
+                throw new JsonMappingException(prov.getGenerator(), errorMsg, e);
+            }
+        }
+        return this;
+    }
+
+    /**
+     * 内部执行器：负责具体的函数式序列化
+     */
+    private static class JsonStringFunctionSerializer extends StdSerializer<String> {
+        private final Function<String, String> function;
+
+        public JsonStringFunctionSerializer(Function<String, String> function) {
+            super(String.class);
+            this.function = function;
+        }
+
+        @Override
+        public void serialize(String value, JsonGenerator gen, SerializerProvider provider) throws IOException {
+            if (value == null) {
+                gen.writeNull();
+                return;
+            }
+            String result = (function != null) ? function.apply(value) : value;
             if (result == null) {
                 gen.writeNull();
             } else {
                 gen.writeString(result);
             }
-        } else {
-            // 默认行为：直接写出原字符串
-            gen.writeString(value);
         }
-    }
-
-    @Override
-    public JsonSerializer<?> createContextual(SerializerProvider prov, BeanProperty property)
-            throws JsonMappingException {
-        if (property == null) {
-            return this;
-        }
-
-        Mask encodeAnn = property.getAnnotation(Mask.class);
-        if (encodeAnn != null) {
-            Class<? extends Function<String, String>> funcClass = encodeAnn.value();
-            Function<String, String> currentEncodeFunc = null;
-            try {
-                // 强制从 Spring 容器获取
-                currentEncodeFunc = applicationContext.getBean(funcClass);
-            } catch (Exception e) {
-                String errorMsg = String.format("未发现 @Mask 指定的函数类 [%s] 的 Bean 实例。", funcClass.getName());
-                log.error(errorMsg);
-                throw new RuntimeException(errorMsg, e);
-            }
-            if (currentEncodeFunc != null) {
-                return new JacksonStringSerializer(currentEncodeFunc, applicationContext);
-            }
-        }
-
-        return this;
     }
 }

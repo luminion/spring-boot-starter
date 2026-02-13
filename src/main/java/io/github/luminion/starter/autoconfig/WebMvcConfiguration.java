@@ -25,7 +25,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @AutoConfiguration
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public class WebMvcConfiguration implements WebMvcConfigurer {
-    
+
     @Bean
     @ConditionalOnMissingBean
     public CommonsRequestLoggingFilter requestLoggingFilter() {
@@ -36,13 +36,12 @@ public class WebMvcConfiguration implements WebMvcConfigurer {
         loggingFilter.setMaxPayloadLength(2000);
         return loggingFilter;
     }
-    
-    
+
+
     @Bean
     @ConditionalOnMissingBean(WebMvcConfigurer.class)
-    public WebMvcConfigurer webMvcConfigurer(ApplicationContext applicationContext, Prop prop , ObjectProvider<XssCleaner> xssCleanerProvider) {
-        XssCleaner xssCleaner = xssCleanerProvider.getIfAvailable();
-        return new BaseWebMvcConfigurer(applicationContext, prop, xssCleaner);
+    public WebMvcConfigurer webMvcConfigurer(ApplicationContext applicationContext, Prop prop) {
+        return new BaseWebMvcConfigurer(applicationContext, prop);
     }
-   
+
 }

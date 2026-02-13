@@ -1,12 +1,20 @@
 package io.github.luminion.starter.web;
 
 import io.github.luminion.starter.Prop;
+import io.github.luminion.starter.converter.XssCleanerConverter;
 import io.github.luminion.starter.web.formatter.*;
 import io.github.luminion.starter.xss.XssCleaner;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.ApplicationContext;
 import org.springframework.format.FormatterRegistry;
+import org.springframework.format.datetime.DateFormatter;
+import org.springframework.format.datetime.DateFormatterRegistrar;
+import org.springframework.format.datetime.standard.DateTimeFormatterRegistrar;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+import java.time.format.DateTimeFormatter;
+import java.util.TimeZone;
 
 /**
  * @author luminion
@@ -16,7 +24,6 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class BaseWebMvcConfigurer implements WebMvcConfigurer {
     private final ApplicationContext applicationContext;
     private final Prop prop;
-    private final XssCleaner xssCleaner;
 
     @Override
     public void addFormatters(FormatterRegistry registry) {
@@ -28,8 +35,10 @@ public class BaseWebMvcConfigurer implements WebMvcConfigurer {
         // 注意：Formatter 接口不支持 ConditionalConverter 的 matches 逻辑（如 @XssIgnore）
         // 如果需要支持 @XssIgnore，建议改用 registry.addConverter(new
         // XssCleanerConverter(xssCleaner))
+        ObjectProvider<XssCleaner> xssCleanerObjectProvider = applicationContext.getBeanProvider(XssCleaner.class);
+        XssCleaner xssCleaner = xssCleanerObjectProvider.getIfAvailable();
         if (xssCleaner != null) {
-            registry.addFormatter(new XssFormatter(xssCleaner));
+            registry.addConverter(new XssCleanerConverter(xssCleaner));
         }
 
         // 3. 注册日期时间格式化器 (从 Prop 配置中获取格式)
@@ -38,12 +47,20 @@ public class BaseWebMvcConfigurer implements WebMvcConfigurer {
         String timePattern = prop.getDateTimeFormat().getTime();
         String timeZone = prop.getDateTimeFormat().getTimeZone();
 
-        registry.addFormatter(new JavaUtilDateFormatter(dateTimePattern, timeZone));
-        registry.addFormatter(new LocalDateTimeFormatter(dateTimePattern));
-        registry.addFormatter(new LocalDateFormatter(datePattern));
-        registry.addFormatter(new LocalTimeFormatter(timePattern));
+        // JSR-310：LocalDateTime / LocalDate / LocalTime
+        DateTimeFormatterRegistrar registrar = new DateTimeFormatterRegistrar();
+        registrar.setTimeFormatter(DateTimeFormatter.ofPattern(timePattern));
+        registrar.setDateFormatter(DateTimeFormatter.ofPattern(datePattern));
+        registrar.setDateTimeFormatter(DateTimeFormatter.ofPattern(dateTimePattern));
+        registrar.registerFormatters(registry);
 
-        // 如果需要 java.sql.Date 等，也可以继续添加
+        // java.util.Date / Calendar
+        DateFormatterRegistrar dateRegistrar = new DateFormatterRegistrar();
+        DateFormatter dateFormatter = new DateFormatter(dateTimePattern);
+        dateFormatter.setTimeZone(TimeZone.getTimeZone(timeZone));
+        dateRegistrar.setFormatter(dateFormatter);
+        dateRegistrar.registerFormatters(registry);
+
     }
     
 }

@@ -1,4 +1,4 @@
-package io.github.luminion.starter.core.context;
+package io.github.luminion.starter.web;
 
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpServletRequest;

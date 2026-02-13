@@ -1,5 +1,7 @@
 package io.github.luminion.starter.converter;
 
+import io.github.luminion.starter.core.annotation.Mask;
+import io.github.luminion.starter.core.annotation.Unmask;
 import io.github.luminion.starter.xss.XssCleaner;
 import io.github.luminion.starter.xss.XssIgnore;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +19,10 @@ public class XssCleanerConverter implements Converter<String, String>, Condition
     
     @Override
     public boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {
-        return  !targetType.hasAnnotation(XssIgnore.class);
+        return  targetType.getType() == String.class
+                && !targetType.hasAnnotation(XssIgnore.class)
+                && !targetType.hasAnnotation(Unmask.class)
+                && !targetType.hasAnnotation(Mask.class);
     }
 
     @Override
