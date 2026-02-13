@@ -1,7 +1,7 @@
 package io.github.luminion.starter.autoconfig;
 
 import io.github.luminion.starter.Prop;
-import io.github.luminion.starter.core.aop.KeyResolver;
+import io.github.luminion.starter.core.spi.KeyResolver;
 import io.github.luminion.starter.ratelimit.aspect.RateLimitAspect;
 import io.github.luminion.starter.ratelimit.spi.RateLimiter;
 import io.github.luminion.starter.ratelimit.support.CaffeineRateLimiter;

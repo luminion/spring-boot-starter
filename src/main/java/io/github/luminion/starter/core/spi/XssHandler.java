@@ -1,4 +1,4 @@
-package io.github.luminion.starter.core.xss;
+package io.github.luminion.starter.core.spi;
 
 /**
  * @author luminion

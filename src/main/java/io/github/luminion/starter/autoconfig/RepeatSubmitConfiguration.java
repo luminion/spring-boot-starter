@@ -1,6 +1,6 @@
 package io.github.luminion.starter.autoconfig;
 
-import io.github.luminion.starter.core.aop.KeyResolver;
+import io.github.luminion.starter.core.spi.KeyResolver;
 import io.github.luminion.starter.repeat.aspect.RepeatSubmitAspect;
 import io.github.luminion.starter.repeat.spi.RepeatSubmitHandler;
 import io.github.luminion.starter.repeat.support.GuavaRepeatSubmitHandler;

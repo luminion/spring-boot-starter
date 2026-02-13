@@ -1,10 +1,10 @@
 package io.github.luminion.starter.autoconfig;
 
 import io.github.luminion.starter.Prop;
-import io.github.luminion.starter.core.aop.KeyResolver;
-import io.github.luminion.starter.core.aop.SpelKeyResolver;
+import io.github.luminion.starter.core.spi.KeyResolver;
+import io.github.luminion.starter.core.spi.support.SpelKeyResolver;
 import io.github.luminion.starter.core.mask.*;
-import io.github.luminion.starter.core.xss.XssHandler;
+import io.github.luminion.starter.core.spi.XssHandler;
 import io.github.luminion.starter.core.xss.support.JsoupXssHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
@@ -12,6 +12,7 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
 /**
  * @author luminion
@@ -24,15 +25,13 @@ public class CoreConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public KeyResolver spelMethodFingerprinter() {
-        log.debug("SpelKeyResolver Configured");
-        return new SpelKeyResolver("spelFingerprinter");
+        return new SpelKeyResolver();
     }
 
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnClass(Jsoup.class)
     public XssHandler xssCleaner(Prop prop) {
-        log.debug("JsoupXssHandler Configured with strategy: {}", prop.getXssStrategy());
         return new JsoupXssHandler(prop.getXssStrategy());
     }
 
@@ -70,6 +69,16 @@ public class CoreConfiguration {
     @ConditionalOnMissingBean
     public SimpleEncoder simpleEncoder() {
         return new SimpleEncoder();
+    }
+    
+    @Configuration(proxyBeanMethods = false)
+    @ConditionalOnClass(Jsoup.class)
+    static class XssConfig {
+        @Bean
+        @ConditionalOnMissingBean
+        public XssHandler xssCleaner(Prop prop) {
+            return new JsoupXssHandler(prop.getXssStrategy());
+        }
     }
 
 }

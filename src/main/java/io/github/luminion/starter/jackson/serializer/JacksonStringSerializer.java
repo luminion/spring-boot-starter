@@ -7,7 +7,7 @@ import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.ser.ContextualSerializer;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
-import io.github.luminion.starter.core.mask.StringEncode;
+import io.github.luminion.starter.core.annotation.StringEncode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
 

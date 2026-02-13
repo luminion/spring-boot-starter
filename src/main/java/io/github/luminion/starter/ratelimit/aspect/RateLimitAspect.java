@@ -1,6 +1,6 @@
 package io.github.luminion.starter.ratelimit.aspect;
 
-import io.github.luminion.starter.core.aop.KeyResolver;
+import io.github.luminion.starter.core.spi.KeyResolver;
 import io.github.luminion.starter.ratelimit.annotation.RateLimit;
 import io.github.luminion.starter.ratelimit.exception.RateLimitException;
 import io.github.luminion.starter.ratelimit.spi.RateLimiter;

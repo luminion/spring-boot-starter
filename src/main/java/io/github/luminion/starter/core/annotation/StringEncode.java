@@ -1,4 +1,4 @@
-package io.github.luminion.starter.core.mask;
+package io.github.luminion.starter.core.annotation;
 
 import java.lang.annotation.*;
 import java.util.function.Function;

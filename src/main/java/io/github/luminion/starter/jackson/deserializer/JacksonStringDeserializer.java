@@ -6,9 +6,9 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.deser.ContextualDeserializer;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
-import io.github.luminion.starter.core.xss.XssHandler;
+import io.github.luminion.starter.core.spi.XssHandler;
 import io.github.luminion.starter.core.xss.XssIgnore;
-import io.github.luminion.starter.core.mask.StringDecode;
+import io.github.luminion.starter.core.annotation.StringDecode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
 

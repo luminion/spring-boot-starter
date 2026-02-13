@@ -1,4 +1,4 @@
-package io.github.luminion.starter.core.aop;
+package io.github.luminion.starter.core.spi;
 
 import java.lang.reflect.Method;
 

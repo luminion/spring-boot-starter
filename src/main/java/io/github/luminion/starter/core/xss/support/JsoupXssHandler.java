@@ -1,6 +1,6 @@
 package io.github.luminion.starter.core.xss.support;
 
-import io.github.luminion.starter.core.xss.XssHandler;
+import io.github.luminion.starter.core.spi.XssHandler;
 import io.github.luminion.starter.core.xss.XssStrategy;
 import lombok.RequiredArgsConstructor;
 import org.jsoup.Jsoup;

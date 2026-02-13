@@ -1,6 +1,6 @@
 package io.github.luminion.starter.repeat.annotation;
 
-import io.github.luminion.starter.core.aop.KeyResolver;
+import io.github.luminion.starter.core.spi.KeyResolver;
 import io.github.luminion.starter.repeat.spi.RepeatSubmitHandler;
 
 import java.lang.annotation.*;

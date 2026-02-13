@@ -14,7 +14,7 @@ import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalTimeSerializer;
 import io.github.luminion.starter.Prop;
-import io.github.luminion.starter.core.xss.XssHandler;
+import io.github.luminion.starter.core.spi.XssHandler;
 import io.github.luminion.starter.jackson.deserializer.JacksonStringDeserializer;
 import io.github.luminion.starter.jackson.serializer.JacksonStringSerializer;
 import lombok.extern.slf4j.Slf4j;

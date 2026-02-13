@@ -1,5 +1,6 @@
-package io.github.luminion.starter.core.aop;
+package io.github.luminion.starter.core.spi.support;
 
+import io.github.luminion.starter.core.spi.KeyResolver;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.expression.MethodBasedEvaluationContext;
 import org.springframework.core.DefaultParameterNameDiscoverer;
@@ -22,12 +23,11 @@ public class SpelKeyResolver implements KeyResolver {
     private static final ExpressionParser PARSER = new SpelExpressionParser();
     private static final ParameterNameDiscoverer PND = new DefaultParameterNameDiscoverer();
     private static final Map<String, Expression> EXPRESSION_CACHE = new ConcurrentHashMap<>(64);
-    private final String prefix;
 
     @Override
     public String resolve(Object target, Method method, Object[] args, String expression) {
         // 2. 优化 Key 结构：使用 "类名#方法名"，比 toGenericString 更短更清晰
-        StringBuilder keyBuilder = new StringBuilder(prefix);
+        StringBuilder keyBuilder = new StringBuilder();
         keyBuilder.append(method.getDeclaringClass().getName())
                 .append('#')
                 .append(method.getName());
