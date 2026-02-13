@@ -1,4 +1,4 @@
-package io.github.luminion.starter.log.spi;
+package io.github.luminion.starter.log;
 
 import org.aspectj.lang.reflect.MethodSignature;
 

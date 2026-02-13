@@ -1,7 +1,7 @@
-package io.github.luminion.starter.core.xss.support;
+package io.github.luminion.starter.xss.support;
 
-import io.github.luminion.starter.core.spi.XssHandler;
-import io.github.luminion.starter.core.xss.XssStrategy;
+import io.github.luminion.starter.xss.XssCleaner;
+import io.github.luminion.starter.xss.XssStrategy;
 import lombok.RequiredArgsConstructor;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -16,13 +16,17 @@ import org.springframework.web.util.HtmlUtils;
  * @since 1.0.0
  */
 @RequiredArgsConstructor
-public class JsoupXssHandler implements XssHandler {
+public class JsoupXssCleaner implements XssCleaner {
 
     private final XssStrategy strategy;
 
     @Override
-    public String handle(String html) {
-        if (html == null || strategy == XssStrategy.NONE) {
+    public String clean(String html) {
+        if (html == null || html.isEmpty() || strategy == XssStrategy.NONE) {
+            return html;
+        }
+        // 快速失败
+        if (!html.contains("<")) {
             return html;
         }
 
@@ -44,13 +48,5 @@ public class JsoupXssHandler implements XssHandler {
                 .escapeMode(Entities.EscapeMode.xhtml);
 
         return Jsoup.clean(html, "", safelist, outputSettings);
-    }
-
-    @Override
-    public boolean isXss(String html) {
-        if (html == null || strategy == XssStrategy.NONE) {
-            return false;
-        }
-        return !handle(html).equals(html);
     }
 }

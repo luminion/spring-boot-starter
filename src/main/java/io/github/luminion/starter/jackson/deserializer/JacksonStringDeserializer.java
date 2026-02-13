@@ -6,9 +6,9 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.deser.ContextualDeserializer;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
-import io.github.luminion.starter.core.spi.XssHandler;
-import io.github.luminion.starter.core.xss.XssIgnore;
-import io.github.luminion.starter.core.annotation.StringDecode;
+import io.github.luminion.starter.core.annotation.JsonUnmask;
+import io.github.luminion.starter.xss.XssCleaner;
+import io.github.luminion.starter.xss.XssIgnore;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
 
@@ -17,26 +17,26 @@ import java.util.function.Function;
 
 /**
  * 统一字符串反序列化处理器
- * 仅处理 String 字段。顺序：1. StringDecode -> 2. XSS 清理
+ * 仅处理 String 字段。顺序：1. JsonUnmask -> 2. XSS 清理
  *
  * @author luminion
  */
 @Slf4j
 public class JacksonStringDeserializer extends StdDeserializer<String> implements ContextualDeserializer {
 
-    private final XssHandler xssHandler;
+    private final XssCleaner xssCleaner;
     private final Function<String, String> decodeFunc;
     private final boolean ignoreXss;
     private final ApplicationContext applicationContext;
 
-    public JacksonStringDeserializer(XssHandler xssHandler, ApplicationContext applicationContext) {
-        this(xssHandler, null, false, applicationContext);
+    public JacksonStringDeserializer(XssCleaner xssCleaner, ApplicationContext applicationContext) {
+        this(xssCleaner, null, false, applicationContext);
     }
 
-    private JacksonStringDeserializer(XssHandler xssHandler, Function<String, String> decodeFunc, boolean ignoreXss,
+    private JacksonStringDeserializer(XssCleaner xssCleaner, Function<String, String> decodeFunc, boolean ignoreXss,
                                       ApplicationContext applicationContext) {
         super(String.class);
-        this.xssHandler = xssHandler;
+        this.xssCleaner = xssCleaner;
         this.decodeFunc = decodeFunc;
         this.ignoreXss = ignoreXss;
         this.applicationContext = applicationContext;
@@ -55,8 +55,8 @@ public class JacksonStringDeserializer extends StdDeserializer<String> implement
         }
 
         // 2. 执行 XSS 清理
-        if (xssHandler != null && !ignoreXss) {
-            text = xssHandler.handle(text);
+        if (xssCleaner != null && !ignoreXss) {
+            text = xssCleaner.clean(text);
         }
 
         return text;
@@ -69,7 +69,7 @@ public class JacksonStringDeserializer extends StdDeserializer<String> implement
         }
 
         boolean currentIgnoreXss = property.getAnnotation(XssIgnore.class) != null;
-        StringDecode decodeAnn = property.getAnnotation(StringDecode.class);
+        JsonUnmask decodeAnn = property.getAnnotation(JsonUnmask.class);
         Function<String, String> currentDecodeFunc = null;
 
         if (decodeAnn != null) {
@@ -77,7 +77,7 @@ public class JacksonStringDeserializer extends StdDeserializer<String> implement
             try {
                 currentDecodeFunc = applicationContext.getBean(funcClass);
             } catch (Exception e) {
-                String errorMsg = String.format("未发现 @StringDecode 指定的函数类 [%s] 的 Bean 实例。", funcClass.getName());
+                String errorMsg = String.format("未发现 @JsonUnmask 指定的函数类 [%s] 的 Bean 实例。", funcClass.getName());
                 log.error(errorMsg);
                 throw new IllegalArgumentException(errorMsg, e);
             }
@@ -85,7 +85,7 @@ public class JacksonStringDeserializer extends StdDeserializer<String> implement
 
         // 只有在真的需要特殊处理时，才返回定制化的实例
         if (currentIgnoreXss != this.ignoreXss || currentDecodeFunc != null) {
-            return new JacksonStringDeserializer(xssHandler, currentDecodeFunc, currentIgnoreXss, applicationContext);
+            return new JacksonStringDeserializer(xssCleaner, currentDecodeFunc, currentIgnoreXss, applicationContext);
         }
 
         return this;

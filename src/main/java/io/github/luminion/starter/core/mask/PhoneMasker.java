@@ -4,20 +4,20 @@ import org.springframework.stereotype.Component;
 import java.util.function.Function;
 
 /**
- * 邮箱脱敏处理器
+ * 手机号脱敏处理器
  *
  * @author luminion
  * @since 1.0.0
  */
 @Component
-public class EmailEncoder implements Function<String, String> {
+public class PhoneMasker implements Function<String, String> {
 
     @Override
     public String apply(String s) {
         if (s == null) {
             return null;
         }
-        return s.replaceAll("(\\w?)(\\w+)(@\\w+\\.[a-z]+(\\.[a-z]+)?)", "$1****$3");
+        return s.replaceAll("(\\d{3})\\d{4}(\\d{4})", "$1****$2");
     }
 
 }

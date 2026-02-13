@@ -1,4 +1,4 @@
-package io.github.luminion.starter.core.xss;
+package io.github.luminion.starter.xss;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

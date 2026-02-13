@@ -4,8 +4,8 @@ import io.github.luminion.starter.Prop;
 import io.github.luminion.starter.core.spi.KeyResolver;
 import io.github.luminion.starter.core.spi.support.SpelKeyResolver;
 import io.github.luminion.starter.core.mask.*;
-import io.github.luminion.starter.core.spi.XssHandler;
-import io.github.luminion.starter.core.xss.support.JsoupXssHandler;
+import io.github.luminion.starter.xss.XssCleaner;
+import io.github.luminion.starter.xss.support.JsoupXssCleaner;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -31,44 +31,44 @@ public class CoreConfiguration {
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnClass(Jsoup.class)
-    public XssHandler xssCleaner(Prop prop) {
-        return new JsoupXssHandler(prop.getXssStrategy());
+    public XssCleaner xssCleaner(Prop prop) {
+        return new JsoupXssCleaner(prop.getXssStrategy());
     }
 
     @Bean
     @ConditionalOnMissingBean
-    public BankCardNoEncoder bankCardNoEncoder() {
-        return new BankCardNoEncoder();
+    public BankCardMasker bankCardNoEncoder() {
+        return new BankCardMasker();
     }
 
     @Bean
     @ConditionalOnMissingBean
-    public EmailEncoder emailEncoder() {
-        return new EmailEncoder();
+    public EmailMasker emailEncoder() {
+        return new EmailMasker();
     }
 
     @Bean
     @ConditionalOnMissingBean
-    public IdCardEncoder idCardEncoder() {
-        return new IdCardEncoder();
+    public IdCardMasker idCardEncoder() {
+        return new IdCardMasker();
     }
 
     @Bean
     @ConditionalOnMissingBean
-    public NameEncoder nameEncoder() {
-        return new NameEncoder();
+    public NameMasker nameEncoder() {
+        return new NameMasker();
     }
 
     @Bean
     @ConditionalOnMissingBean
-    public PhoneEncoder phoneEncoder() {
-        return new PhoneEncoder();
+    public PhoneMasker phoneEncoder() {
+        return new PhoneMasker();
     }
 
     @Bean
     @ConditionalOnMissingBean
-    public SimpleEncoder simpleEncoder() {
-        return new SimpleEncoder();
+    public SimpleMasker simpleEncoder() {
+        return new SimpleMasker();
     }
     
     @Configuration(proxyBeanMethods = false)
@@ -76,8 +76,8 @@ public class CoreConfiguration {
     static class XssConfig {
         @Bean
         @ConditionalOnMissingBean
-        public XssHandler xssCleaner(Prop prop) {
-            return new JsoupXssHandler(prop.getXssStrategy());
+        public XssCleaner xssCleaner(Prop prop) {
+            return new JsoupXssCleaner(prop.getXssStrategy());
         }
     }
 

@@ -1,9 +1,12 @@
 package io.github.luminion.starter.autoconfig;
 
 import io.github.luminion.starter.Prop;
+import io.github.luminion.starter.converter.XssCleanerConverter;
 import io.github.luminion.starter.converter.support.*;
+import io.github.luminion.starter.xss.XssCleaner;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 
@@ -56,6 +59,13 @@ public class ConverterConfiguration {
     @ConditionalOnMissingBean
     public StringToSqlTimestampConverter stringToSqlTimestampConverter(Prop properties) {
         return new StringToSqlTimestampConverter(properties.getDateTimeFormat().getDateTime());
+    }
+    
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnBean(XssCleaner.class)
+    public XssCleanerConverter stringToHtmlConverter(XssCleaner xssCleaner) {
+        return new XssCleanerConverter(xssCleaner);
     }
 
 }

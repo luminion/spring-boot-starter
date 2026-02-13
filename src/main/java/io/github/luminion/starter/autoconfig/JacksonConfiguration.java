@@ -14,7 +14,7 @@ import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalTimeSerializer;
 import io.github.luminion.starter.Prop;
-import io.github.luminion.starter.core.spi.XssHandler;
+import io.github.luminion.starter.xss.XssCleaner;
 import io.github.luminion.starter.jackson.deserializer.JacksonStringDeserializer;
 import io.github.luminion.starter.jackson.serializer.JacksonStringSerializer;
 import lombok.extern.slf4j.Slf4j;
@@ -66,7 +66,7 @@ public class JacksonConfiguration {
          */
         @Bean
         @Order(-1)
-        public Jackson2ObjectMapperBuilderCustomizer jackson2ObjectMapperBuilderCustomizer(Prop prop, ObjectProvider<XssHandler> xssCleanerProvider,
+        public Jackson2ObjectMapperBuilderCustomizer jackson2ObjectMapperBuilderCustomizer(Prop prop, ObjectProvider<XssCleaner> xssCleanerProvider,
                 ApplicationContext applicationContext) {
             log.debug("Jackson2ObjectMapperBuilderCustomizer Configured");
             return builder -> {
@@ -110,10 +110,10 @@ public class JacksonConfiguration {
                         .serializers(new LocalDateSerializer(dateFormatter))
                         .serializers(new LocalTimeSerializer(timeFormatter));
 
-                XssHandler xssHandler = xssCleanerProvider.getIfAvailable();
-                builder.deserializerByType(String.class, new JacksonStringDeserializer(xssHandler, applicationContext));
+                XssCleaner xssCleaner = xssCleanerProvider.getIfAvailable();
+                builder.deserializerByType(String.class, new JacksonStringDeserializer(xssCleaner, applicationContext));
 
-                // 统一字符串处理（StringEncode）
+                // 统一字符串处理（JsonMask）
                 builder.serializerByType(String.class,new JacksonStringSerializer(applicationContext));
             };
         }

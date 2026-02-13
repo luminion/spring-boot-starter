@@ -1,6 +1,6 @@
 package io.github.luminion.starter.log.aspect;
 
-import io.github.luminion.starter.log.spi.LogWriter;
+import io.github.luminion.starter.log.LogWriter;
 import lombok.RequiredArgsConstructor;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;

@@ -12,7 +12,7 @@ import java.util.stream.Stream;
  * @since 1.0.0
  */
 @Component
-public class SimpleEncoder implements Function<String, String> {
+public class SimpleMasker implements Function<String, String> {
 
     @Override
     public String apply(String s) {

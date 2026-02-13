@@ -4,20 +4,20 @@ import org.springframework.stereotype.Component;
 import java.util.function.Function;
 
 /**
- * 姓名脱敏处理器
+ * 身份证号脱敏处理器
  *
  * @author luminion
  * @since 1.0.0
  */
 @Component
-public class NameEncoder implements Function<String, String> {
+public class IdCardMasker implements Function<String, String> {
 
     @Override
     public String apply(String s) {
         if (s == null) {
             return null;
         }
-        return s.replaceAll("(\\S)\\S(\\S*)", "$1*$2");
+        return s.replaceAll("(\\d{6})\\d{9}(\\w{3})", "$1*********$2");
     }
 
 }

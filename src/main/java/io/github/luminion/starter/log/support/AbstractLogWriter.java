@@ -1,6 +1,6 @@
 package io.github.luminion.starter.log.support;
 
-import io.github.luminion.starter.log.spi.LogWriter;
+import io.github.luminion.starter.log.LogWriter;
 import org.aspectj.lang.reflect.MethodSignature;
 
 import java.util.stream.IntStream;
