@@ -2,7 +2,7 @@ package io.github.luminion.starter.idempotent.support;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import io.github.luminion.starter.core.spi.IdempotentHandler;
+import io.github.luminion.starter.idempotent.IdempotentHandler;
 
 import java.util.concurrent.TimeUnit;
 

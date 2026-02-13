@@ -1,6 +1,6 @@
 package io.github.luminion.starter.web.formatter;
 
-import io.github.luminion.starter.core.annotation.Mask;
+import io.github.luminion.starter.mask.annotation.Mask;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationContext;
 import org.springframework.format.AnnotationFormatterFactory;

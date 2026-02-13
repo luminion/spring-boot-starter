@@ -1,5 +1,6 @@
 package io.github.luminion.starter.log.support;
 
+import io.github.luminion.starter.log.LogWriter;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.slf4j.event.Level;
@@ -16,7 +17,8 @@ public class Slf4jLogWriter extends AbstractLogWriter {
     /**
      * Constructs a new Slf4jLogWriter.
      *
-     * @param level The logging level for before and after advice (e.g., Level.INFO, Level.DEBUG).
+     * @param level The logging level for before and after advice (e.g., Level.INFO,
+     *              Level.DEBUG).
      */
     public Slf4jLogWriter(Level level) {
         this.level = level;

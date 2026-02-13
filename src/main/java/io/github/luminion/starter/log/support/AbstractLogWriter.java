@@ -1,6 +1,6 @@
 package io.github.luminion.starter.log.support;
 
-import io.github.luminion.starter.core.spi.LogWriter;
+import io.github.luminion.starter.log.LogWriter;
 import org.aspectj.lang.reflect.MethodSignature;
 
 import java.util.stream.IntStream;
@@ -10,11 +10,10 @@ import java.util.stream.IntStream;
  * @since 1.0.0
  */
 public abstract class AbstractLogWriter implements LogWriter {
-    
+
     protected String getMethodName(MethodSignature signature) {
         return signature.getDeclaringType().getSimpleName() + "." + signature.getName();
     }
-
 
     protected String getFormatArgs(String[] paramNames, Object[] args) {
         if (args == null || args.length == 0) {

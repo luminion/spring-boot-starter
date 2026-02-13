@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.deser.ContextualDeserializer;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
-import io.github.luminion.starter.core.annotation.Unmask;
+import io.github.luminion.starter.mask.annotation.Unmask;
 import io.github.luminion.starter.xss.XssCleaner;
 import io.github.luminion.starter.xss.XssIgnore;
 import lombok.extern.slf4j.Slf4j;

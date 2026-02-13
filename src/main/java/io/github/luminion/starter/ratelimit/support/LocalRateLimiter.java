@@ -2,7 +2,7 @@ package io.github.luminion.starter.ratelimit.support;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import io.github.luminion.starter.core.spi.RateLimiter;
+import io.github.luminion.starter.ratelimit.RateLimiter;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -41,10 +41,10 @@ public class LocalRateLimiter implements RateLimiter {
         public synchronized boolean tryAcquire(double rate, long capacity) {
             long now = System.nanoTime();
             long nanosSinceLastRefill = now - lastRefillTimestamp;
-            
+
             // 计算新增令牌数
             long newTokens = (long) (nanosSinceLastRefill * rate / 1_000_000_000L);
-            
+
             if (newTokens > 0) {
                 long currentTokens = tokens.get();
                 long updatedTokens = Math.min(capacity, currentTokens + newTokens);

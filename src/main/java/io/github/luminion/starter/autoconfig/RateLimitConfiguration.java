@@ -1,8 +1,8 @@
 package io.github.luminion.starter.autoconfig;
 
-import io.github.luminion.starter.core.aspect.RateLimitAspect;
-import io.github.luminion.starter.core.spi.MethodFingerprinter;
-import io.github.luminion.starter.core.spi.RateLimiter;
+import io.github.luminion.starter.ratelimit.aspect.RateLimitAspect;
+import io.github.luminion.starter.core.fingerprint.MethodFingerprinter;
+import io.github.luminion.starter.ratelimit.RateLimiter;
 import io.github.luminion.starter.ratelimit.support.LocalRateLimiter;
 import io.github.luminion.starter.ratelimit.support.RedisRateLimiter;
 import lombok.extern.slf4j.Slf4j;

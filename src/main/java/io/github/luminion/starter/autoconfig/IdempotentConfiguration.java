@@ -1,8 +1,8 @@
 package io.github.luminion.starter.autoconfig;
 
-import io.github.luminion.starter.core.aspect.IdempotentAspect;
-import io.github.luminion.starter.core.spi.IdempotentHandler;
-import io.github.luminion.starter.core.spi.MethodFingerprinter;
+import io.github.luminion.starter.idempotent.aspect.IdempotentAspect;
+import io.github.luminion.starter.idempotent.IdempotentHandler;
+import io.github.luminion.starter.core.fingerprint.MethodFingerprinter;
 import io.github.luminion.starter.idempotent.support.LocalIdempotentHandler;
 import io.github.luminion.starter.idempotent.support.RedisIdempotentHandler;
 import lombok.extern.slf4j.Slf4j;

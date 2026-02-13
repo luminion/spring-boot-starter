@@ -1,9 +1,9 @@
 package io.github.luminion.starter.autoconfig;
 
 import io.github.luminion.starter.Prop;
-import io.github.luminion.starter.core.spi.MethodFingerprinter;
-import io.github.luminion.starter.core.spi.support.SpelMethodFingerprinter;
-import io.github.luminion.starter.core.mask.*;
+import io.github.luminion.starter.core.fingerprint.MethodFingerprinter;
+import io.github.luminion.starter.core.fingerprint.SpelMethodFingerprinter;
+import io.github.luminion.starter.mask.strategy.*;
 import io.github.luminion.starter.xss.XssCleaner;
 import io.github.luminion.starter.xss.support.JsoupXssCleaner;
 import lombok.extern.slf4j.Slf4j;
@@ -63,7 +63,7 @@ public class CoreConfiguration {
     public SimpleMasker simpleMasker() {
         return new SimpleMasker();
     }
-    
+
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnClass(Jsoup.class)
     static class XssConfig {

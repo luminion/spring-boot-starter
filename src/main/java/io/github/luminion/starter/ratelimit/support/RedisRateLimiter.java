@@ -1,6 +1,6 @@
 package io.github.luminion.starter.ratelimit.support;
 
-import io.github.luminion.starter.core.spi.RateLimiter;
+import io.github.luminion.starter.ratelimit.RateLimiter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -23,14 +23,13 @@ public class RedisRateLimiter implements RateLimiter {
     public boolean tryAcquire(String key, double rate, double burst) {
         // Lua 脚本需要的参数：[key], [capacity], [rate], [now_sec]
         long now = System.currentTimeMillis() / 1000;
-        
+
         Long result = redisTemplate.execute(
-                limitScript, 
-                Collections.singletonList(key), 
-                (long) burst, 
-                (long) rate, 
-                now
-        );
+                limitScript,
+                Collections.singletonList(key),
+                (long) burst,
+                (long) rate,
+                now);
 
         return result != null && result == 1L;
     }
@@ -61,7 +60,7 @@ public class RedisRateLimiter implements RateLimiter {
                 "    redis.call('hmset', key, 'tokens', granted_tokens, 'last_time', now_sec)\n" +
                 "    return 0\n" +
                 "end";
-        
+
         DefaultRedisScript<Long> redisScript = new DefaultRedisScript<>();
         redisScript.setScriptText(script);
         redisScript.setResultType(Long.class);

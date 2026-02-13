@@ -1,6 +1,6 @@
 package io.github.luminion.starter.idempotent.support;
 
-import io.github.luminion.starter.core.spi.IdempotentHandler;
+import io.github.luminion.starter.idempotent.IdempotentHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 

@@ -1,7 +1,7 @@
 package io.github.luminion.starter.web.formatter;
 
 import io.github.luminion.starter.converter.XssCleanerConverter;
-import io.github.luminion.starter.core.annotation.Unmask;
+import io.github.luminion.starter.mask.annotation.Unmask;
 import io.github.luminion.starter.xss.XssCleaner;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.ObjectProvider;
