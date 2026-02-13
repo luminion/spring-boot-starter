@@ -67,11 +67,7 @@ public class JacksonStringDeserializer extends StdDeserializer<String> implement
         }
 
         if (xssCleaner != null && !ignoreXss) {
-            if (compositeFunc == null) {
-                compositeFunc = xssCleaner::clean;
-            } else {
-                compositeFunc = compositeFunc.andThen(xssCleaner::clean);
-            }
+            compositeFunc = compositeFunc.andThen(xssCleaner::clean);
         }
 
         if (compositeFunc == null) {
