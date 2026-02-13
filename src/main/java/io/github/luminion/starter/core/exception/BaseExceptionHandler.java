@@ -2,6 +2,8 @@ package io.github.luminion.starter.core.exception;
 
 import io.github.luminion.starter.ratelimit.exception.RateLimitException;
 import io.github.luminion.starter.repeat.exception.RepeatSubmitException;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
@@ -32,14 +34,13 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 @RequiredArgsConstructor
 public class BaseExceptionHandler<R> implements Ordered {
+
     protected final Function<String, R> failed;
     protected final Function<Throwable, R> error;
     protected final Class<? extends RuntimeException> bizExceptionClass;
 
     public BaseExceptionHandler(Function<String, R> failed, Function<Throwable, R> error) {
-        this.failed = failed;
-        this.error = error;
-        this.bizExceptionClass = null;
+        this(failed, error, null);
     }
 
     private String getBindingResultMessage(BindingResult bindingResult) {
@@ -70,6 +71,17 @@ public class BaseExceptionHandler<R> implements Ordered {
         return failed.apply(message);
     }
 
+    /**
+     * Bean Validation 参数校验异常 (@RequestParam/@PathVariable)
+     */
+    @ExceptionHandler(ConstraintViolationException.class)
+    public R handleConstraintViolationException(ConstraintViolationException e) {
+        String message = e.getConstraintViolations().stream()
+                .map(ConstraintViolation::getMessage)
+                .collect(Collectors.joining("; "));
+        log.warn("[参数校验异常][@RequestParam/@PathVariable] 校验失败: {}", message);
+        return failed.apply(message);
+    }
 
     /**
      * 缺少请求参数
@@ -146,7 +158,7 @@ public class BaseExceptionHandler<R> implements Ordered {
     /**
      * 非法参数异常
      */
-    @ExceptionHandler({IllegalArgumentException.class, IllegalStateException.class})
+    @ExceptionHandler({ IllegalArgumentException.class, IllegalStateException.class })
     public R handleIllegalArgumentException(RuntimeException e) {
         log.warn("[逻辑断言失败] 异常信息: {}", e.getMessage());
         return failed.apply(e.getMessage());
