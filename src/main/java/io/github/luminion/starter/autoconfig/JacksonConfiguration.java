@@ -113,7 +113,7 @@ public class JacksonConfiguration {
                 XssCleaner xssCleaner = xssCleanerProvider.getIfAvailable();
                 builder.deserializerByType(String.class, new JacksonStringDeserializer(xssCleaner, applicationContext));
 
-                // 统一字符串处理（JsonMask）
+                // 统一字符串处理（Mask）
                 builder.serializerByType(String.class,new JacksonStringSerializer(applicationContext));
             };
         }

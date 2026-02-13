@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.deser.ContextualDeserializer;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
-import io.github.luminion.starter.core.annotation.JsonUnmask;
+import io.github.luminion.starter.core.annotation.Unmask;
 import io.github.luminion.starter.xss.XssCleaner;
 import io.github.luminion.starter.xss.XssIgnore;
 import lombok.extern.slf4j.Slf4j;
@@ -17,7 +17,7 @@ import java.util.function.Function;
 
 /**
  * 统一字符串反序列化处理器
- * 仅处理 String 字段。顺序：1. JsonUnmask -> 2. XSS 清理
+ * 仅处理 String 字段。顺序：1. Unmask -> 2. XSS 清理
  *
  * @author luminion
  */
@@ -69,7 +69,7 @@ public class JacksonStringDeserializer extends StdDeserializer<String> implement
         }
 
         boolean currentIgnoreXss = property.getAnnotation(XssIgnore.class) != null;
-        JsonUnmask decodeAnn = property.getAnnotation(JsonUnmask.class);
+        Unmask decodeAnn = property.getAnnotation(Unmask.class);
         Function<String, String> currentDecodeFunc = null;
 
         if (decodeAnn != null) {
@@ -77,7 +77,7 @@ public class JacksonStringDeserializer extends StdDeserializer<String> implement
             try {
                 currentDecodeFunc = applicationContext.getBean(funcClass);
             } catch (Exception e) {
-                String errorMsg = String.format("未发现 @JsonUnmask 指定的函数类 [%s] 的 Bean 实例。", funcClass.getName());
+                String errorMsg = String.format("未发现 @Unmask 指定的函数类 [%s] 的 Bean 实例。", funcClass.getName());
                 log.error(errorMsg);
                 throw new IllegalArgumentException(errorMsg, e);
             }
