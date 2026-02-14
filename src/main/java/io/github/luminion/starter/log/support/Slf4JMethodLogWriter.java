@@ -24,14 +24,14 @@ public class Slf4JMethodLogWriter extends AbstractMethodLogWriter {
     }
 
     @Override
-    public void before(Object target, MethodSignature signature, Object[] args) {
+    public void printMethodArgs(Object target, MethodSignature signature, Object[] args) {
         String methodName = getMethodName(signature);
         String formattedArgs = getFormatArgs(signature.getParameterNames(), args);
         log(level, "==> Enter: {} with args: {}", methodName, formattedArgs);
     }
 
     @Override
-    public void after(Object target, MethodSignature signature, Object[] args, Object result) {
+    public void printReturnValue(Object target, MethodSignature signature, Object[] args, Object result) {
         String methodName = getMethodName(signature);
         log(level, "<== Exit: {}. Result: [{}]. Duration: {}ms", methodName, result);
     }

@@ -22,9 +22,9 @@ public class MethodLogAspect {
         MethodSignature signature = (MethodSignature) pjp.getSignature();
         Object[] args = pjp.getArgs();
         Object target = pjp.getTarget();
-        methodLogWriter.before(target, signature, args);
+        methodLogWriter.printMethodArgs(target, signature, args);
         Object result = pjp.proceed(args);
-        methodLogWriter.after(target, signature, args, result);
+        methodLogWriter.printReturnValue(target, signature, args, result);
         return result;
     }
 

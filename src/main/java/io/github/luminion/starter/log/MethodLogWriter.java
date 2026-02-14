@@ -7,8 +7,8 @@ import org.aspectj.lang.reflect.MethodSignature;
  */
 public interface MethodLogWriter {
 
-    void before(Object target, MethodSignature signature, Object[] args);
+    void printMethodArgs(Object target, MethodSignature signature, Object[] args);
 
-    void after(Object target, MethodSignature signature, Object[] args, Object result);
+    void printReturnValue(Object target, MethodSignature signature, Object[] args, Object result);
 
 }
