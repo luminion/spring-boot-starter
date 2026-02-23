@@ -19,6 +19,16 @@ import java.util.Map;
  * @author luminion
  */
 public abstract class WebContextHolder {
+    
+    /**
+     * 判断当前是否在Web请求上下文中。
+     *
+     * @return 如果当前请求是Web请求上下文，则返回true，否则返回false
+     */
+    public static boolean isWebContext() {
+        return RequestContextHolder.getRequestAttributes() != null && RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes;
+    }
+    
 
     /**
      * 获取当前请求的属性对象。
