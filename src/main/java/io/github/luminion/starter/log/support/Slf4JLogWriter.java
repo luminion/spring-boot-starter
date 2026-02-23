@@ -1,6 +1,7 @@
 package io.github.luminion.starter.log.support;
 
 import io.github.luminion.starter.core.util.AspectUtils;
+import io.github.luminion.starter.log.ErrorLogWriter;
 import io.github.luminion.starter.log.InvokeArgsWriter;
 import io.github.luminion.starter.log.InvokeResultWriter;
 import io.github.luminion.starter.log.SlowLogWriter;
@@ -14,7 +15,7 @@ import org.slf4j.event.Level;
  * @author luminion
  */
 @Slf4j
-public class Slf4JLogWriter implements InvokeArgsWriter, InvokeResultWriter, SlowLogWriter {
+public class Slf4JLogWriter implements InvokeArgsWriter, InvokeResultWriter, SlowLogWriter, ErrorLogWriter {
     protected final Level level;
 
     public Slf4JLogWriter(Level level) {
@@ -37,7 +38,14 @@ public class Slf4JLogWriter implements InvokeArgsWriter, InvokeResultWriter, Slo
     @Override
     public void writeSlow(MethodSignature signature, long durationNs) {
         String methodName = AspectUtils.getMethodName(signature);
-        log(level, "!!> Slow Log: {} => Time Cost: {}ms", methodName, durationNs/1000);
+        log(level, "!!> Slow Log: {} => Time Cost: {}ms", methodName, durationNs / 1_000_000);
+    }
+
+    @Override
+    public void writeError(MethodSignature signature, Object[] args, Throwable e) {
+        String methodName = AspectUtils.getMethodName(signature);
+        String formattedArgs = AspectUtils.getFormatArgs(signature, args);
+        log(Level.ERROR, "> Error: {} with args: {}. Exception: {}", methodName, formattedArgs, e.getMessage(), e);
     }
 
     protected void log(Level level, String format, Object... arguments) {

@@ -1,9 +1,11 @@
 package io.github.luminion.starter.config;
 
+import io.github.luminion.starter.log.ErrorLogWriter;
 import io.github.luminion.starter.log.InvokeArgsWriter;
 import io.github.luminion.starter.log.InvokeResultWriter;
 import io.github.luminion.starter.log.SlowLogWriter;
 import io.github.luminion.starter.log.aspect.ArgsLogAspect;
+import io.github.luminion.starter.log.aspect.ErrorLogAspect;
 import io.github.luminion.starter.log.aspect.ResultLogAspect;
 import io.github.luminion.starter.log.aspect.SlowLogAspect;
 import io.github.luminion.starter.log.support.Slf4JLogWriter;
@@ -23,18 +25,14 @@ import org.springframework.context.annotation.Bean;
  * @since 1.0.0
  */
 @AutoConfiguration
-@ConditionalOnClass({Advice.class})
+@ConditionalOnClass({ Advice.class })
 public class LogConfig {
 
     @Bean
-    @ConditionalOnMissingBean({ InvokeArgsWriter.class, InvokeResultWriter.class, SlowLogWriter.class })
+    @ConditionalOnMissingBean({ InvokeArgsWriter.class, InvokeResultWriter.class, SlowLogWriter.class, ErrorLogWriter.class })
     public Slf4JLogWriter slf4JLogWriter() {
         return new Slf4JLogWriter(Level.DEBUG);
     }
-    
-    
-    
-    
 
     @Bean
     @ConditionalOnMissingBean(ArgsLogAspect.class)
@@ -48,6 +46,13 @@ public class LogConfig {
     @ConditionalOnBean(InvokeResultWriter.class)
     public ResultLogAspect resultLogAspect(InvokeResultWriter resultWriter) {
         return new ResultLogAspect(resultWriter);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(ErrorLogAspect.class)
+    @ConditionalOnBean(ErrorLogWriter.class)
+    public ErrorLogAspect errorLogAspect(ErrorLogWriter errorLogWriter) {
+        return new ErrorLogAspect(errorLogWriter);
     }
 
     @Bean

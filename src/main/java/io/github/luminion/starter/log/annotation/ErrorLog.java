@@ -3,8 +3,7 @@ package io.github.luminion.starter.log.annotation;
 import java.lang.annotation.*;
 
 /**
- * 复合调用日志注解
- * 整合了入参和返回值的记录能力
+ * 异常日志注解
  *
  * @author luminion
  * @since 1.0.0
@@ -12,8 +11,5 @@ import java.lang.annotation.*;
 @Target({ ElementType.METHOD, ElementType.TYPE })
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@ArgsLog
-@ResultLog
-@ErrorLog
-public @interface InvokeLog {
+public @interface ErrorLog {
 }
