@@ -6,6 +6,7 @@ import io.github.luminion.starter.converter.support.*;
 import io.github.luminion.starter.web.formatter.MaskAnnotationFormatterFactory;
 import io.github.luminion.starter.web.formatter.UnmaskAnnotationFormatterFactory;
 import io.github.luminion.starter.xss.XssCleaner;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.ApplicationContext;
@@ -16,8 +17,8 @@ import org.springframework.context.annotation.Bean;
  *
  * @author luminion
  */
-//@AutoConfiguration
-@Deprecated
+@AutoConfiguration
+@ConditionalOnBean(Prop.class)
 public class ConverterConfig {
 
     @Bean
