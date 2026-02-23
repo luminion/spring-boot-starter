@@ -9,24 +9,19 @@ import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 基于 Caffeine 的本地令牌桶限流器
- * <p>
- * 适用于单机环境
  *
  * @author luminion
  */
-public class LocalRateLimiter implements RateLimiter {
+public class CaffeineRateLimiter implements RateLimiter {
 
-    /**
-     * 存储令牌桶信息
-     */
     private final Cache<String, TokenBucket> buckets = Caffeine.newBuilder()
-            .expireAfterAccess(10, TimeUnit.MINUTES)
+            .expireAfterAccess(5, TimeUnit.MINUTES)
             .build();
 
     @Override
-    public boolean tryAcquire(String key, double rate, double burst) {
-        TokenBucket bucket = buckets.get(key, k -> new TokenBucket((long) burst));
-        return bucket.tryAcquire(rate, (long) burst);
+    public boolean tryAcquire(String key, double rate) {
+        TokenBucket bucket = buckets.get(key, k -> new TokenBucket((long) rate));
+        return bucket.tryAcquire(rate);
     }
 
     private static class TokenBucket {
@@ -38,8 +33,9 @@ public class LocalRateLimiter implements RateLimiter {
             this.lastRefillTimestamp = System.nanoTime();
         }
 
-        public synchronized boolean tryAcquire(double rate, long capacity) {
+        public synchronized boolean tryAcquire(double rate) {
             long now = System.nanoTime();
+            long capacity = (long) rate;
             long nanosSinceLastRefill = now - lastRefillTimestamp;
 
             // 计算新增令牌数

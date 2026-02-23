@@ -6,29 +6,26 @@ import java.lang.annotation.*;
  * 限流注解
  *
  * @author luminion
+ * @since 1.0.0
  */
-@Target(ElementType.METHOD)
+@Target({ ElementType.METHOD, ElementType.TYPE })
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface RateLimit {
 
     /**
+     * 限流速率 (QPS)
+     * 默认每秒 10 次
+     */
+    double value() default 10;
+
+    /**
      * 用于生成限流 Key 的 SpEL 表达式
      * <p>
+     * 例如: "#user.id", "#request.getHeader('token')"
      * 如果为空，将根据 {@link #limitType()} 自动生成
      */
-    String value() default "";
-
-    /**
-     * 每秒速率 (QPS)
-     */
-    double rate() default 10;
-
-    /**
-     * 突发流量大小 (令牌桶容量)
-     * 默认与 rate 相同
-     */
-    double burst() default 0;
+    String key() default "";
 
     /**
      * 限流类型
@@ -38,7 +35,7 @@ public @interface RateLimit {
     /**
      * 提示信息
      */
-    String message() default "访问过于频繁，请稍后再试";
+    String message() default "当前访问人数较多，请稍后再试";
 
     /**
      * 限流类型枚举

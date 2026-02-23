@@ -20,14 +20,16 @@ public class RedisRateLimiter implements RateLimiter {
     private final RedisScript<Long> limitScript = createLimitScript();
 
     @Override
-    public boolean tryAcquire(String key, double rate, double burst) {
+    public boolean tryAcquire(String key, double rate) {
         // Lua 脚本需要的参数：[key], [capacity], [rate], [now_sec]
+        // 简单处理：burst (capacity) 等于 rate
+        long capacity = (long) Math.max(1, rate);
         long now = System.currentTimeMillis() / 1000;
 
         Long result = redisTemplate.execute(
                 limitScript,
                 Collections.singletonList(key),
-                (long) burst,
+                capacity,
                 (long) rate,
                 now);
 

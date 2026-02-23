@@ -1,18 +1,19 @@
 package io.github.luminion.starter.ratelimit.aspect;
 
-import io.github.luminion.starter.ratelimit.annotation.RateLimit;
 import io.github.luminion.starter.core.fingerprint.MethodFingerprinter;
 import io.github.luminion.starter.ratelimit.RateLimiter;
+import io.github.luminion.starter.ratelimit.annotation.RateLimit;
 import io.github.luminion.starter.ratelimit.exception.RateLimitException;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import jakarta.servlet.http.HttpServletRequest;
 import java.lang.reflect.Method;
 
 /**
@@ -27,20 +28,28 @@ public class RateLimitAspect {
     private final MethodFingerprinter methodFingerprinter;
     private final RateLimiter rateLimiter;
 
-    @Before("@annotation(rateLimit)")
-    public void doRateLimit(JoinPoint joinPoint, RateLimit rateLimit) {
+    @Before("@within(io.github.luminion.starter.ratelimit.annotation.RateLimit) || @annotation(io.github.luminion.starter.ratelimit.annotation.RateLimit)")
+    public void doRateLimit(JoinPoint joinPoint) {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         Method method = signature.getMethod();
+
+        // 支持方法级覆盖类级配置
+        RateLimit rateLimit = AnnotatedElementUtils.findMergedAnnotation(method, RateLimit.class);
+        if (rateLimit == null) {
+            rateLimit = AnnotatedElementUtils.findMergedAnnotation(method.getDeclaringClass(), RateLimit.class);
+        }
+
+        if (rateLimit == null)
+            return;
 
         // 1. 生成基础 Key
         String key = prefix + generateKey(joinPoint, method, rateLimit);
 
-        // 2. 确定速率和桶容量
-        double rate = rateLimit.rate();
-        double burst = rateLimit.burst() > 0 ? rateLimit.burst() : rate;
+        // 2. 确定速率
+        double rate = rateLimit.value();
 
         // 3. 执行限流
-        if (!rateLimiter.tryAcquire(key, rate, burst)) {
+        if (!rateLimiter.tryAcquire(key, rate)) {
             throw new RateLimitException(rateLimit.message());
         }
     }
@@ -55,23 +64,21 @@ public class RateLimitAspect {
                 keyBuilder.append(getIpAddress()).append(":");
                 break;
             case USER:
-                // 这里可以根据项目权限框架获取用户 ID，此处仅提供占位或通过异常处理
                 keyBuilder.append("user:").append(getUserId()).append(":");
                 break;
             case GLOBAL:
                 keyBuilder.append("global:");
                 break;
             default:
-                // DEFAULT 模式下不加特殊前缀
                 break;
         }
 
-        // 使用指纹解析器解析具体的方法/SpEL 签名
+        // 使用指纹解析器解析具体的 SpEL 或指纹 (使用 rateLimit.key() 而非之前的 value())
         String fingerprint = methodFingerprinter.resolveMethodFingerprint(
                 joinPoint.getTarget(),
                 method,
                 joinPoint.getArgs(),
-                rateLimit.value());
+                rateLimit.key());
 
         return keyBuilder.append(fingerprint).toString();
     }
@@ -89,7 +96,6 @@ public class RateLimitAspect {
     }
 
     private String getUserId() {
-        // 最佳实践：用户可以重写此方法或通过注入 UserProvider 获取
         return "anonymous";
     }
 }

@@ -8,13 +8,12 @@ package io.github.luminion.starter.ratelimit;
 public interface RateLimiter {
 
     /**
-     * 尝试获取访问许可 (令牌)
+     * 尝试获取访问许可
      *
-     * @param key   限流 Key
-     * @param rate  速率
-     * @param burst 突发量
+     * @param key  限流 Key
+     * @param rate 速率 (QPS)
      * @return true: 允许访问; false: 已被限流
      */
-    boolean tryAcquire(String key, double rate, double burst);
+    boolean tryAcquire(String key, double rate);
 
 }
