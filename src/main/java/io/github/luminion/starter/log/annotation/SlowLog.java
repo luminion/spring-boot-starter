@@ -1,45 +1,29 @@
 package io.github.luminion.starter.log.annotation;
 
-import org.slf4j.event.Level;
-
 import java.lang.annotation.*;
 import java.util.concurrent.TimeUnit;
 
 /**
+ * 慢日志记录注解
+ * 用于标识需要监控执行时间的业务方法或类
+ *
  * @author luminion
  * @since 1.0.0
  */
-@Target(ElementType.METHOD)
+@Target({ ElementType.METHOD, ElementType.TYPE })
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface SlowLog {
 
     /**
-     * 执行者名称
-     * 
-     * @return 名称
+     * 耗时阈值
+     * 超过该值则记录日志
      */
-    String value() default "";
-
-    /**
-     * 执行者名称
-     */
-    String name() default "";
-
-    /**
-     * 耗时阈值，超过阈值则记录日志
-     */
-    int threshold() default 200;
+    int value() default 200;
 
     /**
      * 阈值时间单位
+     * 默认毫秒
      */
     TimeUnit timeUnit() default TimeUnit.MILLISECONDS;
-
-    /**
-     * 日志等级
-     *
-     * @return 级别
-     */
-    Level level() default Level.DEBUG;
 }

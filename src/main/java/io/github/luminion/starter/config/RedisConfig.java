@@ -1,6 +1,5 @@
 package io.github.luminion.starter.config;
 
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.*;
 import org.springframework.context.annotation.Bean;
@@ -16,7 +15,6 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
  * @author luminion
  * @see org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
  */
-@Slf4j
 @AutoConfiguration
 @ConditionalOnClass(RedisOperations.class)
 @ConditionalOnProperty(value = "luminion.redis.enabled", havingValue = "true", matchIfMissing = true)
@@ -30,7 +28,7 @@ public class RedisConfig {
     //    // 该配置由官方starter提供
     //    return new StringRedisTemplate(redisConnectionFactory);
     //}
-    
+
     @Bean
     @ConditionalOnMissingBean(name = "stringObjectRedisTemplate")
     @ConditionalOnBean({RedisConnectionFactory.class, RedisSerializer.class})
@@ -46,13 +44,12 @@ public class RedisConfig {
         redisTemplate.afterPropertiesSet();
         return redisTemplate;
     }
-    
+
     @Bean
     @ConditionalOnMissingBean(name = "redisTemplate")
     @ConditionalOnBean({RedisConnectionFactory.class, RedisSerializer.class})
     @ConditionalOnSingleCandidate(RedisConnectionFactory.class)
     public RedisTemplate<Object, Object> redisTemplate(RedisConnectionFactory redisConnectionFactory, RedisSerializer<Object> redisSerializer) {
-        log.debug("RedisTemplate Configured");
         RedisTemplate<Object, Object> redisTemplate = new RedisTemplate<>();
         redisTemplate.setConnectionFactory(redisConnectionFactory);
         redisTemplate.setDefaultSerializer(redisSerializer);

@@ -1,35 +1,39 @@
 package io.github.luminion.starter.log.aspect;
 
+import io.github.luminion.starter.log.SlowLogWriter;
 import io.github.luminion.starter.log.annotation.SlowLog;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
-import org.slf4j.event.Level;
-import org.springframework.stereotype.Component;
-
-import java.lang.reflect.Method;
-import java.util.concurrent.TimeUnit;
+import org.springframework.core.annotation.AnnotatedElementUtils;
 
 /**
+ * 慢日志切面
+ *
  * @author luminion
  * @since 1.0.0
  */
 @Aspect
-@Component
-@Slf4j
 @RequiredArgsConstructor
 public class SlowLogAspect {
+    private final SlowLogWriter slowLogWriter;
 
-    @Around("@annotation(slowLog)")
-    public Object logTime(ProceedingJoinPoint joinPoint, SlowLog slowLog) throws Throwable {
-        String name = slowLog.name().isEmpty() ? slowLog.value() : slowLog.name();
-        if (name.isEmpty()) {
-            MethodSignature methodSignature = (MethodSignature) joinPoint.getSignature();
-            Method method = methodSignature.getMethod();
-            name = method.getDeclaringClass().getSimpleName() + "." + methodSignature.getName() + "()";
+    @Around("@within(io.github.luminion.starter.log.annotation.SlowLog) " +
+            "|| @annotation(io.github.luminion.starter.log.annotation.SlowLog)")
+    public Object logTime(ProceedingJoinPoint joinPoint) throws Throwable {
+        MethodSignature signature = (MethodSignature) joinPoint.getSignature();
+
+        // 核心逻辑：获取注解实例，支持方法级覆盖类级
+        SlowLog slowLog = AnnotatedElementUtils.findMergedAnnotation(signature.getMethod(), SlowLog.class);
+        if (slowLog == null) {
+            // 如果方法上没有，尝试从类上获取 (兜底，虽然切点已经过滤，但为了保险)
+            slowLog = AnnotatedElementUtils.findMergedAnnotation(signature.getDeclaringType(), SlowLog.class);
+        }
+
+        if (slowLog == null) {
+            return joinPoint.proceed();
         }
 
         long start = System.nanoTime();
@@ -37,34 +41,11 @@ public class SlowLogAspect {
             return joinPoint.proceed();
         } finally {
             long durationNs = System.nanoTime() - start;
-            long thresholdNs = slowLog.timeUnit().toNanos(slowLog.threshold());
+            long thresholdNs = slowLog.timeUnit().toNanos(slowLog.value());
 
             if (durationNs > thresholdNs) {
-                long durationMs = TimeUnit.NANOSECONDS.toMillis(durationNs);
-                String unit = slowLog.timeUnit().name().toLowerCase();
-                log(slowLog.level(), "{} => Time Cost: {} ms (threshold: {} {})", name, durationMs, slowLog.threshold(),
-                        unit);
+                slowLogWriter.writeSlow(signature, durationNs);
             }
-        }
-    }
-
-    private void log(Level level, String format, Object... arguments) {
-        switch (level) {
-            case TRACE:
-                log.trace(format, arguments);
-                break;
-            case DEBUG:
-                log.debug(format, arguments);
-                break;
-            case INFO:
-                log.info(format, arguments);
-                break;
-            case WARN:
-                log.warn(format, arguments);
-                break;
-            case ERROR:
-                log.error(format, arguments);
-                break;
         }
     }
 }

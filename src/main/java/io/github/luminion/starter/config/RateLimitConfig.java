@@ -21,7 +21,6 @@ import org.springframework.data.redis.core.RedisTemplate;
  *
  * @author luminion
  */
-@Slf4j
 @AutoConfiguration
 @ConditionalOnClass(Advice.class)
 public class RateLimitConfig {
@@ -38,7 +37,6 @@ public class RateLimitConfig {
     @ConditionalOnMissingBean(RateLimiter.class)
     @ConditionalOnBean(name = "redisTemplate")
     public RateLimiter redisRateLimiter(RedisTemplate<Object, Object> redisTemplate) {
-        log.debug("RateLimiter: RedisRateLimiter configured.");
         return new RedisRateLimiter(redisTemplate);
     }
 
@@ -47,7 +45,6 @@ public class RateLimitConfig {
     @ConditionalOnMissingBean(RateLimiter.class)
     @ConditionalOnClass(name = "com.github.benmanes.caffeine.cache.Cache")
     public RateLimiter localRateLimiter() {
-        log.debug("RateLimiter: LocalRateLimiter (Caffeine) configured.");
         return new LocalRateLimiter();
     }
 }

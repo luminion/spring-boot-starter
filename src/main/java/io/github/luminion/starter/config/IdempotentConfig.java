@@ -1,12 +1,11 @@
 package io.github.luminion.starter.config;
 
 import io.github.luminion.starter.Prop;
-import io.github.luminion.starter.idempotent.aspect.IdempotentAspect;
-import io.github.luminion.starter.idempotent.IdempotentHandler;
 import io.github.luminion.starter.core.fingerprint.MethodFingerprinter;
+import io.github.luminion.starter.idempotent.IdempotentHandler;
+import io.github.luminion.starter.idempotent.aspect.IdempotentAspect;
 import io.github.luminion.starter.idempotent.support.LocalIdempotentHandler;
 import io.github.luminion.starter.idempotent.support.RedisIdempotentHandler;
-import lombok.extern.slf4j.Slf4j;
 import org.aspectj.weaver.Advice;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -21,7 +20,6 @@ import org.springframework.data.redis.core.RedisTemplate;
  *
  * @author luminion
  */
-@Slf4j
 @AutoConfiguration
 @ConditionalOnClass(Advice.class)
 public class IdempotentConfig {

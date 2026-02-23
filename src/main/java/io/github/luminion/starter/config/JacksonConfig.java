@@ -16,7 +16,6 @@ import com.fasterxml.jackson.datatype.jsr310.ser.LocalTimeSerializer;
 import io.github.luminion.starter.Prop;
 import io.github.luminion.starter.jackson.deserializer.JacksonStringDeserializer;
 import io.github.luminion.starter.jackson.serializer.JacksonStringSerializer;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -45,13 +44,12 @@ import java.util.TimeZone;
  * @author luminion
  * @see org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration
  */
-@Slf4j
 @AutoConfiguration
 @ConditionalOnClass(ObjectMapper.class)
 public class JacksonConfig {
 
     @Configuration(proxyBeanMethods = false)
-    @ConditionalOnClass({ Jackson2ObjectMapperBuilder.class })
+    @ConditionalOnClass({Jackson2ObjectMapperBuilder.class})
     static class Jackson2ObjectMapperBuilderCustomizerConfiguration {
 
         /**
@@ -120,7 +118,7 @@ public class JacksonConfig {
      * @since 1.0.0
      */
     @Configuration(proxyBeanMethods = false)
-    @ConditionalOnClass({ RedisTemplate.class, Jackson2ObjectMapperBuilder.class })
+    @ConditionalOnClass({RedisTemplate.class, Jackson2ObjectMapperBuilder.class})
     static class JacksonRedisConfiguration {
 
         /**

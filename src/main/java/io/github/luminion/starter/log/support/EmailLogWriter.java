@@ -1,5 +1,6 @@
 package io.github.luminion.starter.log.support;
 
+import io.github.luminion.starter.core.util.AspectUtils;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import org.aspectj.lang.reflect.MethodSignature;
@@ -55,8 +56,7 @@ public class EmailLogWriter extends RequestLogWriter {
 
             String appName = environment != null ?
                     environment.getProperty("spring.application.name", "N/A") : "N/A";
-            helper.setSubject(String.format("⚠️ Exception in %s: %s", appName,
-                    getMethodName(signature)));
+            helper.setSubject(String.format("⚠️ Exception in %s: %s", appName, AspectUtils.getMethodName(signature)));
 
             StringWriter sw = new StringWriter();
             PrintWriter pw = new PrintWriter(sw);
@@ -70,9 +70,8 @@ public class EmailLogWriter extends RequestLogWriter {
                     appName,
                     port,
                     getRequestInfo(),
-                    getMethodName(signature),
-//                    formatArgs(signature.getParameterNames(), ),
-                   "sss",
+                    AspectUtils.getMethodName(signature),
+                    AspectUtils.getFormatArgs(signature, args),
                     duration,
                     stackTrace
             );
@@ -105,9 +104,7 @@ public class EmailLogWriter extends RequestLogWriter {
                 "<table>" +
                 "<tr><th>Application</th><td>" + appName + "</td></tr>" +
                 "<tr><th>Port</th><td>" + port + "</td></tr>" +
-                "<tr><th>Request</th><td>" + requestInfo.
-
-                replace(" -", "") + "</td></tr>" +
+                "<tr><th>Request</th><td>" + requestInfo.replace(" -", "") + "</td></tr>" +
                 "<tr><th>Method</th><td>" + methodName + "</td></tr>" +
                 "<tr><th>Arguments</th><td>" + methodArgs + "</td></tr>" +
                 "<tr><th>Duration</th><td>" + duration + " ms</td></tr>" +

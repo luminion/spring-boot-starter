@@ -6,8 +6,10 @@ import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-
-public class RequestLogWriter extends Slf4JInvokeLogWriter {
+/**
+ * 带有 HTTP 请求信息的日志写入器
+ */
+public class RequestLogWriter extends Slf4JLogWriter {
 
     public RequestLogWriter(Level level) {
         super(level);
@@ -18,12 +20,6 @@ public class RequestLogWriter extends Slf4JInvokeLogWriter {
         super.log(level, getRequestInfo() + " " + format, arguments);
     }
 
-    /**
-     * Formats the request information part of the log.
-     *
-     * @return A string like "127.0.0.1 GET /api/users -", or "[N/A]" if not in a
-     * request context.
-     */
     protected String getRequestInfo() {
         RequestAttributes attributes = RequestContextHolder.getRequestAttributes();
         if (!(attributes instanceof ServletRequestAttributes)) {

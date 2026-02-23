@@ -6,7 +6,6 @@ import io.github.luminion.starter.converter.support.*;
 import io.github.luminion.starter.web.formatter.MaskAnnotationFormatterFactory;
 import io.github.luminion.starter.web.formatter.UnmaskAnnotationFormatterFactory;
 import io.github.luminion.starter.xss.XssCleaner;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.ApplicationContext;
@@ -17,7 +16,6 @@ import org.springframework.context.annotation.Bean;
  *
  * @author luminion
  */
-@Slf4j
 //@AutoConfiguration
 @Deprecated
 public class ConverterConfig {

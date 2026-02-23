@@ -11,6 +11,7 @@ import org.springframework.format.FormatterRegistry;
 import org.springframework.format.datetime.DateFormatter;
 import org.springframework.format.datetime.DateFormatterRegistrar;
 import org.springframework.format.datetime.standard.DateTimeFormatterRegistrar;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.time.format.DateTimeFormatter;
@@ -62,5 +63,36 @@ public class BaseWebMvcConfigurer implements WebMvcConfigurer {
         dateRegistrar.registerFormatters(registry);
 
     }
-    
+
+//     @Override
+//     public void addCorsMappings(CorsRegistry registry) {
+//     // 允许跨域
+//     registry.addMapping("/**")
+//     .allowedOriginPatterns("*")
+//     .allowCredentials(true)
+//     .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+//     .maxAge(3600);
+//     }
+
+    /**
+     * 重写以下方法允许跨域
+     * 
+     * <pre>{@code
+     * @Override
+     * public void addCorsMappings(CorsRegistry registry) {
+     *     allowCrossOrigin(registry);
+     * }
+     * }</pre>
+     *
+     * @param registry 注册表
+     */
+    public void allowCrossOrigin(CorsRegistry registry) {
+        // 允许跨域
+        registry.addMapping("/**")
+                .allowedOriginPatterns("*")
+                .allowCredentials(true)
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                .maxAge(3600);
+    }
+
 }

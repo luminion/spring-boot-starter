@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.InnerInterceptor;
 import lombok.SneakyThrows;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -20,7 +19,6 @@ import java.util.List;
  * @author luminion
  * @see com.baomidou.mybatisplus.autoconfigure.MybatisPlusAutoConfiguration
  */
-@Slf4j
 @AutoConfiguration
 @ConditionalOnClass({BaseMapper.class, MybatisPlusInterceptor.class})
 @ConditionalOnProperty(value = "luminion.mybatis-plus.enabled", havingValue = "true", matchIfMissing = true)
