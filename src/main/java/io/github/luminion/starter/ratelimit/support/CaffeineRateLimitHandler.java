@@ -2,7 +2,7 @@ package io.github.luminion.starter.ratelimit.support;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import io.github.luminion.starter.ratelimit.RateLimiter;
+import io.github.luminion.starter.ratelimit.RateLimitHandler;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicLong;
  *
  * @author luminion
  */
-public class CaffeineRateLimiter implements RateLimiter {
+public class CaffeineRateLimitHandler implements RateLimitHandler {
 
     private final Cache<String, TokenBucket> buckets = Caffeine.newBuilder()
             .expireAfterAccess(5, TimeUnit.MINUTES)

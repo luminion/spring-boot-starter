@@ -1,6 +1,6 @@
 package io.github.luminion.starter.ratelimit.support;
 
-import io.github.luminion.starter.ratelimit.RateLimiter;
+import io.github.luminion.starter.ratelimit.RateLimitHandler;
 
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -10,7 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * @author luminion
  */
-public class JdkRateLimiter implements RateLimiter {
+public class JdkRateLimitHandler implements RateLimitHandler {
 
     /**
      * Key: 限流键

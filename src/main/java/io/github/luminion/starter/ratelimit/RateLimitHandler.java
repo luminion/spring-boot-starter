@@ -5,7 +5,7 @@ package io.github.luminion.starter.ratelimit;
  *
  * @author luminion
  */
-public interface RateLimiter {
+public interface RateLimitHandler {
 
     /**
      * 尝试获取访问许可

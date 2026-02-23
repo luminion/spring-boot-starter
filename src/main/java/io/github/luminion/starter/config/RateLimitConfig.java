@@ -2,12 +2,12 @@ package io.github.luminion.starter.config;
 
 import io.github.luminion.starter.Prop;
 import io.github.luminion.starter.core.fingerprint.MethodFingerprinter;
-import io.github.luminion.starter.ratelimit.RateLimiter;
+import io.github.luminion.starter.ratelimit.RateLimitHandler;
 import io.github.luminion.starter.ratelimit.aspect.RateLimitAspect;
-import io.github.luminion.starter.ratelimit.support.CaffeineRateLimiter;
-import io.github.luminion.starter.ratelimit.support.GuavaRateLimiter;
-import io.github.luminion.starter.ratelimit.support.JdkRateLimiter;
-import io.github.luminion.starter.ratelimit.support.RedisRateLimiter;
+import io.github.luminion.starter.ratelimit.support.CaffeineRateLimitHandler;
+import io.github.luminion.starter.ratelimit.support.GuavaRateLimitHandler;
+import io.github.luminion.starter.ratelimit.support.JdkRateLimitHandler;
+import io.github.luminion.starter.ratelimit.support.RedisRateLimitHandler;
 import org.aspectj.weaver.Advice;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -28,10 +28,10 @@ public class RateLimitConfig {
 
     @Bean
     @ConditionalOnMissingBean(RateLimitAspect.class)
-    @ConditionalOnBean({ MethodFingerprinter.class, RateLimiter.class })
+    @ConditionalOnBean({ MethodFingerprinter.class, RateLimitHandler.class })
     public RateLimitAspect rateLimitAspect(Prop prop, MethodFingerprinter methodFingerprinter,
-            RateLimiter rateLimiter) {
-        return new RateLimitAspect(prop.getRateLimitPrefix(), methodFingerprinter, rateLimiter);
+            RateLimitHandler rateLimitHandler) {
+        return new RateLimitAspect(prop.getRateLimitPrefix(), methodFingerprinter, rateLimitHandler);
     }
 
     /**
@@ -39,10 +39,10 @@ public class RateLimitConfig {
      */
     @Bean
     @Order(100)
-    @ConditionalOnMissingBean(RateLimiter.class)
+    @ConditionalOnMissingBean(RateLimitHandler.class)
     @ConditionalOnBean(name = "redisTemplate")
-    public RateLimiter redisRateLimiter(RedisTemplate<Object, Object> redisTemplate) {
-        return new RedisRateLimiter(redisTemplate);
+    public RateLimitHandler redisRateLimiter(RedisTemplate<Object, Object> redisTemplate) {
+        return new RedisRateLimitHandler(redisTemplate);
     }
 
     /**
@@ -50,10 +50,10 @@ public class RateLimitConfig {
      */
     @Bean
     @Order(200)
-    @ConditionalOnMissingBean(RateLimiter.class)
+    @ConditionalOnMissingBean(RateLimitHandler.class)
     @ConditionalOnClass(name = "com.github.benmanes.caffeine.cache.Cache")
-    public RateLimiter caffeineRateLimiter() {
-        return new CaffeineRateLimiter();
+    public RateLimitHandler caffeineRateLimiter() {
+        return new CaffeineRateLimitHandler();
     }
 
     /**
@@ -61,10 +61,10 @@ public class RateLimitConfig {
      */
     @Bean
     @Order(300)
-    @ConditionalOnMissingBean(RateLimiter.class)
+    @ConditionalOnMissingBean(RateLimitHandler.class)
     @ConditionalOnClass(name = "com.google.common.cache.Cache")
-    public RateLimiter guavaRateLimiter() {
-        return new GuavaRateLimiter();
+    public RateLimitHandler guavaRateLimiter() {
+        return new GuavaRateLimitHandler();
     }
 
     /**
@@ -72,8 +72,8 @@ public class RateLimitConfig {
      */
     @Bean
     @Order(400)
-    @ConditionalOnMissingBean(RateLimiter.class)
-    public RateLimiter jdkRateLimiter() {
-        return new JdkRateLimiter();
+    @ConditionalOnMissingBean(RateLimitHandler.class)
+    public RateLimitHandler jdkRateLimiter() {
+        return new JdkRateLimitHandler();
     }
 }

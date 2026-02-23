@@ -2,7 +2,8 @@ package io.github.luminion.starter.ratelimit.support;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
-import io.github.luminion.starter.ratelimit.RateLimiter;
+import com.google.common.util.concurrent.RateLimiter;
+import io.github.luminion.starter.ratelimit.RateLimitHandler;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -13,22 +14,20 @@ import java.util.concurrent.TimeUnit;
  * @author luminion
  * @since 1.0.1
  */
-public class GuavaRateLimiter implements RateLimiter {
+public class GuavaRateLimitHandler implements RateLimitHandler {
 
     /**
-     * 注意：Guava 的 RateLimiter 是针对单 Key 的对象。
+     * 注意：Guava 的 RateLimitHandler 是针对单 Key 的对象。
      * 这里我们缓存这些对象。
      */
-    private final Cache<String, com.google.common.util.concurrent.RateLimiter> limiters = CacheBuilder.newBuilder()
+    private final Cache<String, RateLimiter> limiters = CacheBuilder.newBuilder()
             .expireAfterAccess(5, TimeUnit.MINUTES)
             .build();
 
     @Override
     public boolean tryAcquire(String key, double rate) {
         try {
-            com.google.common.util.concurrent.RateLimiter limiter = limiters.get(key,
-                    () -> com.google.common.util.concurrent.RateLimiter.create(rate));
-
+            RateLimiter limiter = limiters.get(key, () -> RateLimiter.create(rate));
             // 如果运行中速率发生变化，动态更新
             if (limiter.getRate() != rate) {
                 limiter.setRate(rate);

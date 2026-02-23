@@ -1,7 +1,7 @@
 package io.github.luminion.starter.ratelimit.aspect;
 
 import io.github.luminion.starter.core.fingerprint.MethodFingerprinter;
-import io.github.luminion.starter.ratelimit.RateLimiter;
+import io.github.luminion.starter.ratelimit.RateLimitHandler;
 import io.github.luminion.starter.ratelimit.annotation.RateLimit;
 import io.github.luminion.starter.ratelimit.exception.RateLimitException;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +23,7 @@ import java.lang.reflect.Method;
 public class RateLimitAspect {
     private final String prefix;
     private final MethodFingerprinter methodFingerprinter;
-    private final RateLimiter rateLimiter;
+    private final RateLimitHandler rateLimitHandler;
 
     @Before("@within(io.github.luminion.starter.ratelimit.annotation.RateLimit) || @annotation(io.github.luminion.starter.ratelimit.annotation.RateLimit)")
     public void doRateLimit(JoinPoint joinPoint) {
@@ -48,7 +48,7 @@ public class RateLimitAspect {
                 rateLimit.key());
 
         // 2. 执行限流
-        if (!rateLimiter.tryAcquire(key, rateLimit.value())) {
+        if (!rateLimitHandler.tryAcquire(key, rateLimit.value())) {
             throw new RateLimitException(rateLimit.message());
         }
     }

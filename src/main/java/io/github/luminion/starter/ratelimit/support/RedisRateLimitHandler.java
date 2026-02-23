@@ -1,6 +1,6 @@
 package io.github.luminion.starter.ratelimit.support;
 
-import io.github.luminion.starter.ratelimit.RateLimiter;
+import io.github.luminion.starter.ratelimit.RateLimitHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -14,7 +14,7 @@ import java.util.Collections;
  * @author luminion
  */
 @RequiredArgsConstructor
-public class RedisRateLimiter implements RateLimiter {
+public class RedisRateLimitHandler implements RateLimitHandler {
 
     private final RedisTemplate<Object, Object> redisTemplate;
     private final RedisScript<Long> limitScript = createLimitScript();
