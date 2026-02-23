@@ -18,11 +18,23 @@ import java.lang.reflect.Method;
  * @author luminion
  */
 @Aspect
-@RequiredArgsConstructor
 public class IdempotentAspect {
     private final String prefix;
     private final MethodFingerprinter methodFingerprinter;
     private final IdempotentHandler idempotentHandler;
+
+    /**
+     * 构造函数
+     *
+     * @param prefix              方法指纹的前缀
+     * @param methodFingerprinter 方法指纹生成器
+     * @param idempotentHandler   幂等性处理器
+     */
+    public IdempotentAspect(String prefix, MethodFingerprinter methodFingerprinter, IdempotentHandler idempotentHandler) {
+        this.prefix = prefix;
+        this.methodFingerprinter = methodFingerprinter;
+        this.idempotentHandler = idempotentHandler;
+    }
 
     @Around("@annotation(idempotent)")
     public Object doIdempotent(ProceedingJoinPoint joinPoint, Idempotent idempotent) throws Throwable {
