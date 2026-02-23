@@ -1,7 +1,7 @@
 package io.github.luminion.starter.config;
 
-import io.github.luminion.starter.log.MethodLogWriter;
-import io.github.luminion.starter.log.aspect.MethodLogAspect;
+import io.github.luminion.starter.log.InvokeLogWriter;
+import io.github.luminion.starter.log.aspect.InvokeLogAspect;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -17,10 +17,10 @@ import org.springframework.context.annotation.Bean;
 public class LogConfig {
 
     @Bean
-    @ConditionalOnMissingBean(MethodLogAspect.class)
-    @ConditionalOnBean(MethodLogWriter.class)
-    public MethodLogAspect logAspect(MethodLogWriter methodLogWriter) {
-        return new MethodLogAspect(methodLogWriter);
+    @ConditionalOnMissingBean(InvokeLogAspect.class)
+    @ConditionalOnBean(InvokeLogWriter.class)
+    public InvokeLogAspect logAspect(InvokeLogWriter invokeLogWriter) {
+        return new InvokeLogAspect(invokeLogWriter);
     }
 
 

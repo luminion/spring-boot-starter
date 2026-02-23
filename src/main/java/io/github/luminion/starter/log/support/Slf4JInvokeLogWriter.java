@@ -5,21 +5,21 @@ import org.aspectj.lang.reflect.MethodSignature;
 import org.slf4j.event.Level;
 
 /**
- * A MethodLogWriter implementation that uses SLF4J for logging.
+ * A InvokeLogWriter implementation that uses SLF4J for logging.
  *
  * @author luminion
  */
 @Slf4j
-public class Slf4JMethodLogWriter extends AbstractMethodLogWriter {
+public class Slf4JInvokeLogWriter extends AbstractInvokeLogWriter {
     protected final Level level;
 
     /**
-     * Constructs a new Slf4JMethodLogWriter.
+     * Constructs a new Slf4JInvokeLogWriter.
      *
      * @param level The logging level for before and after advice (e.g., Level.INFO,
      *              Level.DEBUG).
      */
-    public Slf4JMethodLogWriter(Level level) {
+    public Slf4JInvokeLogWriter(Level level) {
         this.level = level;
     }
 
@@ -31,9 +31,10 @@ public class Slf4JMethodLogWriter extends AbstractMethodLogWriter {
     }
 
     @Override
-    public void printReturnValue(Object target, MethodSignature signature, Object[] args, Object result) {
+    public void printReturnValue(Object target, MethodSignature signature, Object[] args, Object result,
+            long duration) {
         String methodName = getMethodName(signature);
-        log(level, "<== Exit: {}. Result: [{}]. Duration: {}ms", methodName, result);
+        log(level, "<== Exit: {}. Result: [{}]. Duration: {}ms", methodName, result, duration);
     }
 
     protected void log(Level level, String format, Object... arguments) {
