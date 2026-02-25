@@ -1,11 +1,12 @@
 package io.github.luminion.starter;
 
-import io.github.luminion.starter.xss.XssStrategy;
+import io.github.luminion.starter.feature.xss.XssStrategy;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.logging.LogLevel;
 
-import java.util.Set;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * 属性值
@@ -17,7 +18,6 @@ import java.util.Set;
 @Data
 public class Prop {
 
-
     /**
      * redis限流前缀key
      */
@@ -27,17 +27,32 @@ public class Prop {
      * 幂等校验前缀key
      */
     private String idempotentPrefix = "idempotent:";
-    
+
+    /**
+     * 锁校验前缀key
+     */
+    private String lockPrefix = "lock:";
+
     /**
      * 日志级别
      */
     private LogLevel logLevel = LogLevel.DEBUG;
-    
+
     /**
      * XSS处理策略
      */
     private XssStrategy xssStrategy = XssStrategy.RELAXED;
-    
+
+    /**
+     * 枚举 编码字段名
+     */
+    private List<String> enumCodeFields = Arrays.asList("code", "id", "value");
+
+    /**
+     * 枚举 描述字段名
+     */
+    private List<String> enumDescFields = Arrays.asList("desc", "name", "label");
+
     /**
      * 日期时间格式
      */

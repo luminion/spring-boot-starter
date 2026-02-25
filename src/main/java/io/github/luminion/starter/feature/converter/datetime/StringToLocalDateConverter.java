@@ -1,0 +1,23 @@
+package io.github.luminion.starter.feature.converter.datetime;
+
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+
+/**
+ * @author luminion
+ */
+public class StringToLocalDateConverter implements CompatibleStringToDateTimeConverter<String, LocalDate> {
+    private final DateTimeFormatter formatter;
+
+    public StringToLocalDateConverter(String pattern) {
+        this.formatter = DateTimeFormatter.ofPattern(pattern);
+    }
+
+    @Override
+    public LocalDate convert(String source) {
+        if (source.isEmpty()) {
+            return null;
+        }
+        return LocalDate.parse(source, formatter);
+    }
+}

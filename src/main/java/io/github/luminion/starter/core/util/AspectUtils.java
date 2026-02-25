@@ -1,6 +1,7 @@
 package io.github.luminion.starter.core.util;
 
 import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.util.ObjectUtils;
 
 import java.util.stream.IntStream;
 
@@ -20,6 +21,16 @@ public class AspectUtils {
      */
     public static String getMethodName(MethodSignature signature) {
         return signature.getDeclaringType().getSimpleName() + "." + signature.getName();
+    }
+
+    /**
+     * 获取方法全限定名 (类全名.方法名)
+     *
+     * @param signature 方法签名
+     * @return 全限定方法名
+     */
+    public static String getFullMethodName(MethodSignature signature) {
+        return signature.getDeclaringType().getName() + "." + signature.getName();
     }
 
     /**
@@ -47,12 +58,21 @@ public class AspectUtils {
     }
 
     /**
-     * 获取方法全限定名 (类全名.方法名)
+     * 获取方法参数的简单字符串标识
      *
-     * @param signature 方法签名
-     * @return 全限定方法名
+     * @param args args
+     * @return 字符串
      */
-    public static String getFullMethodName(MethodSignature signature) {
-        return signature.getDeclaringType().getName() + "." + signature.getName();
+    public static String getArgsSimpleString(Object[] args) {
+        StringBuilder keyBuilder = new StringBuilder();
+        if (args != null && args.length > 0) {
+            for (int i = 0; i < args.length; i++) {
+                if (i > 0) {
+                    keyBuilder.append(',');
+                }
+                keyBuilder.append(ObjectUtils.nullSafeToString(args[i]));
+            }
+        }
+        return keyBuilder.toString();
     }
 }
