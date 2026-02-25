@@ -29,12 +29,15 @@ public class JsoupXssCleaner implements XssCleaner {
             this.outputSettings = null;
         } else {
             // 2. 预热 Jsoup 配置
-            this.safelist = switch (strategy) {
-                case SIMPLE_TEXT -> Safelist.simpleText();
-                case BASIC -> Safelist.basic();
-                case BASIC_WITH_IMAGES -> Safelist.basicWithImages();
-                default -> Safelist.relaxed();
-            };
+            if (strategy == XssStrategy.SIMPLE_TEXT){
+                this.safelist = Safelist.simpleText();
+            }else if (strategy == XssStrategy.BASIC){
+                this.safelist = Safelist.basic();
+            }else if (strategy == XssStrategy.BASIC_WITH_IMAGES){
+                this.safelist = Safelist.basicWithImages();
+            }else {
+                this.safelist = Safelist.relaxed();
+            }
             this.outputSettings = new Document.OutputSettings()
                     .prettyPrint(false)
                     .escapeMode(Entities.EscapeMode.xhtml);
