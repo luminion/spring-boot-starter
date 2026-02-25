@@ -57,13 +57,20 @@ public class Prop {
      * 日期时间格式
      */
     private DateTimeFormatProperties dateTimeFormat;
-
     /**
-     * 日期时间格式属性
-     *
-     * @author luminion
-     * @since 1.0.0
+     * Web 配置
      */
+    private WebProperties web;
+    
+    @Data
+    public class WebProperties {
+        /**
+         * 允许跨域
+         */
+        private boolean allowCors;
+        
+    }
+    
     @Data
     public class DateTimeFormatProperties {
         /**

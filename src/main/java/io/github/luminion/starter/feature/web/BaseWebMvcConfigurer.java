@@ -1,11 +1,8 @@
 package io.github.luminion.starter.feature.web;
 
 import io.github.luminion.starter.Prop;
-import io.github.luminion.starter.feature.xss.converter.XssStringConverter;
-import io.github.luminion.starter.feature.web.formatter.MaskAnnotationFormatterFactory;
-import io.github.luminion.starter.feature.web.formatter.UnmaskAnnotationFormatterFactory;
-import io.github.luminion.starter.web.formatter.*;
 import io.github.luminion.starter.feature.xss.XssCleaner;
+import io.github.luminion.starter.feature.xss.converter.XssStringConverter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.ApplicationContext;
@@ -28,13 +25,15 @@ public class BaseWebMvcConfigurer implements WebMvcConfigurer {
     private final ApplicationContext applicationContext;
     private final Prop prop;
 
+    public BaseWebMvcConfigurer(ApplicationContext applicationContext) {
+        this.applicationContext = applicationContext;
+        this.prop = applicationContext.getBean(Prop.class);
+    }
+
     @Override
     public void addFormatters(FormatterRegistry registry) {
-        // 1. 注册注解驱动的格式化器 (JsonEncrypt/JsonDecrypt)
-        registry.addFormatterForFieldAnnotation(new MaskAnnotationFormatterFactory(applicationContext));
-        registry.addFormatterForFieldAnnotation(new UnmaskAnnotationFormatterFactory(applicationContext));
 
-        // 2. 注册全局 XSS 格式化器（仅对 Web MVC 生效）
+        // 注册全局 XSS 格式化器（仅对 Web MVC 生效）
         // 注意：Formatter 接口不支持 ConditionalConverter 的 matches 逻辑（如 @XssIgnore）
         // 如果需要支持 @XssIgnore，建议改用 registry.addConverter(new
         // XssStringConverter(xssCleaner))
@@ -44,7 +43,7 @@ public class BaseWebMvcConfigurer implements WebMvcConfigurer {
             registry.addConverter(new XssStringConverter(xssCleaner));
         }
 
-        // 3. 注册日期时间格式化器 (从 Prop 配置中获取格式)
+        // 注册日期时间格式化器 (从 Prop 配置中获取格式)
         String dateTimePattern = prop.getDateTimeFormat().getDateTime();
         String datePattern = prop.getDateTimeFormat().getDate();
         String timePattern = prop.getDateTimeFormat().getTime();
@@ -66,35 +65,16 @@ public class BaseWebMvcConfigurer implements WebMvcConfigurer {
 
     }
 
-//     @Override
-//     public void addCorsMappings(CorsRegistry registry) {
-//     // 允许跨域
-//     registry.addMapping("/**")
-//     .allowedOriginPatterns("*")
-//     .allowCredentials(true)
-//     .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-//     .maxAge(3600);
-//     }
-
-    /**
-     * 重写以下方法允许跨域
-     * 
-     * <pre>{@code
-     * @Override
-     * public void addCorsMappings(CorsRegistry registry) {
-     *     allowCrossOrigin(registry);
-     * }
-     * }</pre>
-     *
-     * @param registry 注册表
-     */
-    public void allowCrossOrigin(CorsRegistry registry) {
-        // 允许跨域
-        registry.addMapping("/**")
-                .allowedOriginPatterns("*")
-                .allowCredentials(true)
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                .maxAge(3600);
+    @Override
+    public void addCorsMappings(CorsRegistry registry) {
+        if (prop.getWeb().isAllowCors()) {
+            // 允许跨域
+            registry.addMapping("/**")
+                    .allowedOriginPatterns("*")
+                    .allowCredentials(true)
+                    .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                    .maxAge(3600);
+        }
     }
 
 }

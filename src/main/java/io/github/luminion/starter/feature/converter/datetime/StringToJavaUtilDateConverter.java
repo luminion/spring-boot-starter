@@ -8,11 +8,11 @@ import java.util.Date;
 /**
  * @author luminion
  */
-public class StringToDateConverter implements DateTimeConverter<String, Date> {
+public class StringToJavaUtilDateConverter implements DateTimeConverter<String, Date> {
     private final DateTimeFormatter formatter;
     private final ZoneId zoneId;
 
-    public StringToDateConverter(String pattern, String zoneId) {
+    public StringToJavaUtilDateConverter(String pattern, String zoneId) {
         this.formatter = DateTimeFormatter.ofPattern(pattern);
         this.zoneId = ZoneId.of(zoneId);
     }
