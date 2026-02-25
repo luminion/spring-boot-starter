@@ -34,13 +34,13 @@ import java.util.stream.Collectors;
 @Slf4j
 @RestControllerAdvice
 @RequiredArgsConstructor
-public class BaseExceptionHandler<R> implements Ordered {
+public class WebExceptionHandler<R> implements Ordered {
 
     protected final Function<String, R> failed;
     protected final Function<Throwable, R> error;
     protected final Class<? extends RuntimeException> bizExceptionClass;
 
-    public BaseExceptionHandler(Function<String, R> failed, Function<Throwable, R> error) {
+    public WebExceptionHandler(Function<String, R> failed, Function<Throwable, R> error) {
         this(failed, error, null);
     }
 
