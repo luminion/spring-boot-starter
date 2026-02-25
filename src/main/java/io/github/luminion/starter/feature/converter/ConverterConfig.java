@@ -64,16 +64,4 @@ public class ConverterConfig {
         return new StringToSqlTimestampConverter(properties.getDateTimeFormat().getDateTime());
     }
 
-    @Bean
-    @ConditionalOnMissingBean
-    public MaskAnnotationFormatterFactory maskAnnotationFormatterFactory(ApplicationContext applicationContext) {
-        return new MaskAnnotationFormatterFactory(applicationContext);
-    }
-
-    @Bean
-    @ConditionalOnMissingBean
-    public UnmaskAnnotationFormatterFactory unmaskAnnotationFormatterFactory(ApplicationContext applicationContext) {
-        return new UnmaskAnnotationFormatterFactory(applicationContext);
-    }
-
 }

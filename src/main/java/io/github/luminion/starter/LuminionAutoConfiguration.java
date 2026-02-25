@@ -33,7 +33,6 @@ import org.springframework.context.annotation.Import;
                 JacksonConfig.class,
                 LockConfig.class,
                 LogConfig.class,
-                MaskConfig.class,
                 MybatisPlusConfig.class,
                 RateLimitConfig.class,
                 RedisConfig.class,
