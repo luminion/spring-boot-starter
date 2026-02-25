@@ -46,7 +46,7 @@ public class JacksonStringSerializer extends StdSerializer<String> implements Co
         }
         JsonEncrypt jsonEncrypt = property.getAnnotation(JsonEncrypt.class);
         if (jsonEncrypt != null) {
-            var funcClass = jsonEncrypt.value();
+            Class<? extends StringEncryptor> funcClass = jsonEncrypt.value();
             try {
                 StringEncryptor bean = applicationContext.getBean(funcClass);
                 return new JsonStringFunctionSerializer(bean::encrypt);

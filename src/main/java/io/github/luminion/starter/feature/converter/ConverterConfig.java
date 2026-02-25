@@ -10,10 +10,12 @@ import org.springframework.context.annotation.Bean;
 /**
  * 转换器配置
  *
+ * @deprecated 该类会全局修改spring中所有对应转化, 需确认兼容后使用(若无特殊处理, 标准程序一般可直接使用)
  * @author luminion
  */
 @AutoConfiguration
 @ConditionalOnBean(Prop.class)
+@Deprecated
 public class ConverterConfig {
 
     @Bean

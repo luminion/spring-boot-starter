@@ -1,9 +1,10 @@
-package io.github.luminion.starter.feature.web;
+package io.github.luminion.starter.core.util;
 
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import lombok.NoArgsConstructor;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -18,7 +19,7 @@ import java.util.Map;
 /**
  * @author luminion
  */
-public abstract class WebContextHolder {
+public abstract class WebUtils {
     
     /**
      * 判断当前是否在Web请求上下文中。

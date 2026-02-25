@@ -1,5 +1,6 @@
 package io.github.luminion.starter.core.util;
 
+import lombok.NoArgsConstructor;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.util.ObjectUtils;
 
@@ -11,7 +12,7 @@ import java.util.stream.IntStream;
  * @author luminion
  * @since 1.0.0
  */
-public class AspectUtils {
+public abstract class AspectUtils {
 
     /**
      * 获取方法简洁名称 (类简名.方法名)

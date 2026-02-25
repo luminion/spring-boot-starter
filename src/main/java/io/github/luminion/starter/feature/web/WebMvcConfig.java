@@ -8,7 +8,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplicat
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.web.filter.CommonsRequestLoggingFilter;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
  * Web MVC 配置
@@ -18,7 +17,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Slf4j
 @AutoConfiguration
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-public class WebMvcConfig implements WebMvcConfigurer {
+public class WebMvcConfig  {
 
     @Bean
     @ConditionalOnMissingBean
@@ -31,11 +30,10 @@ public class WebMvcConfig implements WebMvcConfigurer {
         return loggingFilter;
     }
 
-
     @Bean
-    @ConditionalOnMissingBean(WebMvcConfigurer.class)
-    public WebMvcConfigurer webMvcConfigurer(ApplicationContext applicationContext, Prop prop) {
-        return new BaseWebMvcConfigurer(applicationContext, prop);
+    @ConditionalOnMissingBean
+    public WebMvcEnhanceConfigurer webMvcEnhanceConfigurer(ApplicationContext applicationContext, Prop prop) {
+        return new WebMvcEnhanceConfigurer(applicationContext, prop);
     }
 
 }

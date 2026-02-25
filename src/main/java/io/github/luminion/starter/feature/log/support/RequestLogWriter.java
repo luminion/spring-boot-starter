@@ -1,6 +1,6 @@
 package io.github.luminion.starter.feature.log.support;
 
-import io.github.luminion.starter.feature.web.WebContextHolder;
+import io.github.luminion.starter.core.util.WebUtils;
 import org.slf4j.event.Level;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -25,12 +25,12 @@ public class RequestLogWriter extends Slf4JLogWriter {
         if (!(attributes instanceof ServletRequestAttributes)) {
             return "[N/A]";
         }
-        String requestIp = WebContextHolder.getRequestIp();
+        String requestIp = WebUtils.getRequestIp();
         if (requestIp == null) {
             requestIp = "unknown-ip";
         }
-        String requestMethod = WebContextHolder.getRequestMethod();
-        String uri = WebContextHolder.getRequestURI();
+        String requestMethod = WebUtils.getRequestMethod();
+        String uri = WebUtils.getRequestURI();
         return String.format("%s %s %s -", requestIp, requestMethod, uri);
     }
 }

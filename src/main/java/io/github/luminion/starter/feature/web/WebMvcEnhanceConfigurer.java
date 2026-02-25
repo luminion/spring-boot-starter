@@ -21,14 +21,9 @@ import java.util.TimeZone;
  * @since 1.0.0
  */
 @RequiredArgsConstructor
-public class BaseWebMvcConfigurer implements WebMvcConfigurer {
+public class WebMvcEnhanceConfigurer implements WebMvcConfigurer {
     private final ApplicationContext applicationContext;
     private final Prop prop;
-
-    public BaseWebMvcConfigurer(ApplicationContext applicationContext) {
-        this.applicationContext = applicationContext;
-        this.prop = applicationContext.getBean(Prop.class);
-    }
 
     @Override
     public void addFormatters(FormatterRegistry registry) {
