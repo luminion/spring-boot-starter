@@ -15,9 +15,8 @@ public @interface RateLimit {
 
     /**
      * 限流速率 (QPS)
-     * 默认每秒 10 次
      */
-    double value() default 10;
+    double value() default 50;
 
     /**
      * 用于生成限流 Key 的 SpEL 表达式
