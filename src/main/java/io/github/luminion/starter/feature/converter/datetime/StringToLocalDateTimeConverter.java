@@ -6,7 +6,7 @@ import java.time.format.DateTimeFormatter;
 /**
  * @author luminion
  */
-public class StringToLocalDateTimeConverter implements CompatibleStringToDateTimeConverter<String, LocalDateTime> {
+public class StringToLocalDateTimeConverter implements DateTimeConverter<String, LocalDateTime> {
     private final DateTimeFormatter formatter;
 
     public StringToLocalDateTimeConverter(String pattern) {

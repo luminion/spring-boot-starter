@@ -7,7 +7,7 @@ import java.time.format.DateTimeFormatter;
 /**
  * @author luminion
  */
-public class StringToSqlTimeConverter implements CompatibleStringToDateTimeConverter<String, Time> {
+public class StringToSqlTimeConverter implements DateTimeConverter<String, Time> {
     private final DateTimeFormatter formatter;
 
     public StringToSqlTimeConverter(String pattern) {

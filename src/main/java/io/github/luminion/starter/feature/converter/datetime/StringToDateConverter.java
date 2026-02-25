@@ -8,7 +8,7 @@ import java.util.Date;
 /**
  * @author luminion
  */
-public class StringToDateConverter implements CompatibleStringToDateTimeConverter<String, Date> {
+public class StringToDateConverter implements DateTimeConverter<String, Date> {
     private final DateTimeFormatter formatter;
     private final ZoneId zoneId;
 
