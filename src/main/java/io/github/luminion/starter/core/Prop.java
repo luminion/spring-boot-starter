@@ -1,4 +1,4 @@
-package io.github.luminion.starter;
+package io.github.luminion.starter.core;
 
 import io.github.luminion.starter.feature.xss.XssStrategy;
 import lombok.Data;

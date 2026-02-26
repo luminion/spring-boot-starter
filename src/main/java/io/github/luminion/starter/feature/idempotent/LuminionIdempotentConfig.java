@@ -1,6 +1,6 @@
 package io.github.luminion.starter.feature.idempotent;
 
-import io.github.luminion.starter.Prop;
+import io.github.luminion.starter.core.Prop;
 import io.github.luminion.starter.core.spi.Fingerprinter;
 import io.github.luminion.starter.feature.idempotent.aspect.IdempotentAspect;
 import io.github.luminion.starter.feature.idempotent.support.*;
@@ -23,7 +23,7 @@ import org.springframework.data.redis.core.RedisTemplate;
  */
 @AutoConfiguration(after = RedisAutoConfiguration.class)
 @ConditionalOnClass(Advice.class)
-public class IdempotentConfig {
+public class LuminionIdempotentConfig {
 
     @Bean
     @ConditionalOnMissingBean(IdempotentAspect.class)

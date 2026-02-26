@@ -1,1 +1,15 @@
-io.github.luminion.starter.LuminionAutoConfiguration
+# 最先加载,确保触发配置文件
+io.github.luminion.starter.core.LuminionCoreAutoConfiguration
+# 按需加载
+io.github.luminion.starter.feature.cache.LuminionCacheAutoConfiguration
+io.github.luminion.starter.feature.idempotent.LuminionIdempotentConfig
+io.github.luminion.starter.feature.lock.LuminionLockConfig
+io.github.luminion.starter.feature.log.LuminionLogAutoConfiguration
+io.github.luminion.starter.feature.mybatisplus.LuminionMybatisPlusConfig
+io.github.luminion.starter.feature.ratelimit.LuminionRateLimitConfig
+io.github.luminion.starter.feature.redis.LuminionRedisConfig
+io.github.luminion.starter.feature.web.LuminionWebAutoConfiguration
+io.github.luminion.starter.feature.xss.LuminionXssAutoConfiguration
+# 等待其他模块加载完成, 可能会添加对应的jackson组件
+io.github.luminion.starter.feature.jackson.LuminionJacksonConfig
+

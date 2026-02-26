@@ -22,7 +22,7 @@ import org.springframework.context.annotation.Bean;
  */
 @AutoConfiguration
 @ConditionalOnClass({ Advice.class })
-public class LogConfig {
+public class LuminionLogAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean({ InvokeArgsWriter.class, InvokeResultWriter.class, SlowLogWriter.class, ErrorLogWriter.class })

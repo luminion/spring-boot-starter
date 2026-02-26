@@ -1,6 +1,6 @@
 package io.github.luminion.starter.feature.lock;
 
-import io.github.luminion.starter.Prop;
+import io.github.luminion.starter.core.Prop;
 import io.github.luminion.starter.core.spi.Fingerprinter;
 import io.github.luminion.starter.feature.lock.aspect.LockAspect;
 import io.github.luminion.starter.feature.lock.support.JdkLockHandler;
@@ -26,7 +26,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
  */
 @AutoConfiguration(after = RedisAutoConfiguration.class)
 @ConditionalOnClass(Advice.class)
-public class LockConfig {
+public class LuminionLockConfig {
 
     @Bean
     @ConditionalOnMissingBean(LockAspect.class)

@@ -1,6 +1,6 @@
 package io.github.luminion.starter.feature.converter;
 
-import io.github.luminion.starter.Prop;
+import io.github.luminion.starter.core.Prop;
 import io.github.luminion.starter.feature.converter.datetime.*;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -16,7 +16,7 @@ import org.springframework.context.annotation.Bean;
 @AutoConfiguration
 @ConditionalOnBean(Prop.class)
 @Deprecated
-public class ConverterConfig {
+public class LuminionConverterConfig {
 
     @Bean
     @ConditionalOnMissingBean

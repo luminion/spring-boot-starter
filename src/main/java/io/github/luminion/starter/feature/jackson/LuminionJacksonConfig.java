@@ -14,7 +14,7 @@ import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalTimeSerializer;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import io.github.luminion.starter.Prop;
+import io.github.luminion.starter.core.Prop;
 import io.github.luminion.starter.core.spi.EnumFieldConvention;
 import io.github.luminion.starter.feature.jackson.deserializer.JacksonStringDeserializer;
 import io.github.luminion.starter.feature.jackson.serializer.JacksonStringSerializer;
@@ -49,7 +49,7 @@ import java.util.TimeZone;
  */
 @AutoConfiguration
 @ConditionalOnClass(ObjectMapper.class)
-public class JacksonConfig {
+public class LuminionJacksonConfig {
 
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnClass({ Jackson2ObjectMapperBuilder.class })

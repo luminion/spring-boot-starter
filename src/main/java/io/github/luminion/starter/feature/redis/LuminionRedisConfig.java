@@ -17,7 +17,7 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
  */
 @AutoConfiguration
 @ConditionalOnClass(RedisOperations.class)
-public class RedisConfig {
+public class LuminionRedisConfig {
 
     //
     //@Bean

@@ -1,6 +1,6 @@
 package io.github.luminion.starter.feature.ratelimit;
 
-import io.github.luminion.starter.Prop;
+import io.github.luminion.starter.core.Prop;
 import io.github.luminion.starter.core.spi.Fingerprinter;
 import io.github.luminion.starter.feature.ratelimit.aspect.RateLimitAspect;
 import io.github.luminion.starter.feature.ratelimit.support.*;
@@ -23,7 +23,7 @@ import org.springframework.data.redis.core.RedisTemplate;
  */
 @AutoConfiguration(after = RedisAutoConfiguration.class)
 @ConditionalOnClass(Advice.class)
-public class RateLimitConfig {
+public class LuminionRateLimitConfig {
 
     @Bean
     @ConditionalOnMissingBean(RateLimitAspect.class)

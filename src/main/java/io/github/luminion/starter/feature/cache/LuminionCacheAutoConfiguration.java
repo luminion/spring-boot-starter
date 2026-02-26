@@ -1,5 +1,6 @@
 package io.github.luminion.starter.feature.cache;
 
+import org.redisson.spring.starter.RedissonAutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -29,12 +30,20 @@ import java.util.HashMap;
  * @see org.springframework.boot.autoconfigure.cache.CacheAutoConfiguration
  * @since 1.0.0
  */
-@AutoConfiguration(after = {CouchbaseDataAutoConfiguration.class, HazelcastAutoConfiguration.class,
-        HibernateJpaAutoConfiguration.class, RedisAutoConfiguration.class})
+@AutoConfiguration(after = {
+        CouchbaseDataAutoConfiguration.class, 
+        HazelcastAutoConfiguration.class,
+        HibernateJpaAutoConfiguration.class, 
+        RedisAutoConfiguration.class,
+        RedissonAutoConfiguration.class
+},beforeName = {
+      "org.springframework.boot.autoconfigure.cache.CacheAutoConfiguration"  
+}
+)
 @ConditionalOnClass(CacheManager.class)
 @ConditionalOnBean(CacheAspectSupport.class)
 @ConditionalOnMissingBean(value = CacheManager.class, name = "cacheResolver")
-public class CacheConfig {
+public class LuminionCacheAutoConfiguration {
 
 
     @Configuration(proxyBeanMethods = false)
@@ -51,7 +60,7 @@ public class CacheConfig {
         public RedisCacheTimeMapProvider redisCacheTimeMapProvider() {
             return new RedisCacheTimeMapProvider(new HashMap<>());
         }
-        
+
 
         /**
          * 默认redis缓存配置
@@ -101,7 +110,7 @@ public class CacheConfig {
             redisCacheManager.setTransactionAware(true);
             return redisCacheManager;
         }
-        
+
     }
 
 }

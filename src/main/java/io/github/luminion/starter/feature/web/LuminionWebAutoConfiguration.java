@@ -1,6 +1,6 @@
 package io.github.luminion.starter.feature.web;
 
-import io.github.luminion.starter.Prop;
+import io.github.luminion.starter.core.Prop;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -17,7 +17,7 @@ import org.springframework.web.filter.CommonsRequestLoggingFilter;
 @Slf4j
 @AutoConfiguration
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-public class WebMvcConfig  {
+public class LuminionWebAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean

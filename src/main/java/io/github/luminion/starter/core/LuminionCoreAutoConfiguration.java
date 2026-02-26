@@ -1,6 +1,5 @@
 package io.github.luminion.starter.core;
 
-import io.github.luminion.starter.Prop;
 import io.github.luminion.starter.core.spi.EnumFieldConvention;
 import io.github.luminion.starter.core.spi.Fingerprinter;
 import io.github.luminion.starter.core.spi.NamingSuffixStrategy;
@@ -10,6 +9,7 @@ import io.github.luminion.starter.core.util.AspectUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 
 import java.util.List;
@@ -20,7 +20,8 @@ import java.util.List;
  */
 @Slf4j
 @AutoConfiguration
-public class CorePreConfig {
+@EnableConfigurationProperties(Prop.class)
+public class LuminionCoreAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean

@@ -1,6 +1,6 @@
 package io.github.luminion.starter.feature.web;
 
-import io.github.luminion.starter.Prop;
+import io.github.luminion.starter.core.Prop;
 import io.github.luminion.starter.feature.xss.XssCleaner;
 import io.github.luminion.starter.feature.xss.converter.XssStringConverter;
 import lombok.RequiredArgsConstructor;
