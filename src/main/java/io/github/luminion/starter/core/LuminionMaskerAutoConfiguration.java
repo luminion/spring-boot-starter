@@ -4,7 +4,9 @@ import io.github.luminion.starter.core.spi.EnumFieldConvention;
 import io.github.luminion.starter.core.spi.Fingerprinter;
 import io.github.luminion.starter.core.spi.NamingSuffixStrategy;
 import io.github.luminion.starter.core.spi.fingerprint.SpelFingerprinter;
+import io.github.luminion.starter.core.spi.masker.*;
 import io.github.luminion.starter.core.util.AspectUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -17,35 +19,42 @@ import java.util.List;
  * @since 1.0.0
  */
 @AutoConfiguration
-@EnableConfigurationProperties(Prop.class)
-public class LuminionCoreAutoConfiguration {
-
+public class LuminionMaskerAutoConfiguration {
+    
     @Bean
     @ConditionalOnMissingBean
-    public Fingerprinter spelMethodFingerprinter() {
-        return new SpelFingerprinter(AspectUtils::getArgsSimpleString);
+    public BankCardMasker bankCardMasker() {
+        return new BankCardMasker();
     }
 
     @Bean
     @ConditionalOnMissingBean
-    public NamingSuffixStrategy suffixProvider() {
-        return () -> "Name";
+    public EmailMasker emailMasker() {
+        return new EmailMasker();
     }
 
     @Bean
     @ConditionalOnMissingBean
-    public EnumFieldConvention enumFieldConventionProvider(Prop prop) {
-        return new EnumFieldConvention() {
-            @Override
-            public List<String> codeFieldNames() {
-                return prop.getEnumCodeFields();
-            }
+    public IdCardMasker idCardMasker() {
+        return new IdCardMasker();
+    }
 
-            @Override
-            public List<String> descFieldNames() {
-                return prop.getEnumDescFields();
-            }
-        };
+    @Bean
+    @ConditionalOnMissingBean
+    public NameMasker nameMasker() {
+        return new NameMasker();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public PhoneMasker phoneMasker() {
+        return new PhoneMasker();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public SimpleMasker simpleMasker() {
+        return new SimpleMasker();
     }
 
 }

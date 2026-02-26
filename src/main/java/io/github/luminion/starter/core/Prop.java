@@ -1,6 +1,6 @@
 package io.github.luminion.starter.core;
 
-import io.github.luminion.starter.feature.xss.XssStrategy;
+import io.github.luminion.starter.xss.XssStrategy;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.logging.LogLevel;
