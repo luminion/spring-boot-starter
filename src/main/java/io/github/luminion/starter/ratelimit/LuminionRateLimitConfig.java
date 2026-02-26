@@ -3,7 +3,6 @@ package io.github.luminion.starter.ratelimit;
 import io.github.luminion.starter.core.Prop;
 import io.github.luminion.starter.core.spi.Fingerprinter;
 import io.github.luminion.starter.ratelimit.aspect.RateLimitAspect;
-import io.github.luminion.starter.feature.ratelimit.support.*;
 import io.github.luminion.starter.ratelimit.support.*;
 import org.aspectj.weaver.Advice;
 import org.redisson.api.RedissonClient;

@@ -3,7 +3,6 @@ package io.github.luminion.starter.idempotent;
 import io.github.luminion.starter.core.Prop;
 import io.github.luminion.starter.core.spi.Fingerprinter;
 import io.github.luminion.starter.idempotent.aspect.IdempotentAspect;
-import io.github.luminion.starter.feature.idempotent.support.*;
 import io.github.luminion.starter.idempotent.support.*;
 import org.aspectj.weaver.Advice;
 import org.redisson.api.RedissonClient;
