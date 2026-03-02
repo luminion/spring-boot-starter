@@ -11,7 +11,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * 基于 ReentrantLock 的本地锁实现 (兜底方案)
  *
  * @author luminion
- * @since 1.0.1
+ * @since 1.0.0
  */
 public class JdkLockHandler implements LockHandler {
 

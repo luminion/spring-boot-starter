@@ -12,7 +12,7 @@ import org.springframework.context.annotation.Bean;
  * 限流自动配置 (Caffeine 实现)
  *
  * @author luminion
- * @since 1.0.1
+ * @since 1.0.0
  */
 @AutoConfiguration(after = LuminionRateLimitRedisAutoConfiguration.class)
 @ConditionalOnClass({ Advice.class, com.github.benmanes.caffeine.cache.Cache.class })

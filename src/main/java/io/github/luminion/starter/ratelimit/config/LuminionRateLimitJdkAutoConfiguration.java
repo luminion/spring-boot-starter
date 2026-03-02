@@ -13,7 +13,7 @@ import org.springframework.context.annotation.Bean;
  * 限流自动配置 (JDK 实现)
  *
  * @author luminion
- * @since 1.0.1
+ * @since 1.0.0
  */
 @AutoConfiguration(after = LuminionIdempotentCaffeineAutoConfiguration.class)
 @ConditionalOnClass(Advice.class)

@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit;
  * 基于 Redisson 的分布式幂等处理器
  *
  * @author luminion
- * @since 1.0.1
+ * @since 1.0.0
  */
 @RequiredArgsConstructor
 public class RedissonIdempotentHandler implements IdempotentHandler {

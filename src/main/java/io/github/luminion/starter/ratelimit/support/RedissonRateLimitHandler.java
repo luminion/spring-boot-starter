@@ -11,7 +11,7 @@ import org.redisson.api.RedissonClient;
  * 基于 Redisson 的分布式限流器
  *
  * @author luminion
- * @since 1.0.1
+ * @since 1.0.0
  */
 @RequiredArgsConstructor
 public class RedissonRateLimitHandler implements RateLimitHandler {

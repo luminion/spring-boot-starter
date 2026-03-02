@@ -15,7 +15,7 @@ import org.springframework.context.annotation.Bean;
  * 优先级: Redisson > Redis > JDK
  *
  * @author luminion
- * @since 1.0.1
+ * @since 1.0.0
  */
 @AutoConfiguration
 @ConditionalOnClass(Advice.class)

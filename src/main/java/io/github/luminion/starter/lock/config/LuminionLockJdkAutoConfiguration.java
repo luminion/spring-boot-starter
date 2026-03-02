@@ -12,7 +12,7 @@ import org.springframework.context.annotation.Bean;
  * 锁自动配置 (JDK 实现)
  *
  * @author luminion
- * @since 1.0.1
+ * @since 1.0.0
  */
 @AutoConfiguration(after = LuminionLockRedisAutoConfiguration.class)
 @ConditionalOnClass(Advice.class)

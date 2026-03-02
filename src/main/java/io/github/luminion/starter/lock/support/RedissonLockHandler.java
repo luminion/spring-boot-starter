@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit;
  * 支持重入、看门狗续期等高级特性
  *
  * @author luminion
- * @since 1.0.1
+ * @since 1.0.0
  */
 @Slf4j
 @RequiredArgsConstructor

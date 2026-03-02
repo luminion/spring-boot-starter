@@ -7,7 +7,7 @@ import java.util.concurrent.TimeUnit;
  * 分布式锁注解
  *
  * @author luminion
- * @since 1.0.1
+ * @since 1.0.0
  */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)

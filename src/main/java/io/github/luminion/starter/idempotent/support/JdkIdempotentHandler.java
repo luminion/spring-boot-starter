@@ -11,7 +11,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * 使用 compute 原子方法保证并发安全性
  *
  * @author luminion
- * @since 1.0.1
+ * @since 1.0.0
  */
 public class JdkIdempotentHandler implements IdempotentHandler {
 

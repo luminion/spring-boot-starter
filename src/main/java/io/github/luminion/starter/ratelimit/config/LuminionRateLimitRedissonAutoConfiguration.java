@@ -14,7 +14,7 @@ import org.springframework.context.annotation.Bean;
  * 限流自动配置 (Redisson 实现)
  *
  * @author luminion
- * @since 1.0.1
+ * @since 1.0.0
  */
 @AutoConfiguration(afterName = { "org.redisson.spring.starter.RedissonAutoConfiguration" })
 @ConditionalOnClass({ Advice.class, RedissonClient.class })

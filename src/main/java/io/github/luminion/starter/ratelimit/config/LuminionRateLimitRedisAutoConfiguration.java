@@ -15,7 +15,7 @@ import org.springframework.data.redis.core.RedisTemplate;
  * 限流自动配置 (Redis 实现)
  *
  * @author luminion
- * @since 1.0.1
+ * @since 1.0.0
  */
 @AutoConfiguration(after = { RedisAutoConfiguration.class, LuminionRateLimitRedissonAutoConfiguration.class })
 @ConditionalOnClass({ Advice.class, RedisTemplate.class })

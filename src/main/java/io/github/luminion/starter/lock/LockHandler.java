@@ -6,7 +6,7 @@ import java.util.concurrent.TimeUnit;
  * 锁处理器 SPI
  *
  * @author luminion
- * @since 1.0.1
+ * @since 1.0.0
  */
 public interface LockHandler {
 

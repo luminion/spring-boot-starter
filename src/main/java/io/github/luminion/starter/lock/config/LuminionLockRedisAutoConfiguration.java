@@ -15,7 +15,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
  * 锁自动配置 (Redis 实现)
  * 
  * @author luminion
- * @since 1.0.1
+ * @since 1.0.0
  */
 @AutoConfiguration(after = { RedisAutoConfiguration.class, LuminionLockRedissonAutoConfiguration.class })
 @ConditionalOnClass({ Advice.class, StringRedisTemplate.class })
