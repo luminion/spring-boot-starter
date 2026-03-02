@@ -1,7 +1,6 @@
-package io.github.luminion.starter.core.spi.masker;
+package io.github.luminion.starter.core.spi.func;
 
-import io.github.luminion.starter.core.spi.StringMasker;
-import org.springframework.stereotype.Component;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -11,11 +10,10 @@ import java.util.stream.Stream;
  * @author luminion
  * @since 1.0.0
  */
-@Component
-public class SimpleMasker implements StringMasker {
+public class GenericMasker implements Function<String, String> {
 
     @Override
-    public String mask(String s) {
+    public String apply(String s) {
         if (s == null || s.isEmpty()) {
             return s;
         }

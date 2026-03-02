@@ -1,7 +1,5 @@
 package io.github.luminion.starter.jackson.annotation;
 
-import io.github.luminion.starter.core.spi.StringDecryptor;
-
 import java.lang.annotation.*;
 import java.util.function.Function;
 
@@ -11,14 +9,14 @@ import java.util.function.Function;
  * @author luminion
  * @since 1.0.0
  */
-@Target({ ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER })
+@Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-public @interface JsonDecrypt {
+public @interface JsonDecode {
 
     /**
-     * 指定转换函数类，该类必须注册为 Spring Bean
+     * 指定转换函数类
      */
-    Class<? extends StringDecryptor> value();
+    Class<? extends Function<String, String>> value();
 
 }

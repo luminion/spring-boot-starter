@@ -7,10 +7,10 @@ import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.ser.ContextualSerializer;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
-import io.github.luminion.starter.core.spi.StringEncryptor;
-import io.github.luminion.starter.jackson.annotation.JsonEncrypt;
+import io.github.luminion.starter.core.spi.JsonProcessorProvider;
+import io.github.luminion.starter.jackson.annotation.JsonEncode;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationContext;
 
 import java.io.IOException;
 import java.util.function.Function;
@@ -23,11 +23,11 @@ import java.util.function.Function;
 @Slf4j
 public class JacksonStringSerializer extends StdSerializer<String> implements ContextualSerializer {
 
-    private final ApplicationContext applicationContext;
+    private final JsonProcessorProvider jsonProcessorProvider;
 
-    public JacksonStringSerializer(ApplicationContext applicationContext) {
+    public JacksonStringSerializer(JsonProcessorProvider jsonProcessorProvider) {
         super(String.class);
-        this.applicationContext = applicationContext;
+        this.jsonProcessorProvider = jsonProcessorProvider;
     }
 
     @Override
@@ -44,17 +44,10 @@ public class JacksonStringSerializer extends StdSerializer<String> implements Co
         if (property == null) {
             return this;
         }
-        JsonEncrypt jsonEncrypt = property.getAnnotation(JsonEncrypt.class);
-        if (jsonEncrypt != null) {
-            Class<? extends StringEncryptor> funcClass = jsonEncrypt.value();
-            try {
-                StringEncryptor bean = applicationContext.getBean(funcClass);
-                return new JsonStringFunctionSerializer(bean::encrypt);
-            } catch (Exception e) {
-                String errorMsg = String.format("未发现 @JsonEncrypt 指定的函数类 [%s] 的 Bean 实例。", funcClass.getName());
-                log.error(errorMsg);
-                throw new JsonMappingException(prov.getGenerator(), errorMsg, e);
-            }
+        JsonEncode jsonEncode = property.getAnnotation(JsonEncode.class);
+        if (jsonEncode != null) {
+            Function<String, String> processor = jsonProcessorProvider.getProcessor(jsonEncode.value());
+            return new JsonStringFunctionSerializer(processor);
         }
         return this;
     }

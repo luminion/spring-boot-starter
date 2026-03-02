@@ -1,7 +1,5 @@
 package io.github.luminion.starter.jackson.annotation;
 
-import io.github.luminion.starter.core.spi.StringEncryptor;
-
 import java.lang.annotation.*;
 import java.util.function.Function;
 
@@ -14,12 +12,12 @@ import java.util.function.Function;
 @Target({ ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER })
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-public @interface JsonEncrypt {
+public @interface JsonEncode {
 
     /**
-     * 指定转换函数类，该类必须注册为 Spring Bean
+     * 指定转换函数类
      *
      */
-    Class<? extends StringEncryptor> value();
+    Class<? extends Function<String,String>> value();
 
 }

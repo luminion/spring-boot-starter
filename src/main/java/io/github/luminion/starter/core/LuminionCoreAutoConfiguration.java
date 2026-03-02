@@ -2,9 +2,13 @@ package io.github.luminion.starter.core;
 
 import io.github.luminion.starter.core.spi.EnumFieldConvention;
 import io.github.luminion.starter.core.spi.Fingerprinter;
+import io.github.luminion.starter.core.spi.JsonProcessorProvider;
 import io.github.luminion.starter.core.spi.NamingSuffixStrategy;
 import io.github.luminion.starter.core.spi.fingerprint.SpelFingerprinter;
+import io.github.luminion.starter.core.spi.func.*;
+import io.github.luminion.starter.core.spi.provider.DefaultJsonProcessorProvider;
 import io.github.luminion.starter.core.util.AspectUtils;
+import org.springframework.beans.factory.BeanFactory;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -46,6 +50,13 @@ public class LuminionCoreAutoConfiguration {
                 return prop.getEnumDescFields();
             }
         };
+    }
+
+
+    @Bean
+    @ConditionalOnMissingBean
+    public JsonProcessorProvider jacksonProcessorProvider(BeanFactory beanFactory) {
+        return new DefaultJsonProcessorProvider(beanFactory);
     }
 
 }

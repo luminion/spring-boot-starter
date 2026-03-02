@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateDeserializer;
@@ -13,12 +14,15 @@ import com.fasterxml.jackson.datatype.jsr310.deser.LocalTimeDeserializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalTimeSerializer;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import io.github.luminion.starter.core.Prop;
 import io.github.luminion.starter.core.spi.EnumFieldConvention;
+import io.github.luminion.starter.core.spi.JsonProcessorProvider;
 import io.github.luminion.starter.jackson.deserializer.JacksonStringDeserializer;
 import io.github.luminion.starter.jackson.serializer.JacksonStringSerializer;
 import io.github.luminion.starter.jackson.serializer.JsonEnumSerializerModifier;
+import io.github.luminion.starter.xss.XssCleaner;
+import org.springframework.beans.factory.BeanFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -52,7 +56,7 @@ import java.util.TimeZone;
 public class LuminionJacksonConfig {
 
     @Configuration(proxyBeanMethods = false)
-    @ConditionalOnClass({ Jackson2ObjectMapperBuilder.class })
+    @ConditionalOnClass({Jackson2ObjectMapperBuilder.class})
     static class Jackson2ObjectMapperBuilderCustomizerConfiguration {
 
         /**
@@ -60,15 +64,12 @@ public class LuminionJacksonConfig {
          *
          * @param prop               配置属性
          * @param applicationContext Spring 上下文
-         * @param enumCodeProvider       枚举翻译属性提供者
+         * @param enumCodeProvider   枚举翻译属性提供者
          * @return jackson对象映射器生成器定制器
          */
         @Bean
         @Order(-1)
-        public Jackson2ObjectMapperBuilderCustomizer jackson2ObjectMapperBuilderCustomizer(
-                Prop prop,
-                ApplicationContext applicationContext,
-                EnumFieldConvention enumCodeProvider) {
+        public Jackson2ObjectMapperBuilderCustomizer jackson2ObjectMapperBuilderCustomizer(Prop prop, BeanFactory beanFactory) {
             return builder -> {
                 String dateTimeFormat = prop.getDateTimeFormat().getDateTime();
                 String dateFormat = prop.getDateTimeFormat().getDate();
@@ -110,15 +111,24 @@ public class LuminionJacksonConfig {
                         .serializers(new LocalDateSerializer(dateFormatter))
                         .serializers(new LocalTimeSerializer(timeFormatter));
 
-                builder.deserializerByType(String.class, new JacksonStringDeserializer(applicationContext));
-
-                // 统一字符串处理（JsonEncrypt）
-                builder.serializerByType(String.class, new JacksonStringSerializer(applicationContext));
+                // 自定义转化
+                ObjectProvider<JsonProcessorProvider> jsonProcessorProviderObjectProvider = beanFactory.getBeanProvider(JsonProcessorProvider.class);
+                jsonProcessorProviderObjectProvider.ifAvailable(bean -> {
+                    ObjectProvider<XssCleaner> xssCleanerObjectProvider = beanFactory.getBeanProvider(XssCleaner.class);
+                    XssCleaner xssCleaner = xssCleanerObjectProvider.getIfAvailable();
+                    builder.deserializerByType(String.class, new JacksonStringDeserializer(bean, xssCleaner));
+                    builder.serializerByType(String.class, new JacksonStringSerializer(bean));
+                });
 
                 // 枚举翻译处理
-                SimpleModule enumModule = new SimpleModule();
-                enumModule.setSerializerModifier(new JsonEnumSerializerModifier(enumCodeProvider));
-                builder.modules(enumModule);
+                ObjectProvider<EnumFieldConvention> enumFieldConventionObjectProvider = beanFactory.getBeanProvider(EnumFieldConvention.class);
+                enumFieldConventionObjectProvider.ifAvailable(bean -> {
+                    SimpleModule enumModule = new SimpleModule();
+                    enumModule.setSerializerModifier(new JsonEnumSerializerModifier(bean));
+                    builder.modules(enumModule);
+                });
+
+
             };
         }
     }
@@ -130,7 +140,7 @@ public class LuminionJacksonConfig {
      * @since 1.0.0
      */
     @Configuration(proxyBeanMethods = false)
-    @ConditionalOnClass({ RedisTemplate.class, Jackson2ObjectMapperBuilder.class })
+    @ConditionalOnClass({RedisTemplate.class, Jackson2ObjectMapperBuilder.class})
     static class JacksonRedisConfiguration {
 
         /**

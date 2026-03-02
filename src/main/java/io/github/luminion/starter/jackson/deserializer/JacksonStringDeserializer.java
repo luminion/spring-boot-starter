@@ -6,12 +6,13 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.deser.ContextualDeserializer;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
+import io.github.luminion.starter.core.spi.JsonProcessorProvider;
 import io.github.luminion.starter.core.spi.StringDecryptor;
-import io.github.luminion.starter.jackson.annotation.JsonDecrypt;
+import io.github.luminion.starter.jackson.annotation.JsonDecode;
 import io.github.luminion.starter.xss.XssCleaner;
 import io.github.luminion.starter.xss.XssIgnore;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationContext;
+import org.springframework.beans.factory.BeanFactory;
 
 import java.io.IOException;
 import java.util.function.Function;
@@ -23,13 +24,13 @@ import java.util.function.Function;
  */
 @Slf4j
 public class JacksonStringDeserializer extends StdDeserializer<String> implements ContextualDeserializer {
-    private final ApplicationContext applicationContext;
+    private final JsonProcessorProvider jsonProcessorProvider;
     private final XssCleaner xssCleaner;
 
-    public JacksonStringDeserializer(ApplicationContext applicationContext) {
+    public JacksonStringDeserializer(JsonProcessorProvider jsonProcessorProvider, XssCleaner xssCleaner) {
         super(String.class);
-        this.applicationContext = applicationContext;
-        this.xssCleaner = applicationContext.getBeanProvider(XssCleaner.class).getIfAvailable();
+        this.jsonProcessorProvider = jsonProcessorProvider;
+        this.xssCleaner = xssCleaner;
     }
 
     @Override
@@ -48,34 +49,18 @@ public class JacksonStringDeserializer extends StdDeserializer<String> implement
         }
 
         boolean ignoreXss = property.getAnnotation(XssIgnore.class) != null;
-        JsonDecrypt jsonDecrypt = property.getAnnotation(JsonDecrypt.class);
+        JsonDecode jsonDecode = property.getAnnotation(JsonDecode.class);
 
-        if (!ignoreXss && jsonDecrypt == null) {
+        if (!ignoreXss && jsonDecode == null) {
             return this;
         }
-
-        Function<String, String> compositeFunc = null;
-
-        if (jsonDecrypt != null) {
-            Class<? extends StringDecryptor> funcClass = jsonDecrypt.value();
-            try {
-                StringDecryptor bean = applicationContext.getBean(funcClass);
-                compositeFunc = bean::decrypt;
-            } catch (Exception e) {
-                String errorMsg = String.format("未发现 @JsonDecrypt 指定的函数类 [%s] 的 Bean 实例。", funcClass.getName());
-                log.error(errorMsg);
-                throw new IllegalArgumentException(errorMsg, e);
-            }
-        }
-
+        Function<String, String> compositeFunc = jsonProcessorProvider.getProcessor(jsonDecode.value());
         if (xssCleaner != null && !ignoreXss) {
             compositeFunc = compositeFunc.andThen(xssCleaner::clean);
         }
-
         if (compositeFunc == null) {
             return new JsonStringFunctionDeserializer(t -> t);
         }
-
         return new JsonStringFunctionDeserializer(compositeFunc);
     }
 
