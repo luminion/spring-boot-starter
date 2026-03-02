@@ -3,7 +3,11 @@ io.github.luminion.starter.core.LuminionCoreAutoConfiguration
 # 按需加载
 # 默认不使用cache, 提供给用户手动import
 #io.github.luminion.starter.cache.LuminionCacheAutoConfiguration
-io.github.luminion.starter.idempotent.config.LuminionIdempotentConfig
+io.github.luminion.starter.idempotent.config.LuminionIdempotentRedissonAutoConfiguration
+io.github.luminion.starter.idempotent.config.LuminionIdempotentRedisAutoConfiguration
+io.github.luminion.starter.idempotent.config.LuminionIdempotentCaffeineAutoConfiguration
+io.github.luminion.starter.idempotent.config.LuminionIdempotentGuavaAutoConfiguration
+io.github.luminion.starter.idempotent.config.LuminionIdempotentJdkAutoConfiguration
 io.github.luminion.starter.lock.LuminionLockConfig
 io.github.luminion.starter.log.LuminionLogAutoConfiguration
 io.github.luminion.starter.mybatisplus.LuminionMybatisPlusConfig
