@@ -1,5 +1,6 @@
 package io.github.luminion.starter.ratelimit.config;
 
+import io.github.luminion.starter.idempotent.config.LuminionIdempotentCaffeineAutoConfiguration;
 import io.github.luminion.starter.ratelimit.RateLimitHandler;
 import io.github.luminion.starter.ratelimit.support.JdkRateLimitHandler;
 import org.aspectj.weaver.Advice;
@@ -14,7 +15,7 @@ import org.springframework.context.annotation.Bean;
  * @author luminion
  * @since 1.0.1
  */
-@AutoConfiguration(after = LuminionRateLimitGuavaAutoConfiguration.class)
+@AutoConfiguration(after = LuminionIdempotentCaffeineAutoConfiguration.class)
 @ConditionalOnClass(Advice.class)
 public class LuminionRateLimitJdkAutoConfiguration {
 

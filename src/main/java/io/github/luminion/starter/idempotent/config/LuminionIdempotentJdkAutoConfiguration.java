@@ -14,7 +14,7 @@ import org.springframework.context.annotation.Bean;
  * @author luminion
  * @since 1.0.0
  */
-@AutoConfiguration(after = LuminionIdempotentGuavaAutoConfiguration.class)
+@AutoConfiguration(after = LuminionIdempotentCaffeineAutoConfiguration.class)
 @ConditionalOnClass(Advice.class)
 public class LuminionIdempotentJdkAutoConfiguration {
 
