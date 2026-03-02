@@ -22,15 +22,16 @@ public class RedisRateLimitHandler implements RateLimitHandler {
     @Override
     public boolean tryAcquire(String key, double rate) {
         // Lua 脚本需要的参数：[key], [capacity], [rate], [now_sec]
-        // 简单处理：burst (capacity) 等于 rate
+        // 简单处理：burst (capacity) 等于 rate，确保至少为 1
         long capacity = (long) Math.max(1, rate);
-        long now = System.currentTimeMillis() / 1000;
+        // 使用微妙或更小单位以支持高频/低频
+        double now = System.currentTimeMillis() / 1000.0;
 
         Long result = redisTemplate.execute(
                 limitScript,
                 Collections.singletonList(key),
                 capacity,
-                (long) rate,
+                rate,
                 now);
 
         return result != null && result == 1L;
@@ -59,7 +60,7 @@ public class RedisRateLimitHandler implements RateLimitHandler {
                 "    redis.call('expire', key, math.ceil(capacity / rate) + 10)\n" +
                 "    return 1\n" +
                 "else\n" +
-                "    redis.call('hmset', key, 'tokens', granted_tokens, 'last_time', now_sec)\n" +
+                "    -- 失败时不更新 last_time，防止高频请求导致令牌永远无法恢复\n" +
                 "    return 0\n" +
                 "end";
 

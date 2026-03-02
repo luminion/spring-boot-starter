@@ -6,7 +6,7 @@ io.github.luminion.starter.core.LuminionCoreAutoConfiguration
 io.github.luminion.starter.idempotent.config.LuminionIdempotentRedissonAutoConfiguration
 io.github.luminion.starter.idempotent.config.LuminionIdempotentRedisAutoConfiguration
 io.github.luminion.starter.idempotent.config.LuminionIdempotentCaffeineAutoConfiguration
-io.github.luminion.starter.idempotent.config.LuminionIdempotentGuavaAutoConfiguration
+#io.github.luminion.starter.idempotent.config.LuminionIdempotentGuavaAutoConfiguration
 io.github.luminion.starter.idempotent.config.LuminionIdempotentJdkAutoConfiguration
 io.github.luminion.starter.idempotent.LuminionIdempotentConfig
 io.github.luminion.starter.lock.config.LuminionLockRedissonAutoConfiguration
@@ -18,7 +18,7 @@ io.github.luminion.starter.mybatisplus.LuminionMybatisPlusConfig
 io.github.luminion.starter.ratelimit.config.LuminionRateLimitRedissonAutoConfiguration
 io.github.luminion.starter.ratelimit.config.LuminionRateLimitRedisAutoConfiguration
 io.github.luminion.starter.ratelimit.config.LuminionRateLimitCaffeineAutoConfiguration
-io.github.luminion.starter.ratelimit.config.LuminionRateLimitGuavaAutoConfiguration
+#io.github.luminion.starter.ratelimit.config.LuminionRateLimitGuavaAutoConfiguration
 io.github.luminion.starter.ratelimit.config.LuminionRateLimitJdkAutoConfiguration
 io.github.luminion.starter.ratelimit.LuminionRateLimitConfig
 io.github.luminion.starter.redis.LuminionRedisConfig
