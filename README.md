@@ -1,63 +1,30 @@
 # spring-boot
 
-
 一个Spring Boot 工具箱，为常见的开发场景提供开箱即用的配置。
-
-
-重构迭代中, 老版本地址:[bootystar-spring-boot-starter](https://github.com/bootystar/bootystar-spring-boot-starter)
-
 
 
 ## 功能特性
 
-* 注解防重提交, 支持SPEL表达式
-* 
-* 注解方法限流, 支持SPEL表达式
-* 注解全局锁, 支持SPEL表达式
-* 注解JSON字段加密/解密/脱敏, 支持自定义算法
-  * [@JsonEncrypt](src/main/java/io/github/luminion/starter/jackson/annotation/JsonEncrypt.java)
-    * json序列化加密/解密/转化/脱敏
-  * [@JsonDecrypt](src/main/java/io/github/luminion/starter/jackson/annotation/JsonDecrypt.java)
-    * json反序列化加密/解密/转化/反脱敏
-  * [@JsonEnum](src/main/java/io/github/luminion/starter/jackson/annotation/JsonEnum.java)
-    * json枚举字段出参额外字段说明
-  * [@JsonMask](src/main/java/io/github/luminion/starter/jackson/annotation/JsonMask.java)
-    * json序列化脱敏
-  * 提供默认实现, 支持指定自定义函数类
-    * 
-* 注解日志调试
-  * [@ArgsLog](src/main/java/io/github/luminion/starter/log/annotation/ArgsLog.java)
-    * 方法入参日志打印
-  * [@ResultLog](src/main/java/io/github/luminion/starter/log/annotation/ResultLog.java) 
-    * 方法返回结果日志打印
-  * [@ErrorLog](src/main/java/io/github/luminion/starter/log/annotation/ErrorLog.java)
-    * 方法异常信息日志打印
-  * [@InvokeLog](src/main/java/io/github/luminion/starter/log/annotation/InvokeLog.java)
-    * 复合注解,包含方法入参、返回结果、异常信息
-  * [@SlowLog](src/main/java/io/github/luminion/starter/log/annotation/SlowLog.java)
-    * 慢日志, 记录超过阈值的方法执行时间
-  * 提供默认实现, 支持接口扩展, 允许自定义实现
-* 核心自动配置
-  * 提供基于SPEL的Fingerprinter接口
-  * 提供后缀字段扩展的NamingSuffixStrategy接口
-  * 提供数据脱敏Masker接口，提供银行卡号/邮箱/身份证/名称/手机号/等实现
-* spring-cache-redis自动配置
-  * 替换jdk序列化为redis序列化, 并配置相关序列化器
-  * 配置Redis缓存管理器
-  * 配置Redis缓存过期时间
-* jackson自动配置
-  * 基于Jackson2ObjectMapperBuilderCustomizer预先配置日期时间格式及序列化选项, 兼容spring文件
-  * 提供基于jackson实现的redis序列化器
-* 
-* Spring参数转换器，支持日期、时间及高精度数字
-* JSON序列化/反序列化，支持字段级加密/脱敏
-* MyBatis-Plus插件，包括分页、防全表更新、防SQL注入
-* Redis序列化/反序列化配置
-* 为EasyExcel和FastExcel添加额外的转换器（日期、时间、高精度数字）
+* 注解防重提交, 支持SPEL表达式, 支持分布式, 支持自定义实现
+* 注解方法限流, 支持SPEL表达式, 支持分布式, 支持自定义实现
+* 注解全局锁, 支持SPEL表达式, 支持分布式, 支持自定义实现
+* 注解JSON字段`加密`/`解密`/`脱敏`/`枚举转义`, 支持自定义算法
+* 注解日志, 提供`入参`/`返回值`/`错误信息`/`执行时长`等信息
+* 自动配置spring-cache-redis, 提供json序列化替换jdk序列化
+* 自动配置MyBatis-Plus插件，包括分页、防全表更新、防SQL注入
+* 自动配置Redis序列化/反序列化设置
+* 自动配置Web参数转换器, 支持日期、时间等
+* 提供spring中converter的实现, 支持日期、时间等
+* 提供web容器上下文工具/全局异常处理等常用机制及相关类
+* 提供xss处理, 支持自定义实现
 
 ## 快速开始
 
 ### 添加Maven依赖
+
+迭代中, 暂未发布....
+
+老版本地址[bootystar-spring-boot-starter](https://github.com/bootystar/bootystar-spring-boot-starter)
 
 ```xml
 <dependency>
