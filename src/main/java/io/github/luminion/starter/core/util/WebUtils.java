@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import lombok.NoArgsConstructor;
+import lombok.SneakyThrows;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -14,13 +15,15 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.UncheckedIOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 /**
  * @author luminion
  */
 public abstract class WebUtils {
-    
+
     /**
      * 判断当前是否在Web请求上下文中。
      *
@@ -29,7 +32,7 @@ public abstract class WebUtils {
     public static boolean isWebContext() {
         return RequestContextHolder.getRequestAttributes() != null && RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes;
     }
-    
+
 
     /**
      * 获取当前请求的属性对象。
@@ -87,6 +90,91 @@ public abstract class WebUtils {
         }
         return response;
     }
+
+    /**
+     * 设置文件下载的 Response Header (通用核心方法)
+     * 处理了各种浏览器的中文乱码问题和空格变+号问题
+     *
+     * @param fileName 文件名（不含后缀，或包含都可以，具体看调用方）
+     * @param suffix   文件后缀 (如 .xlsx, .pdf)
+     * @param mimeType 文件的MIME类型
+     */
+    public static void setDownloadHeader(String fileName, String suffix, String mimeType) {
+        if (fileName == null || fileName.isEmpty()) {
+            fileName = String.valueOf(System.currentTimeMillis());
+        }
+        if (suffix != null && !suffix.isEmpty() && !fileName.endsWith(suffix)) {
+            fileName += suffix;
+        }
+
+        HttpServletResponse response = getResponse();
+        response.setContentType(mimeType);
+        response.setCharacterEncoding("UTF-8");
+
+        try {
+            // URL编码，并将空格产生的 '+' 替换为标准的 '%20'
+            String encodedFileName = URLEncoder.encode(fileName, "UTF-8").replaceAll("\\+", "%20");
+            // 兼容现代浏览器和老版IE的标准写法 (RFC 5987)
+            String contentDisposition = String.format("attachment; filename=\"%s\"; filename*=utf-8''%s",
+                    encodedFileName, encodedFileName);
+
+            // 解决前端跨域获取不到 header 的问题
+            response.setHeader("Access-Control-Expose-Headers", "Content-Disposition");
+            response.setHeader("Content-Disposition", contentDisposition);
+        } catch (Exception e) {
+            throw new RuntimeException("设置文件下载响应头失败", e);
+        }
+    }
+
+
+    /**
+     * 获取 Excel (xlsx) 输出流
+     */
+    public static OutputStream getExcelOutputStream(String fileName) {
+        setDownloadHeader(fileName, ".xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        return getResponseOutputStream();
+    }
+
+    /**
+     * 获取 CSV 输出流
+     */
+    public static OutputStream getCsvOutputStream(String fileName) {
+        setDownloadHeader(fileName, ".csv", "text/csv");
+        return getResponseOutputStream();
+    }
+
+    /**
+     * 获取 Word (docx) 输出流
+     */
+    public static OutputStream getWordOutputStream(String fileName) {
+        setDownloadHeader(fileName, ".docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+        return getResponseOutputStream();
+    }
+
+    /**
+     * 获取 PDF 输出流 (作为附件下载)
+     */
+    public static OutputStream getPdfOutputStream(String fileName) {
+        setDownloadHeader(fileName, ".pdf", "application/pdf");
+        return getResponseOutputStream();
+    }
+
+    /**
+     * 获取 ZIP 压缩包输出流
+     */
+    public static OutputStream getZipOutputStream(String fileName) {
+        setDownloadHeader(fileName, ".zip", "application/zip");
+        return getResponseOutputStream();
+    }
+
+    /**
+     * 获取通用二进制流 (不知道具体文件类型时)
+     */
+    public static OutputStream getBinaryOutputStream(String fileName) {
+        setDownloadHeader(fileName, "", "application/octet-stream");
+        return getResponseOutputStream();
+    }
+    
 
     /**
      * 获取当前请求的HttpSession对象。
