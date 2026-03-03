@@ -24,22 +24,14 @@ public @interface Idempotent {
     String value() default "";
 
     /**
-     * 过期时间，默认 5 秒
+     * 过期时间
      */
-    long timeout() default 5;
+    long timeout() default 3;
 
     /**
      * 时间单位，默认秒
      */
     TimeUnit unit() default TimeUnit.SECONDS;
-
-    /**
-     * 是否在方法执行完成后自动释放 Key
-     * <p>
-     * true: 仅防止“并发重复提交”。方法执行完立即释放，允许下一次请求进入。
-     * false: (默认) 严格幂等模式。直到过期时间到达前，都不允许相同请求再次进入，防止“采样频率内”的重复提交。
-     */
-    boolean autoRelease() default false;
 
     /**
      * 提示信息

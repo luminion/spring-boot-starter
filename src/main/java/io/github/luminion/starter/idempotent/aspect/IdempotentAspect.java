@@ -1,8 +1,8 @@
 package io.github.luminion.starter.idempotent.aspect;
 
-import io.github.luminion.starter.idempotent.annotation.Idempotent;
 import io.github.luminion.starter.core.spi.Fingerprinter;
 import io.github.luminion.starter.idempotent.IdempotentHandler;
+import io.github.luminion.starter.idempotent.annotation.Idempotent;
 import io.github.luminion.starter.idempotent.exception.IdempotentException;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -25,9 +25,9 @@ public class IdempotentAspect {
     /**
      * 构造函数
      *
-     * @param prefix              方法指纹的前缀
-     * @param fingerprinter 方法指纹生成器
-     * @param idempotentHandler   幂等性处理器
+     * @param prefix            方法指纹的前缀
+     * @param fingerprinter     方法指纹生成器
+     * @param idempotentHandler 幂等性处理器
      */
     public IdempotentAspect(String prefix, Fingerprinter fingerprinter, IdempotentHandler idempotentHandler) {
         this.prefix = prefix;
@@ -53,14 +53,7 @@ public class IdempotentAspect {
             throw new IdempotentException(idempotent.message());
         }
 
-        try {
-            // 3. 执行业务方法
-            return joinPoint.proceed();
-        } finally {
-            // 4. 根据配置决定是否在执行完后立即释放锁
-            if (idempotent.autoRelease()) {
-                idempotentHandler.release(key);
-            }
-        }
+        // 3. 执行业务方法
+        return joinPoint.proceed();
     }
 }

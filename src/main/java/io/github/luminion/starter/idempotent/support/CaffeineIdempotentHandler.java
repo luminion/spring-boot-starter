@@ -2,6 +2,7 @@ package io.github.luminion.starter.idempotent.support;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.Expiry;
 import io.github.luminion.starter.idempotent.IdempotentHandler;
 
 import java.util.concurrent.TimeUnit;
@@ -19,29 +20,32 @@ public class CaffeineIdempotentHandler implements IdempotentHandler {
      * 容器设置兜底过期，防止内存泄漏
      * 具体的幂等时效由 Value (时间戳) 控制
      */
-    private final Cache<String, Long> locks = Caffeine.newBuilder()
-            .expireAfterWrite(5, TimeUnit.MINUTES)
+    // 核心优化：使用自定义过期策略 (Expiry) 来动态控制每个 Key 的存活时间
+    private final Cache<String, Long> cache = Caffeine.newBuilder()
+            .maximumSize(10_000)
+            .expireAfter(new Expiry<String, Long>() {
+                @Override
+                public long expireAfterCreate(String key, Long timeoutNanos, long currentTime) {
+                    return timeoutNanos; // 创建时，直接把传进来的时间作为存活时间
+                }
+                @Override
+                public long expireAfterUpdate(String k, Long v, long t, long currentDuration) {
+                    return currentDuration;
+                }
+                @Override
+                public long expireAfterRead(String k, Long v, long t, long currentDuration) {
+                    return currentDuration;
+                }
+            })
             .build();
 
     @Override
     public boolean tryLock(String key, long timeout, TimeUnit unit) {
-        long now = System.currentTimeMillis();
-        long expireAt = now + unit.toMillis(timeout);
-        AtomicBoolean success = new AtomicBoolean(false);
-
-        locks.asMap().compute(key, (k, v) -> {
-            if (v == null || v <= now) {
-                success.set(true);
-                return expireAt;
-            }
-            return v;
-        });
-
-        return success.get();
+        long timeoutNanos = unit.toNanos(timeout);
+        // 如果 absent，返回 null 并放入 timeoutNanos。如果已存在，返回旧值。
+        Long existing = cache.asMap().putIfAbsent(key, timeoutNanos);
+        // existing == null 说明之前没有，加锁（防重）成功
+        return existing == null;
     }
-
-    @Override
-    public void release(String key) {
-        locks.invalidate(key);
-    }
+    
 }
