@@ -27,7 +27,6 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.jackson.Jackson2ObjectMapperBuilderCustomizer;
-import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -62,14 +61,13 @@ public class LuminionJacksonConfig {
         /**
          * jackson2对象映射器生成器定制器
          *
-         * @param prop               配置属性
-         * @param applicationContext Spring 上下文
-         * @param enumCodeProvider   枚举翻译属性提供者
-         * @return jackson对象映射器生成器定制器
+         * @param prop        配置属性
+         * @param beanFactory Spring 上下文
          */
         @Bean
         @Order(-1)
-        public Jackson2ObjectMapperBuilderCustomizer jackson2ObjectMapperBuilderCustomizer(Prop prop, BeanFactory beanFactory) {
+        public Jackson2ObjectMapperBuilderCustomizer jackson2ObjectMapperBuilderCustomizer(Prop prop,
+                                                                                           BeanFactory beanFactory) {
             return builder -> {
                 String dateTimeFormat = prop.getDateTimeFormat().getDateTime();
                 String dateFormat = prop.getDateTimeFormat().getDate();
@@ -103,31 +101,37 @@ public class LuminionJacksonConfig {
                 DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern(dateFormat);
                 DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern(timeFormat);
 
-                builder.deserializerByType(LocalDateTime.class, new LocalDateTimeDeserializer(dateTimeFormatter))
-                        .deserializerByType(LocalDate.class, new LocalDateDeserializer(dateFormatter))
-                        .deserializerByType(LocalTime.class, new LocalTimeDeserializer(timeFormatter));
+                builder.deserializerByType(LocalDateTime.class,
+                                new LocalDateTimeDeserializer(dateTimeFormatter))
+                        .deserializerByType(LocalDate.class,
+                                new LocalDateDeserializer(dateFormatter))
+                        .deserializerByType(LocalTime.class,
+                                new LocalTimeDeserializer(timeFormatter));
 
                 builder.serializers(new LocalDateTimeSerializer(dateTimeFormatter))
                         .serializers(new LocalDateSerializer(dateFormatter))
                         .serializers(new LocalTimeSerializer(timeFormatter));
 
                 // 自定义转化
-                ObjectProvider<JsonProcessorProvider> jsonProcessorProviderObjectProvider = beanFactory.getBeanProvider(JsonProcessorProvider.class);
+                ObjectProvider<JsonProcessorProvider> jsonProcessorProviderObjectProvider = beanFactory
+                        .getBeanProvider(JsonProcessorProvider.class);
                 jsonProcessorProviderObjectProvider.ifAvailable(bean -> {
-                    ObjectProvider<XssCleaner> xssCleanerObjectProvider = beanFactory.getBeanProvider(XssCleaner.class);
+                    ObjectProvider<XssCleaner> xssCleanerObjectProvider = beanFactory
+                            .getBeanProvider(XssCleaner.class);
                     XssCleaner xssCleaner = xssCleanerObjectProvider.getIfAvailable();
-                    builder.deserializerByType(String.class, new JacksonStringDeserializer(bean, xssCleaner));
+                    builder.deserializerByType(String.class,
+                            new JacksonStringDeserializer(bean, xssCleaner));
                     builder.serializerByType(String.class, new JacksonStringSerializer(bean));
                 });
 
                 // 枚举翻译处理
-                ObjectProvider<EnumFieldConvention> enumFieldConventionObjectProvider = beanFactory.getBeanProvider(EnumFieldConvention.class);
+                ObjectProvider<EnumFieldConvention> enumFieldConventionObjectProvider = beanFactory
+                        .getBeanProvider(EnumFieldConvention.class);
                 enumFieldConventionObjectProvider.ifAvailable(bean -> {
                     SimpleModule enumModule = new SimpleModule();
                     enumModule.setSerializerModifier(new JsonEnumSerializerModifier(bean));
                     builder.modules(enumModule);
                 });
-
 
             };
         }

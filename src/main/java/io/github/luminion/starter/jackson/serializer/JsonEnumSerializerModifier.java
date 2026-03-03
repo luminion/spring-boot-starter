@@ -33,7 +33,7 @@ public class JsonEnumSerializerModifier extends BeanSerializerModifier {
 
     @Override
     public List<BeanPropertyWriter> changeProperties(SerializationConfig config, BeanDescription beanDesc,
-            List<BeanPropertyWriter> beanProperties) {
+                                                     List<BeanPropertyWriter> beanProperties) {
         List<BeanPropertyWriter> newProperties = new ArrayList<>(beanProperties);
         Set<String> existNames = new HashSet<>();
         for (BeanPropertyWriter writer : beanProperties) {
@@ -46,37 +46,49 @@ public class JsonEnumSerializerModifier extends BeanSerializerModifier {
                 continue;
             }
 
-            String targetName = writer.getName() + "name";
+            Class<? extends Enum<?>> enumClass = ann.value();
+            Class<?> fieldType = writer.getType().getRawClass();
+
+            // 1. 根据字段类型判断: 属性名或约定中的 codeField 必须存在且类型相同
+            Field keyField = findKeyField(enumClass, ann.keyField(), fieldType);
+            if (keyField == null) {
+                continue;
+            }
+
+            // 2. 获取匹配的描述字段 (descFieldNames)
+            Field labelField = findLabelField(enumClass, ann.labelField());
+            if (labelField == null) {
+                continue;
+            }
+
+            // 3. 额外字段名计算: 原字段名 + 翻译属性名(首字母大写)
+            // 例如: status + desc (字段) -> statusDesc
+            String labelFieldName = labelField.getName();
+            String targetName = writer.getName() + StringUtils.capitalize(labelFieldName);
+
+            // 4. 确保没有重复字段
             if (existNames.contains(targetName)) {
                 continue;
             }
 
-            EnumMetadata metadata = getMetadata(ann, writer.getType().getRawClass());
+            EnumMetadata metadata = getMetadata(enumClass, keyField, labelField);
             if (metadata != null) {
                 newProperties.add(new JsonEnumPropertyWriter(writer, targetName, metadata));
+                existNames.add(targetName); // 防止本次循环添加重复
             }
         }
         return newProperties;
     }
 
-    private EnumMetadata getMetadata(JsonEnum ann, Class<?> fieldType) {
-        Class<? extends Enum<?>> enumClass = ann.value();
-        String cacheKey = enumClass.getName() + ":" + fieldType.getName() + ":" + ann.keyField() + ":"
-                + ann.labelField();
+    private EnumMetadata getMetadata(Class<? extends Enum<?>> enumClass, Field keyField, Field labelField) {
+        String cacheKey = enumClass.getName() + ":" + keyField.getName() + ":" + labelField.getName();
 
         return metadataCache.computeIfAbsent(cacheKey, k -> {
-            Field kField = findKeyField(enumClass, ann.keyField(), fieldType);
-            Field vField = findLabelField(enumClass, ann.labelField());
-
-            if (kField == null || vField == null) {
-                return null;
-            }
-
             Map<Object, Object> mapping = new HashMap<>();
             Enum<?>[] constants = enumClass.getEnumConstants();
             for (Enum<?> constant : constants) {
-                Object key = getFieldValue(constant, kField);
-                Object label = getFieldValue(constant, vField);
+                Object key = getFieldValue(constant, keyField);
+                Object label = getFieldValue(constant, labelField);
                 if (key != null && label != null) {
                     mapping.put(key, label);
                 }
@@ -93,20 +105,16 @@ public class JsonEnumSerializerModifier extends BeanSerializerModifier {
                 return f;
             }
         }
-        // 使用 EnumFieldConvention 提供的约定
+
         List<String> candidates = enumFieldConvention.codeFieldNames();
         for (String name : candidates) {
             Field f = ReflectionUtils.findField(clazz, name);
             if (f != null) {
-                ReflectionUtils.makeAccessible(f);
-                return f;
-            }
-        }
-        // 类型匹配兜底
-        for (Field f : clazz.getDeclaredFields()) {
-            if (f.getType().isAssignableFrom(fieldType) && !f.isEnumConstant() && !f.isSynthetic()) {
-                ReflectionUtils.makeAccessible(f);
-                return f;
+                // 类型相同判断 (考虑基本类型装饰类)
+                if (isTypeCompatible(f.getType(), fieldType)) {
+                    ReflectionUtils.makeAccessible(f);
+                    return f;
+                }
             }
         }
         return null;
@@ -120,16 +128,50 @@ public class JsonEnumSerializerModifier extends BeanSerializerModifier {
                 return f;
             }
         }
-        // 使用 EnumFieldConvention 提供的约定
+
         List<String> candidates = enumFieldConvention.descFieldNames();
         for (String name : candidates) {
             Field f = ReflectionUtils.findField(clazz, name);
-            if (f != null && f.getType() == String.class) {
+            if (f != null) {
                 ReflectionUtils.makeAccessible(f);
                 return f;
             }
         }
         return null;
+    }
+
+    private boolean isTypeCompatible(Class<?> enumFieldType, Class<?> propertyType) {
+        if (enumFieldType.isAssignableFrom(propertyType)) {
+            return true;
+        }
+        // 简单处理基本类型
+        if (enumFieldType.isPrimitive()) {
+            return getWrapperType(enumFieldType).isAssignableFrom(propertyType);
+        }
+        if (propertyType.isPrimitive()) {
+            return enumFieldType.isAssignableFrom(getWrapperType(propertyType));
+        }
+        return false;
+    }
+
+    private Class<?> getWrapperType(Class<?> primitive) {
+        if (primitive == int.class)
+            return Integer.class;
+        if (primitive == long.class)
+            return Long.class;
+        if (primitive == boolean.class)
+            return Boolean.class;
+        if (primitive == double.class)
+            return Double.class;
+        if (primitive == float.class)
+            return Float.class;
+        if (primitive == byte.class)
+            return Byte.class;
+        if (primitive == char.class)
+            return Character.class;
+        if (primitive == short.class)
+            return Short.class;
+        return primitive;
     }
 
     private Object getFieldValue(Object obj, Field field) {
