@@ -1,6 +1,7 @@
 package io.github.luminion.starter.lock.support;
 
 import io.github.luminion.starter.lock.LockHandler;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -13,7 +14,14 @@ import java.util.concurrent.locks.ReentrantLock;
  * @author luminion
  * @since 1.0.0
  */
+@Slf4j
 public class JdkLockHandler implements LockHandler {
+
+    public JdkLockHandler() {
+        log.warn("[Luminion Starter] JdkLockHandler is used as a fallback implementation. " +
+                "This handler is not suitable for distributed environments and may cause lock validation to fail. " +
+                "Consider using Redis or Redisson for distributed locking.");
+    }
 
     private final Map<String, ReentrantLock> lockMap = new ConcurrentHashMap<>();
 

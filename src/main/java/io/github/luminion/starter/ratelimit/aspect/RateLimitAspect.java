@@ -12,6 +12,7 @@ import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 
 import java.lang.reflect.Method;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 限流切面
@@ -48,7 +49,7 @@ public class RateLimitAspect {
                 rateLimit.key());
 
         // 2. 执行限流
-        if (!rateLimitHandler.tryAcquire(key, rateLimit.value())) {
+        if (!rateLimitHandler.tryAcquire(key, rateLimit.value(), rateLimit.timeout(), rateLimit.unit())) {
             throw new RateLimitException(rateLimit.message());
         }
     }

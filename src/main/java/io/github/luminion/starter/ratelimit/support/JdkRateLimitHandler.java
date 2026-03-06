@@ -1,47 +1,66 @@
 package io.github.luminion.starter.ratelimit.support;
 
 import io.github.luminion.starter.ratelimit.RateLimitHandler;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.function.BiFunction;
 
 /**
- * 基于 JDK 的本地限流器 (固定窗口算法)
- * 适用于无 Redis/Caffeine/Guava 的简单兜底场景
+ * 基于 JDK 的本地限流器 (令牌桶算法)
+ * 适用于无 Redis/Caffeine 的简单兜底场景
  *
  * @author luminion
  */
+@Slf4j
 public class JdkRateLimitHandler implements RateLimitHandler {
 
+    public JdkRateLimitHandler() {
+        log.warn("[Luminion Starter] JdkRateLimitHandler is used as a fallback implementation. " +
+                "This handler is not suitable for distributed environments and may cause rate limiting to be inaccurate. " +
+                "Consider using Redis, Redisson, or Caffeine for distributed rate limiting.");
+    }
+
     /**
-     * Key: 限流键
-     * Value: [0] -> 当前窗口计数, [1] -> 窗口起始时间戳 (ms)
+     * TokenBucket 状态: [0] -> tokens, [1] -> lastRefillTimestamp(nanos)
      */
-    private final ConcurrentHashMap<String, long[]> windowMap = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, long[]> bucketMap = new ConcurrentHashMap<>();
 
     @Override
-    public boolean tryAcquire(String key, double rate) {
-        long limit = (long) rate;
-        if (limit <= 0)
-            return false;
+    public boolean tryAcquire(String key, double rate, long timeout, TimeUnit unit) {
+        long capacity = (long) Math.max(1, rate);
+        long intervalNanos = unit.toNanos(timeout);
+        // fillRate = rate / (timeout秒数)，即每秒补充的令牌数
+        double fillRate = rate * 1_000_000_000L / intervalNanos;
 
-        long now = System.currentTimeMillis();
-        long windowSize = 1000; // 固定 1 秒窗口
+        long[] bucket = bucketMap.compute(key, (k, state) -> {
+            long now = System.nanoTime();
 
-        long[] state = windowMap.compute(key, (k, v) -> {
-            if (v == null || (now - v[1]) > windowSize) {
-                // 新窗口
-                return new long[] { 1, now };
+            if (state == null) {
+                // 首次初始化：满令牌桶
+                return new long[]{capacity, now};
             }
-            // 旧窗口累加
-            v[0]++;
-            return v;
+
+            long tokens = state[0];
+            long lastRefill = state[1];
+            long nanosSinceLastRefill = now - lastRefill;
+
+            // 计算应补充的令牌数
+            long newTokens = (long) (nanosSinceLastRefill * fillRate / 1_000_000_000L);
+            if (newTokens > 0) {
+                tokens = Math.min(capacity, tokens + newTokens);
+                lastRefill = now;
+            }
+
+            return new long[]{tokens, lastRefill};
         });
 
-        // 定期清理过期窗口
-        if (windowMap.size() > 1024) {
-            windowMap.entrySet().removeIf(entry -> (now - entry.getValue()[1]) > windowSize * 10);
+        // 尝试获取令牌
+        if (bucket[0] >= 1) {
+            bucket[0]--;
+            return true;
         }
-
-        return state[0] <= limit;
+        return false;
     }
 }

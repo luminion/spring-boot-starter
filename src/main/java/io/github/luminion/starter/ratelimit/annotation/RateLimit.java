@@ -1,6 +1,7 @@
 package io.github.luminion.starter.ratelimit.annotation;
 
 import java.lang.annotation.*;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 限流注解
@@ -14,9 +15,19 @@ import java.lang.annotation.*;
 public @interface RateLimit {
 
     /**
-     * 限流速率 (QPS)
+     * 时间窗口内允许的最大请求数
      */
     double value() default 50;
+
+    /**
+     * 限流时间窗口大小
+     */
+    long timeout() default 1;
+
+    /**
+     * 限流时间窗口单位
+     */
+    TimeUnit unit() default TimeUnit.SECONDS;
 
     /**
      * 用于生成限流 Key 的 SpEL 表达式

@@ -1,6 +1,7 @@
 package io.github.luminion.starter.idempotent.support;
 
 import io.github.luminion.starter.idempotent.IdempotentHandler;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -14,7 +15,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @author luminion
  * @since 1.0.0
  */
+@Slf4j
 public class JdkIdempotentHandler implements IdempotentHandler {
+
+    public JdkIdempotentHandler() {
+        log.warn("[Luminion Starter] JdkIdempotentHandler is used as a fallback implementation. " +
+                "This handler is not suitable for distributed environments and may cause idempotent validation to fail. " +
+                "Consider using Redis or Redisson for distributed idempotent validation.");
+    }
 
     private final ConcurrentHashMap<String, Long> lockMap = new ConcurrentHashMap<>();
     // 清理标志位，保证同一时间只有一个线程在做清理工作

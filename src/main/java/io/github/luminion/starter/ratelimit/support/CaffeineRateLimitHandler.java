@@ -5,7 +5,6 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import io.github.luminion.starter.ratelimit.RateLimitHandler;
 
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 基于 Caffeine 的本地令牌桶限流器
@@ -19,37 +18,54 @@ public class CaffeineRateLimitHandler implements RateLimitHandler {
             .build();
 
     @Override
-    public boolean tryAcquire(String key, double rate) {
-        TokenBucket bucket = buckets.get(key, k -> new TokenBucket((long) rate));
-        return bucket.tryAcquire(rate);
+    public boolean tryAcquire(String key, double rate, long timeout, TimeUnit unit) {
+        TokenBucket bucket = buckets.get(key, k -> new TokenBucket((long) rate, timeout, unit));
+        return bucket.tryAcquire();
     }
 
     private static class TokenBucket {
-        private final AtomicLong tokens;
-        private volatile long lastRefillTimestamp;
+        /**
+         * 当前令牌数
+         */
+        private double tokens;
+        /**
+         * 上次补充令牌的时间戳（纳秒）
+         */
+        private long lastRefillNanos;
+        /**
+         * 令牌桶容量
+         */
+        private final long capacity;
+        /**
+         * 每秒补充的令牌数 = capacity / timeout秒数
+         */
+        private final double fillRate;
 
-        public TokenBucket(long capacity) {
-            this.tokens = new AtomicLong(capacity);
-            this.lastRefillTimestamp = System.nanoTime();
+        public TokenBucket(long capacity, long timeout, TimeUnit unit) {
+            this.capacity = capacity;
+            this.tokens = capacity;
+            this.lastRefillNanos = System.nanoTime();
+            // fillRate = capacity / (timeout秒数)，即每秒补充的令牌数
+            double timeoutSeconds = timeout * unit.toNanos(1) / 1_000_000_000L;
+            this.fillRate = capacity / timeoutSeconds;
         }
 
-        public synchronized boolean tryAcquire(double rate) {
+        /**
+         * 尝试获取令牌（非线程安全，仅 Caffeine 的 expireAfterAccess 清理时可能有竞态）
+         */
+        public boolean tryAcquire() {
             long now = System.nanoTime();
-            long capacity = (long) rate;
-            long nanosSinceLastRefill = now - lastRefillTimestamp;
+            long nanosSinceLastRefill = now - lastRefillNanos;
 
-            // 计算新增令牌数
-            long newTokens = (long) (nanosSinceLastRefill * rate / 1_000_000_000L);
-
+            // 计算应补充的令牌数
+            double newTokens = nanosSinceLastRefill * fillRate / 1_000_000_000L;
             if (newTokens > 0) {
-                long currentTokens = tokens.get();
-                long updatedTokens = Math.min(capacity, currentTokens + newTokens);
-                tokens.set(updatedTokens);
-                lastRefillTimestamp = now;
+                tokens = Math.min(capacity, tokens + newTokens);
+                lastRefillNanos = now;
             }
 
-            if (tokens.get() >= 1) {
-                tokens.decrementAndGet();
+            if (tokens >= 1) {
+                tokens -= 1;
                 return true;
             }
             return false;
