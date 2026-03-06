@@ -32,28 +32,28 @@ public class LuminionLogAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean(ArgsLogAspect.class)
-    @ConditionalOnBean(InvokeArgsWriter.class)
+    @ConditionalOnBean(Slf4JLogWriter.class)
     public ArgsLogAspect argsLogAspect(InvokeArgsWriter argsWriter) {
         return new ArgsLogAspect(argsWriter);
     }
 
     @Bean
     @ConditionalOnMissingBean(ResultLogAspect.class)
-    @ConditionalOnBean(InvokeResultWriter.class)
+    @ConditionalOnBean(Slf4JLogWriter.class)
     public ResultLogAspect resultLogAspect(InvokeResultWriter resultWriter) {
         return new ResultLogAspect(resultWriter);
     }
 
     @Bean
     @ConditionalOnMissingBean(ErrorLogAspect.class)
-    @ConditionalOnBean(ErrorLogWriter.class)
+    @ConditionalOnBean(Slf4JLogWriter.class)
     public ErrorLogAspect errorLogAspect(ErrorLogWriter errorLogWriter) {
         return new ErrorLogAspect(errorLogWriter);
     }
 
     @Bean
     @ConditionalOnMissingBean(SlowLogAspect.class)
-    @ConditionalOnBean(SlowLogWriter.class)
+    @ConditionalOnBean(Slf4JLogWriter.class)
     public SlowLogAspect slowLogAspect(SlowLogWriter slowLogWriter) {
         return new SlowLogAspect(slowLogWriter);
     }

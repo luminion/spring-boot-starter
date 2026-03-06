@@ -47,5 +47,10 @@ public class CaffeineIdempotentHandler implements IdempotentHandler {
         // existing == null 说明之前没有，加锁（防重）成功
         return existing == null;
     }
-    
+
+    @Override
+    public void unlock(String key) {
+        cache.invalidate(key);
+    }
+
 }

@@ -3,7 +3,6 @@ package io.github.luminion.starter.idempotent.config;
 import io.github.luminion.starter.idempotent.IdempotentHandler;
 import io.github.luminion.starter.idempotent.support.RedisIdempotentHandler;
 import org.aspectj.weaver.Advice;
-import org.redisson.api.RedissonClient;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -18,7 +17,7 @@ import org.springframework.data.redis.core.RedisTemplate;
  * @since 1.0.0
  */
 @AutoConfiguration(after = {RedisAutoConfiguration.class, LuminionIdempotentRedissonAutoConfiguration.class})
-@ConditionalOnClass({Advice.class, RedissonClient.class})
+@ConditionalOnClass({Advice.class, RedisTemplate.class})
 public class LuminionIdempotentRedisAutoConfiguration {
 
     @Bean

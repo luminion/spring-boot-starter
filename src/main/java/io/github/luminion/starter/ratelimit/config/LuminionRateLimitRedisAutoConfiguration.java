@@ -22,7 +22,6 @@ import org.springframework.data.redis.core.RedisTemplate;
 public class LuminionRateLimitRedisAutoConfiguration {
 
     @Bean
-    @ConditionalOnClass(RedisTemplate.class)
     @ConditionalOnBean(RedisTemplate.class)
     @ConditionalOnMissingBean(RateLimitHandler.class)
     public RateLimitHandler rateLimitHandler(RedisTemplate<Object, Object> redisTemplate) {

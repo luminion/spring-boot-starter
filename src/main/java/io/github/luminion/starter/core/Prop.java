@@ -56,11 +56,11 @@ public class Prop {
     /**
      * 日期时间格式
      */
-    private DateTimeFormatProperties dateTimeFormat;
+    private DateTimeFormatProperties dateTimeFormat = new DateTimeFormatProperties();
     /**
      * Web 配置
      */
-    private WebProperties web;
+    private WebProperties web = new WebProperties();
     
     @Data
     public class WebProperties {

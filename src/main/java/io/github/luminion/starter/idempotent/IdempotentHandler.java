@@ -19,4 +19,11 @@ public interface IdempotentHandler {
      */
     boolean tryLock(String key, long timeout, TimeUnit unit);
 
+    /**
+     * 释放幂等锁
+     *
+     * @param key 唯一键
+     */
+    void unlock(String key);
+
 }

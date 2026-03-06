@@ -23,5 +23,10 @@ public class RedissonIdempotentHandler implements IdempotentHandler {
         RBucket<String> bucket = redissonClient.getBucket(key);
         return bucket.setIfAbsent("LOCKED", java.time.Duration.of(timeout, unit.toChronoUnit()));
     }
-    
+
+    @Override
+    public void unlock(String key) {
+        redissonClient.getBucket(key).delete();
+    }
+
 }

@@ -130,7 +130,7 @@ public class LuminionJacksonConfig {
                 enumFieldConventionObjectProvider.ifAvailable(bean -> {
                     SimpleModule enumModule = new SimpleModule();
                     enumModule.setSerializerModifier(new JsonEnumSerializerModifier(bean));
-                    builder.modules(enumModule);
+                    builder.modulesAppend(enumModule);
                 });
 
             };

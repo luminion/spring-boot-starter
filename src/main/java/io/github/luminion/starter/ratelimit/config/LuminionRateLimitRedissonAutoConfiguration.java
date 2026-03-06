@@ -21,7 +21,6 @@ import org.springframework.context.annotation.Bean;
 public class LuminionRateLimitRedissonAutoConfiguration {
 
     @Bean
-    @ConditionalOnClass(RedissonClient.class)
     @ConditionalOnBean(RedissonClient.class)
     @ConditionalOnMissingBean(RateLimitHandler.class)
     public RateLimitHandler rateLimitHandler(RedissonClient redissonClient) {

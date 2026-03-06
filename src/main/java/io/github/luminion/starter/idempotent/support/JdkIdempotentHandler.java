@@ -46,4 +46,9 @@ public class JdkIdempotentHandler implements IdempotentHandler {
         }
         return success.get();
     }
+
+    @Override
+    public void unlock(String key) {
+        lockMap.remove(key);
+    }
 }

@@ -53,7 +53,12 @@ public class IdempotentAspect {
             throw new IdempotentException(idempotent.message());
         }
 
-        // 3. 执行业务方法
-        return joinPoint.proceed();
+        try {
+            // 3. 执行业务方法
+            return joinPoint.proceed();
+        } finally {
+            // 4. 释放锁
+            idempotentHandler.unlock(key);
+        }
     }
 }

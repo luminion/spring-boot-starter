@@ -22,5 +22,10 @@ public class RedisIdempotentHandler implements IdempotentHandler {
         Boolean success = redisTemplate.opsForValue().setIfAbsent(key, "LOCKED", timeout, unit);
         return success != null && success;
     }
-    
+
+    @Override
+    public void unlock(String key) {
+        redisTemplate.delete(key);
+    }
+
 }
