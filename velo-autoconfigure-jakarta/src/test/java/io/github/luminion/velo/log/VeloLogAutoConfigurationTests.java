@@ -1,0 +1,64 @@
+package io.github.luminion.velo.log;
+
+import io.github.luminion.velo.core.VeloCoreAutoConfiguration;
+import io.github.luminion.velo.log.aspect.ArgsLogAspect;
+import io.github.luminion.velo.log.aspect.ErrorLogAspect;
+import io.github.luminion.velo.log.aspect.ResultLogAspect;
+import io.github.luminion.velo.log.aspect.SlowLogAspect;
+import io.github.luminion.velo.log.support.Slf4JLogWriter;
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.test.util.ReflectionTestUtils;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+class VeloLogAutoConfigurationTests {
+
+    private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
+            .withConfiguration(AutoConfigurations.of(
+                    VeloCoreAutoConfiguration.class,
+                    VeloLogAutoConfiguration.class
+            ));
+
+    @Test
+    void shouldDefaultWriterToInfoLevel() {
+        contextRunner.run(context -> {
+            Slf4JLogWriter writer = context.getBean(Slf4JLogWriter.class);
+            assertThat(ReflectionTestUtils.getField(writer, "level")).isEqualTo(org.slf4j.event.Level.INFO);
+        });
+    }
+
+    @Test
+    void shouldCreateAspectsWithCustomWritersWhenSlf4jWriterIsDisabled() {
+        contextRunner
+                .withPropertyValues("velo.log.slf4j-log-writer-enabled=false")
+                .withBean(CustomLogWriter.class, CustomLogWriter::new)
+                .run(context -> {
+                    assertThat(context).doesNotHaveBean(Slf4JLogWriter.class);
+                    assertThat(context).hasSingleBean(ArgsLogAspect.class);
+                    assertThat(context).hasSingleBean(ResultLogAspect.class);
+                    assertThat(context).hasSingleBean(ErrorLogAspect.class);
+                    assertThat(context).hasSingleBean(SlowLogAspect.class);
+                });
+    }
+
+    static final class CustomLogWriter implements InvokeArgsWriter, InvokeResultWriter, ErrorLogWriter, SlowLogWriter {
+
+        @Override
+        public void writeArgs(org.aspectj.lang.reflect.MethodSignature signature, Object[] args) {
+        }
+
+        @Override
+        public void writeResult(org.aspectj.lang.reflect.MethodSignature signature, Object result) {
+        }
+
+        @Override
+        public void writeError(org.aspectj.lang.reflect.MethodSignature signature, Object[] args, Throwable e) {
+        }
+
+        @Override
+        public void writeSlow(org.aspectj.lang.reflect.MethodSignature signature, long durationNs) {
+        }
+    }
+}

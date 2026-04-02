@@ -1,0 +1,27 @@
+package io.github.luminion.velo.converter.datetime;
+
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.Date;
+
+/**
+ * @author luminion
+ */
+public class StringToJavaUtilDateConverter implements DateTimeConverter<String, Date> {
+    private final DateTimeFormatter formatter;
+    private final ZoneId zoneId;
+
+    public StringToJavaUtilDateConverter(String pattern, String zoneId) {
+        this.formatter = DateTimeFormatter.ofPattern(pattern);
+        this.zoneId = ZoneId.of(zoneId);
+    }
+
+    @Override
+    public Date convert(String source) {
+        if (source.isEmpty()) {
+            return null;
+        }
+        return Date.from(LocalDateTime.parse(source, formatter).atZone(zoneId).toInstant());
+    }
+}
