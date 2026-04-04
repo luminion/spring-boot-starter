@@ -1,33 +1,33 @@
 package io.github.luminion.velo.lock.support;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import io.github.luminion.velo.lock.LockHandler;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * 基于 ReentrantLock 的本地锁实现 (兜底方案)
+ * 基于 Caffeine 的本地锁实现。
  *
- * @author luminion
- * @since 1.0.0
+ * 该实现只保证单 JVM 内互斥执行，不提供分布式一致性。
  */
 @Slf4j
-public class JdkLockHandler implements LockHandler {
+public class CaffeineLockHandler implements LockHandler {
 
-    public JdkLockHandler() {
-        log.warn("[Velo Starter] JdkLockHandler is used as a fallback implementation. " +
-                "This handler is not suitable for distributed environments and may cause lock validation to fail. " +
-                "Consider using Redis or Redisson for distributed locking.");
+    private final Cache<String, LockState> lockCache = Caffeine.newBuilder().build();
+
+    public CaffeineLockHandler() {
+        log.warn("[Velo Starter] CaffeineLockHandler is used as a local fallback implementation. " +
+                "This handler only guarantees mutual exclusion inside a single JVM. " +
+                "Use Redis or Redisson when cross-node locking is required.");
     }
-
-    private final ConcurrentHashMap<String, LockState> lockMap = new ConcurrentHashMap<>();
 
     @Override
     public boolean lock(String key, long waitTime, long leaseTime, TimeUnit unit) {
-        LockState state = lockMap.compute(key, (k, existing) -> {
+        LockState state = lockCache.asMap().compute(key, (k, existing) -> {
             LockState resolved = existing != null ? existing : new LockState();
             resolved.retain();
             return resolved;
@@ -49,7 +49,7 @@ public class JdkLockHandler implements LockHandler {
 
     @Override
     public void unlock(String key) {
-        LockState state = lockMap.get(key);
+        LockState state = lockCache.getIfPresent(key);
         if (state == null) {
             return;
         }
@@ -63,7 +63,7 @@ public class JdkLockHandler implements LockHandler {
     }
 
     private void releaseState(String key, LockState state) {
-        lockMap.computeIfPresent(key, (k, existing) -> {
+        lockCache.asMap().computeIfPresent(key, (k, existing) -> {
             if (existing != state) {
                 return existing;
             }

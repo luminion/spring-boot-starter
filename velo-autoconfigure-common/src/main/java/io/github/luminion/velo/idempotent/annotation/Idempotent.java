@@ -17,6 +17,8 @@ public @interface Idempotent {
 
     /**
      * 用于生成幂等 Key 的 SpEL 表达式。
+     * <p>
+     * 该属性在运行时必须提供非空值。
      */
     String key() default "";
 

@@ -5,6 +5,7 @@ import io.github.luminion.velo.core.spi.Fingerprinter;
 import io.github.luminion.velo.lock.LockHandler;
 import io.github.luminion.velo.lock.VeloLockAutoConfiguration;
 import io.github.luminion.velo.lock.aspect.LockAspect;
+import io.github.luminion.velo.lock.support.CaffeineLockHandler;
 import io.github.luminion.velo.lock.support.JdkLockHandler;
 import io.github.luminion.velo.lock.support.RedisLockHandler;
 import io.github.luminion.velo.lock.support.RedissonLockHandler;
@@ -24,6 +25,7 @@ class VeloLockAutoConfigurationTests {
             .withConfiguration(AutoConfigurations.of(
                     VeloLockRedissonAutoConfiguration.class,
                     VeloLockRedisAutoConfiguration.class,
+                    VeloLockCaffeineAutoConfiguration.class,
                     VeloLockJdkAutoConfiguration.class
             ));
 
@@ -31,7 +33,7 @@ class VeloLockAutoConfigurationTests {
     void shouldCreateDefaultLockHandler() {
         contextRunner
                 .run(context -> assertThat(context.getBean(LockHandler.class))
-                        .isInstanceOf(JdkLockHandler.class));
+                        .isInstanceOf(CaffeineLockHandler.class));
     }
 
     @Test
@@ -53,11 +55,20 @@ class VeloLockAutoConfigurationTests {
     }
 
     @Test
+    void shouldUseJdkHandlerWhenCaffeineBackendIsDisabled() {
+        contextRunner
+                .withPropertyValues("velo.lock.backends.caffeine-enabled=false")
+                .run(context -> assertThat(context.getBean(LockHandler.class))
+                        .isInstanceOf(JdkLockHandler.class));
+    }
+
+    @Test
     void shouldCreateAspectWhenCoreDependenciesExist() {
         new ApplicationContextRunner()
                 .withConfiguration(AutoConfigurations.of(
                         VeloLockRedissonAutoConfiguration.class,
                         VeloLockRedisAutoConfiguration.class,
+                        VeloLockCaffeineAutoConfiguration.class,
                         VeloLockJdkAutoConfiguration.class,
                         VeloLockAutoConfiguration.class
                 ))

@@ -16,6 +16,8 @@ public @interface Lock {
 
     /**
      * 锁的 Key（支持 SpEL 表达式）。
+     * <p>
+     * 该属性在运行时必须提供非空值。
      */
     String key() default "";
 
@@ -29,7 +31,8 @@ public @interface Lock {
     /**
      * 锁的持有时间（自动释放时间）。
      * <p>
-     * 默认 30 秒，避免锁长期不释放。
+     * 该语义主要由 Redis / Redisson 这类后端保证；本地 Caffeine / JDK 兜底实现仅保证同 JVM 内互斥，
+     * 不提供强一致的自动过期释放能力。
      */
     long lease() default 30;
 

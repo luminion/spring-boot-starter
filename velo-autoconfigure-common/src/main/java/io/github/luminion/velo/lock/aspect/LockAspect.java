@@ -30,10 +30,16 @@ public class LockAspect {
     @Around("@annotation(lock)")
     public Object doLock(ProceedingJoinPoint joinPoint, Lock lock) throws Throwable {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
-        Method method = signature.getMethod();
-        String keyExpression = lock.key();
+        Method method = ConcurrencyAnnotationUtils.resolveSpecificMethod(joinPoint.getTarget(), signature.getMethod());
+        String keyExpression = ConcurrencyAnnotationUtils.requireKeyExpression("Lock", lock.key());
         long wait = lock.waitTimeout();
         long lease = lock.lease();
+        if (wait < 0L) {
+            throw new IllegalArgumentException("Lock waitTimeout must not be negative.");
+        }
+        if (lease <= 0L) {
+            throw new IllegalArgumentException("Lock lease must be greater than zero.");
+        }
 
         // 1. 生成锁 Key
         String key = ConcurrencyAnnotationUtils.buildPrefixedKey(

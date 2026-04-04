@@ -10,6 +10,7 @@ import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.aop.support.AopUtils;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 
 import java.lang.reflect.Method;
@@ -28,12 +29,15 @@ public class RateLimitAspect {
     @Before("@within(io.github.luminion.velo.ratelimit.annotation.RateLimit) || @annotation(io.github.luminion.velo.ratelimit.annotation.RateLimit)")
     public void doRateLimit(JoinPoint joinPoint) {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
-        Method method = signature.getMethod();
+        Method method = ConcurrencyAnnotationUtils.resolveSpecificMethod(joinPoint.getTarget(), signature.getMethod());
+        Class<?> targetClass = joinPoint.getTarget() != null
+                ? AopUtils.getTargetClass(joinPoint.getTarget())
+                : method.getDeclaringClass();
 
         // 支持方法级覆盖类级配置
         RateLimit rateLimit = AnnotatedElementUtils.findMergedAnnotation(method, RateLimit.class);
         if (rateLimit == null) {
-            rateLimit = AnnotatedElementUtils.findMergedAnnotation(method.getDeclaringClass(), RateLimit.class);
+            rateLimit = AnnotatedElementUtils.findMergedAnnotation(targetClass, RateLimit.class);
         }
 
         if (rateLimit == null) {

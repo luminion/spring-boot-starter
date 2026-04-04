@@ -33,7 +33,7 @@ public @interface RateLimit {
      * 用于生成限流 Key 的 SpEL 表达式
      * <p>
      * 例如: "#user.id", "#request.getHeader('token')"
-     * 如果为空，将根据方法指纹（类名+方法名+参数内容）自动生成
+     * 如果为空，将退回到方法级别的固定 Key
      */
     String key() default "";
 

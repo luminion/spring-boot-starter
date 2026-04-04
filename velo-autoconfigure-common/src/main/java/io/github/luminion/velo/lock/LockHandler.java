@@ -15,7 +15,7 @@ public interface LockHandler {
      *
      * @param key       锁的唯一标识
      * @param waitTime  等待时间
-     * @param leaseTime 持有时间
+     * @param leaseTime 持有时间；分布式后端通常会严格执行，本地兜底实现可按能力降级
      * @param unit      时间单位
      * @return true: 加锁成功; false: 加锁失败
      */

@@ -26,6 +26,7 @@ class VeloPropertiesDefaultsTest {
         assertThat(properties.getJackson().getDateTime().isDeserializersEnabled()).isTrue();
         assertThat(properties.getJackson().getStringConverters().isEnabled()).isFalse();
         assertThat(properties.getCore().isEnabled()).isTrue();
+        assertThat(properties.getLock().getBackends().isCaffeineEnabled()).isTrue();
         assertThat(properties.getLog().isEnabled()).isTrue();
         assertThat(properties.getLog().isSlf4jLogWriterEnabled()).isTrue();
         assertThat(properties.getWeb().isEnabled()).isTrue();

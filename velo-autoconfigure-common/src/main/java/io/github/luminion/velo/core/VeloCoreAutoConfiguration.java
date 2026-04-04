@@ -6,7 +6,6 @@ import io.github.luminion.velo.core.spi.JsonProcessorProvider;
 import io.github.luminion.velo.core.spi.NamingSuffixStrategy;
 import io.github.luminion.velo.core.spi.fingerprint.SpelFingerprinter;
 import io.github.luminion.velo.core.spi.provider.DefaultJsonProcessorProvider;
-import io.github.luminion.velo.core.util.InvocationUtils;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -28,7 +27,7 @@ public class VeloCoreAutoConfiguration {
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = "velo.core", name = "fingerprinter-enabled", havingValue = "true", matchIfMissing = true)
     public Fingerprinter fingerprinter() {
-        return new SpelFingerprinter(InvocationUtils::joinArgumentValues);
+        return new SpelFingerprinter();
     }
 
     @Bean

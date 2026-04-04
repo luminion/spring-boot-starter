@@ -262,6 +262,11 @@ public class VeloProperties {
             private boolean redisEnabled = true;
 
             /**
+             * Enables the Caffeine based lock handler.
+             */
+            private boolean caffeineEnabled = true;
+
+            /**
              * Enables the JDK based fallback lock handler.
              */
             private boolean jdkEnabled = true;
