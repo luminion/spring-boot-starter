@@ -43,6 +43,23 @@ class VeloLogAutoConfigurationTests {
                 });
     }
 
+    @Test
+    void shouldKeepDefaultWritersForOtherAspectsWhenSingleCustomWriterProvided() {
+        contextRunner
+                .withBean(CustomArgsWriter.class, CustomArgsWriter::new)
+                .run(context -> {
+                    assertThat(context).hasSingleBean(Slf4JLogWriter.class);
+                    assertThat(ReflectionTestUtils.getField(context.getBean(ArgsLogAspect.class), "argsWriter"))
+                            .isInstanceOf(CustomArgsWriter.class);
+                    assertThat(ReflectionTestUtils.getField(context.getBean(ResultLogAspect.class), "resultWriter"))
+                            .isInstanceOf(Slf4JLogWriter.class);
+                    assertThat(ReflectionTestUtils.getField(context.getBean(ErrorLogAspect.class), "errorLogWriter"))
+                            .isInstanceOf(Slf4JLogWriter.class);
+                    assertThat(ReflectionTestUtils.getField(context.getBean(SlowLogAspect.class), "slowLogWriter"))
+                            .isInstanceOf(Slf4JLogWriter.class);
+                });
+    }
+
     static final class CustomLogWriter implements InvokeArgsWriter, InvokeResultWriter, ErrorLogWriter, SlowLogWriter {
 
         @Override
@@ -59,6 +76,13 @@ class VeloLogAutoConfigurationTests {
 
         @Override
         public void writeSlow(org.aspectj.lang.reflect.MethodSignature signature, long durationNs) {
+        }
+    }
+
+    static final class CustomArgsWriter implements InvokeArgsWriter {
+
+        @Override
+        public void writeArgs(org.aspectj.lang.reflect.MethodSignature signature, Object[] args) {
         }
     }
 }

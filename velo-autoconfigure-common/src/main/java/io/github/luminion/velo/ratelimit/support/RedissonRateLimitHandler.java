@@ -3,7 +3,7 @@ package io.github.luminion.velo.ratelimit.support;
 import io.github.luminion.velo.ratelimit.RateLimitHandler;
 import lombok.RequiredArgsConstructor;
 import org.redisson.api.RRateLimiter;
-import org.redisson.api.RateIntervalUnit;
+import org.redisson.api.RateLimiterConfig;
 import org.redisson.api.RateType;
 import org.redisson.api.RedissonClient;
 
@@ -23,21 +23,30 @@ public class RedissonRateLimitHandler implements RateLimitHandler {
 
     @Override
     public boolean tryAcquire(String key, double rate, long timeout, TimeUnit unit) {
-        long rateValue = (long) Math.max(1, rate);
-        long intervalMillis = unit.toMillis(timeout);
+        RateLimitWindow window = RateLimitWindow.from(rate, timeout, unit);
+        long rateValue = window.capacity();
+        Duration interval = Duration.ofMillis(window.intervalMillis());
+        Duration keepAlive = Duration.ofMillis(Math.max(window.intervalMillis(), 1000L));
 
         RRateLimiter rateLimiter = redissonClient.getRateLimiter(key);
-        
-        // trySetRate 对已存在的限流器不生效，需要先删除再设置
-        // 但频繁删除会导致限流器状态丢失，这里用 isExists 做简单判断
+
         if (!rateLimiter.isExists()) {
-            rateLimiter.trySetRate(
-                    RateType.OVERALL,
-                    rateValue,
-                    Duration.ofMillis(intervalMillis)
-            );
+            rateLimiter.trySetRate(RateType.OVERALL, rateValue, interval, keepAlive);
         }
 
+        RateLimiterConfig currentConfig = rateLimiter.getConfig();
+        if (!matches(currentConfig, rateValue, interval.toMillis())) {
+            rateLimiter.setRate(RateType.OVERALL, rateValue, interval, keepAlive);
+        }
+
+        rateLimiter.expire(keepAlive);
         return rateLimiter.tryAcquire();
+    }
+
+    private boolean matches(RateLimiterConfig config, long rateValue, long intervalMillis) {
+        return config != null
+                && config.getRateType() == RateType.OVERALL
+                && Long.valueOf(rateValue).equals(config.getRate())
+                && Long.valueOf(intervalMillis).equals(config.getRateInterval());
     }
 }

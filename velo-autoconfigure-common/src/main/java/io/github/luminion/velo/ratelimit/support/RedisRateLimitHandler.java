@@ -17,15 +17,16 @@ public class RedisRateLimitHandler implements RateLimitHandler {
 
     @Override
     public boolean tryAcquire(String key, double rate, long timeout, TimeUnit unit) {
-        long capacity = (long) Math.max(1, rate);
-        long intervalMillis = unit.toMillis(timeout);
+        RateLimitWindow window = RateLimitWindow.from(rate, timeout, unit);
+        long capacity = window.capacity();
+        long intervalMillis = window.intervalMillis();
 
         // 脚本内部按毫秒时间差补充令牌，这里提前把速率换算到“每毫秒恢复多少令牌”。
-        double fillRate = rate / (intervalMillis / 1000.0);
+        double fillRate = capacity / (intervalMillis / 1000.0);
         long nowMs = System.currentTimeMillis();
 
         // 令牌桶至少保留一个完整窗口，再加一点冗余，避免边界时间频繁初始化。
-        long expireSec = unit.toSeconds(timeout) + 10;
+        long expireSec = Math.max(1L, (intervalMillis + 999L) / 1000L) + 10L;
 
         Long result = redisTemplate.execute(
                 RATE_LIMIT_SCRIPT,

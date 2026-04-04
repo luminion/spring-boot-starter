@@ -17,34 +17,32 @@ public class CaffeineRateLimitHandler implements RateLimitHandler {
 
     @Override
     public boolean tryAcquire(String key, double rate, long timeout, TimeUnit unit) {
-        return buckets.get(key, unused -> new TokenBucket()).tryAcquire(rate, timeout, unit);
+        RateLimitWindow window = RateLimitWindow.from(rate, timeout, unit);
+        return buckets.get(key, unused -> new TokenBucket())
+                .tryAcquire(window.capacity(), window.intervalNanos());
     }
 
     private static final class TokenBucket {
         private double tokens;
         private long lastRefillNanos;
         private long capacity;
-        private double fillRate;
+        private long intervalNanos;
 
-        private synchronized boolean tryAcquire(double rate, long timeout, TimeUnit unit) {
-            long resolvedCapacity = Math.max(1L, (long) Math.ceil(rate));
-            long intervalNanos = Math.max(1L, unit.toNanos(timeout));
-            double resolvedFillRate = rate * 1_000_000_000D / intervalNanos;
-
+        private synchronized boolean tryAcquire(long resolvedCapacity, long resolvedIntervalNanos) {
             if (lastRefillNanos == 0L) {
                 capacity = resolvedCapacity;
-                fillRate = resolvedFillRate;
+                intervalNanos = resolvedIntervalNanos;
                 tokens = resolvedCapacity;
                 lastRefillNanos = System.nanoTime();
-            } else if (capacity != resolvedCapacity || Double.compare(fillRate, resolvedFillRate) != 0) {
+            } else if (capacity != resolvedCapacity || intervalNanos != resolvedIntervalNanos) {
                 capacity = resolvedCapacity;
-                fillRate = resolvedFillRate;
+                intervalNanos = resolvedIntervalNanos;
                 tokens = Math.min(tokens, resolvedCapacity);
             }
 
             long now = System.nanoTime();
             long nanosSinceLastRefill = now - lastRefillNanos;
-            double newTokens = nanosSinceLastRefill * fillRate / 1_000_000_000D;
+            double newTokens = nanosSinceLastRefill * capacity / (double) intervalNanos;
             if (newTokens > 0D) {
                 tokens = Math.min(capacity, tokens + newTokens);
                 lastRefillNanos = now;
