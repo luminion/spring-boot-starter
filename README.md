@@ -1,6 +1,6 @@
 # velo-spring-boot-starter
 
-一个按 Spring Boot 官方 `starter` / `autoconfigure` 模式重构的工具箱工程，提供幂等、限流、分布式锁、Jackson、Redis、缓存、MyBatis-Plus、Web 增强、XSS 和日志等能力。
+一个按 Spring Boot 官方 `starter` / `autoconfigure` 模式重构的工具箱工程，定位为低侵入、按需增强，提供幂等、限流、分布式锁、Jackson、Redis、缓存、MyBatis-Plus、Web 增强、XSS 和日志等能力。
 
 ## 模块结构
 
@@ -42,7 +42,7 @@
 mvn -q -DskipTests install
 ```
 
-### 2. 选择对应版本 starter
+### 2. 选择对应版本基础 starter
 
 Spring Boot 2:
 
@@ -54,6 +54,11 @@ Spring Boot 2:
 </dependency>
 ```
 
+基础 starter 仅默认引入：
+
+- `velo-spring-boot2-autoconfigure`
+- `spring-boot-starter-aop`
+
 Spring Boot 3:
 
 ```xml
@@ -64,6 +69,11 @@ Spring Boot 3:
 </dependency>
 ```
 
+基础 starter 仅默认引入：
+
+- `velo-spring-boot3-autoconfigure`
+- `spring-boot-starter-aop`
+
 Spring Boot 4:
 
 ```xml
@@ -71,6 +81,54 @@ Spring Boot 4:
     <groupId>io.github.luminion</groupId>
     <artifactId>velo-spring-boot4-starter</artifactId>
     <version>1.0.0-SNAPSHOT</version>
+</dependency>
+```
+
+基础 starter 仅默认引入：
+
+- `velo-spring-boot4-autoconfigure`
+- `spring-boot-starter-aspectj`
+
+### 3. 按需添加能力依赖
+
+基础 starter 不再传递引入 Web、Validation、Redis、Cache、Mail、Redisson、MyBatis-Plus、Caffeine、Jsoup 等技术栈依赖；只有在项目确实需要对应能力时，才显式添加。
+
+例如，Spring Boot 3 项目如果需要 Redis、Cache 和 Redisson：
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-data-redis</artifactId>
+</dependency>
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-cache</artifactId>
+</dependency>
+<dependency>
+    <groupId>org.redisson</groupId>
+    <artifactId>redisson-spring-boot-starter</artifactId>
+</dependency>
+```
+
+如果需要 Web / XSS / 请求日志能力：
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-web</artifactId>
+</dependency>
+<dependency>
+    <groupId>org.jsoup</groupId>
+    <artifactId>jsoup</artifactId>
+</dependency>
+```
+
+如果需要 MyBatis-Plus：
+
+```xml
+<dependency>
+    <groupId>com.baomidou</groupId>
+    <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
 </dependency>
 ```
 
@@ -123,6 +181,7 @@ velo:
 ## 设计说明
 
 - `starter` 模块不放业务代码，只聚合依赖。
+- 基础 `starter` 只保留低侵入、普适性强的依赖；技术栈型依赖全部交给业务项目按需声明。
 - 自动配置放在 `autoconfigure` 模块，按 `javax` / `jakarta` 和 Jackson 版本拆分。
 - `core` / `cache` / `redis` / `converter` 等无 `javax` / `jakarta` 差异的自动配置统一收敛到 `velo-autoconfigure-common`。
 - Redisson / Redis / Caffeine / JDK 等后端按自动装配顺序显式兜底，默认优先级为 `Redisson > Redis > Caffeine > JDK`。
