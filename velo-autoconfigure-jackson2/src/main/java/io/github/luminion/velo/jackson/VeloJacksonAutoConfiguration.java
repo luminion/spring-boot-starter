@@ -1,11 +1,8 @@
 package io.github.luminion.velo.jackson;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
 import com.fasterxml.jackson.databind.module.SimpleModule;
@@ -23,6 +20,8 @@ import io.github.luminion.velo.core.spi.JsonProcessorProvider;
 import io.github.luminion.velo.jackson.deserializer.JacksonStringDeserializer;
 import io.github.luminion.velo.jackson.serializer.JacksonStringSerializer;
 import io.github.luminion.velo.jackson.serializer.JsonEnumSerializerModifier;
+import io.github.luminion.velo.jackson.serializer.UnsafeBigIntegerToStringSerializer;
+import io.github.luminion.velo.jackson.serializer.UnsafeLongToStringSerializer;
 import io.github.luminion.velo.xss.XssCleaner;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.ObjectProvider;
@@ -39,7 +38,6 @@ import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSeriali
 import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.text.SimpleDateFormat;
@@ -58,8 +56,6 @@ import java.util.TimeZone;
 @ConditionalOnClass(ObjectMapper.class)
 @ConditionalOnProperty(prefix = "velo.jackson", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloJacksonAutoConfiguration {
-
-    private static final long MAX_SAFE_INTEGER = 9007199254740991L;
 
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnClass({Jackson2ObjectMapperBuilder.class})
@@ -94,11 +90,11 @@ public class VeloJacksonAutoConfiguration {
                     }
                 }
 
-                if (jacksonProperties.isWriteIntegerAsString() || jacksonProperties.isWriteUnsafeIntegerAsString()) {
-                    JsonSerializer<Long> longSerializer = longJsonSerializer(jacksonProperties);
+                if (jacksonProperties.isWriteUnsafeIntegerAsString()) {
+                    UnsafeLongToStringSerializer longSerializer = new UnsafeLongToStringSerializer();
                     builder.serializerByType(Long.class, longSerializer)
                             .serializerByType(Long.TYPE, longSerializer)
-                            .serializerByType(BigInteger.class, bigIntegerJsonSerializer(jacksonProperties));
+                            .serializerByType(BigInteger.class, new UnsafeBigIntegerToStringSerializer());
                 }
                 if (jacksonProperties.isWriteBigDecimalAsString()) {
                     builder.serializerByType(BigDecimal.class, ToStringSerializer.instance);
@@ -183,50 +179,5 @@ public class VeloJacksonAutoConfiguration {
             GenericJackson2JsonRedisSerializer.registerNullValueSerializer(objectMapper, null);
             return new GenericJackson2JsonRedisSerializer(objectMapper);
         }
-    }
-
-    private static JsonSerializer<Long> longJsonSerializer(final VeloProperties.JacksonProperties properties) {
-        return new JsonSerializer<Long>() {
-            @Override
-            public void serialize(Long value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
-                if (value == null) {
-                    gen.writeNull();
-                    return;
-                }
-                if (shouldSerializeIntegerAsString(BigInteger.valueOf(value.longValue()), properties)) {
-                    gen.writeString(Long.toString(value));
-                    return;
-                }
-                gen.writeNumber(value.longValue());
-            }
-        };
-    }
-
-    private static JsonSerializer<BigInteger> bigIntegerJsonSerializer(final VeloProperties.JacksonProperties properties) {
-        return new JsonSerializer<BigInteger>() {
-            @Override
-            public void serialize(BigInteger value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
-                if (value == null) {
-                    gen.writeNull();
-                    return;
-                }
-                if (shouldSerializeIntegerAsString(value, properties)) {
-                    gen.writeString(value.toString());
-                    return;
-                }
-                gen.writeNumber(value);
-            }
-        };
-    }
-
-    private static boolean shouldSerializeIntegerAsString(BigInteger value, VeloProperties.JacksonProperties properties) {
-        if (properties.isWriteIntegerAsString()) {
-            return true;
-        }
-        return properties.isWriteUnsafeIntegerAsString() && isUnsafeInteger(value);
-    }
-
-    private static boolean isUnsafeInteger(BigInteger value) {
-        return value.abs().compareTo(BigInteger.valueOf(MAX_SAFE_INTEGER)) > 0;
     }
 }

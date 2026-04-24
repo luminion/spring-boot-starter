@@ -448,11 +448,6 @@ public class VeloProperties {
         private DateTimeProperties dateTime = new DateTimeProperties();
 
         /**
-         * Serializes all integer values as strings.
-         */
-        private boolean writeIntegerAsString = false;
-
-        /**
          * Serializes integer values as strings only when they are outside the JavaScript safe integer range.
          */
         private boolean writeUnsafeIntegerAsString = true;
@@ -460,7 +455,7 @@ public class VeloProperties {
         /**
          * Serializes BigDecimal values as strings.
          */
-        private boolean writeBigDecimalAsString = false;
+        private boolean writeBigDecimalAsString = true;
 
         /**
          * Serializes float and double values as strings.

@@ -157,7 +157,9 @@ velo:
 
   jackson:
     enabled: true
-    write-number-as-string: true
+    write-unsafe-integer-as-string: true
+    write-big-decimal-as-string: true
+    write-floating-point-as-string: false
     enum-description-enabled: false
 
   redis:

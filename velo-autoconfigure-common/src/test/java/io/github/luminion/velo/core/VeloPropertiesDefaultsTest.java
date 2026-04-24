@@ -15,9 +15,8 @@ class VeloPropertiesDefaultsTest {
         assertThat(properties.getDateTimeFormat().getConverters().isEnabled()).isFalse();
         assertThat(properties.getExcel().getConverters().isEnabled()).isFalse();
         assertThat(properties.getExcel().isEnabled()).isTrue();
-        assertThat(properties.getJackson().isWriteIntegerAsString()).isFalse();
         assertThat(properties.getJackson().isWriteUnsafeIntegerAsString()).isTrue();
-        assertThat(properties.getJackson().isWriteBigDecimalAsString()).isFalse();
+        assertThat(properties.getJackson().isWriteBigDecimalAsString()).isTrue();
         assertThat(properties.getJackson().isWriteFloatingPointAsString()).isFalse();
         assertThat(properties.getJackson().isBuilderCustomizerEnabled()).isTrue();
         assertThat(properties.getJackson().getDateTime().isEnabled()).isTrue();

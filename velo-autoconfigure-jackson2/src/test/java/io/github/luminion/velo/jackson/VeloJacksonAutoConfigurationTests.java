@@ -21,7 +21,7 @@ class VeloJacksonAutoConfigurationTests {
             .withConfiguration(AutoConfigurations.of(VeloJacksonAutoConfiguration.class));
 
     @Test
-    void shouldSerializeUnsafeIntegerAsStringAndKeepDecimalAsNumberByDefault() throws Exception {
+    void shouldSerializeUnsafeIntegerAsStringAndSerializeBigDecimalAsStringByDefault() throws Exception {
         contextRunner
                 .withBean(VeloProperties.class, VeloProperties::new)
                 .run(context -> {
@@ -31,6 +31,7 @@ class VeloJacksonAutoConfigurationTests {
                             9007199254740992L,
                             new BigDecimal("1234567890.123456789"),
                             0.125D,
+                            0.25F,
                             LocalDateTime.of(2026, 3, 30, 12, 34, 56)));
                     JsonNode tree = objectMapper.readTree(json);
 
@@ -38,20 +39,42 @@ class VeloJacksonAutoConfigurationTests {
                     assertThat(tree.get("id").longValue()).isEqualTo(1L);
                     assertThat(tree.get("unsafeId").isTextual()).isTrue();
                     assertThat(tree.get("unsafeId").textValue()).isEqualTo("9007199254740992");
-                    assertThat(json).contains("\"amount\":1234567890.123456789");
-                    assertThat(json).doesNotContain("\"amount\":\"");
+                    assertThat(tree.get("amount").isTextual()).isTrue();
+                    assertThat(tree.get("amount").textValue()).isEqualTo("1234567890.123456789");
                     assertThat(json).contains("\"ratio\":0.125");
                     assertThat(json).doesNotContain("\"ratio\":\"");
+                    assertThat(json).contains("\"score\":0.25");
+                    assertThat(json).doesNotContain("\"score\":\"");
                     assertThat(json).contains("\"createdAt\":\"2026-03-30 12:34:56\"");
                     assertThat(context).hasSingleBean(RedisSerializer.class);
                 });
     }
 
     @Test
-    void shouldSerializeConfiguredNumberTypesAsString() throws Exception {
+    void shouldAllowDisablingBigDecimalStringSerialization() throws Exception {
         VeloProperties properties = new VeloProperties();
-        properties.getJackson().setWriteIntegerAsString(true);
-        properties.getJackson().setWriteBigDecimalAsString(true);
+        properties.getJackson().setWriteBigDecimalAsString(false);
+
+        contextRunner
+                .withBean(VeloProperties.class, () -> properties)
+                .run(context -> {
+                    ObjectMapper objectMapper = objectMapper(context);
+                    JsonNode tree = objectMapper.readTree(objectMapper.writeValueAsString(new SamplePayload(
+                            1L,
+                            9007199254740992L,
+                            new BigDecimal("123.45"),
+                            0.5D,
+                            0.25F,
+                            LocalDateTime.of(2026, 3, 30, 12, 34, 56))));
+
+                    assertThat(tree.get("amount").isNumber()).isTrue();
+                    assertThat(tree.get("amount").decimalValue()).isEqualByComparingTo(new BigDecimal("123.45"));
+                });
+    }
+
+    @Test
+    void shouldSerializeFloatingPointValuesAsStringWhenConfigured() throws Exception {
+        VeloProperties properties = new VeloProperties();
         properties.getJackson().setWriteFloatingPointAsString(true);
 
         contextRunner
@@ -60,15 +83,19 @@ class VeloJacksonAutoConfigurationTests {
                     ObjectMapper objectMapper = objectMapper(context);
                     String json = objectMapper.writeValueAsString(new SamplePayload(
                             1L,
-                            2L,
+                            9007199254740992L,
                             new BigDecimal("123.45"),
                             0.5D,
+                            0.25F,
                             LocalDateTime.of(2026, 3, 30, 12, 34, 56)));
+                    JsonNode tree = objectMapper.readTree(json);
 
-                    assertThat(json).contains("\"id\":\"1\"");
-                    assertThat(json).contains("\"unsafeId\":\"2\"");
+                    assertThat(tree.get("id").isNumber()).isTrue();
+                    assertThat(tree.get("id").longValue()).isEqualTo(1L);
+                    assertThat(json).contains("\"unsafeId\":\"9007199254740992\"");
                     assertThat(json).contains("\"amount\":\"123.45\"");
                     assertThat(json).contains("\"ratio\":\"0.5\"");
+                    assertThat(json).contains("\"score\":\"0.25\"");
                 });
     }
 
@@ -86,6 +113,7 @@ class VeloJacksonAutoConfigurationTests {
                             2L,
                             new BigDecimal("123.45"),
                             0.5D,
+                            0.25F,
                             LocalDateTime.of(2026, 3, 30, 12, 34, 56)));
 
                     assertThat(json).contains("\"createdAt\":\"2026-03-30T12:34:56\"");
@@ -106,13 +134,15 @@ class VeloJacksonAutoConfigurationTests {
         private final Long unsafeId;
         private final BigDecimal amount;
         private final Double ratio;
+        private final Float score;
         private final LocalDateTime createdAt;
 
-        SamplePayload(Long id, Long unsafeId, BigDecimal amount, Double ratio, LocalDateTime createdAt) {
+        SamplePayload(Long id, Long unsafeId, BigDecimal amount, Double ratio, Float score, LocalDateTime createdAt) {
             this.id = id;
             this.unsafeId = unsafeId;
             this.amount = amount;
             this.ratio = ratio;
+            this.score = score;
             this.createdAt = createdAt;
         }
 
@@ -130,6 +160,10 @@ class VeloJacksonAutoConfigurationTests {
 
         public Double getRatio() {
             return ratio;
+        }
+
+        public Float getScore() {
+            return score;
         }
 
         public LocalDateTime getCreatedAt() {

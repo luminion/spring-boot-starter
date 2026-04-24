@@ -30,7 +30,6 @@ class VeloConfigurationMetadataTest {
             assertTrue(metadata.contains("velo.excel.converters.boolean-converter-enabled"));
             assertTrue(metadata.contains("velo.date-time-format.converters.enabled"));
             assertTrue(metadata.contains("velo.date-time-format.converters.java-util-date-converter-enabled"));
-            assertTrue(metadata.contains("velo.jackson.write-integer-as-string"));
             assertTrue(metadata.contains("velo.jackson.builder-customizer-enabled"));
             assertTrue(metadata.contains("velo.jackson.date-time.enabled"));
             assertTrue(metadata.contains("velo.jackson.date-time.serializers-enabled"));
