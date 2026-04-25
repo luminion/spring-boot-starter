@@ -1,10 +1,10 @@
 package io.github.luminion.velo.lock.config;
 
+import io.github.luminion.velo.core.ConcurrencyBackend;
+import io.github.luminion.velo.core.condition.ConditionalOnConcurrencyBackend;
 import io.github.luminion.velo.lock.LockHandler;
 import io.github.luminion.velo.lock.support.JdkLockHandler;
-import org.aspectj.weaver.Advice;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -16,13 +16,14 @@ import org.springframework.context.annotation.Bean;
  * @since 1.0.0
  */
 @AutoConfiguration(after = VeloLockCaffeineAutoConfiguration.class)
-@ConditionalOnClass(Advice.class)
+@ConditionalOnConcurrencyBackend(prefix = "velo.lock", value = ConcurrencyBackend.JDK,
+        autoClassNames = "org.aspectj.weaver.Advice")
+@ConditionalOnMissingBean(LockHandler.class)
 @ConditionalOnProperty(prefix = "velo.lock", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloLockJdkAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean(LockHandler.class)
-    @ConditionalOnProperty(prefix = "velo.lock.backends", name = "jdk-enabled", havingValue = "true", matchIfMissing = true)
     public LockHandler lockHandler() {
         return new JdkLockHandler();
     }

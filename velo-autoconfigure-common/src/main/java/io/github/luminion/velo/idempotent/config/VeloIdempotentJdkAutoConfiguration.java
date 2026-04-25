@@ -1,10 +1,10 @@
 package io.github.luminion.velo.idempotent.config;
 
+import io.github.luminion.velo.core.ConcurrencyBackend;
+import io.github.luminion.velo.core.condition.ConditionalOnConcurrencyBackend;
 import io.github.luminion.velo.idempotent.IdempotentHandler;
 import io.github.luminion.velo.idempotent.support.JdkIdempotentHandler;
-import org.aspectj.weaver.Advice;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -16,13 +16,14 @@ import org.springframework.context.annotation.Bean;
  * @since 1.0.0
  */
 @AutoConfiguration(after = VeloIdempotentCaffeineAutoConfiguration.class)
-@ConditionalOnClass(Advice.class)
+@ConditionalOnConcurrencyBackend(prefix = "velo.idempotent", value = ConcurrencyBackend.JDK,
+        autoClassNames = "org.aspectj.weaver.Advice")
+@ConditionalOnMissingBean(IdempotentHandler.class)
 @ConditionalOnProperty(prefix = "velo.idempotent", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloIdempotentJdkAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean(IdempotentHandler.class)
-    @ConditionalOnProperty(prefix = "velo.idempotent.backends", name = "jdk-enabled", havingValue = "true", matchIfMissing = true)
     public IdempotentHandler idempotentHandler() {
         return new JdkIdempotentHandler();
     }

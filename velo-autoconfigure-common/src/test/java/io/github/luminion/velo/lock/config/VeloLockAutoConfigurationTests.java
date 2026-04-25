@@ -16,6 +16,8 @@ import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
+import java.util.concurrent.TimeUnit;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
@@ -63,6 +65,30 @@ class VeloLockAutoConfigurationTests {
     }
 
     @Test
+    void shouldUseExplicitBackendWhenConfigured() {
+        contextRunner
+                .withPropertyValues("velo.lock.backend=jdk")
+                .run(context -> assertThat(context.getBean(LockHandler.class))
+                        .isInstanceOf(JdkLockHandler.class));
+    }
+
+    @Test
+    void shouldUseUserConfiguredHandlerWhenPresent() {
+        contextRunner
+                .withPropertyValues("velo.lock.backend=redisson")
+                .withBean(LockHandler.class, CustomLockHandler::new)
+                .run(context -> assertThat(context.getBean(LockHandler.class))
+                        .isInstanceOf(CustomLockHandler.class));
+    }
+
+    @Test
+    void shouldFailWhenExplicitBackendDependencyBeanIsMissing() {
+        contextRunner
+                .withPropertyValues("velo.lock.backend=redisson")
+                .run(context -> assertThat(context.getStartupFailure()).isNotNull());
+    }
+
+    @Test
     void shouldCreateAspectWhenCoreDependenciesExist() {
         new ApplicationContextRunner()
                 .withConfiguration(AutoConfigurations.of(
@@ -75,5 +101,17 @@ class VeloLockAutoConfigurationTests {
                 .withBean(VeloProperties.class, VeloProperties::new)
                 .withBean(Fingerprinter.class, () -> (target, method, args, expression) -> "fingerprint")
                 .run(context -> assertThat(context).hasSingleBean(LockAspect.class));
+    }
+
+    static class CustomLockHandler implements LockHandler {
+
+        @Override
+        public boolean lock(String key, long waitTime, long leaseTime, TimeUnit unit) {
+            return true;
+        }
+
+        @Override
+        public void unlock(String key) {
+        }
     }
 }

@@ -158,6 +158,11 @@ public class VeloProperties {
         private boolean aspectEnabled = true;
 
         /**
+         * Backend implementation used by idempotent handler selection.
+         */
+        private ConcurrencyBackend backend = ConcurrencyBackend.AUTO;
+
+        /**
          * Backend switches for idempotent handler selection.
          */
         private BackendProperties backends = new BackendProperties();
@@ -201,6 +206,11 @@ public class VeloProperties {
         private boolean aspectEnabled = true;
 
         /**
+         * Backend implementation used by rate-limit handler selection.
+         */
+        private ConcurrencyBackend backend = ConcurrencyBackend.AUTO;
+
+        /**
          * Backend switches for rate-limit handler selection.
          */
         private BackendProperties backends = new BackendProperties();
@@ -242,6 +252,11 @@ public class VeloProperties {
          * Enables the lock aspect bean.
          */
         private boolean aspectEnabled = true;
+
+        /**
+         * Backend implementation used by lock handler selection.
+         */
+        private ConcurrencyBackend backend = ConcurrencyBackend.AUTO;
 
         /**
          * Backend switches for lock handler selection.

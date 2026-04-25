@@ -1,12 +1,11 @@
 package io.github.luminion.velo.ratelimit.config;
 
+import io.github.luminion.velo.core.ConcurrencyBackend;
+import io.github.luminion.velo.core.condition.ConditionalOnConcurrencyBackend;
 import io.github.luminion.velo.ratelimit.RateLimitHandler;
 import io.github.luminion.velo.ratelimit.support.RedissonRateLimitHandler;
-import org.aspectj.weaver.Advice;
 import org.redisson.api.RedissonClient;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -18,14 +17,16 @@ import org.springframework.context.annotation.Bean;
  * @since 1.0.0
  */
 @AutoConfiguration(afterName = { "org.redisson.spring.starter.RedissonAutoConfiguration" })
-@ConditionalOnClass({ Advice.class, RedissonClient.class })
+@ConditionalOnConcurrencyBackend(prefix = "velo.rate-limit", value = ConcurrencyBackend.REDISSON,
+        autoClassNames = {"org.aspectj.weaver.Advice", "org.redisson.api.RedissonClient"})
+@ConditionalOnMissingBean(RateLimitHandler.class)
 @ConditionalOnProperty(prefix = "velo.rate-limit", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloRateLimitRedissonAutoConfiguration {
 
     @Bean
-    @ConditionalOnBean(RedissonClient.class)
+    @ConditionalOnConcurrencyBackend(prefix = "velo.rate-limit", value = ConcurrencyBackend.REDISSON,
+            autoBeanTypeNames = "org.redisson.api.RedissonClient")
     @ConditionalOnMissingBean(RateLimitHandler.class)
-    @ConditionalOnProperty(prefix = "velo.rate-limit.backends", name = "redisson-enabled", havingValue = "true", matchIfMissing = true)
     public RateLimitHandler rateLimitHandler(RedissonClient redissonClient) {
         return new RedissonRateLimitHandler(redissonClient);
     }

@@ -1,12 +1,11 @@
 package io.github.luminion.velo.lock.config;
 
+import io.github.luminion.velo.core.ConcurrencyBackend;
+import io.github.luminion.velo.core.condition.ConditionalOnConcurrencyBackend;
 import io.github.luminion.velo.lock.LockHandler;
 import io.github.luminion.velo.lock.support.RedissonLockHandler;
-import org.aspectj.weaver.Advice;
 import org.redisson.api.RedissonClient;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -18,14 +17,16 @@ import org.springframework.context.annotation.Bean;
  * @since 1.0.0
  */
 @AutoConfiguration(afterName = { "org.redisson.spring.starter.RedissonAutoConfiguration" })
-@ConditionalOnClass({ Advice.class, RedissonClient.class })
+@ConditionalOnConcurrencyBackend(prefix = "velo.lock", value = ConcurrencyBackend.REDISSON,
+        autoClassNames = {"org.aspectj.weaver.Advice", "org.redisson.api.RedissonClient"})
+@ConditionalOnMissingBean(LockHandler.class)
 @ConditionalOnProperty(prefix = "velo.lock", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloLockRedissonAutoConfiguration {
 
     @Bean
+    @ConditionalOnConcurrencyBackend(prefix = "velo.lock", value = ConcurrencyBackend.REDISSON,
+            autoBeanTypeNames = "org.redisson.api.RedissonClient")
     @ConditionalOnMissingBean(LockHandler.class)
-    @ConditionalOnBean(RedissonClient.class)
-    @ConditionalOnProperty(prefix = "velo.lock.backends", name = "redisson-enabled", havingValue = "true", matchIfMissing = true)
     public LockHandler lockHandler(RedissonClient redissonClient) {
         return new RedissonLockHandler(redissonClient);
     }
