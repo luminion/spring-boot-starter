@@ -51,7 +51,7 @@ class VeloRateLimitAutoConfigurationTests {
     @Test
     void shouldUseNamedRedisTemplateWhenRedissonBackendIsDisabled() {
         contextRunner
-                .withPropertyValues("velo.rate-limit.backends.redisson-enabled=false")
+                .withPropertyValues("velo.rate-limit.backend=redis")
                 .withBean("redisTemplate", RedisTemplate.class, TestRedisTemplate::new)
                 .withBean("stringObjectRedisTemplate", RedisTemplate.class, TestRedisTemplate::new)
                 .run(context -> assertThat(context.getBean(RateLimitHandler.class))

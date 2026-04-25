@@ -49,10 +49,9 @@ class VeloConfigurationMetadataTest {
             assertTrue(metadata.contains("velo.web.date-time-formatter-registration-enabled"));
             assertTrue(metadata.contains("velo.web.xss-string-converter-registration-enabled"));
             assertTrue(metadata.contains("velo.redis.string-object-redis-template-enabled"));
-            assertTrue(metadata.contains("velo.idempotent.backends.redisson-enabled"));
-            assertTrue(metadata.contains("velo.rate-limit.backends.redis-enabled"));
-            assertTrue(metadata.contains("velo.lock.backends.caffeine-enabled"));
-            assertTrue(metadata.contains("velo.lock.backends.jdk-enabled"));
+            assertTrue(metadata.contains("velo.idempotent.backend"));
+            assertTrue(metadata.contains("velo.rate-limit.backend"));
+            assertTrue(metadata.contains("velo.lock.backend"));
         }
     }
 }

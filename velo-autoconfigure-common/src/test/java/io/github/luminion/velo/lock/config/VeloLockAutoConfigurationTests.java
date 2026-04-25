@@ -50,7 +50,7 @@ class VeloLockAutoConfigurationTests {
     @Test
     void shouldUseRedisHandlerWhenRedissonBackendIsDisabled() {
         contextRunner
-                .withPropertyValues("velo.lock.backends.redisson-enabled=false")
+                .withPropertyValues("velo.lock.backend=redis")
                 .withBean("stringRedisTemplate", StringRedisTemplate.class, TestStringRedisTemplate::new)
                 .run(context -> assertThat(context.getBean(LockHandler.class))
                         .isInstanceOf(RedisLockHandler.class));
@@ -59,7 +59,7 @@ class VeloLockAutoConfigurationTests {
     @Test
     void shouldUseJdkHandlerWhenCaffeineBackendIsDisabled() {
         contextRunner
-                .withPropertyValues("velo.lock.backends.caffeine-enabled=false")
+                .withPropertyValues("velo.lock.backend=jdk")
                 .run(context -> assertThat(context.getBean(LockHandler.class))
                         .isInstanceOf(JdkLockHandler.class));
     }

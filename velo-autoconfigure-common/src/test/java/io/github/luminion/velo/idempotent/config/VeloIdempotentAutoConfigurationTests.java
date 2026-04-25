@@ -51,7 +51,7 @@ class VeloIdempotentAutoConfigurationTests {
     @Test
     void shouldUseNamedRedisTemplateWhenRedissonBackendIsDisabled() {
         contextRunner
-                .withPropertyValues("velo.idempotent.backends.redisson-enabled=false")
+                .withPropertyValues("velo.idempotent.backend=redis")
                 .withBean("redisTemplate", RedisTemplate.class, TestRedisTemplate::new)
                 .withBean("stringObjectRedisTemplate", RedisTemplate.class, TestRedisTemplate::new)
                 .run(context -> assertThat(context.getBean(IdempotentHandler.class))

@@ -25,7 +25,9 @@ class VeloPropertiesDefaultsTest {
         assertThat(properties.getJackson().getDateTime().isDeserializersEnabled()).isTrue();
         assertThat(properties.getJackson().getStringConverters().isEnabled()).isFalse();
         assertThat(properties.getCore().isEnabled()).isTrue();
-        assertThat(properties.getLock().getBackends().isCaffeineEnabled()).isTrue();
+        assertThat(properties.getIdempotent().getBackend()).isEqualTo(ConcurrencyBackend.AUTO);
+        assertThat(properties.getRateLimit().getBackend()).isEqualTo(ConcurrencyBackend.AUTO);
+        assertThat(properties.getLock().getBackend()).isEqualTo(ConcurrencyBackend.AUTO);
         assertThat(properties.getLog().isEnabled()).isTrue();
         assertThat(properties.getLog().isSlf4jLogWriterEnabled()).isTrue();
         assertThat(properties.getWeb().isEnabled()).isTrue();

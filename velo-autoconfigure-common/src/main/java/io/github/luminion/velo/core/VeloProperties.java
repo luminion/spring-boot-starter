@@ -161,35 +161,6 @@ public class VeloProperties {
          * Backend implementation used by idempotent handler selection.
          */
         private ConcurrencyBackend backend = ConcurrencyBackend.AUTO;
-
-        /**
-         * Backend switches for idempotent handler selection.
-         */
-        private BackendProperties backends = new BackendProperties();
-
-        @Data
-        public static class BackendProperties {
-
-            /**
-             * Enables the Redisson based idempotent handler.
-             */
-            private boolean redissonEnabled = true;
-
-            /**
-             * Enables the Redis based idempotent handler.
-             */
-            private boolean redisEnabled = true;
-
-            /**
-             * Enables the Caffeine based idempotent handler.
-             */
-            private boolean caffeineEnabled = true;
-
-            /**
-             * Enables the JDK based fallback idempotent handler.
-             */
-            private boolean jdkEnabled = true;
-        }
     }
 
     @Data
@@ -209,35 +180,6 @@ public class VeloProperties {
          * Backend implementation used by rate-limit handler selection.
          */
         private ConcurrencyBackend backend = ConcurrencyBackend.AUTO;
-
-        /**
-         * Backend switches for rate-limit handler selection.
-         */
-        private BackendProperties backends = new BackendProperties();
-
-        @Data
-        public static class BackendProperties {
-
-            /**
-             * Enables the Redisson based rate-limit handler.
-             */
-            private boolean redissonEnabled = true;
-
-            /**
-             * Enables the Redis based rate-limit handler.
-             */
-            private boolean redisEnabled = true;
-
-            /**
-             * Enables the Caffeine based rate-limit handler.
-             */
-            private boolean caffeineEnabled = true;
-
-            /**
-             * Enables the JDK based fallback rate-limit handler.
-             */
-            private boolean jdkEnabled = true;
-        }
     }
 
     @Data
@@ -257,35 +199,6 @@ public class VeloProperties {
          * Backend implementation used by lock handler selection.
          */
         private ConcurrencyBackend backend = ConcurrencyBackend.AUTO;
-
-        /**
-         * Backend switches for lock handler selection.
-         */
-        private BackendProperties backends = new BackendProperties();
-
-        @Data
-        public static class BackendProperties {
-
-            /**
-             * Enables the Redisson based lock handler.
-             */
-            private boolean redissonEnabled = true;
-
-            /**
-             * Enables the Redis based lock handler.
-             */
-            private boolean redisEnabled = true;
-
-            /**
-             * Enables the Caffeine based lock handler.
-             */
-            private boolean caffeineEnabled = true;
-
-            /**
-             * Enables the JDK based fallback lock handler.
-             */
-            private boolean jdkEnabled = true;
-        }
     }
 
     @Data

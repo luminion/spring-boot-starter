@@ -13,8 +13,6 @@ import org.springframework.core.type.AnnotatedTypeMetadata;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
 
-import java.util.Locale;
-
 public class OnConcurrencyBackendCondition extends SpringBootCondition {
 
     @Override
@@ -48,12 +46,6 @@ public class OnConcurrencyBackendCondition extends SpringBootCondition {
         boolean matchAuto = attrs.getBoolean("matchAuto");
         if (!matchAuto) {
             return ConditionOutcome.noMatch(message.because("backend is AUTO and matchAuto=false"));
-        }
-
-        String backendSwitch = prefix + ".backends." + backend.name().toLowerCase(Locale.ENGLISH) + "-enabled";
-        boolean enabled = binder.bind(backendSwitch, Boolean.class).orElse(Boolean.TRUE);
-        if (!enabled) {
-            return ConditionOutcome.noMatch(message.because(backendSwitch + " is false"));
         }
 
         String[] autoClassNames = attrs.getStringArray("autoClassNames");
