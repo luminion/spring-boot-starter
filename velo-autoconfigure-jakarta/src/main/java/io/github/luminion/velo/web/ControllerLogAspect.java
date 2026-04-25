@@ -1,6 +1,7 @@
 package io.github.luminion.velo.web;
 
 import io.github.luminion.velo.core.VeloProperties;
+import io.github.luminion.velo.core.spi.RuntimeJsonSerializer;
 import io.github.luminion.velo.core.util.InvocationUtils;
 import io.github.luminion.velo.core.util.WebUtils;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +12,10 @@ import org.aspectj.lang.reflect.MethodSignature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.logging.LogLevel;
+import org.springframework.http.ResponseEntity;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * Controller 调用日志切面。
@@ -21,6 +26,8 @@ public class ControllerLogAspect {
 
     private final VeloProperties properties;
 
+    private final RuntimeJsonSerializer runtimeJsonSerializer;
+
     @Around("execution(public * *(..)) && (within(@org.springframework.web.bind.annotation.RestController *) || @annotation(org.springframework.web.bind.annotation.ResponseBody) || @within(org.springframework.web.bind.annotation.ResponseBody))")
     public Object logControllerInvocation(ProceedingJoinPoint joinPoint) throws Throwable {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
@@ -29,24 +36,47 @@ public class ControllerLogAspect {
         String methodName = InvocationUtils.getMethodName(signature);
         String requestPrefix = buildRequestPrefix(requestLogging);
         String argsText = requestLogging.isIncludePayload()
-                ? InvocationUtils.formatArguments(signature, joinPoint.getArgs(), requestLogging.getMaxPayloadLength())
+                ? limit(runtimeJsonSerializer.toJson(buildArgumentMap(signature, joinPoint.getArgs())),
+                requestLogging.getMaxPayloadLength())
                 : "[payload-disabled]";
 
-        log(logger, properties.getLogLevel(), "{}==> Controller: {} args={}", requestPrefix, methodName, argsText);
+        log(logger, properties.getLogLevel(), "{}==> Controller: {}", requestPrefix, methodName);
+        log(logger, properties.getLogLevel(), "{}argsJson={}", requestPrefix, argsText);
         long start = System.nanoTime();
         try {
             Object result = joinPoint.proceed();
+            Object resultBody = result instanceof ResponseEntity<?> ? ((ResponseEntity<?>) result).getBody() : result;
             String resultText = requestLogging.isIncludePayload()
-                    ? InvocationUtils.formatValue(result, requestLogging.getMaxPayloadLength())
+                    ? limit(runtimeJsonSerializer.toJson(resultBody), requestLogging.getMaxPayloadLength())
                     : "[payload-disabled]";
             long elapsedMs = (System.nanoTime() - start) / 1_000_000;
-            log(logger, properties.getLogLevel(), "{}<== Controller: {} result={} cost={}ms", requestPrefix, methodName,
-                    resultText, elapsedMs);
+            log(logger, properties.getLogLevel(), "{}<== Controller: {} cost={}ms", requestPrefix, methodName, elapsedMs);
+            log(logger, properties.getLogLevel(), "{}resultJson={}", requestPrefix, resultText);
             return result;
         } catch (Throwable ex) {
             log(logger, LogLevel.ERROR, "{}<!! Controller: {} failed: {}", requestPrefix, methodName, ex.getMessage(), ex);
             throw ex;
         }
+    }
+
+    private Map<String, Object> buildArgumentMap(MethodSignature signature, Object[] args) {
+        Map<String, Object> argumentMap = new LinkedHashMap<>();
+        if (args == null || args.length == 0) {
+            return argumentMap;
+        }
+        String[] parameterNames = signature.getParameterNames();
+        for (int i = 0; i < args.length; i++) {
+            String parameterName = parameterNames != null && i < parameterNames.length ? parameterNames[i] : "arg" + i;
+            argumentMap.put(parameterName, args[i]);
+        }
+        return argumentMap;
+    }
+
+    private String limit(String text, int maxLength) {
+        if (maxLength <= 0 || text == null || text.length() <= maxLength) {
+            return text;
+        }
+        return text.substring(0, Math.max(0, maxLength - 3)) + "...";
     }
 
     private String buildRequestPrefix(VeloProperties.RequestLoggingProperties requestLogging) {

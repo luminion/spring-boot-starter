@@ -541,9 +541,9 @@ public class VeloProperties {
         private boolean includePayload = false;
 
         /**
-         * Maximum payload length written into request logs.
+         * Maximum payload length written into request logs. A value less than or equal to 0 disables truncation.
          */
-        private int maxPayloadLength = 2000;
+        private int maxPayloadLength;
     }
 
     @Data

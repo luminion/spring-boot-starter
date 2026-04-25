@@ -21,6 +21,17 @@ public abstract class InvocationUtils {
 
     private static final String OMITTED_VALUE = "[omitted]";
 
+    private static final String[] UNLOGGABLE_TYPE_PREFIXES = {
+            "jakarta.servlet.",
+            "javax.servlet.",
+            "org.springframework.validation.",
+            "org.springframework.web.",
+            "org.springframework.http.",
+            "org.springframework.core.io.",
+            "org.springframework.ui.",
+            "org.springframework.web.multipart."
+    };
+
     public static String getMethodName(MethodSignature signature) {
         return signature.getDeclaringType().getSimpleName() + "." + signature.getName();
     }
@@ -49,7 +60,7 @@ public abstract class InvocationUtils {
 
     public static String formatValue(Object value, int maxLength) {
         String rendered = renderValue(value);
-        if (rendered.length() <= maxLength) {
+        if (maxLength <= 0 || rendered.length() <= maxLength) {
             return rendered;
         }
         return rendered.substring(0, Math.max(0, maxLength - 3)) + "...";
@@ -80,7 +91,7 @@ public abstract class InvocationUtils {
         return ObjectUtils.nullSafeToString(value);
     }
 
-    private static boolean isLoggableValue(Object value) {
+    public static boolean isLoggableValue(Object value) {
         if (value == null) {
             return true;
         }
@@ -107,15 +118,7 @@ public abstract class InvocationUtils {
             return false;
         }
 
-        String className = valueType.getName();
-        return !className.startsWith("jakarta.servlet.")
-                && !className.startsWith("javax.servlet.")
-                && !className.startsWith("org.springframework.validation.")
-                && !className.startsWith("org.springframework.web.")
-                && !className.startsWith("org.springframework.http.")
-                && !className.startsWith("org.springframework.core.io.")
-                && !className.startsWith("org.springframework.ui.")
-                && !className.startsWith("org.springframework.web.multipart.");
+        return !hasTypeNamePrefix(valueType);
     }
 
     private static boolean isLoggableArray(Object value) {
@@ -126,5 +129,22 @@ public abstract class InvocationUtils {
             }
         }
         return true;
+    }
+
+    private static boolean hasTypeNamePrefix(Class<?> valueType) {
+        if (valueType == null || valueType == Object.class) {
+            return false;
+        }
+        for (String prefix : UNLOGGABLE_TYPE_PREFIXES) {
+            if (valueType.getName().startsWith(prefix)) {
+                return true;
+            }
+        }
+        for (Class<?> interfaceType : valueType.getInterfaces()) {
+            if (hasTypeNamePrefix(interfaceType)) {
+                return true;
+            }
+        }
+        return hasTypeNamePrefix(valueType.getSuperclass());
     }
 }

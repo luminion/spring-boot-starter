@@ -35,5 +35,6 @@ class VeloPropertiesDefaultsTest {
         assertThat(properties.getWeb().isDateTimeFormatterRegistrationEnabled()).isTrue();
         assertThat(properties.getWeb().isXssStringConverterRegistrationEnabled()).isTrue();
         assertThat(properties.getWeb().getRequestLogging().isIncludePayload()).isFalse();
+        assertThat(properties.getWeb().getRequestLogging().getMaxPayloadLength()).isZero();
     }
 }
