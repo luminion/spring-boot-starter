@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -48,6 +49,11 @@ class VeloConfigurationMetadataTest {
             assertTrue(metadata.contains("velo.web.mvc-configurer-enabled"));
             assertTrue(metadata.contains("velo.web.date-time-formatter-registration-enabled"));
             assertTrue(metadata.contains("velo.web.xss-string-converter-registration-enabled"));
+            assertTrue(metadata.contains("velo.web.request-logging.enabled"));
+            assertTrue(metadata.contains("velo.web.request-logging.include-payload"));
+            assertTrue(metadata.contains("velo.web.request-logging.max-payload-length"));
+            assertFalse(metadata.contains("velo.web.request-logging.include-client-info"));
+            assertFalse(metadata.contains("velo.web.request-logging.include-query-string"));
             assertTrue(metadata.contains("velo.redis.string-object-redis-template-enabled"));
             assertTrue(metadata.contains("velo.idempotent.backend"));
             assertTrue(metadata.contains("velo.rate-limit.backend"));

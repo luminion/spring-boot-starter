@@ -8,12 +8,17 @@ import io.github.luminion.velo.core.spi.provider.HttpMessageConverterRuntimeJson
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter;
 
 import java.util.ArrayList;
@@ -26,6 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+@ExtendWith(OutputCaptureExtension.class)
 class VeloWebAutoConfigurationTests {
 
     private final WebApplicationContextRunner webContextRunner = new WebApplicationContextRunner()
@@ -103,6 +109,63 @@ class VeloWebAutoConfigurationTests {
         assertThat(arguments.get("id")).isEqualTo(1L);
         assertThat(arguments.get("name")).isEqualTo("Tom");
         assertThat(serializer.values.get(1)).isSameAs(body);
+    }
+
+    @Test
+    void shouldLogQueryAfterRequestPrefix(CapturedOutput output) throws Throwable {
+        VeloProperties properties = new VeloProperties();
+        properties.getWeb().getRequestLogging().setIncludePayload(true);
+        ControllerLogAspect aspect = new ControllerLogAspect(properties, value -> "{\"ok\":true}");
+        ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
+        MethodSignature signature = mock(MethodSignature.class);
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/converter/query");
+
+        request.setRemoteAddr("127.0.0.1");
+        request.setQueryString("date1=2010-10-10%2010:10:10&localDate=2010-10-10");
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
+        try {
+            when(joinPoint.getSignature()).thenReturn(signature);
+            when(joinPoint.getArgs()).thenReturn(new Object[] {"Tom"});
+            when(joinPoint.proceed()).thenReturn(ResponseEntity.ok(new DemoPayload("tomUser")));
+            when(signature.getDeclaringType()).thenReturn(DemoController.class);
+            when(signature.getParameterNames()).thenReturn(new String[] {"name"});
+
+            aspect.logControllerInvocation(joinPoint);
+        } finally {
+            RequestContextHolder.resetRequestAttributes();
+        }
+
+        assertThat(output.getOut()).contains("[127.0.0.1 GET /converter/query] query=date1=2010-10-10%2010:10:10&localDate=2010-10-10 ==> args: {\"ok\":true}");
+    }
+
+    @Test
+    void shouldOmitQuerySegmentAndRespectPayloadSettings(CapturedOutput output) throws Throwable {
+        VeloProperties properties = new VeloProperties();
+        properties.getWeb().getRequestLogging().setIncludePayload(true);
+        properties.getWeb().getRequestLogging().setMaxPayloadLength(10);
+        ControllerLogAspect aspect = new ControllerLogAspect(properties, value -> "{\"veryLong\":true}");
+        ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
+        MethodSignature signature = mock(MethodSignature.class);
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/converter/query");
+
+        request.setRemoteAddr("127.0.0.1");
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
+        try {
+            when(joinPoint.getSignature()).thenReturn(signature);
+            when(joinPoint.getArgs()).thenReturn(new Object[] {"Tom"});
+            when(joinPoint.proceed()).thenReturn(ResponseEntity.ok(new DemoPayload("tomUser")));
+            when(signature.getDeclaringType()).thenReturn(DemoController.class);
+            when(signature.getParameterNames()).thenReturn(new String[] {"name"});
+
+            aspect.logControllerInvocation(joinPoint);
+        } finally {
+            RequestContextHolder.resetRequestAttributes();
+        }
+
+        assertThat(output.getOut()).contains("[127.0.0.1 POST /converter/query] ==> args: {\"veryL...");
+        assertThat(output.getOut()).contains("[127.0.0.1 POST /converter/query] <== cost:");
+        assertThat(output.getOut()).contains("resp: {\"veryL...");
+        assertThat(output.getOut()).doesNotContain("query=");
     }
 
     @Test

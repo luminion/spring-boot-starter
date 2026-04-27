@@ -526,16 +526,6 @@ public class VeloProperties {
         private boolean enabled;
 
         /**
-         * Includes client IP and related client information in request logs.
-         */
-        private boolean includeClientInfo = true;
-
-        /**
-         * Includes the query string in request logs.
-         */
-        private boolean includeQueryString = true;
-
-        /**
          * Includes request and response payload content in logs.
          */
         private boolean includePayload = false;
