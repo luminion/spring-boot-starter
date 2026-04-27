@@ -523,7 +523,7 @@ public class VeloProperties {
         /**
          * Enables the controller request logging aspect.
          */
-        private boolean enabled;
+        private boolean enabled = true;
     }
 
     @Data
