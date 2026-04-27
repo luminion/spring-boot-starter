@@ -12,6 +12,7 @@ import org.aspectj.lang.annotation.Before;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.core.annotation.AnnotatedElementUtils;
+import org.springframework.util.StringUtils;
 
 import java.lang.reflect.Method;
 /**
@@ -46,14 +47,22 @@ public class RateLimitAspect {
         double permits = rateLimit.permits();
         long ttl = rateLimit.ttl();
 
+        String methodFingerprint = fingerprinter.resolveMethodFingerprint(
+                joinPoint.getTarget(),
+                method,
+                joinPoint.getArgs(),
+                "");
+        String keyFingerprint = methodFingerprint;
+        if (StringUtils.hasText(rateLimit.key())) {
+            keyFingerprint += ':' + fingerprinter.resolveMethodFingerprint(
+                    joinPoint.getTarget(),
+                    method,
+                    joinPoint.getArgs(),
+                    rateLimit.key());
+        }
+
         // 1. 生成基础 Key
-        String key = ConcurrencyAnnotationUtils.buildPrefixedKey(
-                prefix,
-                fingerprinter.resolveMethodFingerprint(
-                        joinPoint.getTarget(),
-                        method,
-                        joinPoint.getArgs(),
-                        rateLimit.key()));
+        String key = ConcurrencyAnnotationUtils.buildPrefixedKey(prefix, keyFingerprint);
 
         // 2. 执行限流
         if (!rateLimitHandler.tryAcquire(key, permits, ttl, rateLimit.unit())) {

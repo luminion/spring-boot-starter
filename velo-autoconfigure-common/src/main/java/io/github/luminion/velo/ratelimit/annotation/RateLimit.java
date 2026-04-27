@@ -30,10 +30,11 @@ public @interface RateLimit {
     TimeUnit unit() default TimeUnit.SECONDS;
 
     /**
-     * 用于生成限流 Key 的 SpEL 表达式
+     * 用于生成限流分桶后缀的 SpEL 表达式。
      * <p>
      * 例如: "#user.id", "#request.getHeader('token')"
-     * 如果为空，将退回到方法级别的固定 Key
+     * 如果为空，将直接使用方法级别的固定 Key；
+     * 如果不为空，最终 Key 为“方法级固定 Key + ':' + 表达式结果”。
      */
     String key() default "";
 

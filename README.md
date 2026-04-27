@@ -26,7 +26,7 @@
 ## 功能特性
 
 - `@Idempotent`：防重复提交，支持 SpEL，支持 Redis / Redisson / Caffeine / JDK 回退。
-- `@RateLimit`：方法或类级限流，支持 SpEL，支持 Redis / Redisson / Caffeine / JDK 回退。
+- `@RateLimit`：方法或类级限流，支持 SpEL；未指定 `key` 时按方法限流，指定 `key` 时按“方法 + SpEL 结果”分桶，支持 Redis / Redisson / Caffeine / JDK 回退。
 - `@Lock`：分布式锁，支持 SpEL，支持 Redis / Redisson / JDK 回退。
 - Jackson 增强：字符串处理、枚举展开、数字转字符串、日期时间格式统一。
 - Redis 与 Cache 自动配置：统一 JSON 序列化。
