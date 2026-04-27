@@ -23,6 +23,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ControllerLogAspect {
 
+    private static final int MAX_PAYLOAD_LENGTH = 2000;
+
     private final VeloProperties properties;
 
     private final RuntimeJsonSerializer runtimeJsonSerializer;
@@ -31,27 +33,20 @@ public class ControllerLogAspect {
     public Object logControllerInvocation(ProceedingJoinPoint joinPoint) throws Throwable {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         Logger logger = LoggerFactory.getLogger(signature.getDeclaringType());
-        VeloProperties.RequestLoggingProperties requestLogging = properties.getWeb().getRequestLogging();
-        String requestPrefix = buildRequestPrefix(requestLogging);
-        String requestQuery = buildRequestQuery();
-        String argsText = requestLogging.isIncludePayload()
-                ? limit(runtimeJsonSerializer.toJson(buildArgumentMap(signature, joinPoint.getArgs())),
-                requestLogging.getMaxPayloadLength())
-                : "[payload-disabled]";
+        String requestPrefix = buildRequestPrefix();
+        String argsText = limit(runtimeJsonSerializer.toJson(buildArgumentMap(signature, joinPoint.getArgs())));
 
-        log(logger, properties.getLogLevel(), "{}{}==> args: {}", requestPrefix, requestQuery, argsText);
+        log(logger, properties.getLogLevel(), "{}==> args: {}", requestPrefix, argsText);
         long start = System.nanoTime();
         try {
             Object result = joinPoint.proceed();
             Object resultBody = result instanceof ResponseEntity<?> ? ((ResponseEntity<?>) result).getBody() : result;
-            String resultText = requestLogging.isIncludePayload()
-                    ? limit(runtimeJsonSerializer.toJson(resultBody), requestLogging.getMaxPayloadLength())
-                    : "[payload-disabled]";
+            String resultText = limit(runtimeJsonSerializer.toJson(resultBody));
             long elapsedMs = (System.nanoTime() - start) / 1_000_000;
-            log(logger, properties.getLogLevel(), "{}{}<== cost:{}ms, resp: {}", requestPrefix, requestQuery, elapsedMs, resultText);
+            log(logger, properties.getLogLevel(), "{}<== cost:{}ms, resp: {}", requestPrefix, elapsedMs, resultText);
             return result;
         } catch (Throwable ex) {
-            log(logger, LogLevel.ERROR, "{}{}<!! failed: {}", requestPrefix, requestQuery, ex.getMessage(), ex);
+            log(logger, LogLevel.ERROR, "{}<!! failed: {}", requestPrefix, ex.getMessage(), ex);
             throw ex;
         }
     }
@@ -69,31 +64,19 @@ public class ControllerLogAspect {
         return argumentMap;
     }
 
-    private String limit(String text, int maxLength) {
-        if (maxLength <= 0 || text == null || text.length() <= maxLength) {
+    private String limit(String text) {
+        if (text == null || text.length() <= MAX_PAYLOAD_LENGTH) {
             return text;
         }
-        return text.substring(0, Math.max(0, maxLength - 3)) + "...";
+        return text.substring(0, MAX_PAYLOAD_LENGTH - 3) + "...";
     }
 
-    private String buildRequestPrefix(VeloProperties.RequestLoggingProperties requestLogging) {
+    private String buildRequestPrefix() {
         if (!WebUtils.isWebContext()) {
             return "";
         }
 
         return "[" + WebUtils.getRequestIp() + ' ' + WebUtils.getRequestMethod() + ' ' + WebUtils.getRequestURI() + "] ";
-    }
-
-    private String buildRequestQuery() {
-        if (!WebUtils.isWebContext()) {
-            return "";
-        }
-
-        String queryString = WebUtils.getRequestQueryString();
-        if (queryString == null || queryString.isEmpty()) {
-            return "";
-        }
-        return "query=" + queryString + ' ';
     }
 
     private void log(Logger logger, LogLevel level, String format, Object... arguments) {

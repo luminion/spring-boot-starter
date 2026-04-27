@@ -172,8 +172,6 @@ velo:
     allow-cors: false
     request-logging:
       enabled: false
-      include-payload: false
-      max-payload-length: 0 # <= 0 means no truncation
     xss:
       string-converter-enabled: false
 ```

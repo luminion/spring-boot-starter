@@ -86,7 +86,6 @@ class VeloWebAutoConfigurationTests {
     @Test
     void shouldSerializeControllerArgumentsAsSingleJsonObjectAndResponseBodyOnly() throws Throwable {
         VeloProperties properties = new VeloProperties();
-        properties.getWeb().getRequestLogging().setIncludePayload(true);
         CapturingRuntimeJsonSerializer serializer = new CapturingRuntimeJsonSerializer();
         ControllerLogAspect aspect = new ControllerLogAspect(properties, serializer);
         ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
@@ -112,9 +111,8 @@ class VeloWebAutoConfigurationTests {
     }
 
     @Test
-    void shouldLogQueryAfterRequestPrefix(CapturedOutput output) throws Throwable {
+    void shouldOmitRawQueryStringFromLogs(CapturedOutput output) throws Throwable {
         VeloProperties properties = new VeloProperties();
-        properties.getWeb().getRequestLogging().setIncludePayload(true);
         ControllerLogAspect aspect = new ControllerLogAspect(properties, value -> "{\"ok\":true}");
         ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
         MethodSignature signature = mock(MethodSignature.class);
@@ -135,15 +133,17 @@ class VeloWebAutoConfigurationTests {
             RequestContextHolder.resetRequestAttributes();
         }
 
-        assertThat(output.getOut()).contains("[127.0.0.1 GET /converter/query] query=date1=2010-10-10%2010:10:10&localDate=2010-10-10 ==> args: {\"ok\":true}");
+        assertThat(output.getOut()).contains("[127.0.0.1 GET /converter/query] ==> args: {\"ok\":true}");
+        assertThat(output.getOut()).contains("[127.0.0.1 GET /converter/query] <== cost:");
+        assertThat(output.getOut()).doesNotContain("query=");
+        assertThat(output.getOut()).doesNotContain("date1=2010-10-10%2010:10:10");
     }
 
     @Test
-    void shouldOmitQuerySegmentAndRespectPayloadSettings(CapturedOutput output) throws Throwable {
+    void shouldTruncateLoggedPayloadsWithFixedLimit(CapturedOutput output) throws Throwable {
         VeloProperties properties = new VeloProperties();
-        properties.getWeb().getRequestLogging().setIncludePayload(true);
-        properties.getWeb().getRequestLogging().setMaxPayloadLength(10);
-        ControllerLogAspect aspect = new ControllerLogAspect(properties, value -> "{\"veryLong\":true}");
+        String longJson = "{\"value\":\"" + String.join("", Collections.nCopies(2100, "a")) + "\"}";
+        ControllerLogAspect aspect = new ControllerLogAspect(properties, value -> longJson);
         ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
         MethodSignature signature = mock(MethodSignature.class);
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/converter/query");
@@ -162,16 +162,11 @@ class VeloWebAutoConfigurationTests {
             RequestContextHolder.resetRequestAttributes();
         }
 
-        assertThat(output.getOut()).contains("[127.0.0.1 POST /converter/query] ==> args: {\"veryL...");
+        assertThat(output.getOut()).contains("[127.0.0.1 POST /converter/query] ==> args: {\"value\":\"");
         assertThat(output.getOut()).contains("[127.0.0.1 POST /converter/query] <== cost:");
-        assertThat(output.getOut()).contains("resp: {\"veryL...");
+        assertThat(output.getOut()).contains("resp: {\"value\":\"");
+        assertThat(output.getOut()).contains("...");
         assertThat(output.getOut()).doesNotContain("query=");
-    }
-
-    @Test
-    void shouldDefaultRequestLoggingPayloadLengthToUnlimited() {
-        webContextRunner.run(context -> assertThat(context.getBean(io.github.luminion.velo.core.VeloProperties.class)
-                .getWeb().getRequestLogging().getMaxPayloadLength()).isZero());
     }
 
     static class DemoPayload {

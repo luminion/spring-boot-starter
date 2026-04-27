@@ -524,16 +524,6 @@ public class VeloProperties {
          * Enables the controller request logging aspect.
          */
         private boolean enabled;
-
-        /**
-         * Includes request and response payload content in logs.
-         */
-        private boolean includePayload = false;
-
-        /**
-         * Maximum payload length written into request logs. A value less than or equal to 0 disables truncation.
-         */
-        private int maxPayloadLength;
     }
 
     @Data

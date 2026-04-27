@@ -50,10 +50,10 @@ class VeloConfigurationMetadataTest {
             assertTrue(metadata.contains("velo.web.date-time-formatter-registration-enabled"));
             assertTrue(metadata.contains("velo.web.xss-string-converter-registration-enabled"));
             assertTrue(metadata.contains("velo.web.request-logging.enabled"));
-            assertTrue(metadata.contains("velo.web.request-logging.include-payload"));
-            assertTrue(metadata.contains("velo.web.request-logging.max-payload-length"));
             assertFalse(metadata.contains("velo.web.request-logging.include-client-info"));
             assertFalse(metadata.contains("velo.web.request-logging.include-query-string"));
+            assertFalse(metadata.contains("velo.web.request-logging.include-payload"));
+            assertFalse(metadata.contains("velo.web.request-logging.max-payload-length"));
             assertTrue(metadata.contains("velo.redis.string-object-redis-template-enabled"));
             assertTrue(metadata.contains("velo.idempotent.backend"));
             assertTrue(metadata.contains("velo.rate-limit.backend"));
