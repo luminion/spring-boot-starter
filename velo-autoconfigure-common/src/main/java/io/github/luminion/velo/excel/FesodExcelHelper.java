@@ -32,6 +32,8 @@ import java.util.List;
  */
 @Slf4j
 public abstract class FesodExcelHelper {
+    private static final long MAX_SAFE_INTEGER = 9007199254740991L;
+    private static final BigInteger MAX_SAFE_BIG_INTEGER = BigInteger.valueOf(MAX_SAFE_INTEGER);
     private static final Class<?> CONVERTER_CLASS = Converter.class;
     private static final Class<?> CONVERTER_LOADER_CLASS = DefaultConverterLoader.class;
 
@@ -134,7 +136,7 @@ public abstract class FesodExcelHelper {
 
         @Override
         public CellDataTypeEnum supportExcelTypeKey() {
-            return CellDataTypeEnum.STRING;
+            return CellDataTypeEnum.NUMBER;
         }
 
         @Override
@@ -182,7 +184,10 @@ public abstract class FesodExcelHelper {
             if (value == null) {
                 return new WriteCellData<>("");
             }
-            return new WriteCellData<>(String.valueOf(value));
+            if (value > MAX_SAFE_INTEGER || value < -MAX_SAFE_INTEGER) {
+                return new WriteCellData<>(String.valueOf(value));
+            }
+            return new WriteCellData<>(BigDecimal.valueOf(value));
         }
     }
 
@@ -196,7 +201,7 @@ public abstract class FesodExcelHelper {
 
         @Override
         public CellDataTypeEnum supportExcelTypeKey() {
-            return CellDataTypeEnum.STRING;
+            return CellDataTypeEnum.NUMBER;
         }
 
         @Override
@@ -274,7 +279,10 @@ public abstract class FesodExcelHelper {
             if (value == null) {
                 return new WriteCellData<>("");
             }
-            return new WriteCellData<>(String.valueOf(value));
+            if (value.abs().compareTo(MAX_SAFE_BIG_INTEGER) > 0) {
+                return new WriteCellData<>(String.valueOf(value));
+            }
+            return new WriteCellData<>(new BigDecimal(value));
         }
     }
 
