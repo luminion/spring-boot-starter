@@ -12,6 +12,10 @@
     <artifactId>velo-autoconfigure-common</artifactId>
     <name>velo-autoconfigure-common</name>
 
+    <properties>
+        <mybatis-plus.version>3.5.14</mybatis-plus.version>
+    </properties>
+
     <dependencyManagement>
         <dependencies>
             <dependency>
@@ -48,6 +52,18 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-configuration-processor</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-core</artifactId>
+            <version>${mybatis-plus.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-extension</artifactId>
+            <version>${mybatis-plus.version}</version>
             <optional>true</optional>
         </dependency>
         <dependency>
