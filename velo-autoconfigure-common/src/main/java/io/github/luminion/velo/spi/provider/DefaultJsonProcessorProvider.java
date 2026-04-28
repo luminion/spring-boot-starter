@@ -1,6 +1,6 @@
-package io.github.luminion.velo.core.spi.provider;
+package io.github.luminion.velo.spi.provider;
 
-import io.github.luminion.velo.core.spi.JsonProcessorProvider;
+import io.github.luminion.velo.spi.JsonProcessorProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.ObjectProvider;

@@ -1,7 +1,7 @@
 package io.github.luminion.velo.ratelimit;
 
-import io.github.luminion.velo.core.VeloProperties;
-import io.github.luminion.velo.core.spi.Fingerprinter;
+import io.github.luminion.velo.VeloProperties;
+import io.github.luminion.velo.spi.Fingerprinter;
 import io.github.luminion.velo.ratelimit.aspect.RateLimitAspect;
 import org.aspectj.weaver.Advice;
 import org.springframework.boot.autoconfigure.AutoConfiguration;

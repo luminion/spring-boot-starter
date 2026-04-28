@@ -1,6 +1,6 @@
 package io.github.luminion.velo.lock;
 
-import io.github.luminion.velo.core.spi.Fingerprinter;
+import io.github.luminion.velo.spi.Fingerprinter;
 import io.github.luminion.velo.lock.annotation.Lock;
 import io.github.luminion.velo.lock.aspect.LockAspect;
 import org.junit.jupiter.api.Test;

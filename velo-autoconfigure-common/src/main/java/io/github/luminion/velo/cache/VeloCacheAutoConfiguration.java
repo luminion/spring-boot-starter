@@ -1,6 +1,6 @@
 package io.github.luminion.velo.cache;
 
-import io.github.luminion.velo.core.VeloProperties;
+import io.github.luminion.velo.VeloProperties;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.cache.CacheAutoConfiguration;

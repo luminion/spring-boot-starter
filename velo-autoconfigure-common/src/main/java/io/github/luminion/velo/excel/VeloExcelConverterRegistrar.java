@@ -1,6 +1,6 @@
 package io.github.luminion.velo.excel;
 
-import io.github.luminion.velo.core.VeloProperties;
+import io.github.luminion.velo.VeloProperties;
 import org.springframework.beans.factory.BeanClassLoaderAware;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.EnvironmentAware;

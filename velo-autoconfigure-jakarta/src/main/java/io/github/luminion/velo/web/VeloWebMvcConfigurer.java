@@ -1,6 +1,6 @@
 package io.github.luminion.velo.web;
 
-import io.github.luminion.velo.core.VeloProperties;
+import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.xss.converter.XssStringConverter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.ObjectProvider;

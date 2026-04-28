@@ -1,6 +1,6 @@
 package io.github.luminion.velo.web;
 
-import io.github.luminion.velo.core.VeloProperties;
+import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.xss.converter.XssStringConverter;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.ObjectProvider;
@@ -26,27 +26,27 @@ class VeloWebMvcConfigurerTests {
     void shouldRegisterCustomDateFormattersWhenEnabled() {
         VeloProperties properties = new VeloProperties();
         properties.getDateTimeFormat().setEnabled(true);
-        properties.getDateTimeFormat().setDate("yyyy/MM/dd");
+        properties.getDateTimeFormat().setDate("yyyy|MM|dd");
 
         DefaultFormattingConversionService conversionService = new DefaultFormattingConversionService();
 
         new VeloWebMvcConfigurer(emptyConverterProvider(), properties).addFormatters(conversionService);
 
-        assertThat(conversionService.convert("2024/03/31", LocalDate.class)).isEqualTo(LocalDate.of(2024, 3, 31));
+        assertThat(conversionService.convert("2024|03|31", LocalDate.class)).isEqualTo(LocalDate.of(2024, 3, 31));
     }
 
     @Test
     void shouldSkipDateFormattersWhenWebRegistrationDisabled() {
         VeloProperties properties = new VeloProperties();
         properties.getDateTimeFormat().setEnabled(true);
-        properties.getDateTimeFormat().setDate("yyyy/MM/dd");
+        properties.getDateTimeFormat().setDate("yyyy|MM|dd");
         properties.getWeb().setDateTimeFormatterRegistrationEnabled(false);
 
         DefaultFormattingConversionService conversionService = new DefaultFormattingConversionService();
 
         new VeloWebMvcConfigurer(emptyConverterProvider(), properties).addFormatters(conversionService);
 
-        assertThatThrownBy(() -> conversionService.convert("2024/03/31", LocalDate.class))
+        assertThatThrownBy(() -> conversionService.convert("2024|03|31", LocalDate.class))
                 .isInstanceOf(ConversionFailedException.class);
     }
 
@@ -54,17 +54,17 @@ class VeloWebMvcConfigurerTests {
     void shouldApplyDatePatternToJavaUtilDateFormatter() {
         VeloProperties properties = new VeloProperties();
         properties.getDateTimeFormat().setEnabled(true);
-        properties.getDateTimeFormat().setDate("yyyy/MM/dd");
+        properties.getDateTimeFormat().setDate("yyyy|MM|dd");
         properties.getDateTimeFormat().setTimeZone("UTC");
 
         DefaultFormattingConversionService conversionService = new DefaultFormattingConversionService();
         new VeloWebMvcConfigurer(emptyConverterProvider(), properties).addFormatters(conversionService);
 
-        Date converted = conversionService.convert("2024/03/31", Date.class);
-        SimpleDateFormat formatter = new SimpleDateFormat("yyyy/MM/dd");
+        Date converted = conversionService.convert("2024|03|31", Date.class);
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy|MM|dd");
         formatter.setTimeZone(TimeZone.getTimeZone("UTC"));
 
         assertThat(converted).isNotNull();
-        assertThat(formatter.format(converted)).isEqualTo("2024/03/31");
+        assertThat(formatter.format(converted)).isEqualTo("2024|03|31");
     }
 }

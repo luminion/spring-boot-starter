@@ -1,4 +1,4 @@
-package io.github.luminion.velo.core;
+package io.github.luminion.velo;
 
 import io.github.luminion.velo.xss.XssStrategy;
 import lombok.Data;
@@ -508,7 +508,7 @@ public class VeloProperties {
         /**
          * Enables the controller request logging aspect.
          */
-        private boolean enabled = true;
+        private boolean enabled = false;
     }
 
     @Data

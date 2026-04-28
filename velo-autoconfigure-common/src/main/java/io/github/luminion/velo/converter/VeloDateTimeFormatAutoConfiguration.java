@@ -4,7 +4,7 @@ import io.github.luminion.velo.converter.datetime.StringToJavaUtilDateConverter;
 import io.github.luminion.velo.converter.datetime.StringToLocalDateConverter;
 import io.github.luminion.velo.converter.datetime.StringToLocalDateTimeConverter;
 import io.github.luminion.velo.converter.datetime.StringToLocalTimeConverter;
-import io.github.luminion.velo.core.VeloProperties;
+import io.github.luminion.velo.VeloProperties;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;

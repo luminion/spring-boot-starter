@@ -1,6 +1,6 @@
 package io.github.luminion.velo.jackson;
 
-import io.github.luminion.velo.core.VeloProperties;
+import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.jackson.serializer.UnsafeBigIntegerToStringSerializer;
 import io.github.luminion.velo.jackson.serializer.UnsafeLongToStringSerializer;
 import org.springframework.boot.autoconfigure.AutoConfiguration;

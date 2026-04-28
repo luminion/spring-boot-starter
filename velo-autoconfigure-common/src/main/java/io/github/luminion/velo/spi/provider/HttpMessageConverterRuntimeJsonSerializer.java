@@ -1,7 +1,7 @@
-package io.github.luminion.velo.core.spi.provider;
+package io.github.luminion.velo.spi.provider;
 
-import io.github.luminion.velo.core.spi.RuntimeJsonSerializer;
-import io.github.luminion.velo.core.util.InvocationUtils;
+import io.github.luminion.velo.spi.RuntimeJsonSerializer;
+import io.github.luminion.velo.util.InvocationUtils;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpOutputMessage;
 import org.springframework.http.MediaType;

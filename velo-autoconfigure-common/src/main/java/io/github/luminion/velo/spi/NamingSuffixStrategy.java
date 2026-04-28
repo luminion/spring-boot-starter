@@ -1,4 +1,4 @@
-package io.github.luminion.velo.core.spi;
+package io.github.luminion.velo.spi;
 
 /**
  * 后缀提供器

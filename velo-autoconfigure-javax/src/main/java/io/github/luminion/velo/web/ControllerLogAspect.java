@@ -1,7 +1,7 @@
 package io.github.luminion.velo.web;
 
-import io.github.luminion.velo.core.VeloProperties;
-import io.github.luminion.velo.core.spi.RuntimeJsonSerializer;
+import io.github.luminion.velo.VeloProperties;
+import io.github.luminion.velo.spi.RuntimeJsonSerializer;
 import io.github.luminion.velo.core.util.WebUtils;
 import lombok.RequiredArgsConstructor;
 import org.aspectj.lang.ProceedingJoinPoint;

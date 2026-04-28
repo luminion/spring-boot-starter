@@ -1,6 +1,6 @@
 package io.github.luminion.velo.excel;
 
-import io.github.luminion.velo.core.VeloProperties;
+import io.github.luminion.velo.VeloProperties;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.fesod.sheet.converters.Converter;

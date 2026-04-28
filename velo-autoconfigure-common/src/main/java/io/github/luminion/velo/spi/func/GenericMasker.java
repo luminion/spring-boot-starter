@@ -1,4 +1,4 @@
-package io.github.luminion.velo.core.spi.func;
+package io.github.luminion.velo.spi.func;
 
 import java.util.function.Function;
 import java.util.stream.Collectors;

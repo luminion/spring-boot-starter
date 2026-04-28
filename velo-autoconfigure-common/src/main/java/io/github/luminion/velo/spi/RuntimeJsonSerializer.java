@@ -1,4 +1,4 @@
-package io.github.luminion.velo.core.spi;
+package io.github.luminion.velo.spi;
 
 /**
  * Serializes runtime values with the application's JSON infrastructure.

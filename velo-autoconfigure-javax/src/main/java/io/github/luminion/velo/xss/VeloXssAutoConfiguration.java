@@ -1,6 +1,6 @@
 package io.github.luminion.velo.xss;
 
-import io.github.luminion.velo.core.VeloProperties;
+import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.xss.cleaner.JsoupXssCleaner;
 import io.github.luminion.velo.xss.converter.XssStringConverter;
 import org.jsoup.Jsoup;

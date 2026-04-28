@@ -1,7 +1,7 @@
 package io.github.luminion.velo.lock.config;
 
-import io.github.luminion.velo.core.VeloProperties;
-import io.github.luminion.velo.core.spi.Fingerprinter;
+import io.github.luminion.velo.VeloProperties;
+import io.github.luminion.velo.spi.Fingerprinter;
 import io.github.luminion.velo.lock.LockHandler;
 import io.github.luminion.velo.lock.VeloLockAutoConfiguration;
 import io.github.luminion.velo.lock.aspect.LockAspect;

@@ -1,4 +1,4 @@
-package io.github.luminion.velo.core;
+package io.github.luminion.velo;
 
 import org.junit.jupiter.api.Test;
 

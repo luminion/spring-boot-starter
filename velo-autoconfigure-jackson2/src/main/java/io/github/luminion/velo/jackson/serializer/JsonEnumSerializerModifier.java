@@ -7,7 +7,7 @@ import com.fasterxml.jackson.databind.SerializationConfig;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.ser.BeanPropertyWriter;
 import com.fasterxml.jackson.databind.ser.BeanSerializerModifier;
-import io.github.luminion.velo.core.spi.EnumFieldConvention;
+import io.github.luminion.velo.spi.EnumFieldConvention;
 import io.github.luminion.velo.jackson.annotation.JsonEnum;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.util.StringUtils;

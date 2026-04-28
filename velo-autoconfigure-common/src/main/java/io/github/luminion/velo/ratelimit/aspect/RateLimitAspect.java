@@ -1,7 +1,7 @@
 package io.github.luminion.velo.ratelimit.aspect;
 
-import io.github.luminion.velo.core.spi.Fingerprinter;
-import io.github.luminion.velo.core.util.ConcurrencyAnnotationUtils;
+import io.github.luminion.velo.spi.Fingerprinter;
+import io.github.luminion.velo.util.ConcurrencyAnnotationUtils;
 import io.github.luminion.velo.ratelimit.RateLimitHandler;
 import io.github.luminion.velo.ratelimit.annotation.RateLimit;
 import io.github.luminion.velo.ratelimit.exception.RateLimitException;

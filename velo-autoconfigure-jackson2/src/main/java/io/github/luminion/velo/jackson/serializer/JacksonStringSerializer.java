@@ -7,7 +7,7 @@ import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.ser.ContextualSerializer;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
-import io.github.luminion.velo.core.spi.JsonProcessorProvider;
+import io.github.luminion.velo.spi.JsonProcessorProvider;
 import io.github.luminion.velo.jackson.annotation.JsonEncode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

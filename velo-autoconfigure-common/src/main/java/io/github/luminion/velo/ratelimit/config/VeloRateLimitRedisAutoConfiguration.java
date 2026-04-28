@@ -1,7 +1,7 @@
 package io.github.luminion.velo.ratelimit.config;
 
-import io.github.luminion.velo.core.ConcurrencyBackend;
-import io.github.luminion.velo.core.condition.ConditionalOnConcurrencyBackend;
+import io.github.luminion.velo.ConcurrencyBackend;
+import io.github.luminion.velo.condition.ConditionalOnConcurrencyBackend;
 import io.github.luminion.velo.ratelimit.RateLimitHandler;
 import io.github.luminion.velo.ratelimit.support.RedisRateLimitHandler;
 import org.springframework.beans.factory.annotation.Qualifier;

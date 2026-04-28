@@ -1,4 +1,4 @@
-package io.github.luminion.velo.core.util;
+package io.github.luminion.velo.util;
 
 import org.springframework.aop.support.AopUtils;
 import org.springframework.util.StringUtils;

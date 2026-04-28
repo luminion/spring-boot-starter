@@ -1,4 +1,4 @@
-package io.github.luminion.velo.core;
+package io.github.luminion.velo;
 
 /**
  * Backend implementation used by concurrency-related features.

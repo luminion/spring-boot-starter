@@ -1,4 +1,4 @@
-package io.github.luminion.velo.core.condition;
+package io.github.luminion.velo.condition;
 
 import org.springframework.context.annotation.Conditional;
 

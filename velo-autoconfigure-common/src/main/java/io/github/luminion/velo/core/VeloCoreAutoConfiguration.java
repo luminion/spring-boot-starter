@@ -1,11 +1,12 @@
 package io.github.luminion.velo.core;
 
-import io.github.luminion.velo.core.spi.EnumFieldConvention;
-import io.github.luminion.velo.core.spi.Fingerprinter;
-import io.github.luminion.velo.core.spi.JsonProcessorProvider;
-import io.github.luminion.velo.core.spi.NamingSuffixStrategy;
-import io.github.luminion.velo.core.spi.fingerprint.SpelFingerprinter;
-import io.github.luminion.velo.core.spi.provider.DefaultJsonProcessorProvider;
+import io.github.luminion.velo.VeloProperties;
+import io.github.luminion.velo.spi.EnumFieldConvention;
+import io.github.luminion.velo.spi.Fingerprinter;
+import io.github.luminion.velo.spi.JsonProcessorProvider;
+import io.github.luminion.velo.spi.NamingSuffixStrategy;
+import io.github.luminion.velo.spi.fingerprint.SpelFingerprinter;
+import io.github.luminion.velo.spi.provider.DefaultJsonProcessorProvider;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;

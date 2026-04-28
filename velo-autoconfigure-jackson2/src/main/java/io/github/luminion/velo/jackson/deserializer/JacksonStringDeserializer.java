@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.deser.ContextualDeserializer;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
-import io.github.luminion.velo.core.spi.JsonProcessorProvider;
+import io.github.luminion.velo.spi.JsonProcessorProvider;
 import io.github.luminion.velo.jackson.annotation.JsonDecode;
 import io.github.luminion.velo.xss.XssCleaner;
 import io.github.luminion.velo.xss.XssIgnore;

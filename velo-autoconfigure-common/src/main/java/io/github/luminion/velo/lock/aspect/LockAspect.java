@@ -1,7 +1,7 @@
 package io.github.luminion.velo.lock.aspect;
 
-import io.github.luminion.velo.core.spi.Fingerprinter;
-import io.github.luminion.velo.core.util.ConcurrencyAnnotationUtils;
+import io.github.luminion.velo.spi.Fingerprinter;
+import io.github.luminion.velo.util.ConcurrencyAnnotationUtils;
 import io.github.luminion.velo.lock.LockHandler;
 import io.github.luminion.velo.lock.annotation.Lock;
 import io.github.luminion.velo.lock.exception.LockException;

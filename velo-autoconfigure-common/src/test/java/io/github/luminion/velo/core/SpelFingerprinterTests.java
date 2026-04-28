@@ -1,6 +1,6 @@
-package io.github.luminion.velo.core;
+package io.github.luminion.velo;
 
-import io.github.luminion.velo.core.spi.fingerprint.SpelFingerprinter;
+import io.github.luminion.velo.spi.fingerprint.SpelFingerprinter;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Method;

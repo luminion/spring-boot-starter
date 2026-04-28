@@ -1,4 +1,4 @@
-package io.github.luminion.velo.core.condition;
+package io.github.luminion.velo.condition;
 
 import org.springframework.boot.autoconfigure.condition.ConditionMessage;
 import org.springframework.boot.autoconfigure.condition.ConditionOutcome;

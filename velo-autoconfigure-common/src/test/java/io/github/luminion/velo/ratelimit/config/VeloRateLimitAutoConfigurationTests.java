@@ -1,7 +1,7 @@
 package io.github.luminion.velo.ratelimit.config;
 
-import io.github.luminion.velo.core.VeloProperties;
-import io.github.luminion.velo.core.spi.Fingerprinter;
+import io.github.luminion.velo.VeloProperties;
+import io.github.luminion.velo.spi.Fingerprinter;
 import io.github.luminion.velo.ratelimit.RateLimitHandler;
 import io.github.luminion.velo.ratelimit.VeloRateLimitAutoConfiguration;
 import io.github.luminion.velo.ratelimit.aspect.RateLimitAspect;

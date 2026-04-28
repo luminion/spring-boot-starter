@@ -1,7 +1,7 @@
 package io.github.luminion.velo.ratelimit;
 
-import io.github.luminion.velo.core.spi.Fingerprinter;
-import io.github.luminion.velo.core.spi.fingerprint.SpelFingerprinter;
+import io.github.luminion.velo.spi.Fingerprinter;
+import io.github.luminion.velo.spi.fingerprint.SpelFingerprinter;
 import io.github.luminion.velo.ratelimit.annotation.RateLimit;
 import io.github.luminion.velo.ratelimit.aspect.RateLimitAspect;
 import org.junit.jupiter.api.Test;

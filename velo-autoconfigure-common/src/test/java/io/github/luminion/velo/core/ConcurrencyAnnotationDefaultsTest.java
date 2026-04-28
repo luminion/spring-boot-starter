@@ -1,4 +1,4 @@
-package io.github.luminion.velo.core;
+package io.github.luminion.velo;
 
 import io.github.luminion.velo.idempotent.annotation.Idempotent;
 import io.github.luminion.velo.lock.annotation.Lock;

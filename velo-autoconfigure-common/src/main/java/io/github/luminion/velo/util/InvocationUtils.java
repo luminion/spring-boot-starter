@@ -1,4 +1,4 @@
-package io.github.luminion.velo.core.util;
+package io.github.luminion.velo.util;
 
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.util.ObjectUtils;

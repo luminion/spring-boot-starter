@@ -2,9 +2,9 @@ package io.github.luminion.velo.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.luminion.velo.core.VeloCoreAutoConfiguration;
-import io.github.luminion.velo.core.VeloProperties;
-import io.github.luminion.velo.core.spi.RuntimeJsonSerializer;
-import io.github.luminion.velo.core.spi.provider.HttpMessageConverterRuntimeJsonSerializer;
+import io.github.luminion.velo.VeloProperties;
+import io.github.luminion.velo.spi.RuntimeJsonSerializer;
+import io.github.luminion.velo.spi.provider.HttpMessageConverterRuntimeJsonSerializer;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.junit.jupiter.api.Test;

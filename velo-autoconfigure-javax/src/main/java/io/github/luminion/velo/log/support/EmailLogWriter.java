@@ -1,6 +1,6 @@
 package io.github.luminion.velo.log.support;
 
-import io.github.luminion.velo.core.util.InvocationUtils;
+import io.github.luminion.velo.util.InvocationUtils;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.slf4j.event.Level;
 import org.springframework.core.env.Environment;

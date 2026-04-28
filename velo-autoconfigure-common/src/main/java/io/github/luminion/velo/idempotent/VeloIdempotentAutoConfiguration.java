@@ -1,7 +1,7 @@
 package io.github.luminion.velo.idempotent;
 
-import io.github.luminion.velo.core.VeloProperties;
-import io.github.luminion.velo.core.spi.Fingerprinter;
+import io.github.luminion.velo.VeloProperties;
+import io.github.luminion.velo.spi.Fingerprinter;
 import io.github.luminion.velo.idempotent.aspect.IdempotentAspect;
 import org.aspectj.weaver.Advice;
 import org.springframework.boot.autoconfigure.AutoConfiguration;

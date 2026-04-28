@@ -1,7 +1,7 @@
 package io.github.luminion.velo.idempotent.aspect;
 
-import io.github.luminion.velo.core.spi.Fingerprinter;
-import io.github.luminion.velo.core.util.ConcurrencyAnnotationUtils;
+import io.github.luminion.velo.spi.Fingerprinter;
+import io.github.luminion.velo.util.ConcurrencyAnnotationUtils;
 import io.github.luminion.velo.idempotent.IdempotentHandler;
 import io.github.luminion.velo.idempotent.annotation.Idempotent;
 import io.github.luminion.velo.idempotent.exception.IdempotentException;

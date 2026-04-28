@@ -1,6 +1,6 @@
-package io.github.luminion.velo.core.condition;
+package io.github.luminion.velo.condition;
 
-import io.github.luminion.velo.core.ConcurrencyBackend;
+import io.github.luminion.velo.ConcurrencyBackend;
 import org.springframework.beans.factory.BeanFactoryUtils;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionMessage;

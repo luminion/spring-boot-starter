@@ -1,7 +1,7 @@
 package io.github.luminion.velo.idempotent.config;
 
-import io.github.luminion.velo.core.ConcurrencyBackend;
-import io.github.luminion.velo.core.condition.ConditionalOnConcurrencyBackend;
+import io.github.luminion.velo.ConcurrencyBackend;
+import io.github.luminion.velo.condition.ConditionalOnConcurrencyBackend;
 import io.github.luminion.velo.idempotent.IdempotentHandler;
 import io.github.luminion.velo.idempotent.support.RedissonIdempotentHandler;
 import org.redisson.api.RedissonClient;

@@ -1,8 +1,8 @@
 package io.github.luminion.velo.web;
 
-import io.github.luminion.velo.core.VeloProperties;
-import io.github.luminion.velo.core.spi.RuntimeJsonSerializer;
-import io.github.luminion.velo.core.spi.provider.HttpMessageConverterRuntimeJsonSerializer;
+import io.github.luminion.velo.VeloProperties;
+import io.github.luminion.velo.spi.RuntimeJsonSerializer;
+import io.github.luminion.velo.spi.provider.HttpMessageConverterRuntimeJsonSerializer;
 import io.github.luminion.velo.xss.converter.XssStringConverter;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;

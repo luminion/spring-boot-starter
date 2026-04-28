@@ -1,6 +1,6 @@
 package io.github.luminion.velo.log.support;
 
-import io.github.luminion.velo.core.util.InvocationUtils;
+import io.github.luminion.velo.util.InvocationUtils;
 import io.github.luminion.velo.log.ErrorLogWriter;
 import io.github.luminion.velo.log.InvokeArgsWriter;
 import io.github.luminion.velo.log.InvokeResultWriter;

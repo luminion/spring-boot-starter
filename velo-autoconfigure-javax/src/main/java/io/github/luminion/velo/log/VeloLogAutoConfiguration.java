@@ -1,6 +1,6 @@
 package io.github.luminion.velo.log;
 
-import io.github.luminion.velo.core.VeloProperties;
+import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.log.aspect.ArgsLogAspect;
 import io.github.luminion.velo.log.aspect.ErrorLogAspect;
 import io.github.luminion.velo.log.aspect.ResultLogAspect;

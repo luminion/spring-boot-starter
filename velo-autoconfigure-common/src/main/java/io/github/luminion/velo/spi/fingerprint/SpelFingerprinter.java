@@ -1,6 +1,6 @@
-package io.github.luminion.velo.core.spi.fingerprint;
+package io.github.luminion.velo.spi.fingerprint;
 
-import io.github.luminion.velo.core.spi.Fingerprinter;
+import io.github.luminion.velo.spi.Fingerprinter;
 import org.springframework.context.expression.MethodBasedEvaluationContext;
 import org.springframework.core.DefaultParameterNameDiscoverer;
 import org.springframework.core.ParameterNameDiscoverer;

@@ -1,6 +1,6 @@
 package io.github.luminion.velo.log.support;
 
-import io.github.luminion.velo.core.util.InvocationUtils;
+import io.github.luminion.velo.util.InvocationUtils;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import org.aspectj.lang.reflect.MethodSignature;
