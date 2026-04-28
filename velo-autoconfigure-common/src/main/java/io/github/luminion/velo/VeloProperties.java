@@ -5,6 +5,7 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.logging.LogLevel;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -19,41 +20,6 @@ import java.util.Map;
 @Data
 @ConfigurationProperties("velo")
 public class VeloProperties {
-
-    /**
-     * Prefix used by rate-limit related keys.
-     */
-    private String rateLimitPrefix = "rateLimit:";
-
-    /**
-     * Prefix used by idempotent related keys.
-     */
-    private String idempotentPrefix = "idempotent:";
-
-    /**
-     * Prefix used by lock related keys.
-     */
-    private String lockPrefix = "lock:";
-
-    /**
-     * Default log level used by starter managed log components.
-     */
-    private LogLevel logLevel = LogLevel.INFO;
-
-    /**
-     * Default XSS cleaning strategy.
-     */
-    private XssStrategy xssStrategy = XssStrategy.RELAXED;
-
-    /**
-     * Candidate field names used to resolve enum code values.
-     */
-    private List<String> enumCodeFields = Arrays.asList("code", "id", "value");
-
-    /**
-     * Candidate field names used to resolve enum description values.
-     */
-    private List<String> enumDescFields = Arrays.asList("desc", "name", "label");
 
     /**
      * Date and time formatting settings shared by web, Jackson and Excel features.
@@ -119,29 +85,14 @@ public class VeloProperties {
     public static class CoreProperties {
 
         /**
-         * Enables core auto-configuration.
+         * Candidate field names used to resolve enum code values.
          */
-        private boolean enabled = true;
+        private List<String> enumCodeFields = Arrays.asList("code", "id", "value");
 
         /**
-         * Enables the default fingerprinter bean.
+         * Candidate field names used to resolve enum description values.
          */
-        private boolean fingerprinterEnabled = true;
-
-        /**
-         * Enables the default naming suffix strategy bean.
-         */
-        private boolean namingSuffixStrategyEnabled = true;
-
-        /**
-         * Enables the default enum field convention bean.
-         */
-        private boolean enumFieldConventionEnabled = true;
-
-        /**
-         * Enables the default JSON processor provider bean.
-         */
-        private boolean jsonProcessorProviderEnabled = true;
+        private List<String> enumDescFields = Arrays.asList("desc", "name", "label");
     }
 
     @Data
@@ -153,14 +104,14 @@ public class VeloProperties {
         private boolean enabled = true;
 
         /**
-         * Enables the idempotent aspect bean.
-         */
-        private boolean aspectEnabled = true;
-
-        /**
          * Backend implementation used by idempotent handler selection.
          */
         private ConcurrencyBackend backend = ConcurrencyBackend.AUTO;
+
+        /**
+         * Prefix used by idempotent related keys.
+         */
+        private String keyPrefix = "idempotent:";
     }
 
     @Data
@@ -172,14 +123,14 @@ public class VeloProperties {
         private boolean enabled = true;
 
         /**
-         * Enables the rate-limit aspect bean.
-         */
-        private boolean aspectEnabled = true;
-
-        /**
          * Backend implementation used by rate-limit handler selection.
          */
         private ConcurrencyBackend backend = ConcurrencyBackend.AUTO;
+
+        /**
+         * Prefix used by rate-limit related keys.
+         */
+        private String keyPrefix = "rateLimit:";
     }
 
     @Data
@@ -191,14 +142,14 @@ public class VeloProperties {
         private boolean enabled = true;
 
         /**
-         * Enables the lock aspect bean.
-         */
-        private boolean aspectEnabled = true;
-
-        /**
          * Backend implementation used by lock handler selection.
          */
         private ConcurrencyBackend backend = ConcurrencyBackend.AUTO;
+
+        /**
+         * Prefix used by lock related keys.
+         */
+        private String keyPrefix = "lock:";
     }
 
     @Data
@@ -208,16 +159,6 @@ public class VeloProperties {
          * Enables Redis helper auto-configuration.
          */
         private boolean enabled = true;
-
-        /**
-         * Enables the `stringObjectRedisTemplate` bean.
-         */
-        private boolean stringObjectRedisTemplateEnabled = true;
-
-        /**
-         * Enables the customized `redisTemplate` bean.
-         */
-        private boolean redisTemplateEnabled = true;
     }
 
     @Data
@@ -239,29 +180,15 @@ public class VeloProperties {
         private String keySeparator = ":";
 
         /**
-         * Default cache TTL in seconds.
+         * Default cache TTL.
          */
-        private int defaultTtlSeconds = 3000;
+        private Duration defaultTtl = Duration.ofSeconds(3000);
 
         /**
-         * Per-cache TTL overrides in seconds.
+         * Per-cache TTL overrides.
          */
-        private Map<String, Integer> ttlMap = new LinkedHashMap<>();
+        private Map<String, Duration> ttlMap = new LinkedHashMap<>();
 
-        /**
-         * Enables the Redis cache TTL map provider bean.
-         */
-        private boolean redisCacheTimeMapProviderEnabled = true;
-
-        /**
-         * Enables the Redis cache configuration bean.
-         */
-        private boolean redisCacheConfigurationEnabled = true;
-
-        /**
-         * Enables the Redis cache manager bean.
-         */
-        private boolean cacheManagerEnabled = true;
     }
 
     @Data
@@ -346,16 +273,6 @@ public class VeloProperties {
         private boolean enabled = true;
 
         /**
-         * Enables the Jackson builder customizer bean.
-         */
-        private boolean builderCustomizerEnabled = true;
-
-        /**
-         * Enables the Redis serializer bean provided by the Jackson auto-configuration.
-         */
-        private boolean redisSerializerEnabled = true;
-
-        /**
          * Date-time conversion settings for Jackson customization.
          */
         private DateTimeProperties dateTime = new DateTimeProperties();
@@ -392,21 +309,6 @@ public class VeloProperties {
              * Enables date-time related Jackson customization.
              */
             private boolean enabled = true;
-
-            /**
-             * Enables applying the configured default legacy date format and time zone.
-             */
-            private boolean javaUtilDateEnabled = true;
-
-            /**
-             * Enables LocalDate, LocalDateTime and LocalTime serializers.
-             */
-            private boolean serializersEnabled = true;
-
-            /**
-             * Enables LocalDate, LocalDateTime and LocalTime deserializers.
-             */
-            private boolean deserializersEnabled = true;
         }
 
         @Data
@@ -416,16 +318,6 @@ public class VeloProperties {
              * Enables automatic registration of starter managed String converters.
              */
             private boolean enabled = false;
-
-            /**
-             * Enables automatic registration of the custom String serializer.
-             */
-            private boolean serializerEnabled = true;
-
-            /**
-             * Enables automatic registration of the custom String deserializer.
-             */
-            private boolean deserializerEnabled = true;
         }
     }
 
@@ -436,11 +328,6 @@ public class VeloProperties {
          * Enables log auto-configuration.
          */
         private boolean enabled = true;
-
-        /**
-         * Enables the default SLF4J log writer bean.
-         */
-        private boolean slf4jLogWriterEnabled = true;
 
         /**
          * Enables the method argument logging aspect.
@@ -461,6 +348,11 @@ public class VeloProperties {
          * Enables the slow-call logging aspect.
          */
         private boolean slowAspectEnabled = true;
+
+        /**
+         * Default log level used by starter managed log components.
+         */
+        private LogLevel level = LogLevel.INFO;
     }
 
     @Data
@@ -470,21 +362,6 @@ public class VeloProperties {
          * Enables web MVC auto-configuration.
          */
         private boolean enabled = true;
-
-        /**
-         * Enables the MVC configurer bean provided by this starter.
-         */
-        private boolean mvcConfigurerEnabled = true;
-
-        /**
-         * Enables automatic registration of web date-time formatters.
-         */
-        private boolean dateTimeFormatterRegistrationEnabled = true;
-
-        /**
-         * Enables automatic registration of the XSS String converter into the MVC conversion service.
-         */
-        private boolean xssStringConverterRegistrationEnabled = true;
 
         /**
          * Enables permissive CORS handling in the MVC configurer.
@@ -520,14 +397,9 @@ public class VeloProperties {
         private boolean enabled;
 
         /**
-         * Enables the default XSS cleaner bean.
+         * Default XSS cleaning strategy.
          */
-        private boolean cleanerEnabled = true;
-
-        /**
-         * Enables the web layer String converter backed by the XSS cleaner.
-         */
-        private boolean stringConverterEnabled = true;
+        private XssStrategy strategy = XssStrategy.RELAXED;
     }
 
     @Data
@@ -570,27 +442,6 @@ public class VeloProperties {
              * Enables automatic registration of built-in date-time converters.
              */
             private boolean enabled = false;
-
-            /**
-             * Enables the java.util.Date converter.
-             */
-            private boolean javaUtilDateConverterEnabled = true;
-
-            /**
-             * Enables the LocalDateTime converter.
-             */
-            private boolean localDateTimeConverterEnabled = true;
-
-            /**
-             * Enables the LocalDate converter.
-             */
-            private boolean localDateConverterEnabled = true;
-
-            /**
-             * Enables the LocalTime converter.
-             */
-            private boolean localTimeConverterEnabled = true;
-
         }
     }
 
@@ -601,11 +452,6 @@ public class VeloProperties {
          * Enables MyBatis-Plus auto-configuration.
          */
         private boolean enabled = true;
-
-        /**
-         * Enables the MyBatis-Plus interceptor bean.
-         */
-        private boolean interceptorEnabled = true;
 
         /**
          * Enables the pagination inner interceptor bean.

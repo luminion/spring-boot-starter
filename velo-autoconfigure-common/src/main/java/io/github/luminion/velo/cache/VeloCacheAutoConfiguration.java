@@ -24,8 +24,6 @@ import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.util.StringUtils;
 
-import java.time.Duration;
-
 /**
  * spring缓存自动配置
  *
@@ -65,14 +63,12 @@ public class VeloCacheAutoConfiguration {
 
         @Bean
         @ConditionalOnMissingBean(RedisCacheTimeMapProvider.class)
-        @ConditionalOnProperty(prefix = "velo.cache", name = "redis-cache-time-map-provider-enabled", havingValue = "true", matchIfMissing = true)
         public RedisCacheTimeMapProvider redisCacheTimeMapProvider(VeloProperties properties) {
             return new RedisCacheTimeMapProvider(properties.getCache().getTtlMap());
         }
 
         @Bean
         @ConditionalOnMissingBean(RedisCacheConfiguration.class)
-        @ConditionalOnProperty(prefix = "velo.cache", name = "redis-cache-configuration-enabled", havingValue = "true", matchIfMissing = true)
         public RedisCacheConfiguration redisCacheConfiguration(ObjectProvider<RedisSerializer<Object>> serializerProvider,
                 VeloProperties properties) {
             RedisSerializer<Object> redisSerializer = serializerProvider.getIfAvailable(GenericJackson2JsonRedisSerializer::new);
@@ -86,13 +82,12 @@ public class VeloCacheAutoConfiguration {
             return redisCacheConfiguration
                     .serializeValuesWith(objectSerializationPair)
                     .computePrefixWith(cacheName -> buildCacheKeyPrefix(cacheProperties, cacheName))
-                    .entryTtl(Duration.ofSeconds(cacheProperties.getDefaultTtlSeconds()));
+                    .entryTtl(cacheProperties.getDefaultTtl());
         }
 
         @Bean
         @ConditionalOnMissingBean(CacheManager.class)
         @ConditionalOnBean({RedisConnectionFactory.class, RedisCacheConfiguration.class, RedisCacheTimeMapProvider.class})
-        @ConditionalOnProperty(prefix = "velo.cache", name = "cache-manager-enabled", havingValue = "true", matchIfMissing = true)
         public CacheManager cacheManager(RedisConnectionFactory redisConnectionFactory,
                                          RedisCacheConfiguration redisCacheConfiguration,
                                          RedisCacheTimeMapProvider redisCacheTimeMapProvider,

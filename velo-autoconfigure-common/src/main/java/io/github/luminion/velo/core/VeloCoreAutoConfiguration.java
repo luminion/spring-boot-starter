@@ -21,43 +21,38 @@ import java.util.List;
  */
 @AutoConfiguration
 @EnableConfigurationProperties(VeloProperties.class)
-@ConditionalOnProperty(prefix = "velo.core", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloCoreAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = "velo.core", name = "fingerprinter-enabled", havingValue = "true", matchIfMissing = true)
     public Fingerprinter fingerprinter() {
         return new SpelFingerprinter();
     }
 
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = "velo.core", name = "naming-suffix-strategy-enabled", havingValue = "true", matchIfMissing = true)
     public NamingSuffixStrategy namingSuffixStrategy() {
         return () -> "Name";
     }
 
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = "velo.core", name = "enum-field-convention-enabled", havingValue = "true", matchIfMissing = true)
     public EnumFieldConvention enumFieldConvention(VeloProperties properties) {
         return new EnumFieldConvention() {
             @Override
             public List<String> codeFieldNames() {
-                return properties.getEnumCodeFields();
+                return properties.getCore().getEnumCodeFields();
             }
 
             @Override
             public List<String> descFieldNames() {
-                return properties.getEnumDescFields();
+                return properties.getCore().getEnumDescFields();
             }
         };
     }
 
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = "velo.core", name = "json-processor-provider-enabled", havingValue = "true", matchIfMissing = true)
     public JsonProcessorProvider jsonProcessorProvider(BeanFactory beanFactory) {
         return new DefaultJsonProcessorProvider(beanFactory);
     }

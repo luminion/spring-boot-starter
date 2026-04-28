@@ -34,14 +34,4 @@ class VeloRedisAutoConfigurationTests {
             assertThat(stringObjectRedisTemplate.getKeySerializer()).isInstanceOf(StringRedisSerializer.class);
         });
     }
-
-    @Test
-    void shouldAllowDisablingSingleRedisTemplateBean() {
-        contextRunner
-                .withPropertyValues("velo.redis.redis-template-enabled=false")
-                .run(context -> {
-                    assertThat(context).doesNotHaveBean("redisTemplate");
-                    assertThat(context).hasBean("stringObjectRedisTemplate");
-                });
-    }
 }

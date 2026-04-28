@@ -34,17 +34,4 @@ class VeloDateTimeFormatAutoConfigurationTests {
                     assertThat(context).hasSingleBean(StringToLocalDateTimeConverter.class);
                 });
     }
-
-    @Test
-    void shouldAllowDisablingSingleDateTimeConverter() {
-        contextRunner
-                .withPropertyValues(
-                        "velo.date-time-format.converters.enabled=true",
-                        "velo.date-time-format.converters.local-date-converter-enabled=false"
-                )
-                .run(context -> {
-                    assertThat(context).doesNotHaveBean(StringToLocalDateConverter.class);
-                    assertThat(context).hasSingleBean(StringToLocalDateTimeConverter.class);
-                });
-    }
 }

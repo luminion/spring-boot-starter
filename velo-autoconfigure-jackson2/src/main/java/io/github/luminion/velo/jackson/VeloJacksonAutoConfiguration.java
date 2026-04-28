@@ -59,7 +59,6 @@ public class VeloJacksonAutoConfiguration {
 
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnClass({Jackson2ObjectMapperBuilder.class})
-    @ConditionalOnProperty(prefix = "velo.jackson", name = "builder-customizer-enabled", havingValue = "true", matchIfMissing = true)
     static class Jackson2ObjectMapperBuilderCustomizerConfiguration {
 
         @Bean
@@ -84,10 +83,8 @@ public class VeloJacksonAutoConfiguration {
 
                 if (jacksonDateTime.isEnabled()) {
                     builder.featuresToDisable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-                    if (jacksonDateTime.isJavaUtilDateEnabled()) {
-                        builder.dateFormat(simpleDateFormat)
-                                .timeZone(timeZone);
-                    }
+                    builder.dateFormat(simpleDateFormat)
+                            .timeZone(timeZone);
                 }
 
                 if (jacksonProperties.isWriteUnsafeIntegerAsString()) {
@@ -110,7 +107,7 @@ public class VeloJacksonAutoConfiguration {
                 DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern(dateFormat);
                 DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern(timeFormat);
 
-                if (jacksonDateTime.isEnabled() && jacksonDateTime.isDeserializersEnabled()) {
+                if (jacksonDateTime.isEnabled()) {
                     builder.deserializerByType(LocalDateTime.class,
                                     new LocalDateTimeDeserializer(dateTimeFormatter))
                             .deserializerByType(LocalDate.class,
@@ -119,7 +116,7 @@ public class VeloJacksonAutoConfiguration {
                                     new LocalTimeDeserializer(timeFormatter));
                 }
 
-                if (jacksonDateTime.isEnabled() && jacksonDateTime.isSerializersEnabled()) {
+                if (jacksonDateTime.isEnabled()) {
                     builder.serializers(new LocalDateTimeSerializer(dateTimeFormatter))
                             .serializers(new LocalDateSerializer(dateFormatter))
                             .serializers(new LocalTimeSerializer(timeFormatter));
@@ -133,13 +130,9 @@ public class VeloJacksonAutoConfiguration {
                                 .getBeanProvider(XssCleaner.class);
                         XssCleaner xssCleaner = xssCleanerObjectProvider.getIfAvailable();
 
-                        if (jacksonProperties.getStringConverters().isDeserializerEnabled()) {
-                            builder.deserializerByType(String.class,
-                                    new JacksonStringDeserializer(bean, xssCleaner));
-                        }
-                        if (jacksonProperties.getStringConverters().isSerializerEnabled()) {
-                            builder.serializerByType(String.class, new JacksonStringSerializer(bean));
-                        }
+                        builder.deserializerByType(String.class,
+                                new JacksonStringDeserializer(bean, xssCleaner));
+                        builder.serializerByType(String.class, new JacksonStringSerializer(bean));
                     });
                 }
 
@@ -159,7 +152,6 @@ public class VeloJacksonAutoConfiguration {
 
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnClass({RedisTemplate.class, Jackson2ObjectMapperBuilder.class})
-    @ConditionalOnProperty(prefix = "velo.jackson", name = "redis-serializer-enabled", havingValue = "true", matchIfMissing = true)
     static class JacksonRedisConfiguration {
 
         @Bean

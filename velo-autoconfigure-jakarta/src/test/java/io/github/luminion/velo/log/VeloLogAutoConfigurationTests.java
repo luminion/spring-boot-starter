@@ -30,16 +30,23 @@ class VeloLogAutoConfigurationTests {
     }
 
     @Test
-    void shouldCreateAspectsWithCustomWritersWhenSlf4jWriterIsDisabled() {
+    void shouldPreferCustomWritersWhenAvailable() {
         contextRunner
-                .withPropertyValues("velo.log.slf4j-log-writer-enabled=false")
                 .withBean(CustomLogWriter.class, CustomLogWriter::new)
                 .run(context -> {
-                    assertThat(context).doesNotHaveBean(Slf4JLogWriter.class);
+                    assertThat(context).hasSingleBean(Slf4JLogWriter.class);
                     assertThat(context).hasSingleBean(ArgsLogAspect.class);
                     assertThat(context).hasSingleBean(ResultLogAspect.class);
                     assertThat(context).hasSingleBean(ErrorLogAspect.class);
                     assertThat(context).hasSingleBean(SlowLogAspect.class);
+                    assertThat(ReflectionTestUtils.getField(context.getBean(ArgsLogAspect.class), "argsWriter"))
+                            .isInstanceOf(CustomLogWriter.class);
+                    assertThat(ReflectionTestUtils.getField(context.getBean(ResultLogAspect.class), "resultWriter"))
+                            .isInstanceOf(CustomLogWriter.class);
+                    assertThat(ReflectionTestUtils.getField(context.getBean(ErrorLogAspect.class), "errorLogWriter"))
+                            .isInstanceOf(CustomLogWriter.class);
+                    assertThat(ReflectionTestUtils.getField(context.getBean(SlowLogAspect.class), "slowLogWriter"))
+                            .isInstanceOf(CustomLogWriter.class);
                 });
     }
 

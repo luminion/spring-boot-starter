@@ -36,11 +36,10 @@ class VeloWebMvcConfigurerTests {
     }
 
     @Test
-    void shouldSkipDateFormattersWhenWebRegistrationDisabled() {
+    void shouldSkipDateFormattersWhenDateTimeFormatDisabled() {
         VeloProperties properties = new VeloProperties();
-        properties.getDateTimeFormat().setEnabled(true);
+        properties.getDateTimeFormat().setEnabled(false);
         properties.getDateTimeFormat().setDate("yyyy|MM|dd");
-        properties.getWeb().setDateTimeFormatterRegistrationEnabled(false);
 
         DefaultFormattingConversionService conversionService = new DefaultFormattingConversionService();
 

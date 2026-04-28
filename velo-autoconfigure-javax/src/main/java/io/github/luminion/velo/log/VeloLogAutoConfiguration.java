@@ -31,9 +31,8 @@ public class VeloLogAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean(Slf4JLogWriter.class)
-    @ConditionalOnProperty(prefix = "velo.log", name = "slf4j-log-writer-enabled", havingValue = "true", matchIfMissing = true)
     public Slf4JLogWriter slf4JLogWriter(VeloProperties properties) {
-        return new Slf4JLogWriter(toLevel(properties.getLogLevel()));
+        return new Slf4JLogWriter(toLevel(properties.getLog().getLevel()));
     }
 
     @Bean

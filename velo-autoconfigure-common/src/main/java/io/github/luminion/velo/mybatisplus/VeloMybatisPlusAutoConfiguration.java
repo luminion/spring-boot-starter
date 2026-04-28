@@ -26,7 +26,6 @@ public class VeloMybatisPlusAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = "velo.mybatis-plus", name = "interceptor-enabled", havingValue = "true", matchIfMissing = true)
     public MybatisPlusInterceptor mybatisPlusInterceptor(List<InnerInterceptor> interceptors) {
         MybatisPlusInterceptor mybatisPlusInterceptor = new MybatisPlusInterceptor();
         mybatisPlusInterceptor.setInterceptors(interceptors);

@@ -27,8 +27,7 @@ public class VeloLockAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean(LockAspect.class)
     @ConditionalOnBean({Fingerprinter.class, LockHandler.class})
-    @ConditionalOnProperty(prefix = "velo.lock", name = "aspect-enabled", havingValue = "true", matchIfMissing = true)
     public LockAspect lockAspect(VeloProperties properties, Fingerprinter fingerprinter, LockHandler lockHandler) {
-        return new LockAspect(properties.getLockPrefix(), fingerprinter, lockHandler);
+        return new LockAspect(properties.getLock().getKeyPrefix(), fingerprinter, lockHandler);
     }
 }

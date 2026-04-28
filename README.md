@@ -136,11 +136,6 @@ Spring Boot 4:
 
 ```yaml
 velo:
-  rate-limit-prefix: rateLimit:
-  idempotent-prefix: idempotent:
-  lock-prefix: lock:
-  log-level: INFO
-
   date-time-format:
     enabled: true
     date: yyyy-MM-dd
@@ -152,8 +147,9 @@ velo:
     enabled: true
     key-prefix: ""
     key-separator: ":"
-    default-ttl-seconds: 3000
-    ttl-map: {}
+    default-ttl: 50m
+    ttl-map:
+      users: 10m
 
   jackson:
     enabled: true
@@ -165,6 +161,18 @@ velo:
   redis:
     enabled: true
 
+  idempotent:
+    key-prefix: "idempotent:"
+
+  rate-limit:
+    key-prefix: "rateLimit:"
+
+  lock:
+    key-prefix: "lock:"
+
+  log:
+    level: INFO
+
   mybatis-plus:
     enabled: true
 
@@ -173,7 +181,7 @@ velo:
     request-logging:
       enabled: false
     xss:
-      string-converter-enabled: false
+      strategy: RELAXED
 ```
 
 ## 设计说明

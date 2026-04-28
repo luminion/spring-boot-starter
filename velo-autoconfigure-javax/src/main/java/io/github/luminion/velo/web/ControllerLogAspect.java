@@ -36,14 +36,14 @@ public class ControllerLogAspect {
         String requestPrefix = buildRequestPrefix();
         String argsText = limit(runtimeJsonSerializer.toJson(buildArgumentMap(signature, joinPoint.getArgs())));
 
-        log(logger, properties.getLogLevel(), "{}==> args: {}", requestPrefix, argsText);
+        log(logger, properties.getLog().getLevel(), "{}==> args: {}", requestPrefix, argsText);
         long start = System.nanoTime();
         try {
             Object result = joinPoint.proceed();
             Object resultBody = result instanceof ResponseEntity<?> ? ((ResponseEntity<?>) result).getBody() : result;
             String resultText = limit(runtimeJsonSerializer.toJson(resultBody));
             long elapsedMs = (System.nanoTime() - start) / 1_000_000;
-            log(logger, properties.getLogLevel(), "{}<== cost:{}ms, resp: {}", requestPrefix, elapsedMs, resultText);
+            log(logger, properties.getLog().getLevel(), "{}<== cost:{}ms, resp: {}", requestPrefix, elapsedMs, resultText);
             return result;
         } catch (Throwable ex) {
             log(logger, LogLevel.ERROR, "{}<!! failed: {}", requestPrefix, ex.getMessage(), ex);

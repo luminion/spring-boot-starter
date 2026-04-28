@@ -100,9 +100,9 @@ class VeloJacksonAutoConfigurationTests {
     }
 
     @Test
-    void shouldAllowDisablingJacksonDateTimeSerializers() throws Exception {
+    void shouldAllowDisablingJacksonDateTimeCustomization() throws Exception {
         VeloProperties properties = new VeloProperties();
-        properties.getJackson().getDateTime().setSerializersEnabled(false);
+        properties.getJackson().getDateTime().setEnabled(false);
 
         contextRunner
                 .withBean(VeloProperties.class, () -> properties)
@@ -116,7 +116,7 @@ class VeloJacksonAutoConfigurationTests {
                             0.25F,
                             LocalDateTime.of(2026, 3, 30, 12, 34, 56)));
 
-                    assertThat(json).contains("\"createdAt\":\"2026-03-30T12:34:56\"");
+                    assertThat(json).contains("\"createdAt\":[2026,3,30,12,34,56]");
                     assertThat(json).doesNotContain("\"createdAt\":\"2026-03-30 12:34:56\"");
                 });
     }

@@ -27,16 +27,14 @@ public class VeloXssAutoConfiguration {
 
         @Bean
         @ConditionalOnMissingBean
-        @ConditionalOnProperty(prefix = "velo.web.xss", name = "cleaner-enabled", havingValue = "true", matchIfMissing = true)
         public XssCleaner xssCleaner(VeloProperties properties) {
-            return new JsoupXssCleaner(properties.getXssStrategy());
+            return new JsoupXssCleaner(properties.getWeb().getXss().getStrategy());
         }
     }
 
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnBean(XssCleaner.class)
-    @ConditionalOnProperty(prefix = "velo.web.xss", name = "string-converter-enabled", havingValue = "true", matchIfMissing = true)
     public XssStringConverter xssStringConverter(XssCleaner xssCleaner) {
         return new XssStringConverter(xssCleaner);
     }

@@ -34,7 +34,6 @@ public class VeloRedisAutoConfiguration {
     @ConditionalOnMissingBean(name = "stringObjectRedisTemplate")
     @ConditionalOnBean({RedisConnectionFactory.class, RedisSerializer.class})
     @ConditionalOnSingleCandidate(RedisConnectionFactory.class)
-    @ConditionalOnProperty(prefix = "velo.redis", name = "string-object-redis-template-enabled", havingValue = "true", matchIfMissing = true)
     public RedisTemplate<String, Object> stringObjectRedisTemplate(RedisConnectionFactory redisConnectionFactory, RedisSerializer<Object> redisSerializer) {
         RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
         redisTemplate.setConnectionFactory(redisConnectionFactory);
@@ -51,7 +50,6 @@ public class VeloRedisAutoConfiguration {
     @ConditionalOnMissingBean(name = "redisTemplate")
     @ConditionalOnBean({RedisConnectionFactory.class, RedisSerializer.class})
     @ConditionalOnSingleCandidate(RedisConnectionFactory.class)
-    @ConditionalOnProperty(prefix = "velo.redis", name = "redis-template-enabled", havingValue = "true", matchIfMissing = true)
     public RedisTemplate<Object, Object> redisTemplate(RedisConnectionFactory redisConnectionFactory, RedisSerializer<Object> redisSerializer) {
         RedisTemplate<Object, Object> redisTemplate = new RedisTemplate<>();
         redisTemplate.setConnectionFactory(redisConnectionFactory);

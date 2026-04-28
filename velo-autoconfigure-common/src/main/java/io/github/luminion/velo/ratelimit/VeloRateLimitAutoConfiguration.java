@@ -27,9 +27,8 @@ public class VeloRateLimitAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean(RateLimitAspect.class)
     @ConditionalOnBean({Fingerprinter.class, RateLimitHandler.class})
-    @ConditionalOnProperty(prefix = "velo.rate-limit", name = "aspect-enabled", havingValue = "true", matchIfMissing = true)
     public RateLimitAspect rateLimitAspect(VeloProperties properties, Fingerprinter fingerprinter,
             RateLimitHandler rateLimitHandler) {
-        return new RateLimitAspect(properties.getRateLimitPrefix(), fingerprinter, rateLimitHandler);
+        return new RateLimitAspect(properties.getRateLimit().getKeyPrefix(), fingerprinter, rateLimitHandler);
     }
 }

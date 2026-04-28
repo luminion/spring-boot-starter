@@ -23,7 +23,6 @@ public class VeloWebAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = "velo.web", name = "mvc-configurer-enabled", havingValue = "true", matchIfMissing = true)
     public VeloWebMvcConfigurer veloWebMvcConfigurer(ObjectProvider<XssStringConverter> xssStringConverterProvider,
             VeloProperties properties) {
         return new VeloWebMvcConfigurer(xssStringConverterProvider, properties);

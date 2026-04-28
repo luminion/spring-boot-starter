@@ -45,7 +45,6 @@ import java.util.TimeZone;
 public class VeloJacksonAutoConfiguration {
 
     @Configuration(proxyBeanMethods = false)
-    @ConditionalOnProperty(prefix = "velo.jackson", name = "builder-customizer-enabled", havingValue = "true", matchIfMissing = true)
     static class JsonMapperBuilderCustomizerConfiguration {
 
         @Bean
@@ -65,10 +64,8 @@ public class VeloJacksonAutoConfiguration {
                 builder.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
                 builder.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
                 if (jacksonDateTime.isEnabled()) {
-                    if (jacksonDateTime.isJavaUtilDateEnabled()) {
-                        builder.defaultDateFormat(simpleDateFormat);
-                        builder.defaultTimeZone(timeZone);
-                    }
+                    builder.defaultDateFormat(simpleDateFormat);
+                    builder.defaultTimeZone(timeZone);
                     builder.findAndAddModules();
                 }
 
@@ -92,12 +89,12 @@ public class VeloJacksonAutoConfiguration {
                     module.addSerializer(Float.class, ToStringSerializer.instance);
                     module.addSerializer(Float.TYPE, ToStringSerializer.instance);
                 }
-                if (jacksonDateTime.isEnabled() && jacksonDateTime.isSerializersEnabled()) {
+                if (jacksonDateTime.isEnabled()) {
                     module.addSerializer(LocalDateTime.class, new LocalDateTimeSerializer(dateTimeFormatter));
                     module.addSerializer(LocalDate.class, new LocalDateSerializer(dateFormatter));
                     module.addSerializer(LocalTime.class, new LocalTimeSerializer(timeFormatter));
                 }
-                if (jacksonDateTime.isEnabled() && jacksonDateTime.isDeserializersEnabled()) {
+                if (jacksonDateTime.isEnabled()) {
                     module.addDeserializer(LocalDateTime.class, new LocalDateTimeDeserializer(dateTimeFormatter));
                     module.addDeserializer(LocalDate.class, new LocalDateDeserializer(dateFormatter));
                     module.addDeserializer(LocalTime.class, new LocalTimeDeserializer(timeFormatter));
@@ -109,7 +106,6 @@ public class VeloJacksonAutoConfiguration {
 
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnClass(RedisTemplate.class)
-    @ConditionalOnProperty(prefix = "velo.jackson", name = "redis-serializer-enabled", havingValue = "true", matchIfMissing = true)
     static class JacksonRedisConfiguration {
 
         @Bean

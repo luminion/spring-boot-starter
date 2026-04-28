@@ -21,8 +21,7 @@ class VeloXssAutoConfigurationTests {
     void shouldCreateCleanerAndStringConverterWhenEnabled() {
         contextRunner
                 .withPropertyValues(
-                        "velo.web.xss.enabled=true",
-                        "velo.web.xss.string-converter-enabled=true"
+                        "velo.web.xss.enabled=true"
                 )
                 .run(context -> {
                     assertThat(context.getBean(XssCleaner.class)).isInstanceOf(JsoupXssCleaner.class);

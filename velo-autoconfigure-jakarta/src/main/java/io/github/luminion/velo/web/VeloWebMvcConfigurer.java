@@ -26,17 +26,14 @@ public class VeloWebMvcConfigurer implements WebMvcConfigurer {
     @Override
     public void addFormatters(FormatterRegistry registry) {
         VeloProperties.XssProperties xss = properties.getWeb().getXss();
-        if (properties.getWeb().isXssStringConverterRegistrationEnabled()
-                && xss.isEnabled()
-                && xss.isStringConverterEnabled()) {
+        if (xss.isEnabled()) {
             XssStringConverter xssStringConverter = xssStringConverterProvider.getIfAvailable();
             if (xssStringConverter != null) {
                 registry.addConverter(xssStringConverter);
             }
         }
 
-        if (properties.getWeb().isDateTimeFormatterRegistrationEnabled()
-                && properties.getDateTimeFormat().isEnabled()) {
+        if (properties.getDateTimeFormat().isEnabled()) {
             String dateTimePattern = properties.getDateTimeFormat().getDateTime();
             String datePattern = properties.getDateTimeFormat().getDate();
             String timePattern = properties.getDateTimeFormat().getTime();

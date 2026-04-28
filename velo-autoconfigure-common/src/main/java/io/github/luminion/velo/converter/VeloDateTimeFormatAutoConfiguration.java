@@ -24,7 +24,6 @@ public class VeloDateTimeFormatAutoConfiguration {
 
         @Bean
         @ConditionalOnMissingBean
-        @ConditionalOnProperty(prefix = "velo.date-time-format.converters", name = "java-util-date-converter-enabled", havingValue = "true", matchIfMissing = true)
         public StringToJavaUtilDateConverter stringToDateConverter(VeloProperties properties) {
             return new StringToJavaUtilDateConverter(properties.getDateTimeFormat().getDateTime(),
                     properties.getDateTimeFormat().getTimeZone());
@@ -32,21 +31,18 @@ public class VeloDateTimeFormatAutoConfiguration {
 
         @Bean
         @ConditionalOnMissingBean
-        @ConditionalOnProperty(prefix = "velo.date-time-format.converters", name = "local-date-time-converter-enabled", havingValue = "true", matchIfMissing = true)
         public StringToLocalDateTimeConverter stringToLocalDateTimeConverter(VeloProperties properties) {
             return new StringToLocalDateTimeConverter(properties.getDateTimeFormat().getDateTime());
         }
 
         @Bean
         @ConditionalOnMissingBean
-        @ConditionalOnProperty(prefix = "velo.date-time-format.converters", name = "local-date-converter-enabled", havingValue = "true", matchIfMissing = true)
         public StringToLocalDateConverter stringToLocalDateConverter(VeloProperties properties) {
             return new StringToLocalDateConverter(properties.getDateTimeFormat().getDate());
         }
 
         @Bean
         @ConditionalOnMissingBean
-        @ConditionalOnProperty(prefix = "velo.date-time-format.converters", name = "local-time-converter-enabled", havingValue = "true", matchIfMissing = true)
         public StringToLocalTimeConverter stringToLocalTimeConverter(VeloProperties properties) {
             return new StringToLocalTimeConverter(properties.getDateTimeFormat().getTime());
         }

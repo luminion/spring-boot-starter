@@ -13,8 +13,8 @@ class RedisCacheTimeMapProviderTest {
     @Test
     void shouldOverrideTtlForNamedCaches() {
         RedisCacheTimeMapProvider provider = new RedisCacheTimeMapProvider(Map.of(
-                "shortLived", 5,
-                "longLived", 60
+                "shortLived", Duration.ofSeconds(5),
+                "longLived", Duration.ofMinutes(1)
         ));
         RedisCacheConfiguration baseConfiguration = RedisCacheConfiguration.defaultCacheConfig()
                 .entryTtl(Duration.ofSeconds(30));

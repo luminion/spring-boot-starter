@@ -32,7 +32,7 @@ class VeloCacheAutoConfigurationTests {
                 .withPropertyValues(
                         "velo.cache.key-prefix=app",
                         "velo.cache.key-separator=:",
-                        "velo.cache.default-ttl-seconds=42"
+                        "velo.cache.default-ttl=42s"
                 )
                 .run(context -> {
                     assertThat(context.getBean(CacheManager.class)).isInstanceOf(RedisCacheManager.class);

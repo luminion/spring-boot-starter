@@ -27,9 +27,8 @@ public class VeloIdempotentAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean(IdempotentAspect.class)
     @ConditionalOnBean({Fingerprinter.class, IdempotentHandler.class})
-    @ConditionalOnProperty(prefix = "velo.idempotent", name = "aspect-enabled", havingValue = "true", matchIfMissing = true)
     public IdempotentAspect idempotentAspect(VeloProperties properties, Fingerprinter fingerprinter,
             IdempotentHandler idempotentHandler) {
-        return new IdempotentAspect(properties.getIdempotentPrefix(), fingerprinter, idempotentHandler);
+        return new IdempotentAspect(properties.getIdempotent().getKeyPrefix(), fingerprinter, idempotentHandler);
     }
 }
