@@ -4,9 +4,6 @@ import io.github.luminion.velo.converter.datetime.StringToJavaUtilDateConverter;
 import io.github.luminion.velo.converter.datetime.StringToLocalDateConverter;
 import io.github.luminion.velo.converter.datetime.StringToLocalDateTimeConverter;
 import io.github.luminion.velo.converter.datetime.StringToLocalTimeConverter;
-import io.github.luminion.velo.converter.datetime.StringToSqlDateConverter;
-import io.github.luminion.velo.converter.datetime.StringToSqlTimeConverter;
-import io.github.luminion.velo.converter.datetime.StringToSqlTimestampConverter;
 import io.github.luminion.velo.core.VeloProperties;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -52,27 +49,6 @@ public class VeloDateTimeFormatAutoConfiguration {
         @ConditionalOnProperty(prefix = "velo.date-time-format.converters", name = "local-time-converter-enabled", havingValue = "true", matchIfMissing = true)
         public StringToLocalTimeConverter stringToLocalTimeConverter(VeloProperties properties) {
             return new StringToLocalTimeConverter(properties.getDateTimeFormat().getTime());
-        }
-
-        @Bean
-        @ConditionalOnMissingBean
-        @ConditionalOnProperty(prefix = "velo.date-time-format.converters", name = "sql-date-converter-enabled", havingValue = "true", matchIfMissing = true)
-        public StringToSqlDateConverter stringToSqlDateConverter(VeloProperties properties) {
-            return new StringToSqlDateConverter(properties.getDateTimeFormat().getDate());
-        }
-
-        @Bean
-        @ConditionalOnMissingBean
-        @ConditionalOnProperty(prefix = "velo.date-time-format.converters", name = "sql-time-converter-enabled", havingValue = "true", matchIfMissing = true)
-        public StringToSqlTimeConverter stringToSqlTimeConverter(VeloProperties properties) {
-            return new StringToSqlTimeConverter(properties.getDateTimeFormat().getTime());
-        }
-
-        @Bean
-        @ConditionalOnMissingBean
-        @ConditionalOnProperty(prefix = "velo.date-time-format.converters", name = "sql-timestamp-converter-enabled", havingValue = "true", matchIfMissing = true)
-        public StringToSqlTimestampConverter stringToSqlTimestampConverter(VeloProperties properties) {
-            return new StringToSqlTimestampConverter(properties.getDateTimeFormat().getDateTime());
         }
     }
 }

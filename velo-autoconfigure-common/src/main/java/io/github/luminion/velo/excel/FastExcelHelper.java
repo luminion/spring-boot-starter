@@ -15,8 +15,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.sql.Time;
-import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -91,15 +89,6 @@ public abstract class FastExcelHelper {
         }
         if (properties.isDateConverterEnabled()) {
             converters.add(new DateConverter(dateTimeFormat, zoneId));
-        }
-        if (properties.isSqlTimestampConverterEnabled()) {
-            converters.add(new SqlTimestampConverter(dateTimeFormat));
-        }
-        if (properties.isSqlDateConverterEnabled()) {
-            converters.add(new SqlDateConverter(dateFormat));
-        }
-        if (properties.isSqlTimeConverterEnabled()) {
-            converters.add(new SqlTimeConverter(timeFormat));
         }
         if (properties.isLocalDateTimeConverterEnabled()) {
             converters.add(new LocalDateTimeConverter(dateTimeFormat));
@@ -465,116 +454,6 @@ public abstract class FastExcelHelper {
             return new WriteCellData<>(value.format(formatter));
         }
     }
-
-
-    public static class SqlTimestampConverter implements Converter<Timestamp> {
-        private final DateTimeFormatter formatter;
-
-        public SqlTimestampConverter(String pattern) {
-            formatter = DateTimeFormatter.ofPattern(pattern);
-        }
-
-        @Override
-        public Class<Timestamp> supportJavaTypeKey() {
-            return Timestamp.class;
-        }
-
-        @Override
-        public CellDataTypeEnum supportExcelTypeKey() {
-            return CellDataTypeEnum.STRING;
-        }
-
-        @Override
-        public Timestamp convertToJavaData(ReadCellData cellData, ExcelContentProperty contentProperty, GlobalConfiguration globalConfiguration) {
-            String cellValue = trimToNull(cellData.getStringValue());
-            if (cellValue == null) {
-                return null;
-            }
-            LocalDateTime ldt = LocalDateTime.parse(cellValue, formatter);
-            return Timestamp.valueOf(ldt);
-        }
-
-        @Override
-        public WriteCellData<String> convertToExcelData(Timestamp value, ExcelContentProperty contentProperty, GlobalConfiguration globalConfiguration) {
-            if (value == null) {
-                return new WriteCellData<>("");
-            }
-            return new WriteCellData<>(value.toLocalDateTime().format(formatter));
-        }
-    }
-
-
-    public static class SqlDateConverter implements Converter<java.sql.Date> {
-        private final DateTimeFormatter formatter;
-
-        public SqlDateConverter(String pattern) {
-            formatter = DateTimeFormatter.ofPattern(pattern);
-        }
-
-        @Override
-        public Class<java.sql.Date> supportJavaTypeKey() {
-            return java.sql.Date.class;
-        }
-
-        @Override
-        public CellDataTypeEnum supportExcelTypeKey() {
-            return CellDataTypeEnum.STRING;
-        }
-
-        @Override
-        public java.sql.Date convertToJavaData(ReadCellData cellData, ExcelContentProperty contentProperty, GlobalConfiguration globalConfiguration) {
-            String cellValue = trimToNull(cellData.getStringValue());
-            if (cellValue == null) {
-                return null;
-            }
-            return java.sql.Date.valueOf(LocalDate.parse(cellValue, formatter));
-        }
-
-        @Override
-        public WriteCellData<String> convertToExcelData(java.sql.Date value, ExcelContentProperty contentProperty, GlobalConfiguration globalConfiguration) {
-            if (value == null) {
-                return new WriteCellData<>("");
-            }
-            return new WriteCellData<>(value.toLocalDate().format(formatter));
-        }
-    }
-
-    public static class SqlTimeConverter implements Converter<Time> {
-        private final DateTimeFormatter formatter;
-
-        public SqlTimeConverter(String pattern) {
-            formatter = DateTimeFormatter.ofPattern(pattern);
-        }
-
-        @Override
-        public Class<Time> supportJavaTypeKey() {
-            return Time.class;
-        }
-
-        @Override
-        public CellDataTypeEnum supportExcelTypeKey() {
-            return CellDataTypeEnum.STRING;
-        }
-
-        @Override
-        public Time convertToJavaData(ReadCellData cellData, ExcelContentProperty contentProperty, GlobalConfiguration globalConfiguration) {
-            String cellValue = trimToNull(cellData.getStringValue());
-            if (cellValue == null) {
-                return null;
-            }
-            return Time.valueOf(LocalTime.parse(cellValue, formatter));
-        }
-
-        @Override
-        public WriteCellData<String> convertToExcelData(Time value, ExcelContentProperty contentProperty, GlobalConfiguration globalConfiguration) {
-            if (value == null) {
-                return new WriteCellData<>("");
-            }
-            return new WriteCellData<>(value.toLocalTime().format(formatter));
-        }
-    }
-
-
     private static String trimToNull(String value) {
         if (value == null) {
             return null;

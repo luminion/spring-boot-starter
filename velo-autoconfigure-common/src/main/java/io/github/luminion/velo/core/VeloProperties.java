@@ -321,21 +321,6 @@ public class VeloProperties {
             private boolean dateConverterEnabled = true;
 
             /**
-             * Enables the java.sql.Timestamp Excel converter.
-             */
-            private boolean sqlTimestampConverterEnabled = true;
-
-            /**
-             * Enables the java.sql.Date Excel converter.
-             */
-            private boolean sqlDateConverterEnabled = true;
-
-            /**
-             * Enables the java.sql.Time Excel converter.
-             */
-            private boolean sqlTimeConverterEnabled = true;
-
-            /**
              * Enables the LocalDateTime Excel converter.
              */
             private boolean localDateTimeConverterEnabled = true;
@@ -606,20 +591,6 @@ public class VeloProperties {
              */
             private boolean localTimeConverterEnabled = true;
 
-            /**
-             * Enables the java.sql.Date converter.
-             */
-            private boolean sqlDateConverterEnabled = true;
-
-            /**
-             * Enables the java.sql.Time converter.
-             */
-            private boolean sqlTimeConverterEnabled = true;
-
-            /**
-             * Enables the java.sql.Timestamp converter.
-             */
-            private boolean sqlTimestampConverterEnabled = true;
         }
     }
 
