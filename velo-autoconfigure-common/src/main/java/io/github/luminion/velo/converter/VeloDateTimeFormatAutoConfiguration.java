@@ -18,7 +18,7 @@ import org.springframework.context.annotation.Configuration;
 public class VeloDateTimeFormatAutoConfiguration {
 
     @Configuration(proxyBeanMethods = false)
-    @ConditionalOnProperty(prefix = "velo.spring-converter", name = "date-time-enabled", havingValue = "true", matchIfMissing = true)
+    @ConditionalOnProperty(prefix = "velo.spring-converter", name = "date-time-enabled", havingValue = "true")
     static class DateTimeConverterConfiguration {
 
         @Bean

@@ -4,6 +4,8 @@ import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.xss.converter.XssStringConverter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.format.FormatterRegistry;
 import org.springframework.format.datetime.DateFormatter;
 import org.springframework.format.datetime.DateFormatterRegistrar;
@@ -18,6 +20,7 @@ import java.util.TimeZone;
  * Web MVC 增强配置。
  */
 @RequiredArgsConstructor
+@Order(Ordered.LOWEST_PRECEDENCE)
 public class VeloWebMvcConfigurer implements WebMvcConfigurer {
 
     private final ObjectProvider<XssStringConverter> xssStringConverterProvider;
