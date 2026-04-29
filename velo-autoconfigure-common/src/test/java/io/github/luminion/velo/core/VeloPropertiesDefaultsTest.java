@@ -18,7 +18,7 @@ class VeloPropertiesDefaultsTest {
         VeloProperties properties = new VeloProperties();
 
         assertThat(properties.getLog().getLevel()).isEqualTo(LogLevel.INFO);
-        assertThat(properties.getDateTimeFormat().getConverters().isEnabled()).isTrue();
+        assertThat(properties.getSpringConverter().isDateTimeEnabled()).isTrue();
         assertThat(properties.getExcel().getConverters().isEnabled()).isFalse();
         assertThat(properties.getExcel().isEnabled()).isTrue();
         assertThat(properties.getJackson().isUnsafeIntegerAsString()).isTrue();

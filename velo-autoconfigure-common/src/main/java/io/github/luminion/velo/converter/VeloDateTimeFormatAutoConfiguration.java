@@ -15,11 +15,10 @@ import org.springframework.context.annotation.Configuration;
  * 日期时间转换自动配置实现。
  */
 @AutoConfiguration
-@ConditionalOnProperty(prefix = "velo.date-time-format", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloDateTimeFormatAutoConfiguration {
 
     @Configuration(proxyBeanMethods = false)
-    @ConditionalOnProperty(prefix = "velo.date-time-format.converters", name = "enabled", havingValue = "true")
+    @ConditionalOnProperty(prefix = "velo.spring-converter", name = "date-time-enabled", havingValue = "true", matchIfMissing = true)
     static class DateTimeConverterConfiguration {
 
         @Bean

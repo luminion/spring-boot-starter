@@ -25,6 +25,11 @@ public class VeloProperties {
     private DateTimeFormatProperties dateTimeFormat = new DateTimeFormatProperties();
 
     /**
+     * Spring converter settings.
+     */
+    private SpringConverterProperties springConverter = new SpringConverterProperties();
+
+    /**
      * Idempotent feature settings.
      */
     private IdempotentProperties idempotent = new IdempotentProperties();
@@ -353,17 +358,6 @@ public class VeloProperties {
 
     @Data
     public static class DateTimeFormatProperties {
-
-        /**
-         * Enables date and time formatter auto-configuration.
-         */
-        private boolean enabled = true;
-
-        /**
-         * Enables automatic registration of web date-time converters.
-         */
-        private ConverterProperties converters = new ConverterProperties();
-
         /**
          * Default time pattern.
          */
@@ -384,14 +378,15 @@ public class VeloProperties {
          */
         private String timeZone = "GMT+8";
 
-        @Data
-        public static class ConverterProperties {
+    }
 
-            /**
-             * Enables automatic registration of built-in date-time converters.
-             */
-            private boolean enabled = true;
-        }
+    @Data
+    public static class SpringConverterProperties {
+
+        /**
+         * Enables automatic registration of built-in date-time converters.
+         */
+        private boolean dateTimeEnabled = true;
     }
 
     @Data

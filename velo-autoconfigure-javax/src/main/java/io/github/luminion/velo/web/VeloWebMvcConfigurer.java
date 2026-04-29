@@ -33,7 +33,7 @@ public class VeloWebMvcConfigurer implements WebMvcConfigurer {
             }
         }
 
-        if (properties.getDateTimeFormat().isEnabled()) {
+        if (properties.getSpringConverter().isDateTimeEnabled()) {
             String dateTimePattern = properties.getDateTimeFormat().getDateTime();
             String datePattern = properties.getDateTimeFormat().getDate();
             String timePattern = properties.getDateTimeFormat().getTime();

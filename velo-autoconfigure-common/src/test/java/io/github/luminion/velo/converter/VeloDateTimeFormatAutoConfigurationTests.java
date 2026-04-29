@@ -20,18 +20,28 @@ class VeloDateTimeFormatAutoConfigurationTests {
     @Test
     void shouldNotRegisterDateTimeConvertersByDefault() {
         contextRunner.run(context -> {
-            assertThat(context).doesNotHaveBean(StringToLocalDateConverter.class);
-            assertThat(context).doesNotHaveBean(StringToLocalDateTimeConverter.class);
+            assertThat(context).hasSingleBean(StringToLocalDateConverter.class);
+            assertThat(context).hasSingleBean(StringToLocalDateTimeConverter.class);
         });
     }
 
     @Test
     void shouldRegisterDateTimeConvertersWhenEnabled() {
         contextRunner
-                .withPropertyValues("velo.date-time-format.converters.enabled=true")
+                .withPropertyValues("velo.spring-converter.date-time-enabled=true")
                 .run(context -> {
                     assertThat(context).hasSingleBean(StringToLocalDateConverter.class);
                     assertThat(context).hasSingleBean(StringToLocalDateTimeConverter.class);
+                });
+    }
+
+    @Test
+    void shouldSkipDateTimeConvertersWhenDisabled() {
+        contextRunner
+                .withPropertyValues("velo.spring-converter.date-time-enabled=false")
+                .run(context -> {
+                    assertThat(context).doesNotHaveBean(StringToLocalDateConverter.class);
+                    assertThat(context).doesNotHaveBean(StringToLocalDateTimeConverter.class);
                 });
     }
 }

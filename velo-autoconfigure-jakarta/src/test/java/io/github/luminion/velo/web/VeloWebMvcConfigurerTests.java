@@ -25,7 +25,7 @@ class VeloWebMvcConfigurerTests {
     @Test
     void shouldRegisterCustomDateFormattersWhenEnabled() {
         VeloProperties properties = new VeloProperties();
-        properties.getDateTimeFormat().setEnabled(true);
+        properties.getSpringConverter().setDateTimeEnabled(true);
         properties.getDateTimeFormat().setDate("yyyy|MM|dd");
 
         DefaultFormattingConversionService conversionService = new DefaultFormattingConversionService();
@@ -38,7 +38,7 @@ class VeloWebMvcConfigurerTests {
     @Test
     void shouldSkipDateFormattersWhenDateTimeFormatDisabled() {
         VeloProperties properties = new VeloProperties();
-        properties.getDateTimeFormat().setEnabled(false);
+        properties.getSpringConverter().setDateTimeEnabled(false);
         properties.getDateTimeFormat().setDate("yyyy|MM|dd");
 
         DefaultFormattingConversionService conversionService = new DefaultFormattingConversionService();
@@ -52,7 +52,7 @@ class VeloWebMvcConfigurerTests {
     @Test
     void shouldApplyDatePatternToJavaUtilDateFormatter() {
         VeloProperties properties = new VeloProperties();
-        properties.getDateTimeFormat().setEnabled(true);
+        properties.getSpringConverter().setDateTimeEnabled(true);
         properties.getDateTimeFormat().setDate("yyyy|MM|dd");
         properties.getDateTimeFormat().setTimeZone("UTC");
 

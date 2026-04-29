@@ -42,7 +42,8 @@ class VeloConfigurationMetadataTest {
             assertTrue(metadata.contains("velo.excel.converters.enabled"));
             assertTrue(metadata.contains("velo.excel.converters.boolean-enabled"));
             assertFalse(metadata.contains("velo.excel.converters.boolean-converter-enabled"));
-            assertTrue(metadata.contains("velo.date-time-format.converters.enabled"));
+            assertTrue(metadata.contains("velo.spring-converter.date-time-enabled"));
+            assertFalse(metadata.contains("velo.date-time-format.converters.enabled"));
             assertFalse(metadata.contains("velo.date-time-format.converters.java-util-date-converter-enabled"));
             assertFalse(metadata.contains("velo.date-time-format.converters.local-date-time-converter-enabled"));
             assertFalse(metadata.contains("velo.date-time-format.converters.local-date-converter-enabled"));
@@ -89,7 +90,7 @@ class VeloConfigurationMetadataTest {
             assertFalse(metadata.contains("velo.mybatis-plus.pagination-inner-interceptor-enabled"));
             assertFalse(metadata.contains("velo.mybatis-plus.optimistic-locker-inner-interceptor-enabled"));
             assertFalse(metadata.contains("velo.mybatis-plus.block-attack-inner-interceptor-enabled"));
-            assertTrue(metadata.contains("velo.date-time-format.enabled"));
+            assertFalse(metadata.contains("velo.date-time-format.enabled"));
             assertTrue(metadata.contains("velo.web.enabled"));
             assertFalse(metadata.contains("velo.web.mvc-configurer-enabled"));
             assertFalse(metadata.contains("velo.web.date-time-formatter-registration-enabled"));
