@@ -145,30 +145,30 @@ velo:
 
   cache:
     enabled: true
-    key-prefix: ""
-    key-separator: ":"
+    prefix: ""
+    separator: ":"
     default-ttl: 50m
-    ttl-map:
+    ttl:
       users: 10m
 
   jackson:
     enabled: true
-    write-unsafe-integer-as-string: true
-    write-big-decimal-as-string: true
-    write-floating-point-as-string: false
-    enum-description-enabled: false
+    unsafe-integer-as-string: true
+    big-decimal-as-string: true
+    floating-as-string: false
+    enum-desc-enabled: false
 
   redis:
     enabled: true
 
   idempotent:
-    key-prefix: "idempotent:"
+    prefix: "idempotent:"
 
   rate-limit:
-    key-prefix: "rateLimit:"
+    prefix: "rateLimit:"
 
   lock:
-    key-prefix: "lock:"
+    prefix: "lock:"
 
   log:
     level: INFO
@@ -178,8 +178,7 @@ velo:
 
   web:
     allow-cors: false
-    request-logging:
-      enabled: false
+    request-logging-enabled: false
     xss:
       strategy: RELAXED
 ```

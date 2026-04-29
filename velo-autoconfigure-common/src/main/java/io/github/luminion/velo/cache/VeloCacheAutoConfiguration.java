@@ -46,11 +46,11 @@ import org.springframework.util.StringUtils;
 public class VeloCacheAutoConfiguration {
 
     private static String buildCacheKeyPrefix(VeloProperties.CacheProperties cacheProperties, String cacheName) {
-        String separator = StringUtils.hasText(cacheProperties.getKeySeparator())
-                ? cacheProperties.getKeySeparator()
+        String separator = StringUtils.hasText(cacheProperties.getSeparator())
+                ? cacheProperties.getSeparator()
                 : ":";
-        if (StringUtils.hasText(cacheProperties.getKeyPrefix())) {
-            return cacheProperties.getKeyPrefix() + separator + cacheName + separator;
+        if (StringUtils.hasText(cacheProperties.getPrefix())) {
+            return cacheProperties.getPrefix() + separator + cacheName + separator;
         }
         return cacheName + separator;
     }
@@ -64,7 +64,7 @@ public class VeloCacheAutoConfiguration {
         @Bean
         @ConditionalOnMissingBean(RedisCacheTimeMapProvider.class)
         public RedisCacheTimeMapProvider redisCacheTimeMapProvider(VeloProperties properties) {
-            return new RedisCacheTimeMapProvider(properties.getCache().getTtlMap());
+            return new RedisCacheTimeMapProvider(properties.getCache().getTtl());
         }
 
         @Bean

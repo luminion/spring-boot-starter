@@ -74,29 +74,28 @@ public class VeloJacksonAutoConfiguration {
                 SimpleDateFormat simpleDateFormat = new SimpleDateFormat(dateTimeFormat);
                 simpleDateFormat.setTimeZone(timeZone);
                 VeloProperties.JacksonProperties jacksonProperties = properties.getJackson();
-                VeloProperties.JacksonProperties.DateTimeProperties jacksonDateTime = jacksonProperties.getDateTime();
 
                 // 先收口基础时间与容错策略，再让业务自定义器继续叠加更细粒度的能力。
                 builder
                         .failOnEmptyBeans(false)
                         .failOnUnknownProperties(false);
 
-                if (jacksonDateTime.isEnabled()) {
+                if (jacksonProperties.isDateTimeEnabled()) {
                     builder.featuresToDisable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
                     builder.dateFormat(simpleDateFormat)
                             .timeZone(timeZone);
                 }
 
-                if (jacksonProperties.isWriteUnsafeIntegerAsString()) {
+                if (jacksonProperties.isUnsafeIntegerAsString()) {
                     UnsafeLongToStringSerializer longSerializer = new UnsafeLongToStringSerializer();
                     builder.serializerByType(Long.class, longSerializer)
                             .serializerByType(Long.TYPE, longSerializer)
                             .serializerByType(BigInteger.class, new UnsafeBigIntegerToStringSerializer());
                 }
-                if (jacksonProperties.isWriteBigDecimalAsString()) {
+                if (jacksonProperties.isBigDecimalAsString()) {
                     builder.serializerByType(BigDecimal.class, ToStringSerializer.instance);
                 }
-                if (jacksonProperties.isWriteFloatingPointAsString()) {
+                if (jacksonProperties.isFloatingAsString()) {
                     builder.serializerByType(Double.class, ToStringSerializer.instance)
                             .serializerByType(Double.TYPE, ToStringSerializer.instance)
                             .serializerByType(Float.class, ToStringSerializer.instance)
@@ -107,7 +106,7 @@ public class VeloJacksonAutoConfiguration {
                 DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern(dateFormat);
                 DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern(timeFormat);
 
-                if (jacksonDateTime.isEnabled()) {
+                if (jacksonProperties.isDateTimeEnabled()) {
                     builder.deserializerByType(LocalDateTime.class,
                                     new LocalDateTimeDeserializer(dateTimeFormatter))
                             .deserializerByType(LocalDate.class,
@@ -116,13 +115,13 @@ public class VeloJacksonAutoConfiguration {
                                     new LocalTimeDeserializer(timeFormatter));
                 }
 
-                if (jacksonDateTime.isEnabled()) {
+                if (jacksonProperties.isDateTimeEnabled()) {
                     builder.serializers(new LocalDateTimeSerializer(dateTimeFormatter))
                             .serializers(new LocalDateSerializer(dateFormatter))
                             .serializers(new LocalTimeSerializer(timeFormatter));
                 }
 
-                if (jacksonProperties.getStringConverters().isEnabled()) {
+                if (jacksonProperties.isStringConverterEnabled()) {
                     ObjectProvider<JsonProcessorProvider> jsonProcessorProviderObjectProvider = beanFactory
                             .getBeanProvider(JsonProcessorProvider.class);
                     jsonProcessorProviderObjectProvider.ifAvailable(bean -> {
@@ -136,7 +135,7 @@ public class VeloJacksonAutoConfiguration {
                     });
                 }
 
-                if (jacksonProperties.isEnumDescriptionEnabled()) {
+                if (jacksonProperties.isEnumDescEnabled()) {
                     ObjectProvider<EnumFieldConvention> enumFieldConventionObjectProvider = beanFactory
                             .getBeanProvider(EnumFieldConvention.class);
                     enumFieldConventionObjectProvider.ifAvailable(bean -> {

@@ -111,7 +111,7 @@ public class VeloProperties {
         /**
          * Prefix used by idempotent related keys.
          */
-        private String keyPrefix = "idempotent:";
+        private String prefix = "idempotent:";
     }
 
     @Data
@@ -130,7 +130,7 @@ public class VeloProperties {
         /**
          * Prefix used by rate-limit related keys.
          */
-        private String keyPrefix = "rateLimit:";
+        private String prefix = "rateLimit:";
     }
 
     @Data
@@ -149,7 +149,7 @@ public class VeloProperties {
         /**
          * Prefix used by lock related keys.
          */
-        private String keyPrefix = "lock:";
+        private String prefix = "lock:";
     }
 
     @Data
@@ -172,22 +172,22 @@ public class VeloProperties {
         /**
          * Static prefix added to cache keys.
          */
-        private String keyPrefix = "";
+        private String prefix = "";
 
         /**
          * Separator used when building cache key prefixes.
          */
-        private String keySeparator = ":";
+        private String separator = ":";
 
         /**
          * Default cache TTL.
          */
-        private Duration defaultTtl = Duration.ofSeconds(3000);
+        private Duration defaultTtl = Duration.ofMinutes(5);
 
         /**
          * Per-cache TTL overrides.
          */
-        private Map<String, Duration> ttlMap = new LinkedHashMap<>();
+        private Map<String, Duration> ttl = new LinkedHashMap<>();
 
     }
 
@@ -215,52 +215,52 @@ public class VeloProperties {
             /**
              * Enables the Boolean Excel converter.
              */
-            private boolean booleanConverterEnabled = true;
+            private boolean booleanEnabled = true;
 
             /**
              * Enables the Long Excel converter.
              */
-            private boolean longConverterEnabled = true;
+            private boolean longEnabled = true;
 
             /**
              * Enables the Float Excel converter.
              */
-            private boolean floatConverterEnabled = true;
+            private boolean floatEnabled = true;
 
             /**
              * Enables the Double Excel converter.
              */
-            private boolean doubleConverterEnabled = true;
+            private boolean doubleEnabled = true;
 
             /**
              * Enables the BigInteger Excel converter.
              */
-            private boolean bigIntegerConverterEnabled = true;
+            private boolean bigIntegerEnabled = true;
 
             /**
              * Enables the BigDecimal Excel converter.
              */
-            private boolean bigDecimalConverterEnabled = true;
+            private boolean bigDecimalEnabled = true;
 
             /**
              * Enables the java.util.Date Excel converter.
              */
-            private boolean dateConverterEnabled = true;
+            private boolean dateEnabled = true;
 
             /**
              * Enables the LocalDateTime Excel converter.
              */
-            private boolean localDateTimeConverterEnabled = true;
+            private boolean localDateTimeEnabled = true;
 
             /**
              * Enables the LocalDate Excel converter.
              */
-            private boolean localDateConverterEnabled = true;
+            private boolean localDateEnabled = true;
 
             /**
              * Enables the LocalTime Excel converter.
              */
-            private boolean localTimeConverterEnabled = true;
+            private boolean localTimeEnabled = true;
         }
     }
 
@@ -273,52 +273,34 @@ public class VeloProperties {
         private boolean enabled = true;
 
         /**
-         * Date-time conversion settings for Jackson customization.
+         * Enables date-time related Jackson customization.
          */
-        private DateTimeProperties dateTime = new DateTimeProperties();
+        private boolean dateTimeEnabled = true;
 
         /**
          * Serializes integer values as strings only when they are outside the JavaScript safe integer range.
          */
-        private boolean writeUnsafeIntegerAsString = true;
+        private boolean unsafeIntegerAsString = true;
 
         /**
          * Serializes BigDecimal values as strings.
          */
-        private boolean writeBigDecimalAsString = true;
+        private boolean bigDecimalAsString = true;
 
         /**
          * Serializes float and double values as strings.
          */
-        private boolean writeFloatingPointAsString = false;
+        private boolean floatingAsString = false;
 
         /**
          * Adds enum description fields during serialization.
          */
-        private boolean enumDescriptionEnabled = false;
+        private boolean enumDescEnabled = true;
 
         /**
-         * Controls automatic registration of custom String serializer and deserializer hooks.
+         * Enables automatic registration of starter managed String converters.
          */
-        private StringConverterProperties stringConverters = new StringConverterProperties();
-
-        @Data
-        public static class DateTimeProperties {
-
-            /**
-             * Enables date-time related Jackson customization.
-             */
-            private boolean enabled = true;
-        }
-
-        @Data
-        public static class StringConverterProperties {
-
-            /**
-             * Enables automatic registration of starter managed String converters.
-             */
-            private boolean enabled = false;
-        }
+        private boolean stringConverterEnabled = true;
     }
 
     @Data
@@ -328,26 +310,6 @@ public class VeloProperties {
          * Enables log auto-configuration.
          */
         private boolean enabled = true;
-
-        /**
-         * Enables the method argument logging aspect.
-         */
-        private boolean argsAspectEnabled = true;
-
-        /**
-         * Enables the method result logging aspect.
-         */
-        private boolean resultAspectEnabled = true;
-
-        /**
-         * Enables the error logging aspect.
-         */
-        private boolean errorAspectEnabled = true;
-
-        /**
-         * Enables the slow-call logging aspect.
-         */
-        private boolean slowAspectEnabled = true;
 
         /**
          * Default log level used by starter managed log components.
@@ -369,23 +331,14 @@ public class VeloProperties {
         private boolean allowCors;
 
         /**
-         * Controller request logging settings.
+         * Enables the controller request logging aspect.
          */
-        private RequestLoggingProperties requestLogging = new RequestLoggingProperties();
+        private boolean requestLoggingEnabled = true;
 
         /**
          * Web XSS settings.
          */
         private XssProperties xss = new XssProperties();
-    }
-
-    @Data
-    public static class RequestLoggingProperties {
-
-        /**
-         * Enables the controller request logging aspect.
-         */
-        private boolean enabled = false;
     }
 
     @Data
@@ -441,7 +394,7 @@ public class VeloProperties {
             /**
              * Enables automatic registration of built-in date-time converters.
              */
-            private boolean enabled = false;
+            private boolean enabled = true;
         }
     }
 
@@ -456,16 +409,16 @@ public class VeloProperties {
         /**
          * Enables the pagination inner interceptor bean.
          */
-        private boolean paginationInnerInterceptorEnabled = true;
+        private boolean paginationEnabled = true;
 
         /**
          * Enables the optimistic locker inner interceptor bean.
          */
-        private boolean optimisticLockerInnerInterceptorEnabled = true;
+        private boolean optimisticLockerEnabled = true;
 
         /**
          * Enables the block attack inner interceptor bean.
          */
-        private boolean blockAttackInnerInterceptorEnabled = true;
+        private boolean blockAttackEnabled = true;
     }
 }

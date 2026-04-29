@@ -38,7 +38,6 @@ public class VeloLogAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean(ArgsLogAspect.class)
     @ConditionalOnBean(InvokeArgsWriter.class)
-    @ConditionalOnProperty(prefix = "velo.log", name = "args-aspect-enabled", havingValue = "true", matchIfMissing = true)
     public ArgsLogAspect argsLogAspect(ObjectProvider<InvokeArgsWriter> argsWriters) {
         return new ArgsLogAspect(resolveWriter(argsWriters, InvokeArgsWriter.class));
     }
@@ -46,7 +45,6 @@ public class VeloLogAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean(ResultLogAspect.class)
     @ConditionalOnBean(InvokeResultWriter.class)
-    @ConditionalOnProperty(prefix = "velo.log", name = "result-aspect-enabled", havingValue = "true", matchIfMissing = true)
     public ResultLogAspect resultLogAspect(ObjectProvider<InvokeResultWriter> resultWriters) {
         return new ResultLogAspect(resolveWriter(resultWriters, InvokeResultWriter.class));
     }
@@ -54,7 +52,6 @@ public class VeloLogAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean(ErrorLogAspect.class)
     @ConditionalOnBean(ErrorLogWriter.class)
-    @ConditionalOnProperty(prefix = "velo.log", name = "error-aspect-enabled", havingValue = "true", matchIfMissing = true)
     public ErrorLogAspect errorLogAspect(ObjectProvider<ErrorLogWriter> errorLogWriters) {
         return new ErrorLogAspect(resolveWriter(errorLogWriters, ErrorLogWriter.class));
     }
@@ -62,7 +59,6 @@ public class VeloLogAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean(SlowLogAspect.class)
     @ConditionalOnBean(SlowLogWriter.class)
-    @ConditionalOnProperty(prefix = "velo.log", name = "slow-aspect-enabled", havingValue = "true", matchIfMissing = true)
     public SlowLogAspect slowLogAspect(ObjectProvider<SlowLogWriter> slowLogWriters) {
         return new SlowLogAspect(resolveWriter(slowLogWriters, SlowLogWriter.class));
     }

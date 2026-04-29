@@ -52,7 +52,7 @@ class VeloJacksonAutoConfigurationTests {
     @Test
     void shouldAllowDisablingBigDecimalStringSerialization() throws Exception {
         VeloProperties properties = new VeloProperties();
-        properties.getJackson().setWriteBigDecimalAsString(false);
+        properties.getJackson().setBigDecimalAsString(false);
 
         contextRunner
                 .withBean(VeloProperties.class, () -> properties)
@@ -74,7 +74,7 @@ class VeloJacksonAutoConfigurationTests {
     @Test
     void shouldSerializeFloatingPointValuesAsStringWhenConfigured() throws Exception {
         VeloProperties properties = new VeloProperties();
-        properties.getJackson().setWriteFloatingPointAsString(true);
+        properties.getJackson().setFloatingAsString(true);
 
         contextRunner
                 .withBean(VeloProperties.class, () -> properties)

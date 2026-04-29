@@ -37,7 +37,7 @@ public class VeloMybatisPlusAutoConfiguration {
     static class PaginationInnerInterceptorConfiguration {
         @Bean
         @ConditionalOnMissingBean(type = "com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor")
-        @ConditionalOnProperty(prefix = "velo.mybatis-plus", name = "pagination-inner-interceptor-enabled", havingValue = "true", matchIfMissing = true)
+        @ConditionalOnProperty(prefix = "velo.mybatis-plus", name = "pagination-enabled", havingValue = "true", matchIfMissing = true)
         @SneakyThrows
         public InnerInterceptor paginationInnerInterceptor() {
             Class<?> clazz = Class.forName("com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor");
@@ -51,7 +51,7 @@ public class VeloMybatisPlusAutoConfiguration {
     static class OptimisticLockerInnerInterceptorConfiguration {
         @Bean
         @ConditionalOnMissingBean(type = "com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor")
-        @ConditionalOnProperty(prefix = "velo.mybatis-plus", name = "optimistic-locker-inner-interceptor-enabled", havingValue = "true", matchIfMissing = true)
+        @ConditionalOnProperty(prefix = "velo.mybatis-plus", name = "optimistic-locker-enabled", havingValue = "true", matchIfMissing = true)
         @SneakyThrows
         public InnerInterceptor optimisticLockerInnerInterceptor() {
             Class<?> clazz = Class.forName("com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor");
@@ -65,7 +65,7 @@ public class VeloMybatisPlusAutoConfiguration {
     static class BlockAttackInnerInterceptorConfiguration {
         @Bean
         @ConditionalOnMissingBean(type = "com.baomidou.mybatisplus.extension.plugins.inner.BlockAttackInnerInterceptor")
-        @ConditionalOnProperty(prefix = "velo.mybatis-plus", name = "block-attack-inner-interceptor-enabled", havingValue = "true", matchIfMissing = true)
+        @ConditionalOnProperty(prefix = "velo.mybatis-plus", name = "block-attack-enabled", havingValue = "true", matchIfMissing = true)
         @SneakyThrows
         public InnerInterceptor blockAttackInnerInterceptor() {
             Class<?> clazz = Class.forName("com.baomidou.mybatisplus.extension.plugins.inner.BlockAttackInnerInterceptor");

@@ -40,7 +40,7 @@ public class VeloWebAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnClass(ControllerLogAspect.class)
-    @ConditionalOnProperty(prefix = "velo.web.request-logging", name = "enabled", havingValue = "true")
+    @ConditionalOnProperty(prefix = "velo.web", name = "request-logging-enabled", havingValue = "true")
     public ControllerLogAspect controllerLogAspect(VeloProperties properties, RuntimeJsonSerializer runtimeJsonSerializer) {
         return new ControllerLogAspect(properties, runtimeJsonSerializer);
     }

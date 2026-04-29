@@ -30,8 +30,8 @@ class VeloCacheAutoConfigurationTests {
     void shouldCreateRedisCacheConfigurationUsingConfiguredPrefixAndTtl() {
         contextRunner
                 .withPropertyValues(
-                        "velo.cache.key-prefix=app",
-                        "velo.cache.key-separator=:",
+                        "velo.cache.prefix=app",
+                        "velo.cache.separator=:",
                         "velo.cache.default-ttl=42s"
                 )
                 .run(context -> {

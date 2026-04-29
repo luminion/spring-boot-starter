@@ -48,7 +48,7 @@ class VeloWebAutoConfigurationTests {
     @Test
     void shouldCreateControllerLogAspectOnlyWhenRequestLoggingEnabled() {
         webContextRunner
-                .withPropertyValues("velo.web.request-logging.enabled=true")
+                .withPropertyValues("velo.web.request-logging-enabled=true")
                 .run(context -> {
                     assertThat(context).hasSingleBean(RuntimeJsonSerializer.class);
                     assertThat(context).hasSingleBean(ControllerLogAspect.class);

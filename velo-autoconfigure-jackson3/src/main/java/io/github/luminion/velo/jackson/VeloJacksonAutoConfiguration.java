@@ -59,11 +59,10 @@ public class VeloJacksonAutoConfiguration {
                 SimpleDateFormat simpleDateFormat = new SimpleDateFormat(dateTimeFormat);
                 simpleDateFormat.setTimeZone(timeZone);
                 VeloProperties.JacksonProperties jacksonProperties = properties.getJackson();
-                VeloProperties.JacksonProperties.DateTimeProperties jacksonDateTime = jacksonProperties.getDateTime();
 
                 builder.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
                 builder.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
-                if (jacksonDateTime.isEnabled()) {
+                if (jacksonProperties.isDateTimeEnabled()) {
                     builder.defaultDateFormat(simpleDateFormat);
                     builder.defaultTimeZone(timeZone);
                     builder.findAndAddModules();
@@ -74,27 +73,27 @@ public class VeloJacksonAutoConfiguration {
                 DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern(timeFormat);
 
                 SimpleModule module = new SimpleModule("velo-jackson3");
-                if (jacksonProperties.isWriteUnsafeIntegerAsString()) {
+                if (jacksonProperties.isUnsafeIntegerAsString()) {
                     UnsafeLongToStringSerializer longSerializer = new UnsafeLongToStringSerializer();
                     module.addSerializer(Long.class, longSerializer);
                     module.addSerializer(Long.TYPE, longSerializer);
                     module.addSerializer(BigInteger.class, new UnsafeBigIntegerToStringSerializer());
                 }
-                if (jacksonProperties.isWriteBigDecimalAsString()) {
+                if (jacksonProperties.isBigDecimalAsString()) {
                     module.addSerializer(BigDecimal.class, ToStringSerializer.instance);
                 }
-                if (jacksonProperties.isWriteFloatingPointAsString()) {
+                if (jacksonProperties.isFloatingAsString()) {
                     module.addSerializer(Double.class, ToStringSerializer.instance);
                     module.addSerializer(Double.TYPE, ToStringSerializer.instance);
                     module.addSerializer(Float.class, ToStringSerializer.instance);
                     module.addSerializer(Float.TYPE, ToStringSerializer.instance);
                 }
-                if (jacksonDateTime.isEnabled()) {
+                if (jacksonProperties.isDateTimeEnabled()) {
                     module.addSerializer(LocalDateTime.class, new LocalDateTimeSerializer(dateTimeFormatter));
                     module.addSerializer(LocalDate.class, new LocalDateSerializer(dateFormatter));
                     module.addSerializer(LocalTime.class, new LocalTimeSerializer(timeFormatter));
                 }
-                if (jacksonDateTime.isEnabled()) {
+                if (jacksonProperties.isDateTimeEnabled()) {
                     module.addDeserializer(LocalDateTime.class, new LocalDateTimeDeserializer(dateTimeFormatter));
                     module.addDeserializer(LocalDate.class, new LocalDateDeserializer(dateFormatter));
                     module.addDeserializer(LocalTime.class, new LocalTimeDeserializer(timeFormatter));

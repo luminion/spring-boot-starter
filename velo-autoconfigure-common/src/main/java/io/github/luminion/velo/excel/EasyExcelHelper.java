@@ -72,34 +72,34 @@ public abstract class EasyExcelHelper {
                 : converterProperties;
         List<Converter<?>> converters = new ArrayList<>();
 
-        if (properties.isBooleanConverterEnabled()) {
+        if (properties.isBooleanEnabled()) {
             converters.add(new BooleanConverter());
         }
-        if (properties.isLongConverterEnabled()) {
+        if (properties.isLongEnabled()) {
             converters.add(new LongConverter());
         }
-        if (properties.isFloatConverterEnabled()) {
+        if (properties.isFloatEnabled()) {
             converters.add(new FloatConverter());
         }
-        if (properties.isDoubleConverterEnabled()) {
+        if (properties.isDoubleEnabled()) {
             converters.add(new DoubleConverter());
         }
-        if (properties.isBigIntegerConverterEnabled()) {
+        if (properties.isBigIntegerEnabled()) {
             converters.add(new BigIntergerConverter());
         }
-        if (properties.isBigDecimalConverterEnabled()) {
+        if (properties.isBigDecimalEnabled()) {
             converters.add(new BigDecimalConverter());
         }
-        if (properties.isDateConverterEnabled()) {
+        if (properties.isDateEnabled()) {
             converters.add(new DateConverter(dateTimeFormat, zoneId));
         }
-        if (properties.isLocalDateTimeConverterEnabled()) {
+        if (properties.isLocalDateTimeEnabled()) {
             converters.add(new LocalDateTimeConverter(dateTimeFormat));
         }
-        if (properties.isLocalDateConverterEnabled()) {
+        if (properties.isLocalDateEnabled()) {
             converters.add(new LocalDateConverter(dateFormat));
         }
-        if (properties.isLocalTimeConverterEnabled()) {
+        if (properties.isLocalTimeEnabled()) {
             converters.add(new LocalTimeConverter(timeFormat));
         }
         return Collections.unmodifiableList(converters);
