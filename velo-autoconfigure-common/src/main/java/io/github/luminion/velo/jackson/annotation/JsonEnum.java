@@ -9,8 +9,10 @@ public @interface JsonEnum {
 
     Class<? extends Enum<?>> value();
 
-    String keyField() default "";
+    String codeField() default "";
 
-    String labelField() default "";
+    String nameField() default "";
+
+    String nameSuffix() default "";
 
 }

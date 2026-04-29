@@ -1,6 +1,7 @@
 package io.github.luminion.velo.jackson;
 
 import io.github.luminion.velo.VeloProperties;
+import io.github.luminion.velo.jackson.serializer.JsonEnumSerializerModifier;
 import io.github.luminion.velo.jackson.serializer.UnsafeBigIntegerToStringSerializer;
 import io.github.luminion.velo.jackson.serializer.UnsafeLongToStringSerializer;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -97,6 +98,9 @@ public class VeloJacksonAutoConfiguration {
                     module.addDeserializer(LocalDateTime.class, new LocalDateTimeDeserializer(dateTimeFormatter));
                     module.addDeserializer(LocalDate.class, new LocalDateDeserializer(dateFormatter));
                     module.addDeserializer(LocalTime.class, new LocalTimeDeserializer(timeFormatter));
+                }
+                if (jacksonProperties.isEnumDescEnabled()) {
+                    module.setSerializerModifier(new JsonEnumSerializerModifier(jacksonProperties));
                 }
                 builder.addModule(module);
             };

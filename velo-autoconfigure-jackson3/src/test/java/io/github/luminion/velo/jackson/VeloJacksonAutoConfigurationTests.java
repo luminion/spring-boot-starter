@@ -1,12 +1,16 @@
 package io.github.luminion.velo.jackson;
 
 import io.github.luminion.velo.VeloProperties;
+import io.github.luminion.velo.jackson.annotation.JsonEnum;
+import io.github.luminion.velo.xss.XssIgnore;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.jackson.autoconfigure.JsonMapperBuilderCustomizer;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.data.redis.serializer.RedisSerializer;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.PropertyNamingStrategies;
+import tools.jackson.databind.PropertyNamingStrategy;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.math.BigDecimal;
@@ -98,8 +102,103 @@ class VeloJacksonAutoConfigurationTests {
                 });
     }
 
+    @Test
+    void shouldSerializeJsonEnumDerivedNameWithDefaultFields() throws Exception {
+        contextRunner
+                .withBean(VeloProperties.class, VeloProperties::new)
+                .run(context -> {
+                    JsonMapper mapper = jsonMapper(context);
+                    JsonNode tree = mapper.readTree(mapper.writeValueAsString(new EnumPayload(1)));
+
+                    assertThat(tree.get("status").intValue()).isEqualTo(1);
+                    assertThat(tree.get("statusName").textValue()).isEqualTo("Enabled");
+                });
+    }
+
+    @Test
+    void shouldUseLegacyKeyValueEnumFieldsAsDefaultFallback() throws Exception {
+        contextRunner
+                .withBean(VeloProperties.class, VeloProperties::new)
+                .run(context -> {
+                    JsonMapper mapper = jsonMapper(context);
+                    JsonNode tree = mapper.readTree(mapper.writeValueAsString(new LegacyEnumPayload(1)));
+
+                    assertThat(tree.get("statusName").textValue()).isEqualTo("Enabled");
+                });
+    }
+
+    @Test
+    void shouldUseExplicitJsonEnumFieldsAndSuffix() throws Exception {
+        contextRunner
+                .withBean(VeloProperties.class, VeloProperties::new)
+                .run(context -> {
+                    JsonMapper mapper = jsonMapper(context);
+                    JsonNode tree = mapper.readTree(mapper.writeValueAsString(new ExplicitEnumPayload(1)));
+
+                    assertThat(tree.get("statusLabel").textValue()).isEqualTo("Enabled");
+                });
+    }
+
+    @Test
+    void shouldApplyJacksonNamingStrategyToDerivedEnumName() throws Exception {
+        contextRunner
+                .withBean(VeloProperties.class, VeloProperties::new)
+                .run(context -> {
+                    JsonMapper mapper = jsonMapper(context, PropertyNamingStrategies.SNAKE_CASE);
+                    JsonNode tree = mapper.readTree(mapper.writeValueAsString(new EnumPayload(1)));
+
+                    assertThat(tree.get("status_name").textValue()).isEqualTo("Enabled");
+                    assertThat(tree.get("statusName")).isNull();
+                });
+    }
+
+    @Test
+    void shouldSkipJsonEnumDerivedNameWhenTargetFieldExists() throws Exception {
+        contextRunner
+                .withBean(VeloProperties.class, VeloProperties::new)
+                .run(context -> {
+                    JsonMapper mapper = jsonMapper(context);
+                    JsonNode tree = mapper.readTree(mapper.writeValueAsString(new ConflictingEnumPayload(1)));
+
+                    assertThat(tree.get("statusName").textValue()).isEqualTo("Existing");
+                });
+    }
+
+    @Test
+    void shouldNotAccessJavaLangEnumNameWhenEnumNameFieldIsMissing() throws Exception {
+        contextRunner
+                .withBean(VeloProperties.class, VeloProperties::new)
+                .run(context -> {
+                    JsonMapper mapper = jsonMapper(context);
+                    JsonNode tree = mapper.readTree(mapper.writeValueAsString(new CodeOnlyEnumPayload(1)));
+
+                    assertThat(tree.get("status").intValue()).isEqualTo(1);
+                    assertThat(tree.get("statusName")).isNull();
+                });
+    }
+
+    @Test
+    void shouldDeserializeXssIgnoredStringWithoutJsonDecode() {
+        contextRunner
+                .withBean(VeloProperties.class, VeloProperties::new)
+                .run(context -> {
+                    JsonMapper mapper = jsonMapper(context);
+                    StringPayload payload = mapper.readValue("{\"name\":\"ok\"}", StringPayload.class);
+
+                    assertThat(payload.getName()).isEqualTo("ok");
+                });
+    }
+
     private static JsonMapper jsonMapper(org.springframework.context.ApplicationContext context) {
+        return jsonMapper(context, null);
+    }
+
+    private static JsonMapper jsonMapper(org.springframework.context.ApplicationContext context,
+                                         PropertyNamingStrategy propertyNamingStrategy) {
         JsonMapper.Builder builder = JsonMapper.builder();
+        if (propertyNamingStrategy != null) {
+            builder.propertyNamingStrategy(propertyNamingStrategy);
+        }
         context.getBeansOfType(JsonMapperBuilderCustomizer.class)
                 .values()
                 .forEach(customizer -> customizer.customize(builder));
@@ -145,6 +244,127 @@ class VeloJacksonAutoConfigurationTests {
 
         public LocalDateTime getCreatedAt() {
             return createdAt;
+        }
+    }
+
+    static class EnumPayload {
+        @JsonEnum(StatusEnum.class)
+        private final Integer status;
+
+        EnumPayload(Integer status) {
+            this.status = status;
+        }
+
+        public Integer getStatus() {
+            return status;
+        }
+    }
+
+    static class LegacyEnumPayload {
+        @JsonEnum(LegacyStatusEnum.class)
+        private final Integer status;
+
+        LegacyEnumPayload(Integer status) {
+            this.status = status;
+        }
+
+        public Integer getStatus() {
+            return status;
+        }
+    }
+
+    static class ExplicitEnumPayload {
+        @JsonEnum(value = ExplicitStatusEnum.class, codeField = "id", nameField = "label", nameSuffix = "label")
+        private final Integer status;
+
+        ExplicitEnumPayload(Integer status) {
+            this.status = status;
+        }
+
+        public Integer getStatus() {
+            return status;
+        }
+    }
+
+    static class ConflictingEnumPayload extends EnumPayload {
+        ConflictingEnumPayload(Integer status) {
+            super(status);
+        }
+
+        public String getStatusName() {
+            return "Existing";
+        }
+    }
+
+    static class CodeOnlyEnumPayload {
+        @JsonEnum(CodeOnlyStatusEnum.class)
+        private final Integer status;
+
+        CodeOnlyEnumPayload(Integer status) {
+            this.status = status;
+        }
+
+        public Integer getStatus() {
+            return status;
+        }
+    }
+
+    static class StringPayload {
+        @XssIgnore
+        private String name;
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+    }
+
+    enum StatusEnum {
+        ENABLED(1, "Enabled");
+
+        private final int code;
+        private final String name;
+
+        StatusEnum(int code, String name) {
+            this.code = code;
+            this.name = name;
+        }
+    }
+
+    enum LegacyStatusEnum {
+        ENABLED(1, "Enabled");
+
+        private final int key;
+        private final String value;
+
+        LegacyStatusEnum(int key, String value) {
+            this.key = key;
+            this.value = value;
+        }
+    }
+
+    enum ExplicitStatusEnum {
+        ENABLED(1, "Enabled");
+
+        private final int id;
+        private final String label;
+
+        ExplicitStatusEnum(int id, String label) {
+            this.id = id;
+            this.label = label;
+        }
+    }
+
+    enum CodeOnlyStatusEnum {
+        ENABLED(1);
+
+        private final int code;
+
+        CodeOnlyStatusEnum(int code) {
+            this.code = code;
         }
     }
 }

@@ -1,18 +1,18 @@
 package io.github.luminion.velo.jackson.serializer;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.BeanDescription;
-import com.fasterxml.jackson.databind.PropertyName;
-import com.fasterxml.jackson.databind.SerializationConfig;
-import com.fasterxml.jackson.databind.SerializerProvider;
-import com.fasterxml.jackson.databind.ser.BeanPropertyWriter;
-import com.fasterxml.jackson.databind.ser.BeanSerializerModifier;
 import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.jackson.annotation.JsonEnum;
 import io.github.luminion.velo.jackson.support.JsonEnumMetadata;
 import io.github.luminion.velo.jackson.support.JsonEnumMetadataResolver;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
+import tools.jackson.core.JsonGenerator;
+import tools.jackson.databind.BeanDescription;
+import tools.jackson.databind.PropertyName;
+import tools.jackson.databind.SerializationConfig;
+import tools.jackson.databind.SerializationContext;
+import tools.jackson.databind.ser.BeanPropertyWriter;
+import tools.jackson.databind.ser.ValueSerializerModifier;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Set;
 
 @Slf4j
-public class JsonEnumSerializerModifier extends BeanSerializerModifier {
+public class JsonEnumSerializerModifier extends ValueSerializerModifier {
 
     private final JsonEnumMetadataResolver metadataResolver;
     private final VeloProperties.JacksonProperties jacksonProperties;
@@ -31,7 +31,7 @@ public class JsonEnumSerializerModifier extends BeanSerializerModifier {
     }
 
     @Override
-    public List<BeanPropertyWriter> changeProperties(SerializationConfig config, BeanDescription beanDesc,
+    public List<BeanPropertyWriter> changeProperties(SerializationConfig config, BeanDescription.Supplier beanDesc,
                                                      List<BeanPropertyWriter> beanProperties) {
         List<BeanPropertyWriter> newProperties = new ArrayList<>(beanProperties);
         Set<String> existNames = new HashSet<>();
@@ -84,16 +84,16 @@ public class JsonEnumSerializerModifier extends BeanSerializerModifier {
         private final JsonEnumMetadata metadata;
 
         public JsonEnumPropertyWriter(BeanPropertyWriter base, String targetName, JsonEnumMetadata metadata) {
-            super(base, new PropertyName(targetName));
+            super(base, PropertyName.construct(targetName));
             this.targetName = targetName;
             this.metadata = metadata;
         }
 
         @Override
-        public void serializeAsField(Object bean, JsonGenerator gen, SerializerProvider prov) throws Exception {
+        public void serializeAsProperty(Object bean, JsonGenerator gen, SerializationContext ctxt) throws Exception {
             Object value;
             try {
-                value = getMember().getValue(bean);
+                value = get(bean);
             } catch (Exception e) {
                 log.warn("Failed to read JsonEnum source property: {}", getName(), e);
                 return;
@@ -110,7 +110,7 @@ public class JsonEnumSerializerModifier extends BeanSerializerModifier {
                 return;
             }
             if (name != null) {
-                gen.writeStringField(targetName, name.toString());
+                gen.writeStringProperty(targetName, name.toString());
             }
         }
     }

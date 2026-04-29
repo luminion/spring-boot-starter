@@ -15,7 +15,6 @@ import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalTimeSerializer;
 import io.github.luminion.velo.VeloProperties;
-import io.github.luminion.velo.spi.EnumFieldConvention;
 import io.github.luminion.velo.spi.JsonProcessorProvider;
 import io.github.luminion.velo.jackson.deserializer.JacksonStringDeserializer;
 import io.github.luminion.velo.jackson.serializer.JacksonStringSerializer;
@@ -136,13 +135,9 @@ public class VeloJacksonAutoConfiguration {
                 }
 
                 if (jacksonProperties.isEnumDescEnabled()) {
-                    ObjectProvider<EnumFieldConvention> enumFieldConventionObjectProvider = beanFactory
-                            .getBeanProvider(EnumFieldConvention.class);
-                    enumFieldConventionObjectProvider.ifAvailable(bean -> {
-                        SimpleModule enumModule = new SimpleModule();
-                        enumModule.setSerializerModifier(new JsonEnumSerializerModifier(bean));
-                        builder.modules(enumModule);
-                    });
+                    SimpleModule enumModule = new SimpleModule();
+                    enumModule.setSerializerModifier(new JsonEnumSerializerModifier(jacksonProperties));
+                    builder.modulesToInstall(enumModule);
                 }
 
             };

@@ -6,9 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.logging.LogLevel;
 
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -25,11 +23,6 @@ public class VeloProperties {
      * Date and time formatting settings shared by web, Jackson and Excel features.
      */
     private DateTimeFormatProperties dateTimeFormat = new DateTimeFormatProperties();
-
-    /**
-     * Core infrastructure settings.
-     */
-    private CoreProperties core = new CoreProperties();
 
     /**
      * Idempotent feature settings.
@@ -80,20 +73,6 @@ public class VeloProperties {
      * Web related settings.
      */
     private WebProperties web = new WebProperties();
-
-    @Data
-    public static class CoreProperties {
-
-        /**
-         * Candidate field names used to resolve enum code values.
-         */
-        private List<String> enumCodeFields = Arrays.asList("code", "id", "value");
-
-        /**
-         * Candidate field names used to resolve enum description values.
-         */
-        private List<String> enumDescFields = Arrays.asList("desc", "name", "label");
-    }
 
     @Data
     public static class IdempotentProperties {
@@ -298,9 +277,26 @@ public class VeloProperties {
         private boolean enumDescEnabled = true;
 
         /**
+         * Default suffix used by derived enum description fields.
+         */
+        private String enumNameSuffix = "name";
+
+        /**
+         * Candidate enum code-to-name field pairs, matched in declaration order.
+         */
+        private Map<String, String> enumMappings = defaultEnumMappings();
+
+        /**
          * Enables automatic registration of starter managed String converters.
          */
         private boolean stringConverterEnabled = true;
+
+        private static Map<String, String> defaultEnumMappings() {
+            Map<String, String> mappings = new LinkedHashMap<>();
+            mappings.put("code", "name");
+            mappings.put("key", "value");
+            return mappings;
+        }
     }
 
     @Data

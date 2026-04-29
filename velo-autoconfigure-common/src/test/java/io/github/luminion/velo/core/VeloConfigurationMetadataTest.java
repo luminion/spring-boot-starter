@@ -26,8 +26,8 @@ class VeloConfigurationMetadataTest {
             assertFalse(metadata.contains("velo.core.naming-suffix-strategy-enabled"));
             assertFalse(metadata.contains("velo.core.enum-field-convention-enabled"));
             assertFalse(metadata.contains("velo.core.json-processor-provider-enabled"));
-            assertTrue(metadata.contains("velo.core.enum-code-fields"));
-            assertTrue(metadata.contains("velo.core.enum-desc-fields"));
+            assertFalse(metadata.contains("velo.core.enum-code-fields"));
+            assertFalse(metadata.contains("velo.core.enum-desc-fields"));
             assertTrue(metadata.contains("velo.cache.default-ttl"));
             assertTrue(metadata.contains("velo.cache.prefix"));
             assertTrue(metadata.contains("velo.cache.separator"));
@@ -77,6 +77,9 @@ class VeloConfigurationMetadataTest {
             assertFalse(metadata.contains("velo.log.error-aspect-enabled"));
             assertFalse(metadata.contains("velo.log.slow-aspect-enabled"));
             assertTrue(metadata.contains("velo.jackson.enum-desc-enabled"));
+            assertTrue(metadata.contains("velo.jackson.enum-name-suffix"));
+            assertTrue(metadata.contains("velo.jackson.enum-mappings"));
+            assertFalse(metadata.contains("velo.jackson.enum-fields"));
             assertFalse(metadata.contains("velo.jackson.enum-description-enabled"));
             assertTrue(metadata.contains("velo.mybatis-plus.enabled"));
             assertTrue(metadata.contains("velo.mybatis-plus.pagination-enabled"));

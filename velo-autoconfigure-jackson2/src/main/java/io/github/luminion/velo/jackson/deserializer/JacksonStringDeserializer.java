@@ -52,12 +52,10 @@ public class JacksonStringDeserializer extends StdDeserializer<String> implement
         if (!ignoreXss && jsonDecode == null) {
             return this;
         }
-        Function<String, String> compositeFunc = jsonProcessorProvider.getProcessor(jsonDecode.value());
+        Function<String, String> compositeFunc = jsonDecode == null ? t -> t : jsonProcessorProvider.getProcessor(jsonDecode.value());
         if (xssCleaner != null && !ignoreXss) {
-            compositeFunc = compositeFunc.andThen(xssCleaner::clean);
-        }
-        if (compositeFunc == null) {
-            return new JsonStringFunctionDeserializer(t -> t);
+            Function<String, String> processor = compositeFunc == null ? t -> t : compositeFunc;
+            compositeFunc = processor.andThen(xssCleaner::clean);
         }
         return new JsonStringFunctionDeserializer(compositeFunc);
     }
