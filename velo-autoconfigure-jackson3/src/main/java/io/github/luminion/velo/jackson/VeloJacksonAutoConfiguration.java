@@ -1,9 +1,15 @@
 package io.github.luminion.velo.jackson;
 
 import io.github.luminion.velo.VeloProperties;
+import io.github.luminion.velo.jackson.deserializer.JacksonStringDeserializer;
+import io.github.luminion.velo.jackson.serializer.JacksonStringSerializer;
 import io.github.luminion.velo.jackson.serializer.JsonEnumSerializerModifier;
 import io.github.luminion.velo.jackson.serializer.UnsafeBigIntegerToStringSerializer;
 import io.github.luminion.velo.jackson.serializer.UnsafeLongToStringSerializer;
+import io.github.luminion.velo.spi.JsonProcessorProvider;
+import io.github.luminion.velo.xss.XssCleaner;
+import org.springframework.beans.factory.BeanFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -38,7 +44,7 @@ import java.util.TimeZone;
 /**
  * Jackson 3 自动配置。
  *
- * Boot 4 的 Jackson SPI 与 Boot 2/3 不兼容，这里仅保留基础时间格式、数字转字符串和 Redis 序列化配置。
+ * Boot 4 的 Jackson SPI 与 Boot 2/3 不兼容，这里使用 Jackson 3 API 对齐 starter 的通用 JSON 行为。
  */
 @AutoConfiguration
 @ConditionalOnClass(ObjectMapper.class)
@@ -50,7 +56,8 @@ public class VeloJacksonAutoConfiguration {
 
         @Bean
         @Order(-1)
-        public JsonMapperBuilderCustomizer jsonMapperBuilderCustomizer(VeloProperties properties) {
+        public JsonMapperBuilderCustomizer jsonMapperBuilderCustomizer(VeloProperties properties,
+                                                                       BeanFactory beanFactory) {
             return builder -> {
                 String dateTimeFormat = properties.getDateTimeFormat().getDateTime();
                 String dateFormat = properties.getDateTimeFormat().getDate();
@@ -98,6 +105,16 @@ public class VeloJacksonAutoConfiguration {
                     module.addDeserializer(LocalDateTime.class, new LocalDateTimeDeserializer(dateTimeFormatter));
                     module.addDeserializer(LocalDate.class, new LocalDateDeserializer(dateFormatter));
                     module.addDeserializer(LocalTime.class, new LocalTimeDeserializer(timeFormatter));
+                }
+                if (jacksonProperties.isStringConverterEnabled()) {
+                    ObjectProvider<JsonProcessorProvider> jsonProcessorProviderObjectProvider = beanFactory
+                            .getBeanProvider(JsonProcessorProvider.class);
+                    jsonProcessorProviderObjectProvider.ifAvailable(bean -> {
+                        ObjectProvider<XssCleaner> xssCleanerObjectProvider = beanFactory.getBeanProvider(XssCleaner.class);
+                        XssCleaner xssCleaner = xssCleanerObjectProvider.getIfAvailable();
+                        module.addDeserializer(String.class, new JacksonStringDeserializer(bean, xssCleaner));
+                        module.addSerializer(String.class, new JacksonStringSerializer(bean));
+                    });
                 }
                 if (jacksonProperties.isEnumDescEnabled()) {
                     module.setSerializerModifier(new JsonEnumSerializerModifier(jacksonProperties));

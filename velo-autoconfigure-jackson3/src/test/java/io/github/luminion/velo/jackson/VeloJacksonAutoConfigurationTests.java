@@ -1,7 +1,11 @@
 package io.github.luminion.velo.jackson;
 
 import io.github.luminion.velo.VeloProperties;
+import io.github.luminion.velo.jackson.annotation.JsonDecode;
+import io.github.luminion.velo.jackson.annotation.JsonEncode;
 import io.github.luminion.velo.jackson.annotation.JsonEnum;
+import io.github.luminion.velo.spi.JsonProcessorProvider;
+import io.github.luminion.velo.xss.XssCleaner;
 import io.github.luminion.velo.xss.XssIgnore;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
@@ -103,6 +107,27 @@ class VeloJacksonAutoConfigurationTests {
     }
 
     @Test
+    void shouldAllowDisablingJacksonDateTimeCustomization() {
+        VeloProperties properties = new VeloProperties();
+        properties.getJackson().setDateTimeEnabled(false);
+
+        contextRunner
+                .withBean(VeloProperties.class, () -> properties)
+                .run(context -> {
+                    JsonMapper mapper = jsonMapper(context);
+                    String json = mapper.writeValueAsString(new SamplePayload(
+                            1L,
+                            2L,
+                            new BigDecimal("123.45"),
+                            0.5D,
+                            0.25F,
+                            LocalDateTime.of(2026, 3, 31, 8, 9, 10)));
+
+                    assertThat(json).doesNotContain("\"createdAt\":\"2026-03-31 08:09:10\"");
+                });
+    }
+
+    @Test
     void shouldSerializeJsonEnumDerivedNameWithDefaultFields() throws Exception {
         contextRunner
                 .withBean(VeloProperties.class, VeloProperties::new)
@@ -181,11 +206,57 @@ class VeloJacksonAutoConfigurationTests {
     void shouldDeserializeXssIgnoredStringWithoutJsonDecode() {
         contextRunner
                 .withBean(VeloProperties.class, VeloProperties::new)
+                .withBean(JsonProcessorProvider.class, () -> clazz -> {
+                    try {
+                        return clazz.getDeclaredConstructor().newInstance();
+                    } catch (Exception e) {
+                        throw new IllegalStateException(e);
+                    }
+                })
                 .run(context -> {
                     JsonMapper mapper = jsonMapper(context);
                     StringPayload payload = mapper.readValue("{\"name\":\"ok\"}", StringPayload.class);
 
                     assertThat(payload.getName()).isEqualTo("ok");
+                });
+    }
+
+    @Test
+    void shouldApplyStringEncodeDecodeAndXssCleaner() {
+        contextRunner
+                .withBean(VeloProperties.class, VeloProperties::new)
+                .withBean(JsonProcessorProvider.class, () -> clazz -> {
+                    try {
+                        return clazz.getDeclaredConstructor().newInstance();
+                    } catch (Exception e) {
+                        throw new IllegalStateException(e);
+                    }
+                })
+                .withBean(XssCleaner.class, () -> html -> html.replace("<b>", "").replace("</b>", ""))
+                .run(context -> {
+                    JsonMapper mapper = jsonMapper(context);
+                    StringTransformPayload payload = mapper
+                            .readValue("{\"encoded\":\"abc\",\"decoded\":\"ABC\",\"cleaned\":\"<b>safe</b>\",\"ignored\":\"<b>raw</b>\"}",
+                                    StringTransformPayload.class);
+                    JsonNode tree = mapper.readTree(mapper.writeValueAsString(payload));
+
+                    assertThat(payload.getDecoded()).isEqualTo("abc");
+                    assertThat(payload.getCleaned()).isEqualTo("safe");
+                    assertThat(payload.getIgnored()).isEqualTo("<b>raw</b>");
+                    assertThat(tree.get("encoded").textValue()).isEqualTo("ABC");
+                });
+    }
+
+    @Test
+    void shouldRoundTripRedisJsonSerializer() {
+        contextRunner
+                .withBean(VeloProperties.class, VeloProperties::new)
+                .run(context -> {
+                    RedisSerializer<Object> serializer = context.getBean(RedisSerializer.class);
+                    Object value = serializer.deserialize(serializer.serialize(new RedisPayload("ok")));
+
+                    assertThat(value).isInstanceOf(RedisPayload.class);
+                    assertThat(((RedisPayload) value).getName()).isEqualTo("ok");
                 });
     }
 
@@ -312,6 +383,81 @@ class VeloJacksonAutoConfigurationTests {
     static class StringPayload {
         @XssIgnore
         private String name;
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+    }
+
+    static class StringTransformPayload {
+        @JsonEncode(UppercaseProcessor.class)
+        private String encoded;
+        @JsonDecode(LowercaseProcessor.class)
+        private String decoded;
+        private String cleaned;
+        @XssIgnore
+        private String ignored;
+
+        public String getEncoded() {
+            return encoded;
+        }
+
+        public void setEncoded(String encoded) {
+            this.encoded = encoded;
+        }
+
+        public String getDecoded() {
+            return decoded;
+        }
+
+        public void setDecoded(String decoded) {
+            this.decoded = decoded;
+        }
+
+        public String getCleaned() {
+            return cleaned;
+        }
+
+        public void setCleaned(String cleaned) {
+            this.cleaned = cleaned;
+        }
+
+        public String getIgnored() {
+            return ignored;
+        }
+
+        public void setIgnored(String ignored) {
+            this.ignored = ignored;
+        }
+    }
+
+    public static class UppercaseProcessor implements java.util.function.Function<String, String> {
+        @Override
+        public String apply(String value) {
+            return value == null ? null : value.toUpperCase();
+        }
+    }
+
+    public static class LowercaseProcessor implements java.util.function.Function<String, String> {
+        @Override
+        public String apply(String value) {
+            return value == null ? null : value.toLowerCase();
+        }
+    }
+
+    static class RedisPayload {
+        private String name;
+
+        RedisPayload() {
+        }
+
+        RedisPayload(String name) {
+            this.name = name;
+        }
 
         public String getName() {
             return name;

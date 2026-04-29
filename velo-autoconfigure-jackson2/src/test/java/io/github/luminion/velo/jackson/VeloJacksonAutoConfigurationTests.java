@@ -4,7 +4,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import io.github.luminion.velo.VeloProperties;
+import io.github.luminion.velo.jackson.annotation.JsonDecode;
+import io.github.luminion.velo.jackson.annotation.JsonEncode;
 import io.github.luminion.velo.jackson.annotation.JsonEnum;
+import io.github.luminion.velo.spi.JsonProcessorProvider;
+import io.github.luminion.velo.xss.XssCleaner;
 import io.github.luminion.velo.xss.XssIgnore;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
@@ -203,11 +207,44 @@ class VeloJacksonAutoConfigurationTests {
     void shouldDeserializeXssIgnoredStringWithoutJsonDecode() {
         contextRunner
                 .withBean(VeloProperties.class, VeloProperties::new)
+                .withBean(JsonProcessorProvider.class, () -> clazz -> {
+                    try {
+                        return clazz.getDeclaredConstructor().newInstance();
+                    } catch (Exception e) {
+                        throw new IllegalStateException(e);
+                    }
+                })
                 .run(context -> {
                     ObjectMapper objectMapper = objectMapper(context);
                     StringPayload payload = objectMapper.readValue("{\"name\":\"ok\"}", StringPayload.class);
 
                     assertThat(payload.getName()).isEqualTo("ok");
+                });
+    }
+
+    @Test
+    void shouldApplyStringEncodeDecodeAndXssCleaner() {
+        contextRunner
+                .withBean(VeloProperties.class, VeloProperties::new)
+                .withBean(JsonProcessorProvider.class, () -> clazz -> {
+                    try {
+                        return clazz.getDeclaredConstructor().newInstance();
+                    } catch (Exception e) {
+                        throw new IllegalStateException(e);
+                    }
+                })
+                .withBean(XssCleaner.class, () -> html -> html.replace("<b>", "").replace("</b>", ""))
+                .run(context -> {
+                    ObjectMapper objectMapper = objectMapper(context);
+                    StringTransformPayload payload = objectMapper
+                            .readValue("{\"encoded\":\"abc\",\"decoded\":\"ABC\",\"cleaned\":\"<b>safe</b>\",\"ignored\":\"<b>raw</b>\"}",
+                                    StringTransformPayload.class);
+                    JsonNode tree = objectMapper.readTree(objectMapper.writeValueAsString(payload));
+
+                    assertThat(payload.getDecoded()).isEqualTo("abc");
+                    assertThat(payload.getCleaned()).isEqualTo("safe");
+                    assertThat(payload.getIgnored()).isEqualTo("<b>raw</b>");
+                    assertThat(tree.get("encoded").textValue()).isEqualTo("ABC");
                 });
     }
 
@@ -341,6 +378,62 @@ class VeloJacksonAutoConfigurationTests {
 
         public void setName(String name) {
             this.name = name;
+        }
+    }
+
+    static class StringTransformPayload {
+        @JsonEncode(UppercaseProcessor.class)
+        private String encoded;
+        @JsonDecode(LowercaseProcessor.class)
+        private String decoded;
+        private String cleaned;
+        @XssIgnore
+        private String ignored;
+
+        public String getEncoded() {
+            return encoded;
+        }
+
+        public void setEncoded(String encoded) {
+            this.encoded = encoded;
+        }
+
+        public String getDecoded() {
+            return decoded;
+        }
+
+        public void setDecoded(String decoded) {
+            this.decoded = decoded;
+        }
+
+        public String getCleaned() {
+            return cleaned;
+        }
+
+        public void setCleaned(String cleaned) {
+            this.cleaned = cleaned;
+        }
+
+        public String getIgnored() {
+            return ignored;
+        }
+
+        public void setIgnored(String ignored) {
+            this.ignored = ignored;
+        }
+    }
+
+    public static class UppercaseProcessor implements java.util.function.Function<String, String> {
+        @Override
+        public String apply(String value) {
+            return value == null ? null : value.toUpperCase();
+        }
+    }
+
+    public static class LowercaseProcessor implements java.util.function.Function<String, String> {
+        @Override
+        public String apply(String value) {
+            return value == null ? null : value.toLowerCase();
         }
     }
 
