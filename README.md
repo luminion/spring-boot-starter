@@ -656,10 +656,3 @@ velo:
 ```
 
 ---
-
-## 构建验证
-
-```bash
-mvn -q -DskipTests compile
-mvn test
-```
