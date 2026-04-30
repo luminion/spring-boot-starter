@@ -1,6 +1,9 @@
 package io.github.luminion.velo.util;
 
 import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.core.DefaultParameterNameDiscoverer;
+import org.springframework.core.ParameterNameDiscoverer;
+import org.springframework.util.ClassUtils;
 import org.springframework.util.ObjectUtils;
 
 import java.io.File;
@@ -9,6 +12,7 @@ import java.io.OutputStream;
 import java.io.Reader;
 import java.io.Writer;
 import java.lang.reflect.Array;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -20,6 +24,7 @@ import java.util.Map;
 public abstract class InvocationUtils {
 
     private static final String OMITTED_VALUE = "[omitted]";
+    private static final ParameterNameDiscoverer PARAMETER_NAME_DISCOVERER = new DefaultParameterNameDiscoverer();
 
     private static final String[] UNLOGGABLE_TYPE_PREFIXES = {
             "jakarta.servlet.",
@@ -41,7 +46,7 @@ public abstract class InvocationUtils {
     }
 
     public static String formatArguments(MethodSignature signature, Object[] args, int maxLength) {
-        String[] parameterNames = signature.getParameterNames();
+        String[] parameterNames = resolveParameterNames(signature);
         if (args == null || args.length == 0) {
             return "[]";
         }
@@ -79,6 +84,27 @@ public abstract class InvocationUtils {
             }
         }
         return String.join(",", values);
+    }
+
+    public static String[] resolveParameterNames(MethodSignature signature) {
+        return resolveParameterNames(signature, null);
+    }
+
+    public static String[] resolveParameterNames(MethodSignature signature, Object target) {
+        Method method = signature.getMethod();
+        if (method != null) {
+            String[] parameterNames = PARAMETER_NAME_DISCOVERER.getParameterNames(method);
+            if ((parameterNames == null || parameterNames.length == 0) && target != null) {
+                Method specificMethod = ClassUtils.getMostSpecificMethod(method, target.getClass());
+                if (!specificMethod.equals(method)) {
+                    parameterNames = PARAMETER_NAME_DISCOVERER.getParameterNames(specificMethod);
+                }
+            }
+            if (parameterNames != null && parameterNames.length > 0) {
+                return parameterNames;
+            }
+        }
+        return signature.getParameterNames();
     }
 
     private static String renderValue(Object value) {

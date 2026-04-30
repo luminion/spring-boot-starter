@@ -3,6 +3,7 @@ package io.github.luminion.velo.web;
 import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.spi.RuntimeJsonSerializer;
 import io.github.luminion.velo.core.util.WebUtils;
+import io.github.luminion.velo.util.InvocationUtils;
 import lombok.RequiredArgsConstructor;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -24,6 +25,7 @@ import java.util.Map;
 public class ControllerLogAspect {
 
     private static final int MAX_PAYLOAD_LENGTH = 2000;
+    private static final String EMPTY_PAYLOAD = "-";
 
     private final VeloProperties properties;
 
@@ -34,16 +36,24 @@ public class ControllerLogAspect {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         Logger logger = LoggerFactory.getLogger(signature.getDeclaringType());
         String requestPrefix = buildRequestPrefix();
-        String argsText = limit(runtimeJsonSerializer.toJson(buildArgumentMap(signature, joinPoint.getArgs())));
+        LogLevel level = properties.getLog().getLevel();
 
-        log(logger, properties.getLog().getLevel(), "{}==> args: {}", requestPrefix, argsText);
+        if (isEnabled(logger, level)) {
+            String argsText = limit(runtimeJsonSerializer.toJson(buildArgumentMap(signature, joinPoint.getTarget(), joinPoint.getArgs())));
+            log(logger, level, "{}==> args: {}", requestPrefix, argsText);
+        }
         long start = System.nanoTime();
         try {
             Object result = joinPoint.proceed();
-            Object resultBody = result instanceof ResponseEntity<?> ? ((ResponseEntity<?>) result).getBody() : result;
-            String resultText = limit(runtimeJsonSerializer.toJson(resultBody));
-            long elapsedMs = (System.nanoTime() - start) / 1_000_000;
-            log(logger, properties.getLog().getLevel(), "{}<== cost:{}ms, resp: {}", requestPrefix, elapsedMs, resultText);
+            if (isEnabled(logger, level)) {
+                Object resultBody = result instanceof ResponseEntity<?> ? ((ResponseEntity<?>) result).getBody() : result;
+                String resultText = limit(runtimeJsonSerializer.toJson(resultBody));
+                if (resultText == null || "null".equals(resultText)) {
+                    resultText = EMPTY_PAYLOAD;
+                }
+                long elapsedMs = (System.nanoTime() - start) / 1_000_000;
+                log(logger, level, "{}<== cost:{}ms, resp: {}", requestPrefix, elapsedMs, resultText);
+            }
             return result;
         } catch (Throwable ex) {
             log(logger, LogLevel.ERROR, "{}<!! failed: {}", requestPrefix, ex.getMessage(), ex);
@@ -51,12 +61,12 @@ public class ControllerLogAspect {
         }
     }
 
-    private Map<String, Object> buildArgumentMap(MethodSignature signature, Object[] args) {
+    private Map<String, Object> buildArgumentMap(MethodSignature signature, Object target, Object[] args) {
         Map<String, Object> argumentMap = new LinkedHashMap<>();
         if (args == null || args.length == 0) {
             return argumentMap;
         }
-        String[] parameterNames = signature.getParameterNames();
+        String[] parameterNames = InvocationUtils.resolveParameterNames(signature, target);
         for (int i = 0; i < args.length; i++) {
             String parameterName = parameterNames != null && i < parameterNames.length ? parameterNames[i] : "arg" + i;
             argumentMap.put(parameterName, args[i]);
@@ -77,6 +87,26 @@ public class ControllerLogAspect {
         }
 
         return "[" + WebUtils.getRequestIp() + ' ' + WebUtils.getRequestMethod() + ' ' + WebUtils.getRequestURI() + "] ";
+    }
+
+    private boolean isEnabled(Logger logger, LogLevel level) {
+        LogLevel targetLevel = level == null ? LogLevel.INFO : level;
+        if (targetLevel == LogLevel.OFF) {
+            return false;
+        }
+        switch (targetLevel) {
+            case TRACE:
+                return logger.isTraceEnabled();
+            case INFO:
+                return logger.isInfoEnabled();
+            case WARN:
+                return logger.isWarnEnabled();
+            case ERROR:
+            case FATAL:
+                return logger.isErrorEnabled();
+            default:
+                return logger.isDebugEnabled();
+        }
     }
 
     private void log(Logger logger, LogLevel level, String format, Object... arguments) {
