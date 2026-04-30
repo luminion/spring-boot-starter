@@ -19,7 +19,7 @@ class VeloPropertiesDefaultsTest {
 
         assertThat(properties.getLog().getLevel()).isEqualTo(LogLevel.INFO);
         assertThat(properties.getSpringConverter().isDateTimeEnabled()).isTrue();
-        assertThat(properties.getExcel().getConverters().isEnabled()).isFalse();
+        assertThat(properties.getExcel().getConverters().isEnabled()).isTrue();
         assertThat(properties.getExcel().isEnabled()).isTrue();
         assertThat(properties.getJackson().isUnsafeIntegerAsString()).isTrue();
         assertThat(properties.getJackson().isBigDecimalAsString()).isTrue();

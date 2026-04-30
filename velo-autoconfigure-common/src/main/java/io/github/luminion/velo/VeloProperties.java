@@ -194,7 +194,7 @@ public class VeloProperties {
             /**
              * Enables automatic registration of built-in Excel converters.
              */
-            private boolean enabled = false;
+            private boolean enabled = true;
 
             /**
              * Enables the Boolean Excel converter.
