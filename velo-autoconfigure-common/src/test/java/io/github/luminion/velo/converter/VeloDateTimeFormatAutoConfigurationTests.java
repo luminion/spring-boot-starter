@@ -18,10 +18,10 @@ class VeloDateTimeFormatAutoConfigurationTests {
             ));
 
     @Test
-    void shouldNotRegisterDateTimeConvertersByDefault() {
+    void shouldRegisterDateTimeConvertersByDefault() {
         contextRunner.run(context -> {
-            assertThat(context).doesNotHaveBean(StringToLocalDateConverter.class);
-            assertThat(context).doesNotHaveBean(StringToLocalDateTimeConverter.class);
+            assertThat(context).hasSingleBean(StringToLocalDateConverter.class);
+            assertThat(context).hasSingleBean(StringToLocalDateTimeConverter.class);
         });
     }
 

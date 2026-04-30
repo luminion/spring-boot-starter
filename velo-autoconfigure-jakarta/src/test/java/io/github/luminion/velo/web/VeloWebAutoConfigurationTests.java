@@ -46,15 +46,20 @@ class VeloWebAutoConfigurationTests {
     }
 
     @Test
-    void shouldCreateControllerLogAspectOnlyWhenRequestLoggingEnabled() {
+    void shouldCreateControllerLogAspectByDefault() {
+        webContextRunner.run(context -> {
+            assertThat(context).hasSingleBean(RuntimeJsonSerializer.class);
+            assertThat(context).hasSingleBean(ControllerLogAspect.class);
+            assertThat(ReflectionTestUtils.getField(context.getBean(ControllerLogAspect.class),
+                    "runtimeJsonSerializer")).isSameAs(context.getBean(RuntimeJsonSerializer.class));
+        });
+    }
+
+    @Test
+    void shouldSkipControllerLogAspectWhenRequestLoggingDisabled() {
         webContextRunner
-                .withPropertyValues("velo.web.request-logging-enabled=true")
-                .run(context -> {
-                    assertThat(context).hasSingleBean(RuntimeJsonSerializer.class);
-                    assertThat(context).hasSingleBean(ControllerLogAspect.class);
-                    assertThat(ReflectionTestUtils.getField(context.getBean(ControllerLogAspect.class),
-                            "runtimeJsonSerializer")).isSameAs(context.getBean(RuntimeJsonSerializer.class));
-                });
+                .withPropertyValues("velo.web.request-logging-enabled=false")
+                .run(context -> assertThat(context).doesNotHaveBean(ControllerLogAspect.class));
     }
 
     @Test
