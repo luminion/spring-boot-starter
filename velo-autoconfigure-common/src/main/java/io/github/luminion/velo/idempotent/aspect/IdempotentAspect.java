@@ -33,7 +33,6 @@ public class IdempotentAspect {
     public Object doIdempotent(ProceedingJoinPoint joinPoint, Idempotent idempotent) throws Throwable {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         Method method = ConcurrencyAnnotationUtils.resolveSpecificMethod(joinPoint.getTarget(), signature.getMethod());
-        String keyExpression = ConcurrencyAnnotationUtils.requireKeyExpression("Idempotent", idempotent.key());
         long ttl = idempotent.ttl();
         if (ttl <= 0L) {
             throw new IllegalArgumentException("Idempotent ttl must be greater than zero.");
@@ -45,7 +44,7 @@ public class IdempotentAspect {
                         joinPoint.getTarget(),
                         method,
                         joinPoint.getArgs(),
-                        keyExpression));
+                        idempotent.key()));
 
         boolean accepted = idempotentHandler.tryLock(key, ttl, idempotent.unit());
         if (!accepted) {

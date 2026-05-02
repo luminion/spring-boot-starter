@@ -22,7 +22,7 @@ public class RedisRateLimitHandler implements RateLimitHandler {
         long intervalMillis = window.intervalMillis();
 
         // 脚本内部按毫秒时间差补充令牌，这里提前把速率换算到“每毫秒恢复多少令牌”。
-        double fillRate = capacity / (intervalMillis / 1000.0);
+        double fillRate = capacity / (double) intervalMillis;
         long nowMs = System.currentTimeMillis();
 
         // 令牌桶至少保留一个完整窗口，再加一点冗余，避免边界时间频繁初始化。
@@ -43,9 +43,9 @@ public class RedisRateLimitHandler implements RateLimitHandler {
     private static RedisScript<Long> createLimitScript() {
         String script =
                 "local key        = KEYS[1]\n" +
-                        "local capacity   = tonumber(ARGV[1])\n" +
-                        "local fill_rate  = tonumber(ARGV[2])\n" +  
-        "local now_ms     = tonumber(ARGV[3])\n" +
+                "local capacity   = tonumber(ARGV[1])\n" +
+                "local fill_rate  = tonumber(ARGV[2])\n" +
+                "local now_ms     = tonumber(ARGV[3])\n" +
                 "local expire_sec = tonumber(ARGV[4])\n" +
                 "\n" +
                 "local bucket    = redis.call('hmget', key, 'tokens', 'last_ms')\n" +

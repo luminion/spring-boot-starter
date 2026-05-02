@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.redisson.api.RBucket;
 import org.redisson.api.RedissonClient;
 
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -21,7 +22,7 @@ public class RedissonIdempotentHandler implements IdempotentHandler {
     @Override
     public boolean tryLock(String key, long timeout, TimeUnit unit) {
         RBucket<String> bucket = redissonClient.getBucket(key);
-        return bucket.setIfAbsent("LOCKED", java.time.Duration.of(timeout, unit.toChronoUnit()));
+        return bucket.setIfAbsent("LOCKED", Duration.ofNanos(unit.toNanos(timeout)));
     }
 
     @Override
