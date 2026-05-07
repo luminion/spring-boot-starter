@@ -402,7 +402,8 @@ public class UserQuery {
 
 - `velo.web.xss.enabled` 默认 `false`
 - `strategy` 可选 `NONE`、`ESCAPE`、`SIMPLE_TEXT`、`BASIC`、`BASIC_WITH_IMAGES`、`RELAXED`
-- 开启后会注册基于 Jsoup 的 `XssCleaner`
+- `ESCAPE` 不依赖 `jsoup`，其余 HTML 清洗策略仍建议引入 `jsoup`
+- 开启后会注册 `XssCleaner`；`ESCAPE` 且无 `jsoup` 时会走 Spring 转义
 - 清洗发生在 Web MVC 的字符串参数绑定阶段，不会全局处理所有字符串字段
 
 ### 8. Jackson
