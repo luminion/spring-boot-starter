@@ -13,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.logging.LogLevel;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.servlet.HandlerMapping;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -24,7 +25,6 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ControllerLogAspect {
 
-    private static final int MAX_PAYLOAD_LENGTH = 2000;
     private static final String EMPTY_PAYLOAD = "-";
 
     private final VeloProperties properties;
@@ -37,9 +37,11 @@ public class ControllerLogAspect {
         Logger logger = LoggerFactory.getLogger(signature.getDeclaringType());
         String requestPrefix = buildRequestPrefix();
         LogLevel level = properties.getLog().getLevel();
+        int maxPayloadLength = properties.getWeb().getRequestLoggingMaxPayloadLength();
 
         if (isEnabled(logger, level)) {
-            String argsText = limit(runtimeJsonSerializer.toJson(buildArgumentMap(signature, joinPoint.getTarget(), joinPoint.getArgs())));
+            String argsText = limit(runtimeJsonSerializer.toJson(buildArgumentMap(signature, joinPoint.getTarget(), joinPoint.getArgs())),
+                    maxPayloadLength);
             log(logger, level, "{}==> args: {}", requestPrefix, argsText);
         }
         long start = System.nanoTime();
@@ -47,7 +49,7 @@ public class ControllerLogAspect {
             Object result = joinPoint.proceed();
             if (isEnabled(logger, level)) {
                 Object resultBody = result instanceof ResponseEntity<?> ? ((ResponseEntity<?>) result).getBody() : result;
-                String resultText = limit(runtimeJsonSerializer.toJson(resultBody));
+                String resultText = limit(runtimeJsonSerializer.toJson(resultBody), maxPayloadLength);
                 if (resultText == null || "null".equals(resultText)) {
                     resultText = EMPTY_PAYLOAD;
                 }
@@ -74,11 +76,15 @@ public class ControllerLogAspect {
         return argumentMap;
     }
 
-    private String limit(String text) {
-        if (text == null || text.length() <= MAX_PAYLOAD_LENGTH) {
+    private String limit(String text, int maxPayloadLength) {
+        int safeMaxPayloadLength = Math.max(0, maxPayloadLength);
+        if (text == null || text.length() <= safeMaxPayloadLength) {
             return text;
         }
-        return text.substring(0, MAX_PAYLOAD_LENGTH - 3) + "...";
+        if (safeMaxPayloadLength <= 3) {
+            return text.substring(0, safeMaxPayloadLength);
+        }
+        return text.substring(0, safeMaxPayloadLength - 3) + "...";
     }
 
     private String buildRequestPrefix() {
@@ -86,7 +92,15 @@ public class ControllerLogAspect {
             return "";
         }
 
-        return "[" + WebUtils.getRequestIp() + ' ' + WebUtils.getRequestMethod() + ' ' + WebUtils.getRequestURI() + "] ";
+        return "[" + WebUtils.getRequestIp() + ' ' + WebUtils.getRequestMethod() + ' ' + resolveRequestPath() + "] ";
+    }
+
+    private String resolveRequestPath() {
+        Object pattern = WebUtils.getRequest().getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
+        if (pattern != null) {
+            return String.valueOf(pattern);
+        }
+        return WebUtils.getRequestURI();
     }
 
     private boolean isEnabled(Logger logger, LogLevel level) {

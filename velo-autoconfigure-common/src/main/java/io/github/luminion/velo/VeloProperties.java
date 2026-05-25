@@ -337,6 +337,11 @@ public class VeloProperties {
         private boolean requestLoggingEnabled = true;
 
         /**
+         * Maximum length of logged request and response payloads.
+         */
+        private int requestLoggingMaxPayloadLength = 2000;
+
+        /**
          * Web XSS settings.
          */
         private XssProperties xss = new XssProperties();

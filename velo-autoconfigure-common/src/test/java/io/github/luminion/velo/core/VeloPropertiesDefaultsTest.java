@@ -40,6 +40,7 @@ class VeloPropertiesDefaultsTest {
         assertThat(properties.getLog().isEnabled()).isTrue();
         assertThat(properties.getWeb().isEnabled()).isTrue();
         assertThat(properties.getWeb().isRequestLoggingEnabled()).isTrue();
+        assertThat(properties.getWeb().getRequestLoggingMaxPayloadLength()).isEqualTo(2000);
     }
 
     @Test

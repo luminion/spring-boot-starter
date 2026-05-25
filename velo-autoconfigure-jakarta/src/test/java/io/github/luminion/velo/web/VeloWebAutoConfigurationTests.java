@@ -19,6 +19,7 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
+import org.springframework.web.servlet.HandlerMapping;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter;
 
 import java.util.ArrayList;
@@ -145,8 +146,37 @@ class VeloWebAutoConfigurationTests {
     }
 
     @Test
-    void shouldTruncateLoggedPayloadsWithFixedLimit(CapturedOutput output) throws Throwable {
+    void shouldPreferControllerMappingTemplateWhenAvailable(CapturedOutput output) throws Throwable {
         VeloProperties properties = new VeloProperties();
+        ControllerLogAspect aspect = new ControllerLogAspect(properties, value -> "{\"ok\":true}");
+        ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
+        MethodSignature signature = mock(MethodSignature.class);
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/converter/query/123");
+
+        request.setRemoteAddr("127.0.0.1");
+        request.setAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE, "/converter/query/{id}");
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
+        try {
+            when(joinPoint.getSignature()).thenReturn(signature);
+            when(joinPoint.getArgs()).thenReturn(new Object[] {"Tom"});
+            when(joinPoint.proceed()).thenReturn(ResponseEntity.ok(new DemoPayload("tomUser")));
+            when(signature.getDeclaringType()).thenReturn(DemoController.class);
+            when(signature.getParameterNames()).thenReturn(new String[] {"name"});
+
+            aspect.logControllerInvocation(joinPoint);
+        } finally {
+            RequestContextHolder.resetRequestAttributes();
+        }
+
+        assertThat(output.getOut()).contains("[127.0.0.1 GET /converter/query/{id}] ==> args: {\"ok\":true}");
+        assertThat(output.getOut()).contains("[127.0.0.1 GET /converter/query/{id}] <== cost:");
+        assertThat(output.getOut()).doesNotContain("/converter/query/123] ==> args:");
+    }
+
+    @Test
+    void shouldTruncateLoggedPayloadsUsingConfiguredLimit(CapturedOutput output) throws Throwable {
+        VeloProperties properties = new VeloProperties();
+        properties.getWeb().setRequestLoggingMaxPayloadLength(13);
         String longJson = "{\"value\":\"" + String.join("", Collections.nCopies(2100, "a")) + "\"}";
         ControllerLogAspect aspect = new ControllerLogAspect(properties, value -> longJson);
         ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
@@ -169,8 +199,9 @@ class VeloWebAutoConfigurationTests {
 
         assertThat(output.getOut()).contains("[127.0.0.1 POST /converter/query] ==> args: {\"value\":\"");
         assertThat(output.getOut()).contains("[127.0.0.1 POST /converter/query] <== cost:");
-        assertThat(output.getOut()).contains("resp: {\"value\":\"");
+        assertThat(output.getOut()).contains("resp: {\"value\":\"...");
         assertThat(output.getOut()).contains("...");
+        assertThat(output.getOut()).doesNotContain("aaaaaaaaaaaaaaaaaaaa");
         assertThat(output.getOut()).doesNotContain("query=");
     }
 

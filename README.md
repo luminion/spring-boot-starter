@@ -590,14 +590,15 @@ velo:
 velo:
   web:
     request-logging-enabled: true
+    request-logging-max-payload-length: 2000
 ```
 
 说明：
 
 - 默认开启
-- 会记录请求方法、路径、入参与响应体
+- 会记录请求方法、controller 映射模板路径、入参与响应体
 - 会过滤掉原始 query string，避免把敏感查询串直接打到日志中
-- 过长 payload 会自动截断
+- 过长 payload 会自动截断，默认最大长度 `2000`
 - 如果不需要这层日志，直接关闭 `velo.web.request-logging-enabled`
 
 ### 4. CORS

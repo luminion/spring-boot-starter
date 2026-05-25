@@ -98,6 +98,7 @@ class VeloConfigurationMetadataTest {
             assertFalse(metadata.contains("velo.web.xss.string-converter-enabled"));
             assertTrue(metadata.contains("velo.web.xss.strategy"));
             assertTrue(metadata.contains("velo.web.request-logging-enabled"));
+            assertTrue(metadata.contains("velo.web.request-logging-max-payload-length"));
             assertFalse(metadata.contains("velo.web.request-logging.enabled"));
             assertFalse(metadata.contains("velo.web.request-logging.include-client-info"));
             assertFalse(metadata.contains("velo.web.request-logging.include-query-string"));
