@@ -22,22 +22,24 @@ final class FeignClientMetadataResolver {
         return findFeignClientAnnotation(beanType) != null;
     }
 
-    static String resolveClientName(Class<?> beanType) {
+    static String resolveClientAddress(Class<?> beanType) {
         Annotation annotation = findFeignClientAnnotation(beanType);
         if (annotation == null) {
             return beanType.getSimpleName();
         }
+        String value = readStringAttribute(annotation, "value");
+        String name = readStringAttribute(annotation, "name");
         String contextId = readStringAttribute(annotation, "contextId");
+        String clientValue = StringUtils.hasText(value) ? value : name;
+
+        if (StringUtils.hasText(clientValue) && StringUtils.hasText(contextId) && !clientValue.equals(contextId)) {
+            return clientValue + "(" + contextId + ")";
+        }
+        if (StringUtils.hasText(clientValue)) {
+            return clientValue;
+        }
         if (StringUtils.hasText(contextId)) {
             return contextId;
-        }
-        String name = readStringAttribute(annotation, "name");
-        if (StringUtils.hasText(name)) {
-            return name;
-        }
-        String value = readStringAttribute(annotation, "value");
-        if (StringUtils.hasText(value)) {
-            return value;
         }
         return beanType.getSimpleName();
     }

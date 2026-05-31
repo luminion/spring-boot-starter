@@ -44,12 +44,13 @@ public class FeignLogAspect {
         Logger logger = LoggerFactory.getLogger(feignType);
         LogLevel level = properties.getLog().getLevel();
         VeloProperties.FeignProperties feignProperties = properties.getFeign();
-        String clientName = FeignClientMetadataResolver.resolveClientName(feignType);
+        String clientAddress = FeignClientMetadataResolver.resolveClientAddress(feignType);
         FeignRequestMetadata requestMetadata = FeignClientMetadataResolver.resolveRequestMetadata(method);
-        String prefix = FeignLogSupport.buildInvocationPrefix(clientName, method, requestMetadata);
+        String prefix = FeignLogSupport.buildInvocationPrefix(clientAddress, method, requestMetadata);
 
         if (FeignLogSupport.isEnabled(logger, level)) {
-            String argsText = FeignLogSupport.buildArgsText(method, joinPoint.getArgs(), runtimeJsonSerializer, feignProperties);
+            String argsText = FeignLogSupport.buildArgsText(signature, joinPoint.getTarget(), joinPoint.getArgs(),
+                    runtimeJsonSerializer, feignProperties);
             FeignLogSupport.log(logger, level, "{}==> args: {}", prefix, argsText);
         }
         long start = System.nanoTime();

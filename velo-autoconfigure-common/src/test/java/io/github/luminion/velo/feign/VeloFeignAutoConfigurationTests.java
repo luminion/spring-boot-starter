@@ -62,9 +62,9 @@ class VeloFeignAutoConfigurationTests {
             assertThat(AopUtils.isAopProxy(client)).isTrue();
         });
 
-        assertThat(output.getOut()).contains("[Feign demo-client GET /users/{id}] ==> args:");
+        assertThat(output.getOut()).contains("[demo-client GET /users/{id}] ==> args:");
         assertThat(output.getOut()).contains("\"id\":1");
-        assertThat(output.getOut()).contains("[Feign demo-client GET /users/{id}] <== cost:");
+        assertThat(output.getOut()).contains("[demo-client GET /users/{id}] <== cost:");
         assertThat(output.getOut()).contains("\"userName\":\"tom\"");
     }
 
@@ -74,7 +74,7 @@ class VeloFeignAutoConfigurationTests {
                 .withPropertyValues("velo.feign.request-logging-max-payload-length=13")
                 .run(context -> context.getBean(DemoFeignClient.class).findById(1L));
 
-        assertThat(output.getOut()).contains("[Feign demo-client GET /users/{id}] ==> args:");
+        assertThat(output.getOut()).contains("[demo-client GET /users/{id}] ==> args:");
         assertThat(output.getOut()).contains("resp: {\"userName...");
     }
 
@@ -84,7 +84,7 @@ class VeloFeignAutoConfigurationTests {
                 .withPropertyValues("velo.feign.request-logging-max-payload-length=-1")
                 .run(context -> context.getBean(DemoFeignClient.class).findById(1L));
 
-        assertThat(output.getOut()).contains("[Feign demo-client GET /users/{id}] ==> args:");
+        assertThat(output.getOut()).contains("[demo-client GET /users/{id}] ==> args:");
         assertThat(output.getOut()).contains("resp: {\"userName\":\"tom\"}");
         assertThat(output.getOut()).doesNotContain("...");
     }
@@ -100,7 +100,7 @@ class VeloFeignAutoConfigurationTests {
                 .withUserConfiguration(NullBodyFeignConfiguration.class)
                 .run(context -> context.getBean(NullBodyFeignClient.class).ping());
 
-        assertThat(output.getOut()).contains("[Feign null-body-client GET /ping] <== cost:");
+        assertThat(output.getOut()).contains("[null-body-client GET /ping] <== cost:");
         assertThat(output.getOut()).contains("resp: -");
     }
 
@@ -114,7 +114,7 @@ class VeloFeignAutoConfigurationTests {
             }
         });
 
-        assertThat(output.getOut()).contains("[Feign demo-client GET /users/fail] <!! failed: boom");
+        assertThat(output.getOut()).contains("[demo-client GET /users/fail] <!! failed: boom");
     }
 
     @Configuration(proxyBeanMethods = false)

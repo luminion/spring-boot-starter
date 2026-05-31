@@ -3,6 +3,7 @@ package io.github.luminion.velo.feign;
 import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.spi.RuntimeJsonSerializer;
 import io.github.luminion.velo.util.InvocationUtils;
+import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.core.DefaultParameterNameDiscoverer;
 import org.springframework.core.ParameterNameDiscoverer;
 import org.springframework.boot.logging.LogLevel;
@@ -25,9 +26,10 @@ final class FeignLogSupport {
     private FeignLogSupport() {
     }
 
-    static String buildArgsText(Method method, Object[] args, RuntimeJsonSerializer runtimeJsonSerializer,
-            VeloProperties.FeignProperties properties) {
-        return limit(runtimeJsonSerializer.toJson(buildArgumentMap(method, args)), properties.getRequestLoggingMaxPayloadLength());
+    static String buildArgsText(MethodSignature signature, Object target, Object[] args,
+            RuntimeJsonSerializer runtimeJsonSerializer, VeloProperties.FeignProperties properties) {
+        return limit(runtimeJsonSerializer.toJson(buildArgumentMap(signature, target, args)),
+                properties.getRequestLoggingMaxPayloadLength());
     }
 
     static String buildResultText(Object result, RuntimeJsonSerializer runtimeJsonSerializer,
@@ -40,18 +42,24 @@ final class FeignLogSupport {
         return resultText;
     }
 
-    static String buildInvocationPrefix(String clientName, Method method, FeignRequestMetadata requestMetadata) {
-        StringBuilder builder = new StringBuilder("[Feign");
-        if (StringUtils.hasText(clientName)) {
-            builder.append(' ').append(clientName);
-        }
-        if (requestMetadata != null && StringUtils.hasText(requestMetadata.getHttpMethod())) {
-            builder.append(' ').append(requestMetadata.getHttpMethod());
-        }
-        if (requestMetadata != null && StringUtils.hasText(requestMetadata.getPath())) {
-            builder.append(' ').append(requestMetadata.getPath());
+    static String buildInvocationPrefix(String clientAddress, Method method, FeignRequestMetadata requestMetadata) {
+        StringBuilder builder = new StringBuilder("[");
+        if (StringUtils.hasText(clientAddress)) {
+            builder.append(clientAddress);
         } else {
-            builder.append(' ').append(method.getDeclaringClass().getSimpleName()).append('.').append(method.getName());
+            builder.append(method.getDeclaringClass().getSimpleName());
+        }
+        builder.append(' ');
+        if (requestMetadata != null && StringUtils.hasText(requestMetadata.getHttpMethod())) {
+            builder.append(requestMetadata.getHttpMethod());
+        } else {
+            builder.append("CALL");
+        }
+        builder.append(' ');
+        if (requestMetadata != null && StringUtils.hasText(requestMetadata.getPath())) {
+            builder.append(requestMetadata.getPath());
+        } else {
+            builder.append(method.getDeclaringClass().getSimpleName()).append('.').append(method.getName());
         }
         builder.append("] ");
         return builder.toString();
@@ -101,12 +109,15 @@ final class FeignLogSupport {
         }
     }
 
-    private static Map<String, Object> buildArgumentMap(Method method, Object[] args) {
+    private static Map<String, Object> buildArgumentMap(MethodSignature signature, Object target, Object[] args) {
         Map<String, Object> argumentMap = new LinkedHashMap<>();
         if (args == null || args.length == 0) {
             return argumentMap;
         }
-        String[] parameterNames = PARAMETER_NAME_DISCOVERER.getParameterNames(method);
+        String[] parameterNames = InvocationUtils.resolveParameterNames(signature, target);
+        if (parameterNames == null || parameterNames.length == 0) {
+            parameterNames = PARAMETER_NAME_DISCOVERER.getParameterNames(signature.getMethod());
+        }
         for (int i = 0; i < args.length; i++) {
             String parameterName = parameterNames != null && i < parameterNames.length ? parameterNames[i] : "arg" + i;
             argumentMap.put(parameterName, args[i]);
