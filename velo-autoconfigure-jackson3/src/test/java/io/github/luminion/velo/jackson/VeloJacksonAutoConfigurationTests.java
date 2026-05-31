@@ -12,6 +12,7 @@ import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.jackson.autoconfigure.JsonMapperBuilderCustomizer;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.data.redis.serializer.RedisSerializer;
+import tools.jackson.core.StreamWriteFeature;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.PropertyNamingStrategies;
 import tools.jackson.databind.PropertyNamingStrategy;
@@ -28,7 +29,7 @@ class VeloJacksonAutoConfigurationTests {
             .withConfiguration(AutoConfigurations.of(VeloJacksonAutoConfiguration.class));
 
     @Test
-    void shouldSerializeUnsafeIntegerAsStringAndSerializeBigDecimalAsStringByDefault() throws Exception {
+    void shouldSerializeLongAsStringAndSerializeBigDecimalAsStringByDefault() throws Exception {
         contextRunner
                 .withBean(VeloProperties.class, VeloProperties::new)
                 .run(context -> {
@@ -42,8 +43,8 @@ class VeloJacksonAutoConfigurationTests {
                             LocalDateTime.of(2026, 3, 31, 8, 9, 10)));
                     JsonNode tree = mapper.readTree(json);
 
-                    assertThat(tree.get("id").isNumber()).isTrue();
-                    assertThat(tree.get("id").longValue()).isEqualTo(1L);
+                    assertThat(tree.get("id").isTextual()).isTrue();
+                    assertThat(tree.get("id").textValue()).isEqualTo("1");
                     assertThat(tree.get("unsafeId").isTextual()).isTrue();
                     assertThat(tree.get("unsafeId").textValue()).isEqualTo("9007199254740992");
                     assertThat(tree.get("amount").isTextual()).isTrue();
@@ -54,6 +55,30 @@ class VeloJacksonAutoConfigurationTests {
                     assertThat(json).doesNotContain("\"score\":\"");
                     assertThat(json).contains("\"createdAt\":\"2026-03-31 08:09:10\"");
                     assertThat(context).hasSingleBean(RedisSerializer.class);
+                });
+    }
+
+    @Test
+    void shouldAllowDisablingLongStringSerialization() throws Exception {
+        VeloProperties properties = new VeloProperties();
+        properties.getJackson().setLongAsString(false);
+
+        contextRunner
+                .withBean(VeloProperties.class, () -> properties)
+                .run(context -> {
+                    JsonMapper mapper = jsonMapper(context);
+                    JsonNode tree = mapper.readTree(mapper.writeValueAsString(new SamplePayload(
+                            1L,
+                            9007199254740992L,
+                            new BigDecimal("123.45"),
+                            0.5D,
+                            0.25F,
+                            LocalDateTime.of(2026, 3, 31, 8, 9, 10))));
+
+                    assertThat(tree.get("id").isNumber()).isTrue();
+                    assertThat(tree.get("id").longValue()).isEqualTo(1L);
+                    assertThat(tree.get("unsafeId").isNumber()).isTrue();
+                    assertThat(tree.get("unsafeId").longValue()).isEqualTo(9007199254740992L);
                 });
     }
 
@@ -80,6 +105,104 @@ class VeloJacksonAutoConfigurationTests {
     }
 
     @Test
+    void shouldKeepBigDecimalTrailingZerosByDefault() throws Exception {
+        contextRunner
+                .withBean(VeloProperties.class, VeloProperties::new)
+                .run(context -> {
+                    JsonMapper mapper = jsonMapper(context);
+                    JsonNode tree = mapper.readTree(mapper.writeValueAsString(new SamplePayload(
+                            1L,
+                            9007199254740992L,
+                            new BigDecimal("123.4500"),
+                            0.5D,
+                            0.25F,
+                            LocalDateTime.of(2026, 3, 31, 8, 9, 10))));
+
+                    assertThat(tree.get("amount").textValue()).isEqualTo("123.4500");
+                });
+    }
+
+    @Test
+    void shouldStripBigDecimalTrailingZerosWhenSerializingAsString() throws Exception {
+        VeloProperties properties = new VeloProperties();
+        properties.getJackson().setBigDecimalStripTrailingZeros(true);
+
+        contextRunner
+                .withBean(VeloProperties.class, () -> properties)
+                .run(context -> {
+                    JsonMapper mapper = jsonMapper(context);
+                    JsonNode tree = mapper.readTree(mapper.writeValueAsString(new SamplePayload(
+                            1L,
+                            9007199254740992L,
+                            new BigDecimal("123.4500"),
+                            0.5D,
+                            0.25F,
+                            LocalDateTime.of(2026, 3, 31, 8, 9, 10))));
+
+                    assertThat(tree.get("amount").isTextual()).isTrue();
+                    assertThat(tree.get("amount").textValue()).isEqualTo("123.45");
+                });
+    }
+
+    @Test
+    void shouldStripBigDecimalTrailingZerosWhenSerializingAsNumber() throws Exception {
+        VeloProperties properties = new VeloProperties();
+        properties.getJackson().setBigDecimalAsString(false);
+        properties.getJackson().setBigDecimalStripTrailingZeros(true);
+
+        contextRunner
+                .withBean(VeloProperties.class, () -> properties)
+                .run(context -> {
+                    JsonMapper mapper = jsonMapper(context);
+                    String json = mapper.writeValueAsString(new SamplePayload(
+                            1L,
+                            9007199254740992L,
+                            new BigDecimal("123.4500"),
+                            0.5D,
+                            0.25F,
+                            LocalDateTime.of(2026, 3, 31, 8, 9, 10)));
+                    JsonNode tree = mapper.readTree(json);
+
+                    assertThat(tree.get("amount").isNumber()).isTrue();
+                    assertThat(tree.get("amount").decimalValue()).isEqualByComparingTo(new BigDecimal("123.45"));
+                    assertThat(json).contains("\"amount\":123.45");
+                });
+    }
+
+    @Test
+    void shouldSerializeScientificBigDecimalAsPlainTextByDefault() throws Exception {
+        contextRunner
+                .withBean(VeloProperties.class, VeloProperties::new)
+                .run(context -> {
+                    JsonMapper mapper = jsonMapper(context);
+                    JsonNode tree = mapper.readTree(mapper.writeValueAsString(new ScientificAmountPayload(
+                            new BigDecimal("1E+3"))));
+
+                    assertThat(tree.get("amount").isTextual()).isTrue();
+                    assertThat(tree.get("amount").textValue()).isEqualTo("1000");
+                });
+    }
+
+    @Test
+    void shouldStillSerializeScientificBigDecimalAsPlainTextWhenSpringPlainFeatureIsEnabled() throws Exception {
+        contextRunner
+                .withBean(VeloProperties.class, VeloProperties::new)
+                .run(context -> {
+                    JsonMapper.Builder builder = JsonMapper.builder();
+                    context.getBeansOfType(JsonMapperBuilderCustomizer.class)
+                            .values()
+                            .forEach(customizer -> customizer.customize(builder));
+                    builder.enable(StreamWriteFeature.WRITE_BIGDECIMAL_AS_PLAIN);
+                    JsonMapper mapper = builder.build();
+                    JsonNode tree = mapper.readTree(mapper.writeValueAsString(new ScientificAmountPayload(
+                            new BigDecimal("1E+3"))));
+
+                    assertThat(tree.get("amount").isTextual()).isTrue();
+                    assertThat(tree.get("amount").textValue()).isEqualTo("1000");
+                });
+    }
+
+    @Test
     void shouldSerializeFloatingPointValuesAsStringWhenConfigured() throws Exception {
         VeloProperties properties = new VeloProperties();
         properties.getJackson().setFloatingAsString(true);
@@ -97,8 +220,8 @@ class VeloJacksonAutoConfigurationTests {
                             LocalDateTime.of(2026, 3, 31, 8, 9, 10)));
                     JsonNode tree = mapper.readTree(json);
 
-                    assertThat(tree.get("id").isNumber()).isTrue();
-                    assertThat(tree.get("id").longValue()).isEqualTo(1L);
+                    assertThat(tree.get("id").isTextual()).isTrue();
+                    assertThat(tree.get("id").textValue()).isEqualTo("1");
                     assertThat(json).contains("\"unsafeId\":\"9007199254740992\"");
                     assertThat(json).contains("\"amount\":\"123.45\"");
                     assertThat(json).contains("\"ratio\":\"0.5\"");
@@ -315,6 +438,18 @@ class VeloJacksonAutoConfigurationTests {
 
         public LocalDateTime getCreatedAt() {
             return createdAt;
+        }
+    }
+
+    static class ScientificAmountPayload {
+        private final BigDecimal amount;
+
+        ScientificAmountPayload(BigDecimal amount) {
+            this.amount = amount;
+        }
+
+        public BigDecimal getAmount() {
+            return amount;
         }
     }
 

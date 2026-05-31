@@ -17,10 +17,11 @@ import com.fasterxml.jackson.datatype.jsr310.ser.LocalTimeSerializer;
 import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.spi.JsonProcessorProvider;
 import io.github.luminion.velo.jackson.deserializer.JacksonStringDeserializer;
+import io.github.luminion.velo.jackson.serializer.ConfigurableBigDecimalSerializer;
 import io.github.luminion.velo.jackson.serializer.JacksonStringSerializer;
 import io.github.luminion.velo.jackson.serializer.JsonEnumSerializerModifier;
 import io.github.luminion.velo.jackson.serializer.UnsafeBigIntegerToStringSerializer;
-import io.github.luminion.velo.jackson.serializer.UnsafeLongToStringSerializer;
+import io.github.luminion.velo.jackson.serializer.LongToStringSerializer;
 import io.github.luminion.velo.xss.XssCleaner;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.ObjectProvider;
@@ -85,14 +86,16 @@ public class VeloJacksonAutoConfiguration {
                             .timeZone(timeZone);
                 }
 
-                if (jacksonProperties.isUnsafeIntegerAsString()) {
-                    UnsafeLongToStringSerializer longSerializer = new UnsafeLongToStringSerializer();
+                if (jacksonProperties.isLongAsString()) {
+                    LongToStringSerializer longSerializer = new LongToStringSerializer();
                     builder.serializerByType(Long.class, longSerializer)
                             .serializerByType(Long.TYPE, longSerializer)
                             .serializerByType(BigInteger.class, new UnsafeBigIntegerToStringSerializer());
                 }
-                if (jacksonProperties.isBigDecimalAsString()) {
-                    builder.serializerByType(BigDecimal.class, ToStringSerializer.instance);
+                if (jacksonProperties.isBigDecimalAsString() || jacksonProperties.isBigDecimalStripTrailingZeros()) {
+                    builder.serializerByType(BigDecimal.class, new ConfigurableBigDecimalSerializer(
+                            jacksonProperties.isBigDecimalAsString(),
+                            jacksonProperties.isBigDecimalStripTrailingZeros()));
                 }
                 if (jacksonProperties.isFloatingAsString()) {
                     builder.serializerByType(Double.class, ToStringSerializer.instance)

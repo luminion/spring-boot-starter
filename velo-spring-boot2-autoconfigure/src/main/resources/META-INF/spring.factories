@@ -17,6 +17,7 @@ io.github.luminion.velo.ratelimit.config.VeloRateLimitCaffeineAutoConfiguration,
 io.github.luminion.velo.ratelimit.config.VeloRateLimitJdkAutoConfiguration,\
 io.github.luminion.velo.ratelimit.VeloRateLimitAutoConfiguration,\
 io.github.luminion.velo.log.VeloLogAutoConfiguration,\
+io.github.luminion.velo.feign.VeloFeignAutoConfiguration,\
 io.github.luminion.velo.mybatisplus.VeloMybatisPlusAutoConfiguration,\
 io.github.luminion.velo.redis.VeloRedisAutoConfiguration,\
 io.github.luminion.velo.web.VeloWebAutoConfiguration,\

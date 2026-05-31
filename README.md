@@ -419,7 +419,7 @@ velo:
   jackson:
     enabled: true
     date-time-enabled: true
-    unsafe-integer-as-string: true
+    long-as-string: true
     big-decimal-as-string: true
     floating-as-string: false
     enum-desc-enabled: true
@@ -449,7 +449,7 @@ public class OrderVO {
 说明：
 
 - Boot 2 / 3 使用 Jackson 2 自动配置，Boot 4 使用 Jackson 3 自动配置
-- `unsafe-integer-as-string=true` 时，仅对超出 JavaScript 安全整数范围的整数转成字符串
+- `long-as-string=true` 时，`Long` 默认统一序列化为字符串，保持字段类型一致
 - `big-decimal-as-string=true` 默认开启
 - `enum-desc-enabled=true` 时，`@JsonEnum` 可为数值字段派生出描述字段，例如 `statusName`
 - `string-converter-enabled=true` 时，`@JsonEncode` / `@JsonDecode` 会按函数类做字符串转换
@@ -601,7 +601,30 @@ velo:
 - 过长 payload 会自动截断，默认最大长度 `2000`
 - 如果不需要这层日志，直接关闭 `velo.web.request-logging-enabled`
 
-### 4. CORS
+### 4. Feign 调试日志
+
+如果项目中存在 `@FeignClient`，Velo 可以按和 Controller 请求日志接近的格式记录 Feign 调用。
+
+配置项：
+
+```yaml
+velo:
+  feign:
+    enabled: true
+    request-logging-enabled: true
+    request-logging-max-payload-length: 2000
+```
+
+说明：
+
+- 默认开启
+- 会记录 client 名、HTTP 方法、映射路径、入参与响应体
+- 日志格式和 Controller 请求日志保持一致，便于联调排查
+- 暂不记录 header，只保留调试常用关键信息
+- 过长 payload 会自动截断，默认最大长度 `2000`
+- 如果不需要这层日志，直接关闭 `velo.feign.request-logging-enabled`
+
+### 5. CORS
 
 Velo 提供一个偏“快速放开”的 CORS 开关，默认关闭。
 
@@ -630,6 +653,9 @@ velo:
 
 ```yaml
 velo:
+  feign:
+    enabled: false
+    request-logging-enabled: false
   web:
     enabled: false
     request-logging-enabled: false

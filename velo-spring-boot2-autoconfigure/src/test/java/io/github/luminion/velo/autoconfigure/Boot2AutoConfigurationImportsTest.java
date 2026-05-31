@@ -23,6 +23,7 @@ class Boot2AutoConfigurationImportsTest {
             assertTrue(factories.contains("io.github.luminion.velo.ratelimit.VeloRateLimitAutoConfiguration"));
             assertTrue(factories.contains("io.github.luminion.velo.mybatisplus.VeloMybatisPlusAutoConfiguration"));
             assertTrue(factories.contains("io.github.luminion.velo.redis.VeloRedisAutoConfiguration"));
+            assertTrue(factories.contains("io.github.luminion.velo.feign.VeloFeignAutoConfiguration"));
             assertTrue(factories.contains("io.github.luminion.velo.excel.VeloExcelAutoConfiguration"));
             assertTrue(factories.contains("io.github.luminion.velo.jackson.VeloJacksonAutoConfiguration"));
             assertTrue(!factories.contains("VeloIdempotentConfig"));

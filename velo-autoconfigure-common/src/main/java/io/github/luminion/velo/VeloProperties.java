@@ -3,6 +3,7 @@ package io.github.luminion.velo;
 import io.github.luminion.velo.xss.XssStrategy;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.DeprecatedConfigurationProperty;
 import org.springframework.boot.logging.LogLevel;
 
 import java.time.Duration;
@@ -78,6 +79,11 @@ public class VeloProperties {
      * Web related settings.
      */
     private WebProperties web = new WebProperties();
+
+    /**
+     * Feign related settings.
+     */
+    private FeignProperties feign = new FeignProperties();
 
     @Data
     public static class IdempotentProperties {
@@ -262,14 +268,19 @@ public class VeloProperties {
         private boolean dateTimeEnabled = true;
 
         /**
-         * Serializes integer values as strings only when they are outside the JavaScript safe integer range.
+         * Serializes long values as strings.
          */
-        private boolean unsafeIntegerAsString = true;
+        private boolean longAsString = true;
 
         /**
          * Serializes BigDecimal values as strings.
          */
         private boolean bigDecimalAsString = true;
+
+        /**
+         * Removes trailing zeros before serializing BigDecimal values.
+         */
+        private boolean bigDecimalStripTrailingZeros = false;
 
         /**
          * Serializes float and double values as strings.
@@ -295,6 +306,17 @@ public class VeloProperties {
          * Enables automatic registration of starter managed String converters.
          */
         private boolean stringConverterEnabled = true;
+
+        @Deprecated
+        @DeprecatedConfigurationProperty(replacement = "velo.jackson.long-as-string")
+        public boolean isUnsafeIntegerAsString() {
+            return longAsString;
+        }
+
+        @Deprecated
+        public void setUnsafeIntegerAsString(boolean unsafeIntegerAsString) {
+            this.longAsString = unsafeIntegerAsString;
+        }
 
         private static Map<String, String> defaultEnumMappings() {
             Map<String, String> mappings = new LinkedHashMap<>();
@@ -345,6 +367,25 @@ public class VeloProperties {
          * Web XSS settings.
          */
         private XssProperties xss = new XssProperties();
+    }
+
+    @Data
+    public static class FeignProperties {
+
+        /**
+         * Enables Feign client logging auto-configuration.
+         */
+        private boolean enabled = true;
+
+        /**
+         * Enables the Feign invocation logging proxy.
+         */
+        private boolean requestLoggingEnabled = true;
+
+        /**
+         * Maximum length of logged request and response payloads.
+         */
+        private int requestLoggingMaxPayloadLength = 2000;
     }
 
     @Data

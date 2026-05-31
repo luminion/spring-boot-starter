@@ -4,11 +4,9 @@ import tools.jackson.core.JsonGenerator;
 import tools.jackson.databind.SerializationContext;
 import tools.jackson.databind.ser.std.StdSerializer;
 
-public class UnsafeLongToStringSerializer extends StdSerializer<Long> {
+public class LongToStringSerializer extends StdSerializer<Long> {
 
-    private static final long MAX_SAFE_INTEGER = 9007199254740991L;
-
-    public UnsafeLongToStringSerializer() {
+    public LongToStringSerializer() {
         super(Long.class);
     }
 
@@ -18,10 +16,6 @@ public class UnsafeLongToStringSerializer extends StdSerializer<Long> {
             gen.writeNull();
             return;
         }
-        if (value.longValue() > MAX_SAFE_INTEGER || value.longValue() < -MAX_SAFE_INTEGER) {
-            gen.writeString(Long.toString(value));
-            return;
-        }
-        gen.writeNumber(value.longValue());
+        gen.writeString(Long.toString(value));
     }
 }
