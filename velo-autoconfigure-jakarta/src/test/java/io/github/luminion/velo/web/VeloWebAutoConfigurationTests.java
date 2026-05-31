@@ -206,6 +206,35 @@ class VeloWebAutoConfigurationTests {
     }
 
     @Test
+    void shouldAllowUnlimitedLoggedPayloadsWhenConfiguredAsNegativeOne(CapturedOutput output) throws Throwable {
+        VeloProperties properties = new VeloProperties();
+        properties.getWeb().setRequestLoggingMaxPayloadLength(-1);
+        String longJson = "{\"value\":\"abcdefghijklmnopqrstuvwxyz\"}";
+        ControllerLogAspect aspect = new ControllerLogAspect(properties, value -> longJson);
+        ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
+        MethodSignature signature = mock(MethodSignature.class);
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/converter/query");
+
+        request.setRemoteAddr("127.0.0.1");
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
+        try {
+            when(joinPoint.getSignature()).thenReturn(signature);
+            when(joinPoint.getArgs()).thenReturn(new Object[] {"Tom"});
+            when(joinPoint.proceed()).thenReturn(ResponseEntity.ok(new DemoPayload("tomUser")));
+            when(signature.getDeclaringType()).thenReturn(DemoController.class);
+            when(signature.getParameterNames()).thenReturn(new String[] {"name"});
+
+            aspect.logControllerInvocation(joinPoint);
+        } finally {
+            RequestContextHolder.resetRequestAttributes();
+        }
+
+        assertThat(output.getOut()).contains("[127.0.0.1 POST /converter/query] ==> args: " + longJson);
+        assertThat(output.getOut()).contains("resp: " + longJson);
+        assertThat(output.getOut()).doesNotContain("...");
+    }
+
+    @Test
     void shouldLogDashWhenResponseBodyIsNull(CapturedOutput output) throws Throwable {
         VeloProperties properties = new VeloProperties();
         ControllerLogAspect aspect = new ControllerLogAspect(properties, value -> "null");

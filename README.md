@@ -599,6 +599,7 @@ velo:
 - 会记录请求方法、controller 映射模板路径、入参与响应体
 - 会过滤掉原始 query string，避免把敏感查询串直接打到日志中
 - 过长 payload 会自动截断，默认最大长度 `2000`
+- `request-logging-max-payload-length=-1` 表示不限制长度，`0` 表示不输出 payload 内容
 - 如果不需要这层日志，直接关闭 `velo.web.request-logging-enabled`
 
 ### 4. Feign 调试日志
@@ -622,6 +623,7 @@ velo:
 - 日志格式和 Controller 请求日志保持一致，便于联调排查
 - 暂不记录 header，只保留调试常用关键信息
 - 过长 payload 会自动截断，默认最大长度 `2000`
+- `request-logging-max-payload-length=-1` 表示不限制长度，`0` 表示不输出 payload 内容
 - 如果不需要这层日志，直接关闭 `velo.feign.request-logging-enabled`
 
 ### 5. CORS

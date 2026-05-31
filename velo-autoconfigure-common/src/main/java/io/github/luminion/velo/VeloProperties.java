@@ -359,7 +359,7 @@ public class VeloProperties {
         private boolean requestLoggingEnabled = true;
 
         /**
-         * Maximum length of logged request and response payloads.
+         * Maximum length of logged request and response payloads. Use -1 for unlimited output.
          */
         private int requestLoggingMaxPayloadLength = 2000;
 
@@ -383,7 +383,7 @@ public class VeloProperties {
         private boolean requestLoggingEnabled = true;
 
         /**
-         * Maximum length of logged request and response payloads.
+         * Maximum length of logged request and response payloads. Use -1 for unlimited output.
          */
         private int requestLoggingMaxPayloadLength = 2000;
     }

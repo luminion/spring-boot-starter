@@ -5,6 +5,7 @@ import io.github.luminion.velo.spi.RuntimeJsonSerializer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.aop.support.AopUtils;
+import org.springframework.boot.autoconfigure.aop.AopAutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.FilteredClassLoader;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -25,28 +26,29 @@ class VeloFeignAutoConfigurationTests {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
             .withConfiguration(AutoConfigurations.of(
+                    AopAutoConfiguration.class,
                     VeloCoreAutoConfiguration.class,
                     VeloFeignAutoConfiguration.class
             ))
             .withUserConfiguration(TestFeignConfiguration.class);
 
     @Test
-    void shouldCreateFeignLogBeanPostProcessorWhenFeignClientPresent() {
-        contextRunner.run(context -> assertThat(context).hasSingleBean(FeignLogBeanPostProcessor.class));
+    void shouldCreateFeignLogAspectWhenFeignClientPresent() {
+        contextRunner.run(context -> assertThat(context).hasSingleBean(FeignLogAspect.class));
     }
 
     @Test
-    void shouldSkipFeignLogBeanPostProcessorWhenRequestLoggingDisabled() {
+    void shouldSkipFeignLogAspectWhenRequestLoggingDisabled() {
         contextRunner
                 .withPropertyValues("velo.feign.request-logging-enabled=false")
-                .run(context -> assertThat(context).doesNotHaveBean(FeignLogBeanPostProcessor.class));
+                .run(context -> assertThat(context).doesNotHaveBean(FeignLogAspect.class));
     }
 
     @Test
     void shouldSkipAutoConfigurationWhenFeignClientClassMissing() {
         contextRunner
                 .withClassLoader(new FilteredClassLoader("org.springframework.cloud.openfeign"))
-                .run(context -> assertThat(context).doesNotHaveBean(FeignLogBeanPostProcessor.class));
+                .run(context -> assertThat(context).doesNotHaveBean(FeignLogAspect.class));
     }
 
     @Test
@@ -73,13 +75,25 @@ class VeloFeignAutoConfigurationTests {
                 .run(context -> context.getBean(DemoFeignClient.class).findById(1L));
 
         assertThat(output.getOut()).contains("[Feign demo-client GET /users/{id}] ==> args:");
-        assertThat(output.getOut()).contains("resp: {\"userNam...");
+        assertThat(output.getOut()).contains("resp: {\"userName...");
+    }
+
+    @Test
+    void shouldAllowUnlimitedPayloadLoggingWhenConfiguredAsNegativeOne(CapturedOutput output) {
+        contextRunner
+                .withPropertyValues("velo.feign.request-logging-max-payload-length=-1")
+                .run(context -> context.getBean(DemoFeignClient.class).findById(1L));
+
+        assertThat(output.getOut()).contains("[Feign demo-client GET /users/{id}] ==> args:");
+        assertThat(output.getOut()).contains("resp: {\"userName\":\"tom\"}");
+        assertThat(output.getOut()).doesNotContain("...");
     }
 
     @Test
     void shouldLogDashWhenResponseBodyIsNull(CapturedOutput output) {
         new ApplicationContextRunner()
                 .withConfiguration(AutoConfigurations.of(
+                        AopAutoConfiguration.class,
                         VeloCoreAutoConfiguration.class,
                         VeloFeignAutoConfiguration.class
                 ))

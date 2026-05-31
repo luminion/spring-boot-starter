@@ -115,6 +115,9 @@ final class FeignLogSupport {
     }
 
     private static String limit(String text, int maxPayloadLength) {
+        if (maxPayloadLength < 0) {
+            return text;
+        }
         int safeMaxPayloadLength = Math.max(0, maxPayloadLength);
         if (text == null || text.length() <= safeMaxPayloadLength) {
             return text;
