@@ -24,6 +24,46 @@ Velo Spring Boot Starter 是一组低侵入的 Spring Boot 自动配置扩展。
 
 ## 总览
 
+Velo 默认使用 `velo.mode=OPINIONATED`，目标是引入 starter 后直接获得常用增强能力。
+
+如果你希望 starter 只保留显式注解类能力，尽量不自动改变全局行为，可以切到保守模式：
+
+```yaml
+velo:
+  mode: CONSERVATIVE
+```
+
+模式说明：
+
+- `OPINIONATED`：默认模式，开启偏开箱即用的全局增强
+- `CONSERVATIVE`：关闭容易自动影响应用行为的默认项，但 `@Idempotent`、`@RateLimit`、`@Lock`、`@InvokeLog`、`@SlowLog` 等显式注解仍可用
+- `CONSERVATIVE` 只提供低优先级默认值，业务项目显式配置的属性优先级更高
+- 保守模式下重新打开某类能力时，需要显式设置对应的 `enabled` 项，例如 `velo.jackson.enabled=true`
+
+例如保守模式下重新打开 traceId：
+
+```yaml
+velo:
+  mode: CONSERVATIVE
+  log:
+    trace:
+      enabled: true
+```
+
+默认会自动影响全局行为的能力：
+
+| 能力 | `OPINIONATED` 默认 | `CONSERVATIVE` 默认 | 说明 |
+| --- | --- | --- | --- |
+| traceId / MDC / 日志 pattern / 响应头 | 开启 | 关闭 | 影响用户自己的日志输出 |
+| Controller 调用日志 | 开启 | 关闭 | Web 环境下自动记录请求调用 |
+| Feign 调用日志 | 开启 | 关闭 | 存在 Feign 时自动记录远程调用 |
+| Jackson 增强 | 开启 | 关闭 | 影响 JSON 序列化、反序列化扩展 |
+| Spring Converter / Web MVC 日期绑定 | 开启 | 关闭 | 影响字符串到日期时间的全局转换 |
+| MyBatis-Plus 拦截器 | 开启 | 关闭 | 自动补充分页、乐观锁、防全表更新 |
+| RedisTemplate 自动补齐 | 开启 | 关闭 | 依赖 Redis classpath 与连接工厂 |
+| Redis Cache 自动补齐 | 开启 | 关闭 | 依赖 Spring Cache / Redis 条件 |
+| Excel converter 自动注册 | 开启 | 关闭 | helper 工具类不受影响 |
+
 
 ## Maven 依赖
 
@@ -245,7 +285,7 @@ public void submitOrder(Long userId) {
 - `backend` 可选 `AUTO`、`REDISSON`、`REDIS`、`CAFFEINE`、`JDK`
 - `AUTO` 模式下按自动配置顺序选择后端：`REDISSON -> REDIS -> CAFFEINE -> JDK`
 - `prefix` 默认 `idempotent:`
-- `key` 为空时会退化成 `类名#方法名`，但业务通常仍建议显式给出 SpEL key
+- `key` 为空时会退化成 `类名#方法名`，同一方法不同参数会被视为同一请求，业务通常建议显式给出 SpEL key
 
 ### 4. 限流
 
@@ -280,7 +320,7 @@ public Object query(Long userId) {
 
 说明：
 
-- `permits` 表示一个时间窗口内允许通过的最大请求数
+- `permits` 表示一个时间窗口内允许通过的最大请求数，支持小数；小数会向上取整容量并拉长窗口，近似保持平均速率
 - `ttl + unit` 定义窗口大小
 - `backend` 与幂等一致，也支持 `AUTO/REDISSON/REDIS/CAFFEINE/JDK`
 - `AUTO` 模式下默认选择顺序同幂等：`REDISSON -> REDIS -> CAFFEINE -> JDK`
@@ -326,7 +366,7 @@ public void pay(Long orderId) {
 
 ### 6. 日志
 
-Velo 提供一套注解式方法日志能力，默认输出到 `Slf4J`。
+Velo 提供一套统一调用日志能力，Controller、Feign 与 `@InvokeLog` 都按同一格式输出一次调用的最终状态。
 
 基础 starter 默认可用，无需额外依赖。
 
@@ -337,6 +377,29 @@ velo:
   log:
     enabled: true
     level: INFO
+    trace:
+      enabled: true
+      header-name: X-Trace-Id
+      mdc-key: traceId
+      response-header-enabled: true
+      feign-propagation-enabled: true
+      logging-pattern-enabled: true
+    invocation:
+      enabled: true
+      max-payload-length: 2000
+      include-args: true
+      include-result: true
+      include-error-stack-trace: false
+      sensitive-fields:
+        - password
+        - token
+        - authorization
+      controller:
+        enabled: true
+      feign:
+        enabled: true
+      method:
+        enabled: true
 ```
 
 使用示例：
@@ -354,10 +417,13 @@ public Object createOrder(CreateOrderCmd cmd) {
 
 说明：
 
-- `@InvokeLog` 是组合注解，等价于 `@ArgsLog + @ResultLog + @ErrorLog`
-- `@SlowLog` 用于慢调用日志，默认时间单位为毫秒
-- `velo.log.level` 控制 starter 默认 `Slf4JLogWriter` 的输出级别
-- 如果你自己提供 `InvokeArgsWriter`、`InvokeResultWriter`、`ErrorLogWriter`、`SlowLogWriter` Bean，starter 会优先使用自定义实现
+- `traceId` 默认开启，会写入 MDC、响应头，并在 Feign 调用中透传
+- 如果没有自定义 `logging.pattern.level`，会自动把 `%X{traceId}` 加到用户自己的日志中
+- `@InvokeLog` 只输出一条完成态日志，成功包含 `args` 与 `result`，异常包含 `args` 与异常摘要
+- `@SlowLog` 保留慢调用语义，单独使用时只在超过阈值后输出统一调用日志
+- 同时使用 `@InvokeLog` 与 `@SlowLog` 时不会重复打印，统一日志中会带 `slow=true`
+- 如果需要写入 MQ、数据库或审计系统，提供自定义 `InvocationLogWriter` Bean 即可
+- `velo.log.level=OFF` 会关闭默认 Slf4J 调用日志 writer 的成功和异常输出；自定义 `InvocationLogWriter` 不受该日志级别约束
 
 ### 7. XSS
 
@@ -404,7 +470,7 @@ public class UserQuery {
 - `strategy` 可选 `NONE`、`ESCAPE`、`SIMPLE_TEXT`、`BASIC`、`BASIC_WITH_IMAGES`、`RELAXED`
 - `ESCAPE` 不依赖 `jsoup`，其余 HTML 清洗策略仍建议引入 `jsoup`
 - 开启后会注册 `XssCleaner`；`ESCAPE` 且无 `jsoup` 时会走 Spring 转义
-- 清洗发生在 Web MVC 的字符串参数绑定阶段，不会全局处理所有字符串字段
+- 清洗发生在 Web MVC 的字符串参数绑定阶段，包括 query/form/path 和普通对象参数中通过 MVC binder 绑定的 `String` 字段；不会接管 Jackson JSON 请求体反序列化，也不会全局处理所有字符串字段
 
 ### 8. Jackson
 
@@ -580,31 +646,36 @@ velo:
 - 默认值就是 `true`
 - 关闭后，会同时影响全局 Converter 注册以及 Web MVC 日期时间 formatter 逻辑
 
-### 3. Controller 请求日志
+### 3. Controller 调用日志
 
-有 Web 环境时，Velo 默认开启 Controller 请求日志切面。
+有 Web 环境时，Velo 默认开启 Controller 调用日志切面，并自动生成或接收 `X-Trace-Id`。
 
 配置项：
 
 ```yaml
 velo:
-  web:
-    request-logging-enabled: true
-    request-logging-max-payload-length: 2000
+  log:
+    invocation:
+      enabled: true
+      max-payload-length: 2000
+      controller:
+        enabled: true
+    trace:
+      enabled: true
 ```
 
 说明：
 
 - 默认开启
-- 会记录请求方法、controller 映射模板路径、入参与响应体
+- 每次调用输出一条完成态日志，包含请求方法、controller 映射模板路径、耗时、入参与响应体或异常摘要
 - 会过滤掉原始 query string，避免把敏感查询串直接打到日志中
 - 过长 payload 会自动截断，默认最大长度 `2000`
-- `request-logging-max-payload-length=-1` 表示不限制长度，`0` 表示不输出 payload 内容
-- 如果不需要这层日志，直接关闭 `velo.web.request-logging-enabled`
+- `max-payload-length=-1` 表示不限制长度，`0` 表示 payload 记录为 `-`
+- 如果不需要这层日志，关闭 `velo.log.invocation.controller.enabled`
 
-### 4. Feign 调试日志
+### 4. Feign 调用日志
 
-如果项目中存在 `@FeignClient`，Velo 可以按和 Controller 请求日志接近的格式记录 Feign 调用。
+如果项目中存在 `@FeignClient`，Velo 会按统一调用日志格式记录 Feign 调用，并自动透传 `X-Trace-Id`。
 
 配置项：
 
@@ -612,19 +683,26 @@ velo:
 velo:
   feign:
     enabled: true
-    request-logging-enabled: true
-    request-logging-max-payload-length: 2000
+  log:
+    invocation:
+      enabled: true
+      max-payload-length: 2000
+      feign:
+        enabled: true
+    trace:
+      enabled: true
+      feign-propagation-enabled: true
 ```
 
 说明：
 
 - 默认开启
-- 会记录 client 名、HTTP 方法、映射路径、入参与响应体
-- 日志格式和 Controller 请求日志保持一致，便于联调排查
+- 会记录 client 名、HTTP 方法、映射路径、耗时、入参与响应体或异常摘要
+- 日志格式和 Controller、`@InvokeLog` 保持一致，便于联调排查
 - 暂不记录 header，只保留调试常用关键信息
 - 过长 payload 会自动截断，默认最大长度 `2000`
-- `request-logging-max-payload-length=-1` 表示不限制长度，`0` 表示不输出 payload 内容
-- 如果不需要这层日志，直接关闭 `velo.feign.request-logging-enabled`
+- `max-payload-length=-1` 表示不限制长度，`0` 表示 payload 记录为 `-`
+- 如果不需要这层日志，关闭 `velo.log.invocation.feign.enabled`
 
 ### 5. CORS
 
@@ -651,17 +729,28 @@ velo:
 
 ## 常用关闭开关
 
-如果你只想保留部分能力，可以按配置域逐项关闭：
+如果你希望尽量减少自动影响，优先使用：
+
+```yaml
+velo:
+  mode: CONSERVATIVE
+```
+
+如果你只想保留部分能力，也可以按配置域逐项关闭：
 
 ```yaml
 velo:
   feign:
     enabled: false
-    request-logging-enabled: false
   web:
     enabled: false
-    request-logging-enabled: false
     xss:
+      enabled: false
+  log:
+    enabled: false
+    invocation:
+      enabled: false
+    trace:
       enabled: false
   jackson:
     enabled: false
@@ -678,8 +767,6 @@ velo:
   lock:
     enabled: false
   excel:
-    enabled: false
-  log:
     enabled: false
   spring-converter:
     date-time-enabled: false

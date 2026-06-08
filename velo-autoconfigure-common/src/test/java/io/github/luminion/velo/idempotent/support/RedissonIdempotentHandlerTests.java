@@ -22,9 +22,9 @@ class RedissonIdempotentHandlerTests {
         when(bucket.setIfAbsent("LOCKED", Duration.ofMillis(1500L))).thenReturn(true);
 
         RedissonIdempotentHandler handler = new RedissonIdempotentHandler(redissonClient);
-        boolean locked = handler.tryLock("demo", 1500L, TimeUnit.MILLISECONDS);
+        boolean recorded = handler.tryRecord("demo", 1500L, TimeUnit.MILLISECONDS);
 
-        assertThat(locked).isTrue();
+        assertThat(recorded).isTrue();
         verify(bucket).setIfAbsent("LOCKED", Duration.ofMillis(1500L));
     }
 

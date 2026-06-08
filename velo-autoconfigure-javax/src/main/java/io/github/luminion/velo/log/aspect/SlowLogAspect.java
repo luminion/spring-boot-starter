@@ -1,25 +1,44 @@
 package io.github.luminion.velo.log.aspect;
 
-import io.github.luminion.velo.log.SlowLogWriter;
+import io.github.luminion.velo.VeloProperties;
+import io.github.luminion.velo.log.InvocationLogRecord;
+import io.github.luminion.velo.log.InvocationLogSource;
+import io.github.luminion.velo.log.InvocationLogSupport;
+import io.github.luminion.velo.log.InvocationLogWriter;
+import io.github.luminion.velo.log.annotation.InvokeLog;
 import io.github.luminion.velo.log.annotation.SlowLog;
+import io.github.luminion.velo.log.trace.TraceContext;
+import io.github.luminion.velo.spi.RuntimeJsonSerializer;
+import io.github.luminion.velo.spi.provider.HttpMessageConverterRuntimeJsonSerializer;
+import io.github.luminion.velo.util.InvocationUtils;
 import lombok.RequiredArgsConstructor;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.core.annotation.AnnotatedElementUtils;
+
+import java.util.Collections;
 
 @Aspect
 @RequiredArgsConstructor
 public class SlowLogAspect {
-    private final SlowLogWriter slowLogWriter;
+
+    private final VeloProperties properties;
+
+    private final ObjectProvider<RuntimeJsonSerializer> runtimeJsonSerializerProvider;
+
+    private final InvocationLogWriter invocationLogWriter;
 
     @Around("@within(io.github.luminion.velo.log.annotation.SlowLog) " +
             "|| @annotation(io.github.luminion.velo.log.annotation.SlowLog)")
     public Object logTime(ProceedingJoinPoint joinPoint) throws Throwable {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
+        if (hasInvokeLog(signature)) {
+            return joinPoint.proceed();
+        }
 
-        // 统一从 merged annotation 读取配置，保证方法级配置优先覆盖类级配置。
         SlowLog slowLog = AnnotatedElementUtils.findMergedAnnotation(signature.getMethod(), SlowLog.class);
         if (slowLog == null) {
             slowLog = AnnotatedElementUtils.findMergedAnnotation(signature.getDeclaringType(), SlowLog.class);
@@ -29,17 +48,58 @@ public class SlowLogAspect {
             return joinPoint.proceed();
         }
 
+        RuntimeJsonSerializer runtimeJsonSerializer = runtimeJsonSerializer();
+        VeloProperties.InvocationProperties invocationProperties = properties.getLog().getInvocation();
+        String argsText = InvocationLogSupport.buildArgsText(signature, joinPoint.getTarget(), joinPoint.getArgs(),
+                runtimeJsonSerializer, invocationProperties);
         long start = System.nanoTime();
         try {
-            return joinPoint.proceed();
-        } finally {
-            long durationNs = System.nanoTime() - start;
-            long thresholdNs = slowLog.timeUnit().toNanos(slowLog.value());
-
-            // 统一换算成纳秒后比较，避免在不同时间单位之间写重复分支。
-            if (durationNs > thresholdNs) {
-                slowLogWriter.writeSlow(signature, durationNs);
+            Object result = joinPoint.proceed();
+            long elapsedMs = InvocationLogSupport.elapsedMs(start);
+            if (elapsedMs * 1_000_000 > slowLog.timeUnit().toNanos(slowLog.value())) {
+                InvocationLogRecord record = buildRecord(signature, argsText,
+                        InvocationLogSupport.buildResultText(result, runtimeJsonSerializer, invocationProperties),
+                        elapsedMs, null);
+                invocationLogWriter.write(record);
             }
+            return result;
+        } catch (Throwable ex) {
+            long elapsedMs = InvocationLogSupport.elapsedMs(start);
+            if (elapsedMs * 1_000_000 > slowLog.timeUnit().toNanos(slowLog.value())) {
+                InvocationLogRecord record = buildRecord(signature, argsText, null, elapsedMs, ex);
+                invocationLogWriter.write(record);
+            }
+            throw ex;
         }
+    }
+
+    private InvocationLogRecord buildRecord(MethodSignature signature, String argsText, String resultText, long costMs,
+            Throwable error) {
+        InvocationLogRecord record = new InvocationLogRecord();
+        record.setTraceId(TraceContext.get(properties.getLog().getTrace().getMdcKey()));
+        record.setSource(InvocationLogSource.INVOKE);
+        record.setTarget(InvocationUtils.getMethodName(signature));
+        record.setCostMs(costMs);
+        record.setArgs(argsText);
+        record.setSlow(true);
+        record.setSuccess(error == null);
+        if (error == null) {
+            record.setResult(resultText);
+        } else {
+            record.setError(error);
+            record.setErrorClass(error.getClass().getName());
+            record.setErrorMessage(error.getMessage());
+        }
+        return record;
+    }
+
+    private boolean hasInvokeLog(MethodSignature signature) {
+        return AnnotatedElementUtils.findMergedAnnotation(signature.getMethod(), InvokeLog.class) != null
+                || AnnotatedElementUtils.findMergedAnnotation(signature.getDeclaringType(), InvokeLog.class) != null;
+    }
+
+    private RuntimeJsonSerializer runtimeJsonSerializer() {
+        return runtimeJsonSerializerProvider.getIfAvailable(
+                () -> new HttpMessageConverterRuntimeJsonSerializer(Collections.emptyList()));
     }
 }

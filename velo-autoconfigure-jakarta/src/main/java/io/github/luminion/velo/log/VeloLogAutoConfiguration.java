@@ -1,25 +1,17 @@
 package io.github.luminion.velo.log;
 
 import io.github.luminion.velo.VeloProperties;
-import io.github.luminion.velo.log.aspect.ArgsLogAspect;
-import io.github.luminion.velo.log.aspect.ErrorLogAspect;
-import io.github.luminion.velo.log.aspect.ResultLogAspect;
+import io.github.luminion.velo.log.aspect.InvokeLogAspect;
 import io.github.luminion.velo.log.aspect.SlowLogAspect;
-import io.github.luminion.velo.log.support.Slf4JLogWriter;
+import io.github.luminion.velo.log.support.Slf4JInvocationLogWriter;
+import io.github.luminion.velo.spi.RuntimeJsonSerializer;
 import org.aspectj.weaver.Advice;
-import org.springframework.beans.factory.NoUniqueBeanDefinitionException;
 import org.springframework.beans.factory.ObjectProvider;
-import org.slf4j.event.Level;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.boot.logging.LogLevel;
 import org.springframework.context.annotation.Bean;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * 日志自动配置。
@@ -30,79 +22,30 @@ import java.util.stream.Collectors;
 public class VeloLogAutoConfiguration {
 
     @Bean
-    @ConditionalOnMissingBean(Slf4JLogWriter.class)
-    public Slf4JLogWriter slf4JLogWriter(VeloProperties properties) {
-        return new Slf4JLogWriter(toLevel(properties.getLog().getLevel()));
+    @ConditionalOnMissingBean
+    @ConditionalOnProperty(prefix = "velo.log.invocation", name = "enabled", havingValue = "true",
+            matchIfMissing = true)
+    public InvocationLogWriter invocationLogWriter(VeloProperties properties) {
+        return new Slf4JInvocationLogWriter(properties);
     }
 
     @Bean
-    @ConditionalOnMissingBean(ArgsLogAspect.class)
-    @ConditionalOnBean(InvokeArgsWriter.class)
-    public ArgsLogAspect argsLogAspect(ObjectProvider<InvokeArgsWriter> argsWriters) {
-        return new ArgsLogAspect(resolveWriter(argsWriters, InvokeArgsWriter.class));
+    @ConditionalOnMissingBean
+    @ConditionalOnProperty(prefix = "velo.log.invocation", name = {"enabled", "method.enabled"},
+            havingValue = "true", matchIfMissing = true)
+    public InvokeLogAspect invokeLogAspect(VeloProperties properties,
+            ObjectProvider<RuntimeJsonSerializer> runtimeJsonSerializerProvider,
+            InvocationLogWriter invocationLogWriter) {
+        return new InvokeLogAspect(properties, runtimeJsonSerializerProvider, invocationLogWriter);
     }
 
     @Bean
-    @ConditionalOnMissingBean(ResultLogAspect.class)
-    @ConditionalOnBean(InvokeResultWriter.class)
-    public ResultLogAspect resultLogAspect(ObjectProvider<InvokeResultWriter> resultWriters) {
-        return new ResultLogAspect(resolveWriter(resultWriters, InvokeResultWriter.class));
-    }
-
-    @Bean
-    @ConditionalOnMissingBean(ErrorLogAspect.class)
-    @ConditionalOnBean(ErrorLogWriter.class)
-    public ErrorLogAspect errorLogAspect(ObjectProvider<ErrorLogWriter> errorLogWriters) {
-        return new ErrorLogAspect(resolveWriter(errorLogWriters, ErrorLogWriter.class));
-    }
-
-    @Bean
-    @ConditionalOnMissingBean(SlowLogAspect.class)
-    @ConditionalOnBean(SlowLogWriter.class)
-    public SlowLogAspect slowLogAspect(ObjectProvider<SlowLogWriter> slowLogWriters) {
-        return new SlowLogAspect(resolveWriter(slowLogWriters, SlowLogWriter.class));
-    }
-
-    private Level toLevel(LogLevel logLevel) {
-        if (logLevel == null) {
-            return Level.INFO;
-        }
-        switch (logLevel) {
-            case TRACE:
-                return Level.TRACE;
-            case DEBUG:
-                return Level.DEBUG;
-            case INFO:
-                return Level.INFO;
-            case WARN:
-                return Level.WARN;
-            case ERROR:
-            case FATAL:
-                return Level.ERROR;
-            case OFF:
-                return null;
-            default:
-                return Level.INFO;
-        }
-    }
-
-    private <T> T resolveWriter(ObjectProvider<T> writerProvider, Class<T> writerType) {
-        List<T> candidates = writerProvider.orderedStream().collect(Collectors.toList());
-        if (candidates.isEmpty()) {
-            throw new IllegalStateException("No " + writerType.getSimpleName() + " bean available.");
-        }
-        List<T> customCandidates = candidates.stream()
-                .filter(candidate -> candidate.getClass() != Slf4JLogWriter.class)
-                .collect(Collectors.toList());
-
-        if (customCandidates.size() > 1) {
-            throw new NoUniqueBeanDefinitionException(writerType, customCandidates.size(),
-                    "Multiple custom " + writerType.getSimpleName()
-                            + " beans found; keep only one custom writer for this interface.");
-        }
-        if (!customCandidates.isEmpty()) {
-            return customCandidates.get(0);
-        }
-        return candidates.get(0);
+    @ConditionalOnMissingBean
+    @ConditionalOnProperty(prefix = "velo.log.invocation", name = {"enabled", "method.enabled"},
+            havingValue = "true", matchIfMissing = true)
+    public SlowLogAspect slowLogAspect(VeloProperties properties,
+            ObjectProvider<RuntimeJsonSerializer> runtimeJsonSerializerProvider,
+            InvocationLogWriter invocationLogWriter) {
+        return new SlowLogAspect(properties, runtimeJsonSerializerProvider, invocationLogWriter);
     }
 }

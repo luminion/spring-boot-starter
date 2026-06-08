@@ -46,11 +46,17 @@ public class IdempotentAspect {
                         joinPoint.getArgs(),
                         idempotent.key()));
 
-        boolean accepted = idempotentHandler.tryLock(key, ttl, idempotent.unit());
+        boolean accepted = idempotentHandler.tryRecord(key, ttl, idempotent.unit());
         if (!accepted) {
             throw new IdempotentException(idempotent.message());
         }
 
-        return joinPoint.proceed();
+        try {
+            return joinPoint.proceed();
+        } catch (Throwable ex) {
+            // 业务方法执行失败时清除幂等记录，允许重试
+            idempotentHandler.remove(key);
+            throw ex;
+        }
     }
 }

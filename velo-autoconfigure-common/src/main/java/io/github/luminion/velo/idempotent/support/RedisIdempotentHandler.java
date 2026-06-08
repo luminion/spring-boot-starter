@@ -17,14 +17,14 @@ public class RedisIdempotentHandler implements IdempotentHandler {
     private final RedisTemplate<Object, Object> redisTemplate;
 
     @Override
-    public boolean tryLock(String key, long timeout, TimeUnit unit) {
+    public boolean tryRecord(String key, long timeout, TimeUnit unit) {
         // 使用 SET NX EX 命令
         Boolean success = redisTemplate.opsForValue().setIfAbsent(key, "LOCKED", timeout, unit);
         return success != null && success;
     }
 
     @Override
-    public void unlock(String key) {
+    public void remove(String key) {
         redisTemplate.delete(key);
     }
 

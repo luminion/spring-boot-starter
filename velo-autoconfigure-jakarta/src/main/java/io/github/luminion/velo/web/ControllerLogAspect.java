@@ -1,22 +1,19 @@
 package io.github.luminion.velo.web;
 
 import io.github.luminion.velo.VeloProperties;
+import io.github.luminion.velo.log.InvocationLogRecord;
+import io.github.luminion.velo.log.InvocationLogSource;
+import io.github.luminion.velo.log.InvocationLogSupport;
+import io.github.luminion.velo.log.InvocationLogWriter;
+import io.github.luminion.velo.log.trace.TraceContext;
 import io.github.luminion.velo.spi.RuntimeJsonSerializer;
 import io.github.luminion.velo.core.util.WebUtils;
-import io.github.luminion.velo.util.InvocationUtils;
 import lombok.RequiredArgsConstructor;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.boot.logging.LogLevel;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.servlet.HandlerMapping;
-
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 /**
  * Controller 调用日志切面。
@@ -25,77 +22,58 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ControllerLogAspect {
 
-    private static final String EMPTY_PAYLOAD = "-";
-
     private final VeloProperties properties;
 
     private final RuntimeJsonSerializer runtimeJsonSerializer;
 
+    private final InvocationLogWriter invocationLogWriter;
+
     @Around("execution(public * *(..)) && (within(@org.springframework.web.bind.annotation.RestController *) || @annotation(org.springframework.web.bind.annotation.ResponseBody) || @within(org.springframework.web.bind.annotation.ResponseBody))")
     public Object logControllerInvocation(ProceedingJoinPoint joinPoint) throws Throwable {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
-        Logger logger = LoggerFactory.getLogger(signature.getDeclaringType());
-        String requestPrefix = buildRequestPrefix();
-        LogLevel level = properties.getLog().getLevel();
-        int maxPayloadLength = properties.getWeb().getRequestLoggingMaxPayloadLength();
-
-        if (isEnabled(logger, level)) {
-            String argsText = limit(runtimeJsonSerializer.toJson(buildArgumentMap(signature, joinPoint.getTarget(), joinPoint.getArgs())),
-                    maxPayloadLength);
-            log(logger, level, "{}==> args: {}", requestPrefix, argsText);
-        }
+        String target = buildRequestTarget();
+        VeloProperties.InvocationProperties invocationProperties = properties.getLog().getInvocation();
+        String argsText = InvocationLogSupport.buildArgsText(signature, joinPoint.getTarget(), joinPoint.getArgs(),
+                runtimeJsonSerializer, invocationProperties);
         long start = System.nanoTime();
         try {
             Object result = joinPoint.proceed();
-            if (isEnabled(logger, level)) {
-                Object resultBody = result instanceof ResponseEntity<?> ? ((ResponseEntity<?>) result).getBody() : result;
-                String resultText = limit(runtimeJsonSerializer.toJson(resultBody), maxPayloadLength);
-                if (resultText == null || "null".equals(resultText)) {
-                    resultText = EMPTY_PAYLOAD;
-                }
-                long elapsedMs = (System.nanoTime() - start) / 1_000_000;
-                log(logger, level, "{}<== cost:{}ms, resp: {}", requestPrefix, elapsedMs, resultText);
-            }
+            InvocationLogRecord record = buildRecord(target, argsText, InvocationLogSupport.buildResultText(result,
+                    runtimeJsonSerializer, invocationProperties), InvocationLogSupport.elapsedMs(start), null);
+            invocationLogWriter.write(record);
             return result;
         } catch (Throwable ex) {
-            log(logger, LogLevel.ERROR, "{}<!! failed: {}", requestPrefix, ex.getMessage(), ex);
+            InvocationLogRecord record = buildRecord(target, argsText, null, InvocationLogSupport.elapsedMs(start), ex);
+            invocationLogWriter.write(record);
             throw ex;
         }
     }
 
-    private Map<String, Object> buildArgumentMap(MethodSignature signature, Object target, Object[] args) {
-        Map<String, Object> argumentMap = new LinkedHashMap<>();
-        if (args == null || args.length == 0) {
-            return argumentMap;
+    private InvocationLogRecord buildRecord(String target, String argsText, String resultText, long costMs,
+            Throwable error) {
+        InvocationLogRecord record = new InvocationLogRecord();
+        record.setTraceId(TraceContext.get(properties.getLog().getTrace().getMdcKey()));
+        record.setSource(InvocationLogSource.CONTROLLER);
+        record.setTarget(target);
+        record.setCostMs(costMs);
+        record.setArgs(argsText);
+        record.setSuccess(error == null);
+        if (error == null) {
+            record.setResult(resultText);
+        } else {
+            record.setError(error);
+            record.setErrorClass(error.getClass().getName());
+            record.setErrorMessage(error.getMessage());
         }
-        String[] parameterNames = InvocationUtils.resolveParameterNames(signature, target);
-        for (int i = 0; i < args.length; i++) {
-            String parameterName = parameterNames != null && i < parameterNames.length ? parameterNames[i] : "arg" + i;
-            argumentMap.put(parameterName, args[i]);
-        }
-        return argumentMap;
+        return record;
     }
 
-    private String limit(String text, int maxPayloadLength) {
-        if (maxPayloadLength < 0) {
-            return text;
-        }
-        int safeMaxPayloadLength = Math.max(0, maxPayloadLength);
-        if (text == null || text.length() <= safeMaxPayloadLength) {
-            return text;
-        }
-        if (safeMaxPayloadLength <= 3) {
-            return text.substring(0, safeMaxPayloadLength);
-        }
-        return text.substring(0, safeMaxPayloadLength - 3) + "...";
-    }
-
-    private String buildRequestPrefix() {
+    private String buildRequestTarget() {
         if (!WebUtils.isWebContext()) {
             return "";
         }
 
-        return "[" + WebUtils.getRequestIp() + ' ' + WebUtils.getRequestMethod() + ' ' + resolveRequestPath() + "] ";
+        return WebUtils.getRequestIp() + ' ' + WebUtils.getRequestMethod() + ' ' + resolveRequestPath();
     }
 
     private String resolveRequestPath() {
@@ -104,49 +82,5 @@ public class ControllerLogAspect {
             return String.valueOf(pattern);
         }
         return WebUtils.getRequestURI();
-    }
-
-    private boolean isEnabled(Logger logger, LogLevel level) {
-        LogLevel targetLevel = level == null ? LogLevel.INFO : level;
-        if (targetLevel == LogLevel.OFF) {
-            return false;
-        }
-        switch (targetLevel) {
-            case TRACE:
-                return logger.isTraceEnabled();
-            case INFO:
-                return logger.isInfoEnabled();
-            case WARN:
-                return logger.isWarnEnabled();
-            case ERROR:
-            case FATAL:
-                return logger.isErrorEnabled();
-            default:
-                return logger.isDebugEnabled();
-        }
-    }
-
-    private void log(Logger logger, LogLevel level, String format, Object... arguments) {
-        LogLevel targetLevel = level == null ? LogLevel.INFO : level;
-        if (targetLevel == LogLevel.OFF) {
-            return;
-        }
-        switch (targetLevel) {
-            case TRACE:
-                logger.trace(format, arguments);
-                return;
-            case INFO:
-                logger.info(format, arguments);
-                return;
-            case WARN:
-                logger.warn(format, arguments);
-                return;
-            case ERROR:
-            case FATAL:
-                logger.error(format, arguments);
-                return;
-            default:
-                logger.debug(format, arguments);
-        }
     }
 }

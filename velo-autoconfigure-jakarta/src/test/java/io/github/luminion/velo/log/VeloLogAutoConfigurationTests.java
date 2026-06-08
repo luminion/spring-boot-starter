@@ -1,15 +1,12 @@
 package io.github.luminion.velo.log;
 
 import io.github.luminion.velo.core.VeloCoreAutoConfiguration;
-import io.github.luminion.velo.log.aspect.ArgsLogAspect;
-import io.github.luminion.velo.log.aspect.ErrorLogAspect;
-import io.github.luminion.velo.log.aspect.ResultLogAspect;
+import io.github.luminion.velo.log.aspect.InvokeLogAspect;
 import io.github.luminion.velo.log.aspect.SlowLogAspect;
-import io.github.luminion.velo.log.support.Slf4JLogWriter;
+import io.github.luminion.velo.log.support.Slf4JInvocationLogWriter;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -22,74 +19,53 @@ class VeloLogAutoConfigurationTests {
             ));
 
     @Test
-    void shouldDefaultWriterToInfoLevel() {
+    void shouldCreateUnifiedInvocationLoggingBeansByDefault() {
         contextRunner.run(context -> {
-            Slf4JLogWriter writer = context.getBean(Slf4JLogWriter.class);
-            assertThat(ReflectionTestUtils.getField(writer, "level")).isEqualTo(org.slf4j.event.Level.INFO);
+            assertThat(context).hasSingleBean(InvocationLogWriter.class);
+            assertThat(context.getBean(InvocationLogWriter.class)).isInstanceOf(Slf4JInvocationLogWriter.class);
+            assertThat(context).hasSingleBean(InvokeLogAspect.class);
+            assertThat(context).hasSingleBean(SlowLogAspect.class);
         });
     }
 
     @Test
-    void shouldPreferCustomWritersWhenAvailable() {
+    void shouldPreferCustomInvocationLogWriterWhenAvailable() {
         contextRunner
-                .withBean(CustomLogWriter.class, CustomLogWriter::new)
+                .withBean(CustomInvocationLogWriter.class, CustomInvocationLogWriter::new)
                 .run(context -> {
-                    assertThat(context).hasSingleBean(Slf4JLogWriter.class);
-                    assertThat(context).hasSingleBean(ArgsLogAspect.class);
-                    assertThat(context).hasSingleBean(ResultLogAspect.class);
-                    assertThat(context).hasSingleBean(ErrorLogAspect.class);
+                    assertThat(context).hasSingleBean(InvocationLogWriter.class);
+                    assertThat(context.getBean(InvocationLogWriter.class)).isInstanceOf(CustomInvocationLogWriter.class);
+                    assertThat(context).hasSingleBean(InvokeLogAspect.class);
                     assertThat(context).hasSingleBean(SlowLogAspect.class);
-                    assertThat(ReflectionTestUtils.getField(context.getBean(ArgsLogAspect.class), "argsWriter"))
-                            .isInstanceOf(CustomLogWriter.class);
-                    assertThat(ReflectionTestUtils.getField(context.getBean(ResultLogAspect.class), "resultWriter"))
-                            .isInstanceOf(CustomLogWriter.class);
-                    assertThat(ReflectionTestUtils.getField(context.getBean(ErrorLogAspect.class), "errorLogWriter"))
-                            .isInstanceOf(CustomLogWriter.class);
-                    assertThat(ReflectionTestUtils.getField(context.getBean(SlowLogAspect.class), "slowLogWriter"))
-                            .isInstanceOf(CustomLogWriter.class);
                 });
     }
 
     @Test
-    void shouldKeepDefaultWritersForOtherAspectsWhenSingleCustomWriterProvided() {
+    void shouldSkipInvocationLoggingBeansWhenInvocationLoggingDisabled() {
         contextRunner
-                .withBean(CustomArgsWriter.class, CustomArgsWriter::new)
+                .withPropertyValues("velo.log.invocation.enabled=false")
                 .run(context -> {
-                    assertThat(context).hasSingleBean(Slf4JLogWriter.class);
-                    assertThat(ReflectionTestUtils.getField(context.getBean(ArgsLogAspect.class), "argsWriter"))
-                            .isInstanceOf(CustomArgsWriter.class);
-                    assertThat(ReflectionTestUtils.getField(context.getBean(ResultLogAspect.class), "resultWriter"))
-                            .isInstanceOf(Slf4JLogWriter.class);
-                    assertThat(ReflectionTestUtils.getField(context.getBean(ErrorLogAspect.class), "errorLogWriter"))
-                            .isInstanceOf(Slf4JLogWriter.class);
-                    assertThat(ReflectionTestUtils.getField(context.getBean(SlowLogAspect.class), "slowLogWriter"))
-                            .isInstanceOf(Slf4JLogWriter.class);
+                    assertThat(context).doesNotHaveBean(InvocationLogWriter.class);
+                    assertThat(context).doesNotHaveBean(InvokeLogAspect.class);
+                    assertThat(context).doesNotHaveBean(SlowLogAspect.class);
                 });
     }
 
-    static final class CustomLogWriter implements InvokeArgsWriter, InvokeResultWriter, ErrorLogWriter, SlowLogWriter {
-
-        @Override
-        public void writeArgs(org.aspectj.lang.reflect.MethodSignature signature, Object[] args) {
-        }
-
-        @Override
-        public void writeResult(org.aspectj.lang.reflect.MethodSignature signature, Object result) {
-        }
-
-        @Override
-        public void writeError(org.aspectj.lang.reflect.MethodSignature signature, Object[] args, Throwable e) {
-        }
-
-        @Override
-        public void writeSlow(org.aspectj.lang.reflect.MethodSignature signature, long durationNs) {
-        }
+    @Test
+    void shouldSkipMethodAspectsWhenMethodInvocationLoggingDisabled() {
+        contextRunner
+                .withPropertyValues("velo.log.invocation.method.enabled=false")
+                .run(context -> {
+                    assertThat(context).hasSingleBean(InvocationLogWriter.class);
+                    assertThat(context).doesNotHaveBean(InvokeLogAspect.class);
+                    assertThat(context).doesNotHaveBean(SlowLogAspect.class);
+                });
     }
 
-    static final class CustomArgsWriter implements InvokeArgsWriter {
+    static final class CustomInvocationLogWriter implements InvocationLogWriter {
 
         @Override
-        public void writeArgs(org.aspectj.lang.reflect.MethodSignature signature, Object[] args) {
+        public void write(InvocationLogRecord record) {
         }
     }
 }

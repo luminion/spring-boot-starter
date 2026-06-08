@@ -1,11 +1,13 @@
 package io.github.luminion.velo.web;
 
 import io.github.luminion.velo.VeloProperties;
+import io.github.luminion.velo.log.InvocationLogWriter;
 import io.github.luminion.velo.spi.RuntimeJsonSerializer;
 import io.github.luminion.velo.spi.provider.HttpMessageConverterRuntimeJsonSerializer;
 import io.github.luminion.velo.xss.converter.XssStringConverter;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -39,10 +41,21 @@ public class VeloWebAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
+    @ConditionalOnBean(InvocationLogWriter.class)
     @ConditionalOnClass(ControllerLogAspect.class)
-    @ConditionalOnProperty(prefix = "velo.web", name = "request-logging-enabled", havingValue = "true",
+    @ConditionalOnProperty(prefix = "velo.log", name = {"enabled", "invocation.enabled", "invocation.controller.enabled"},
+            havingValue = "true",
             matchIfMissing = true)
-    public ControllerLogAspect controllerLogAspect(VeloProperties properties, RuntimeJsonSerializer runtimeJsonSerializer) {
-        return new ControllerLogAspect(properties, runtimeJsonSerializer);
+    public ControllerLogAspect controllerLogAspect(VeloProperties properties, RuntimeJsonSerializer runtimeJsonSerializer,
+            InvocationLogWriter invocationLogWriter) {
+        return new ControllerLogAspect(properties, runtimeJsonSerializer, invocationLogWriter);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnProperty(prefix = "velo.log", name = {"enabled", "trace.enabled"}, havingValue = "true",
+            matchIfMissing = true)
+    public TraceIdFilter traceIdFilter(VeloProperties properties) {
+        return new TraceIdFilter(properties);
     }
 }

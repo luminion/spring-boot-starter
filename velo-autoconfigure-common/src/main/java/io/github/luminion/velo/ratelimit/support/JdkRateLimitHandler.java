@@ -3,8 +3,9 @@ package io.github.luminion.velo.ratelimit.support;
 import io.github.luminion.velo.ratelimit.RateLimitHandler;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -23,6 +24,11 @@ public class JdkRateLimitHandler implements RateLimitHandler {
 
     private final ConcurrentHashMap<String, TokenBucket> bucketMap = new ConcurrentHashMap<>();
     private final AtomicBoolean isCleaning = new AtomicBoolean(false);
+    private final ExecutorService cleanupExecutor = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "velo-ratelimit-cleanup");
+        t.setDaemon(true);
+        return t;
+    });
 
     @Override
     public boolean tryAcquire(String key, double rate, long timeout, TimeUnit unit) {
@@ -31,7 +37,7 @@ public class JdkRateLimitHandler implements RateLimitHandler {
         boolean acquired = bucketMap.computeIfAbsent(key, unused -> new TokenBucket())
                 .tryAcquire(window.capacity(), window.intervalNanos(), now);
         if (bucketMap.mappingCount() > 1024 && isCleaning.compareAndSet(false, true)) {
-            CompletableFuture.runAsync(() -> {
+            cleanupExecutor.execute(() -> {
                 try {
                     long current = System.nanoTime();
                     bucketMap.entrySet().removeIf(entry -> entry.getValue().isExpired(current));

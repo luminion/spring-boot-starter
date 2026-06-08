@@ -20,13 +20,13 @@ public class RedissonIdempotentHandler implements IdempotentHandler {
     private final RedissonClient redissonClient;
 
     @Override
-    public boolean tryLock(String key, long timeout, TimeUnit unit) {
+    public boolean tryRecord(String key, long timeout, TimeUnit unit) {
         RBucket<String> bucket = redissonClient.getBucket(key);
         return bucket.setIfAbsent("LOCKED", Duration.ofNanos(unit.toNanos(timeout)));
     }
 
     @Override
-    public void unlock(String key) {
+    public void remove(String key) {
         redissonClient.getBucket(key).delete();
     }
 

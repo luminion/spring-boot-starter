@@ -39,13 +39,13 @@ public class CaffeineIdempotentHandler implements IdempotentHandler {
             .build();
 
     @Override
-    public boolean tryLock(String key, long timeout, TimeUnit unit) {
+    public boolean tryRecord(String key, long timeout, TimeUnit unit) {
         Marker existing = cache.asMap().putIfAbsent(key, new Marker(unit.toNanos(timeout)));
         return existing == null;
     }
 
     @Override
-    public void unlock(String key) {
+    public void remove(String key) {
         cache.invalidate(key);
     }
 

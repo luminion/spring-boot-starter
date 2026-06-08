@@ -17,6 +17,7 @@ class VeloPropertiesDefaultsTest {
     void shouldUseProductionSafeDefaultsForLogging() {
         VeloProperties properties = new VeloProperties();
 
+        assertThat(properties.getMode()).isEqualTo(VeloMode.OPINIONATED);
         assertThat(properties.getLog().getLevel()).isEqualTo(LogLevel.INFO);
         assertThat(properties.getSpringConverter().isDateTimeEnabled()).isTrue();
         assertThat(properties.getExcel().getConverters().isEnabled()).isTrue();
@@ -40,9 +41,24 @@ class VeloPropertiesDefaultsTest {
         assertThat(properties.getLock().getBackend()).isEqualTo(ConcurrencyBackend.AUTO);
         assertThat(properties.getLock().getPrefix()).isEqualTo("lock:");
         assertThat(properties.getLog().isEnabled()).isTrue();
+        assertThat(properties.getLog().getTrace().isEnabled()).isTrue();
+        assertThat(properties.getLog().getTrace().getHeaderName()).isEqualTo("X-Trace-Id");
+        assertThat(properties.getLog().getTrace().getMdcKey()).isEqualTo("traceId");
+        assertThat(properties.getLog().getTrace().isResponseHeaderEnabled()).isTrue();
+        assertThat(properties.getLog().getTrace().isFeignPropagationEnabled()).isTrue();
+        assertThat(properties.getLog().getTrace().isLoggingPatternEnabled()).isTrue();
+        assertThat(properties.getLog().getInvocation().isEnabled()).isTrue();
+        assertThat(properties.getLog().getInvocation().getMaxPayloadLength()).isEqualTo(2000);
+        assertThat(properties.getLog().getInvocation().isIncludeArgs()).isTrue();
+        assertThat(properties.getLog().getInvocation().isIncludeResult()).isTrue();
+        assertThat(properties.getLog().getInvocation().isIncludeErrorStackTrace()).isFalse();
+        assertThat(properties.getLog().getInvocation().getSensitivePattern())
+                .isEqualTo("(?i)(password|token|authorization|secret|credential)");
+        assertThat(properties.getLog().getInvocation().getController().isEnabled()).isTrue();
+        assertThat(properties.getLog().getInvocation().getFeign().isEnabled()).isTrue();
+        assertThat(properties.getLog().getInvocation().getMethod().isEnabled()).isTrue();
         assertThat(properties.getWeb().isEnabled()).isTrue();
-        assertThat(properties.getWeb().isRequestLoggingEnabled()).isTrue();
-        assertThat(properties.getWeb().getRequestLoggingMaxPayloadLength()).isEqualTo(2000);
+        assertThat(properties.getFeign().isEnabled()).isTrue();
     }
 
     @Test

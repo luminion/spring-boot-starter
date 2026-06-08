@@ -100,12 +100,8 @@ class VeloIdempotentAutoConfigurationTests {
     static class CustomIdempotentHandler implements IdempotentHandler {
 
         @Override
-        public boolean tryLock(String key, long timeout, TimeUnit unit) {
+        public boolean tryRecord(String key, long timeout, TimeUnit unit) {
             return true;
-        }
-
-        @Override
-        public void unlock(String key) {
         }
     }
 }

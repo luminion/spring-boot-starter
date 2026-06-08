@@ -1,16 +1,19 @@
 package io.github.luminion.velo.feign;
 
 import io.github.luminion.velo.VeloProperties;
+import io.github.luminion.velo.log.InvocationLogRecord;
+import io.github.luminion.velo.log.InvocationLogSource;
+import io.github.luminion.velo.log.InvocationLogSupport;
+import io.github.luminion.velo.log.InvocationLogWriter;
+import io.github.luminion.velo.log.trace.TraceContext;
 import io.github.luminion.velo.spi.RuntimeJsonSerializer;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.boot.logging.LogLevel;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ReflectionUtils;
+import org.springframework.util.StringUtils;
 
 import java.lang.reflect.Method;
 
@@ -24,9 +27,13 @@ public class FeignLogAspect {
 
     private final RuntimeJsonSerializer runtimeJsonSerializer;
 
-    public FeignLogAspect(VeloProperties properties, RuntimeJsonSerializer runtimeJsonSerializer) {
+    private final InvocationLogWriter invocationLogWriter;
+
+    public FeignLogAspect(VeloProperties properties, RuntimeJsonSerializer runtimeJsonSerializer,
+            InvocationLogWriter invocationLogWriter) {
         this.properties = properties;
         this.runtimeJsonSerializer = runtimeJsonSerializer;
+        this.invocationLogWriter = invocationLogWriter;
     }
 
     @Around("execution(public * *(..)) && (within(@org.springframework.cloud.openfeign.FeignClient *) || @within(org.springframework.cloud.openfeign.FeignClient))")
@@ -41,31 +48,57 @@ public class FeignLogAspect {
         if (feignType == null) {
             return joinPoint.proceed();
         }
-        Logger logger = LoggerFactory.getLogger(feignType);
-        LogLevel level = properties.getLog().getLevel();
-        VeloProperties.FeignProperties feignProperties = properties.getFeign();
         String clientAddress = FeignClientMetadataResolver.resolveClientAddress(feignType);
         FeignRequestMetadata requestMetadata = FeignClientMetadataResolver.resolveRequestMetadata(method);
-        String prefix = FeignLogSupport.buildInvocationPrefix(clientAddress, method, requestMetadata);
-
-        if (FeignLogSupport.isEnabled(logger, level)) {
-            String argsText = FeignLogSupport.buildArgsText(signature, joinPoint.getTarget(), joinPoint.getArgs(),
-                    runtimeJsonSerializer, feignProperties);
-            FeignLogSupport.log(logger, level, "{}==> args: {}", prefix, argsText);
-        }
+        String target = FeignLogSupport.buildInvocationTarget(clientAddress, method, requestMetadata);
+        VeloProperties.InvocationProperties invocationProperties = properties.getLog().getInvocation();
+        String argsText = InvocationLogSupport.buildArgsText(signature, joinPoint.getTarget(), joinPoint.getArgs(),
+                runtimeJsonSerializer, invocationProperties);
+        String mdcKey = properties.getLog().getTrace().getMdcKey();
+        boolean createdTraceId = ensureTraceId(mdcKey);
         long start = System.nanoTime();
         try {
             Object result = joinPoint.proceed();
-            if (FeignLogSupport.isEnabled(logger, level)) {
-                String resultText = FeignLogSupport.buildResultText(result, runtimeJsonSerializer, feignProperties);
-                long elapsedMs = (System.nanoTime() - start) / 1_000_000;
-                FeignLogSupport.log(logger, level, "{}<== cost:{}ms, resp: {}", prefix, elapsedMs, resultText);
-            }
+            InvocationLogRecord record = buildRecord(target, argsText, InvocationLogSupport.buildResultText(result,
+                    runtimeJsonSerializer, invocationProperties), InvocationLogSupport.elapsedMs(start), null);
+            invocationLogWriter.write(record);
             return result;
         } catch (Throwable ex) {
-            FeignLogSupport.log(logger, LogLevel.ERROR, "{}<!! failed: {}", prefix, ex.getMessage(), ex);
+            InvocationLogRecord record = buildRecord(target, argsText, null, InvocationLogSupport.elapsedMs(start), ex);
+            invocationLogWriter.write(record);
             throw ex;
+        } finally {
+            if (createdTraceId) {
+                TraceContext.remove(mdcKey);
+            }
         }
+    }
+
+    private boolean ensureTraceId(String mdcKey) {
+        if (!properties.getLog().getTrace().isEnabled() || StringUtils.hasText(TraceContext.get(mdcKey))) {
+            return false;
+        }
+        TraceContext.put(mdcKey, TraceContext.createTraceId());
+        return true;
+    }
+
+    private InvocationLogRecord buildRecord(String target, String argsText, String resultText, long costMs,
+            Throwable error) {
+        InvocationLogRecord record = new InvocationLogRecord();
+        record.setTraceId(TraceContext.get(properties.getLog().getTrace().getMdcKey()));
+        record.setSource(InvocationLogSource.FEIGN);
+        record.setTarget(target);
+        record.setCostMs(costMs);
+        record.setArgs(argsText);
+        record.setSuccess(error == null);
+        if (error == null) {
+            record.setResult(resultText);
+        } else {
+            record.setError(error);
+            record.setErrorClass(error.getClass().getName());
+            record.setErrorMessage(error.getMessage());
+        }
+        return record;
     }
 
     private Class<?> resolveFeignType(ProceedingJoinPoint joinPoint, Method method) {

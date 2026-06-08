@@ -3,6 +3,7 @@ package io.github.luminion.velo.redis;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.*;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisOperations;
@@ -16,7 +17,7 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
  * @author luminion
  * @see org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
  */
-@AutoConfiguration
+@AutoConfiguration(after = RedisAutoConfiguration.class)
 @ConditionalOnClass(RedisOperations.class)
 @ConditionalOnProperty(prefix = "velo.redis", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloRedisAutoConfiguration {

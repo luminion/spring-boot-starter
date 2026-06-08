@@ -21,6 +21,11 @@ import java.util.Map;
 public class VeloProperties {
 
     /**
+     * Starter default behavior profile.
+     */
+    private VeloMode mode = VeloMode.OPINIONATED;
+
+    /**
      * Date and time formatting settings shared by web, Jackson and Excel features.
      */
     private DateTimeFormatProperties dateTimeFormat = new DateTimeFormatProperties();
@@ -338,6 +343,112 @@ public class VeloProperties {
          * Default log level used by starter managed log components.
          */
         private LogLevel level = LogLevel.INFO;
+
+        /**
+         * Trace id settings used by MDC, servlet responses and Feign propagation.
+         */
+        private TraceProperties trace = new TraceProperties();
+
+        /**
+         * Unified invocation logging settings.
+         */
+        private InvocationProperties invocation = new InvocationProperties();
+    }
+
+    @Data
+    public static class TraceProperties {
+
+        /**
+         * Enables automatic trace id creation and propagation.
+         */
+        private boolean enabled = true;
+
+        /**
+         * Request and response header used for trace id propagation.
+         */
+        private String headerName = "X-Trace-Id";
+
+        /**
+         * MDC key used by logging frameworks.
+         */
+        private String mdcKey = "traceId";
+
+        /**
+         * Writes the trace id back to servlet responses.
+         */
+        private boolean responseHeaderEnabled = true;
+
+        /**
+         * Propagates the current trace id to Feign requests.
+         */
+        private boolean feignPropagationEnabled = true;
+
+        /**
+         * Adds trace id to Spring Boot default log level pattern when no pattern is customized.
+         */
+        private boolean loggingPatternEnabled = true;
+    }
+
+    @Data
+    public static class InvocationProperties {
+
+        /**
+         * Enables unified invocation logging.
+         */
+        private boolean enabled = true;
+
+        /**
+         * Maximum length of logged argument and result payloads. Use -1 for unlimited output.
+         */
+        private int maxPayloadLength = 2000;
+
+        /**
+         * Includes invocation arguments in logs.
+         */
+        private boolean includeArgs = true;
+
+        /**
+         * Includes invocation results in successful logs.
+         */
+        private boolean includeResult = true;
+
+        /**
+         * Includes stack traces in error logs.
+         */
+        private boolean includeErrorStackTrace;
+
+        /**
+         * Regex pattern used to identify sensitive field names in argument maps before serialization.
+         * <p>
+         * Uses {@link java.util.regex.Matcher#find()} to perform substring matching.
+         * For exact matching, use anchors: {@code "(?i)^(password|token|secret)$"}.
+         * For prefix/suffix matching: {@code "(?i).*(password|secret)$"}.
+         */
+        private String sensitivePattern = "(?i)(password|token|authorization|secret|credential)";
+
+        /**
+         * Controller invocation logging settings.
+         */
+        private InvocationSourceProperties controller = new InvocationSourceProperties();
+
+        /**
+         * Feign invocation logging settings.
+         */
+        private InvocationSourceProperties feign = new InvocationSourceProperties();
+
+        /**
+         * Method invocation logging settings.
+         */
+        private InvocationSourceProperties method = new InvocationSourceProperties();
+    }
+
+    @Data
+    public static class InvocationSourceProperties {
+
+        /**
+         * Enables this invocation log source.
+         */
+        private boolean enabled = true;
     }
 
     @Data
@@ -354,16 +465,6 @@ public class VeloProperties {
         private boolean allowCors;
 
         /**
-         * Enables the controller request logging aspect.
-         */
-        private boolean requestLoggingEnabled = true;
-
-        /**
-         * Maximum length of logged request and response payloads. Use -1 for unlimited output.
-         */
-        private int requestLoggingMaxPayloadLength = 2000;
-
-        /**
          * Web XSS settings.
          */
         private XssProperties xss = new XssProperties();
@@ -377,15 +478,6 @@ public class VeloProperties {
          */
         private boolean enabled = true;
 
-        /**
-         * Enables the Feign invocation logging proxy.
-         */
-        private boolean requestLoggingEnabled = true;
-
-        /**
-         * Maximum length of logged request and response payloads. Use -1 for unlimited output.
-         */
-        private int requestLoggingMaxPayloadLength = 2000;
     }
 
     @Data

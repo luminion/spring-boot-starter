@@ -10,20 +10,21 @@ import java.util.concurrent.TimeUnit;
 public interface IdempotentHandler {
 
     /**
-     * 尝试锁定/记录该幂等 Key
+     * 尝试记录该幂等 Key。
      *
      * @param key     唯一键
      * @param timeout 过期时间
      * @param unit    时间单位
-     * @return true: 锁定成功（首次进入）; false: 锁定失败（重复请求）
+     * @return true: 记录成功（首次进入）; false: 记录失败（重复请求）
      */
-    boolean tryLock(String key, long timeout, TimeUnit unit);
+    boolean tryRecord(String key, long timeout, TimeUnit unit);
 
     /**
-     * 释放幂等锁
+     * 移除已记录的幂等 Key，允许在业务失败后重新提交。
      *
      * @param key 唯一键
      */
-    void unlock(String key);
-
+    default void remove(String key) {
+        // no-op by default, implementations should override to provide cleanup
+    }
 }
