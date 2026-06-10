@@ -386,14 +386,11 @@ velo:
       logging-pattern-enabled: true
     invocation:
       enabled: true
-      max-payload-length: 2000
+      max-payload-length: -1
       include-args: true
       include-result: true
       include-error-stack-trace: false
-      sensitive-fields:
-        - password
-        - token
-        - authorization
+      sensitive-pattern: "(?i)(password|token|authorization|secret|credential)"
       controller:
         enabled: true
       feign:
@@ -657,7 +654,7 @@ velo:
   log:
     invocation:
       enabled: true
-      max-payload-length: 2000
+      max-payload-length: -1
       controller:
         enabled: true
     trace:
@@ -669,8 +666,8 @@ velo:
 - 默认开启
 - 每次调用输出一条完成态日志，包含请求方法、controller 映射模板路径、耗时、入参与响应体或异常摘要
 - 会过滤掉原始 query string，避免把敏感查询串直接打到日志中
-- 过长 payload 会自动截断，默认最大长度 `2000`
-- `max-payload-length=-1` 表示不限制长度，`0` 表示 payload 记录为 `-`
+- `max-payload-length` 为正数时，过长 payload 会按配置长度截断
+- 当前默认 `max-payload-length=-1`，表示不限制长度；`0` 表示 payload 记录为 `-`
 - 如果不需要这层日志，关闭 `velo.log.invocation.controller.enabled`
 
 ### 4. Feign 调用日志
@@ -686,7 +683,7 @@ velo:
   log:
     invocation:
       enabled: true
-      max-payload-length: 2000
+      max-payload-length: -1
       feign:
         enabled: true
     trace:
@@ -700,8 +697,8 @@ velo:
 - 会记录 client 名、HTTP 方法、映射路径、耗时、入参与响应体或异常摘要
 - 日志格式和 Controller、`@InvokeLog` 保持一致，便于联调排查
 - 暂不记录 header，只保留调试常用关键信息
-- 过长 payload 会自动截断，默认最大长度 `2000`
-- `max-payload-length=-1` 表示不限制长度，`0` 表示 payload 记录为 `-`
+- `max-payload-length` 为正数时，过长 payload 会按配置长度截断
+- 当前默认 `max-payload-length=-1`，表示不限制长度；`0` 表示 payload 记录为 `-`
 - 如果不需要这层日志，关闭 `velo.log.invocation.feign.enabled`
 
 ### 5. CORS
