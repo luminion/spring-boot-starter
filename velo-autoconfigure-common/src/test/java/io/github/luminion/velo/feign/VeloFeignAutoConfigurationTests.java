@@ -47,6 +47,20 @@ class VeloFeignAutoConfigurationTests {
     }
 
     @Test
+    void shouldCreateFeignLogAspectWithFallbackWriterWhenInvocationLogWriterMissing() {
+        new ApplicationContextRunner()
+                .withConfiguration(AutoConfigurations.of(
+                        AopAutoConfiguration.class,
+                        VeloCoreAutoConfiguration.class,
+                        VeloFeignAutoConfiguration.class
+                ))
+                .run(context -> {
+                    assertThat(context).doesNotHaveBean(InvocationLogWriter.class);
+                    assertThat(context).hasSingleBean(FeignLogAspect.class);
+                });
+    }
+
+    @Test
     void shouldSkipFeignLogAspectWhenFeignInvocationLoggingDisabled() {
         contextRunner
                 .withPropertyValues("velo.log.invocation.feign.enabled=false")

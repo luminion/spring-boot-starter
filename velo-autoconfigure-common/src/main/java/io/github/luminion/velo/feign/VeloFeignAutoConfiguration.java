@@ -2,12 +2,12 @@ package io.github.luminion.velo.feign;
 
 import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.log.InvocationLogWriter;
+import io.github.luminion.velo.log.support.Slf4JInvocationLogWriter;
 import io.github.luminion.velo.spi.RuntimeJsonSerializer;
 import io.github.luminion.velo.spi.provider.HttpMessageConverterRuntimeJsonSerializer;
 import org.aspectj.weaver.Advice;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -25,13 +25,14 @@ public class VeloFeignAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnBean(InvocationLogWriter.class)
     @ConditionalOnProperty(prefix = "velo.log", name = {"enabled", "invocation.enabled", "invocation.feign.enabled"},
             havingValue = "true",
             matchIfMissing = true)
     public FeignLogAspect feignLogAspect(VeloProperties properties,
-            InvocationLogWriter invocationLogWriter,
+            ObjectProvider<InvocationLogWriter> invocationLogWriterProvider,
             ObjectProvider<RuntimeJsonSerializer> runtimeJsonSerializerProvider) {
+        InvocationLogWriter invocationLogWriter = invocationLogWriterProvider.getIfAvailable(
+                () -> new Slf4JInvocationLogWriter(properties));
         RuntimeJsonSerializer runtimeJsonSerializer = runtimeJsonSerializerProvider.getIfAvailable(
                 () -> new HttpMessageConverterRuntimeJsonSerializer(Collections.emptyList()));
         return new FeignLogAspect(properties, runtimeJsonSerializer, invocationLogWriter);

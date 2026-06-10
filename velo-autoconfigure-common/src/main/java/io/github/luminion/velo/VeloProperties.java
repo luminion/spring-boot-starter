@@ -411,7 +411,7 @@ public class VeloProperties {
         /**
          * Maximum length of logged argument and result payloads. Use -1 for unlimited output.
          */
-        private int maxPayloadLength = 2000;
+        private int maxPayloadLength = -1;
 
         /**
          * Includes invocation arguments in logs.

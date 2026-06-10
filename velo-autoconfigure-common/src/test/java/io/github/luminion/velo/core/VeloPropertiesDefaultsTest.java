@@ -48,7 +48,7 @@ class VeloPropertiesDefaultsTest {
         assertThat(properties.getLog().getTrace().isFeignPropagationEnabled()).isTrue();
         assertThat(properties.getLog().getTrace().isLoggingPatternEnabled()).isTrue();
         assertThat(properties.getLog().getInvocation().isEnabled()).isTrue();
-        assertThat(properties.getLog().getInvocation().getMaxPayloadLength()).isEqualTo(2000);
+        assertThat(properties.getLog().getInvocation().getMaxPayloadLength()).isEqualTo(-1);
         assertThat(properties.getLog().getInvocation().isIncludeArgs()).isTrue();
         assertThat(properties.getLog().getInvocation().isIncludeResult()).isTrue();
         assertThat(properties.getLog().getInvocation().isIncludeErrorStackTrace()).isFalse();

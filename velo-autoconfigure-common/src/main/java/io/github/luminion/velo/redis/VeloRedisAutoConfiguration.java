@@ -1,13 +1,18 @@
 package io.github.luminion.velo.redis;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.autoconfigure.condition.*;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnSingleCandidate;
 import org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
@@ -33,9 +38,12 @@ public class VeloRedisAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean(name = "stringObjectRedisTemplate")
-    @ConditionalOnBean({RedisConnectionFactory.class, RedisSerializer.class})
+    @ConditionalOnBean(RedisConnectionFactory.class)
     @ConditionalOnSingleCandidate(RedisConnectionFactory.class)
-    public RedisTemplate<String, Object> stringObjectRedisTemplate(RedisConnectionFactory redisConnectionFactory, RedisSerializer<Object> redisSerializer) {
+    public RedisTemplate<String, Object> stringObjectRedisTemplate(RedisConnectionFactory redisConnectionFactory,
+            ObjectProvider<RedisSerializer<Object>> redisSerializerProvider) {
+        RedisSerializer<Object> redisSerializer = redisSerializerProvider.getIfAvailable(
+                GenericJackson2JsonRedisSerializer::new);
         RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
         redisTemplate.setConnectionFactory(redisConnectionFactory);
         redisTemplate.setKeySerializer(new StringRedisSerializer());
@@ -49,9 +57,12 @@ public class VeloRedisAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean(name = "redisTemplate")
-    @ConditionalOnBean({RedisConnectionFactory.class, RedisSerializer.class})
+    @ConditionalOnBean(RedisConnectionFactory.class)
     @ConditionalOnSingleCandidate(RedisConnectionFactory.class)
-    public RedisTemplate<Object, Object> redisTemplate(RedisConnectionFactory redisConnectionFactory, RedisSerializer<Object> redisSerializer) {
+    public RedisTemplate<Object, Object> redisTemplate(RedisConnectionFactory redisConnectionFactory,
+            ObjectProvider<RedisSerializer<Object>> redisSerializerProvider) {
+        RedisSerializer<Object> redisSerializer = redisSerializerProvider.getIfAvailable(
+                GenericJackson2JsonRedisSerializer::new);
         RedisTemplate<Object, Object> redisTemplate = new RedisTemplate<>();
         redisTemplate.setConnectionFactory(redisConnectionFactory);
         redisTemplate.setDefaultSerializer(redisSerializer);

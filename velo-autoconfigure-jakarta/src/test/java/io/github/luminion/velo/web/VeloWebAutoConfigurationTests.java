@@ -58,6 +58,19 @@ class VeloWebAutoConfigurationTests {
     }
 
     @Test
+    void shouldCreateControllerLogAspectWithFallbackWriterWhenInvocationLogWriterMissing() {
+        new WebApplicationContextRunner()
+                .withConfiguration(AutoConfigurations.of(
+                        VeloCoreAutoConfiguration.class,
+                        VeloWebAutoConfiguration.class
+                ))
+                .run(context -> {
+                    assertThat(context).doesNotHaveBean(InvocationLogWriter.class);
+                    assertThat(context).hasSingleBean(ControllerLogAspect.class);
+                });
+    }
+
+    @Test
     void shouldSkipControllerLogAspectWhenControllerInvocationLoggingDisabled() {
         webContextRunner
                 .withPropertyValues("velo.log.invocation.controller.enabled=false")
