@@ -48,9 +48,8 @@ public class FeignLogAspect {
         if (feignType == null) {
             return joinPoint.proceed();
         }
-        String clientAddress = FeignClientMetadataResolver.resolveClientAddress(feignType);
         FeignRequestMetadata requestMetadata = FeignClientMetadataResolver.resolveRequestMetadata(method);
-        String target = FeignLogSupport.buildInvocationTarget(clientAddress, method, requestMetadata);
+        String target = FeignLogSupport.buildInvocationTarget(method, requestMetadata);
         VeloProperties.InvocationProperties invocationProperties = properties.getLog().getInvocation();
         String argsText = InvocationLogSupport.buildArgsText(signature, joinPoint.getTarget(), joinPoint.getArgs(),
                 runtimeJsonSerializer, invocationProperties);
@@ -59,12 +58,12 @@ public class FeignLogAspect {
         long start = System.nanoTime();
         try {
             Object result = joinPoint.proceed();
-            InvocationLogRecord record = buildRecord(target, argsText, InvocationLogSupport.buildResultText(result,
+            InvocationLogRecord record = buildRecord(feignType.getName(), target, argsText, InvocationLogSupport.buildResultText(result,
                     runtimeJsonSerializer, invocationProperties), InvocationLogSupport.elapsedMs(start), null);
             invocationLogWriter.write(record);
             return result;
         } catch (Throwable ex) {
-            InvocationLogRecord record = buildRecord(target, argsText, null, InvocationLogSupport.elapsedMs(start), ex);
+            InvocationLogRecord record = buildRecord(feignType.getName(), target, argsText, null, InvocationLogSupport.elapsedMs(start), ex);
             invocationLogWriter.write(record);
             throw ex;
         } finally {
@@ -82,9 +81,10 @@ public class FeignLogAspect {
         return true;
     }
 
-    private InvocationLogRecord buildRecord(String target, String argsText, String resultText, long costMs,
+    private InvocationLogRecord buildRecord(String loggerName, String target, String argsText, String resultText, long costMs,
             Throwable error) {
         InvocationLogRecord record = new InvocationLogRecord();
+        record.setLoggerName(loggerName);
         record.setTraceId(TraceContext.get(properties.getLog().getTrace().getMdcKey()));
         record.setSource(InvocationLogSource.FEIGN);
         record.setTarget(target);

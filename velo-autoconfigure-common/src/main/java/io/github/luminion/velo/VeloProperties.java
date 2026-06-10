@@ -387,6 +387,17 @@ public class VeloProperties {
          * Adds trace id to Spring Boot default log level pattern when no pattern is customized.
          */
         private boolean loggingPatternEnabled = true;
+
+        /**
+         * Applies a simplified date format ({@code yyyy-MM-dd HH:mm:ss.SSS}) to Spring Boot default log pattern
+         * when no date format is customized.
+         */
+        private boolean loggingDateFormatEnabled = true;
+
+        /**
+         * Custom log date format used when {@link #loggingDateFormatEnabled} is true.
+         */
+        private String loggingDateFormat = "yyyy-MM-dd HH:mm:ss.SSS";
     }
 
     @Data

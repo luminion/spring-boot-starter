@@ -27,6 +27,12 @@ public class InvocationLogRecord {
 
     private boolean slow;
 
+    /**
+     * Logger name used by the log writer. When set, the writer logs under this class name
+     * instead of its own, so the log output shows the actual intercepted class.
+     */
+    private String loggerName;
+
     public String getTraceId() {
         return traceId;
     }
@@ -113,5 +119,13 @@ public class InvocationLogRecord {
 
     public void setSlow(boolean slow) {
         this.slow = slow;
+    }
+
+    public String getLoggerName() {
+        return loggerName;
+    }
+
+    public void setLoggerName(String loggerName) {
+        this.loggerName = loggerName;
     }
 }

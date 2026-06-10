@@ -19,6 +19,7 @@ class Slf4JInvocationLogWriterTest {
         Slf4JInvocationLogWriter writer = new Slf4JInvocationLogWriter(new VeloProperties());
         InvocationLogRecord record = new InvocationLogRecord();
         record.setTraceId("trace-001");
+        record.setLoggerName("com.example.UserController");
         record.setSource(InvocationLogSource.CONTROLLER);
         record.setTarget("127.0.0.1 GET /users/{id}");
         record.setCostMs(12);
@@ -29,11 +30,12 @@ class Slf4JInvocationLogWriterTest {
         writer.write(record);
 
         assertThat(output.getOut())
-                .contains("traceId=trace-001")
-                .contains("source=controller")
-                .contains("target=\"127.0.0.1 GET /users/{id}\"")
+                .contains("com.example.UserController")
+                .doesNotContain("traceId=")
+                .doesNotContain("source=")
+                .contains("[127.0.0.1 GET /users/{id}]")
                 .contains("cost=12ms")
-                .contains("status=success")
+                .doesNotContain("status=")
                 .contains("args={\"id\":1}")
                 .contains("result={\"name\":\"Tom\"}");
     }
@@ -43,6 +45,7 @@ class Slf4JInvocationLogWriterTest {
         Slf4JInvocationLogWriter writer = new Slf4JInvocationLogWriter(new VeloProperties());
         InvocationLogRecord record = new InvocationLogRecord();
         record.setTraceId("trace-001");
+        record.setLoggerName("com.example.DemoClient");
         record.setSource(InvocationLogSource.FEIGN);
         record.setTarget("demo-client GET /fail");
         record.setCostMs(8);
@@ -53,9 +56,28 @@ class Slf4JInvocationLogWriterTest {
         writer.write(record);
 
         assertThat(output.getOut())
-                .contains("status=error")
+                .contains("com.example.DemoClient")
                 .contains("error=\"IllegalStateException: boom\"")
                 .doesNotContain("at io.github");
+    }
+
+    @Test
+    void shouldFallbackToOwnLoggerWhenLoggerNameIsNull(CapturedOutput output) {
+        Slf4JInvocationLogWriter writer = new Slf4JInvocationLogWriter(new VeloProperties());
+        InvocationLogRecord record = new InvocationLogRecord();
+        record.setSource(InvocationLogSource.CONTROLLER);
+        record.setTarget("127.0.0.1 GET /test");
+        record.setCostMs(1);
+        record.setSuccess(true);
+        record.setArgs("-");
+        record.setResult("-");
+
+        writer.write(record);
+
+        assertThat(output.getOut())
+                .contains("Slf4JInvocationLogWriter")
+                .doesNotContain("source=")
+                .contains("[127.0.0.1 GET /test]");
     }
 
     @Test

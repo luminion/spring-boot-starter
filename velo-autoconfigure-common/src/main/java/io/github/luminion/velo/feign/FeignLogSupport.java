@@ -12,14 +12,8 @@ final class FeignLogSupport {
     private FeignLogSupport() {
     }
 
-    static String buildInvocationTarget(String clientAddress, Method method, FeignRequestMetadata requestMetadata) {
+    static String buildInvocationTarget(Method method, FeignRequestMetadata requestMetadata) {
         StringBuilder builder = new StringBuilder();
-        if (StringUtils.hasText(clientAddress)) {
-            builder.append(clientAddress);
-        } else {
-            builder.append(method.getDeclaringClass().getSimpleName());
-        }
-        builder.append(' ');
         if (requestMetadata != null && StringUtils.hasText(requestMetadata.getHttpMethod())) {
             builder.append(requestMetadata.getHttpMethod());
         } else {

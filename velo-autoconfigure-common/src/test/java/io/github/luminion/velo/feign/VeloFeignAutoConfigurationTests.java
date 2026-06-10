@@ -84,7 +84,7 @@ class VeloFeignAutoConfigurationTests {
         assertThat(writer.records).hasSize(1);
         InvocationLogRecord record = writer.records.get(0);
         assertThat(record.getSource()).isEqualTo(InvocationLogSource.FEIGN);
-        assertThat(record.getTarget()).isEqualTo("demo-client GET /users/{id}");
+        assertThat(record.getTarget()).isEqualTo("GET /users/{id}");
         assertThat(record.isSuccess()).isTrue();
         assertThat(record.getArgs()).contains("\"id\":1");
         assertThat(record.getResult()).isEqualTo("{\"userName\":\"tom\"}");
@@ -139,7 +139,7 @@ class VeloFeignAutoConfigurationTests {
         assertThat(writer.records).hasSize(1);
         InvocationLogRecord record = writer.records.get(0);
         assertThat(record.isSuccess()).isFalse();
-        assertThat(record.getTarget()).isEqualTo("demo-client GET /users/fail");
+        assertThat(record.getTarget()).isEqualTo("GET /users/fail");
         assertThat(record.getError()).isInstanceOf(IllegalStateException.class);
         assertThat(record.getErrorMessage()).isEqualTo("boom");
     }

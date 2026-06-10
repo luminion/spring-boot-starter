@@ -31,6 +31,8 @@ public class ControllerLogAspect {
     @Around("execution(public * *(..)) && (within(@org.springframework.web.bind.annotation.RestController *) || @annotation(org.springframework.web.bind.annotation.ResponseBody) || @within(org.springframework.web.bind.annotation.ResponseBody))")
     public Object logControllerInvocation(ProceedingJoinPoint joinPoint) throws Throwable {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
+        Class<?> declaringType = signature.getDeclaringType();
+        String loggerName = declaringType != null ? declaringType.getName() : null;
         String target = buildRequestTarget();
         VeloProperties.InvocationProperties invocationProperties = properties.getLog().getInvocation();
         String argsText = InvocationLogSupport.buildArgsText(signature, joinPoint.getTarget(), joinPoint.getArgs(),
@@ -38,20 +40,21 @@ public class ControllerLogAspect {
         long start = System.nanoTime();
         try {
             Object result = joinPoint.proceed();
-            InvocationLogRecord record = buildRecord(target, argsText, InvocationLogSupport.buildResultText(result,
+            InvocationLogRecord record = buildRecord(loggerName, target, argsText, InvocationLogSupport.buildResultText(result,
                     runtimeJsonSerializer, invocationProperties), InvocationLogSupport.elapsedMs(start), null);
             invocationLogWriter.write(record);
             return result;
         } catch (Throwable ex) {
-            InvocationLogRecord record = buildRecord(target, argsText, null, InvocationLogSupport.elapsedMs(start), ex);
+            InvocationLogRecord record = buildRecord(loggerName, target, argsText, null, InvocationLogSupport.elapsedMs(start), ex);
             invocationLogWriter.write(record);
             throw ex;
         }
     }
 
-    private InvocationLogRecord buildRecord(String target, String argsText, String resultText, long costMs,
+    private InvocationLogRecord buildRecord(String loggerName, String target, String argsText, String resultText, long costMs,
             Throwable error) {
         InvocationLogRecord record = new InvocationLogRecord();
+        record.setLoggerName(loggerName);
         record.setTraceId(TraceContext.get(properties.getLog().getTrace().getMdcKey()));
         record.setSource(InvocationLogSource.CONTROLLER);
         record.setTarget(target);

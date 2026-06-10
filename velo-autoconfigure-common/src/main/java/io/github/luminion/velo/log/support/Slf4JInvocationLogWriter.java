@@ -2,7 +2,6 @@ package io.github.luminion.velo.log.support;
 
 import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.log.InvocationLogRecord;
-import io.github.luminion.velo.log.InvocationLogSource;
 import io.github.luminion.velo.log.InvocationLogSupport;
 import io.github.luminion.velo.log.InvocationLogWriter;
 import org.slf4j.Logger;
@@ -10,12 +9,17 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.logging.LogLevel;
 import org.springframework.util.StringUtils;
 
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+
 /**
  * SLF4J based unified invocation log writer.
  */
 public class Slf4JInvocationLogWriter implements InvocationLogWriter {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(Slf4JInvocationLogWriter.class);
+    private static final Logger FALLBACK_LOGGER = LoggerFactory.getLogger(Slf4JInvocationLogWriter.class);
+
+    private final ConcurrentMap<String, Logger> loggerCache = new ConcurrentHashMap<>();
 
     private final LogLevel level;
 
@@ -36,27 +40,26 @@ public class Slf4JInvocationLogWriter implements InvocationLogWriter {
         }
         if (!record.isSuccess()) {
             String message = buildMessage(record);
+            Logger logger = resolveLogger(record.getLoggerName());
             if (includeErrorStackTrace && record.getError() != null) {
-                resolveLevel(LogLevel.ERROR).logError(message, record.getError());
+                resolveLevel(LogLevel.ERROR).logError(logger, message, record.getError());
             } else {
-                resolveLevel(LogLevel.ERROR).log(message);
+                resolveLevel(LogLevel.ERROR).log(logger, message);
             }
             return;
         }
         LogOperations ops = resolveLevel(level);
-        if (!ops.isEnabled()) {
+        Logger logger = resolveLogger(record.getLoggerName());
+        if (!ops.isEnabled(logger)) {
             return;
         }
-        ops.log(buildMessage(record));
+        ops.log(logger, buildMessage(record));
     }
 
     private String buildMessage(InvocationLogRecord record) {
         StringBuilder builder = new StringBuilder();
-        append(builder, "traceId", text(record.getTraceId()));
-        append(builder, "source", source(record.getSource()));
-        appendQuoted(builder, "target", text(record.getTarget()));
+        builder.append('[').append(text(record.getTarget())).append(']');
         append(builder, "cost", record.getCostMs() + "ms");
-        append(builder, "status", record.isSuccess() ? "success" : "error");
         if (record.isSlow()) {
             append(builder, "slow", "true");
         }
@@ -67,10 +70,6 @@ public class Slf4JInvocationLogWriter implements InvocationLogWriter {
             appendQuoted(builder, "error", InvocationLogSupport.errorSummary(record.getError()));
         }
         return builder.toString();
-    }
-
-    private String source(InvocationLogSource source) {
-        return source == null ? InvocationLogSupport.EMPTY_PAYLOAD : source.getValue();
     }
 
     private String text(String value) {
@@ -91,6 +90,13 @@ public class Slf4JInvocationLogWriter implements InvocationLogWriter {
         builder.append(key).append("=\"").append(value).append('"');
     }
 
+    private Logger resolveLogger(String loggerName) {
+        if (!StringUtils.hasText(loggerName)) {
+            return FALLBACK_LOGGER;
+        }
+        return loggerCache.computeIfAbsent(loggerName, LoggerFactory::getLogger);
+    }
+
     private static LogOperations resolveLevel(LogLevel level) {
         LogLevel target = level == null ? LogLevel.INFO : level;
         switch (target) {
@@ -105,33 +111,33 @@ public class Slf4JInvocationLogWriter implements InvocationLogWriter {
 
     private enum LogOperations {
         TRACE {
-            @Override boolean isEnabled() { return LOGGER.isTraceEnabled(); }
-            @Override void log(String msg) { LOGGER.trace(msg); }
-            @Override void logError(String msg, Throwable t) { LOGGER.trace(msg, t); }
+            @Override boolean isEnabled(Logger logger) { return logger.isTraceEnabled(); }
+            @Override void log(Logger logger, String msg) { logger.trace(msg); }
+            @Override void logError(Logger logger, String msg, Throwable t) { logger.trace(msg, t); }
         },
         DEBUG {
-            @Override boolean isEnabled() { return LOGGER.isDebugEnabled(); }
-            @Override void log(String msg) { LOGGER.debug(msg); }
-            @Override void logError(String msg, Throwable t) { LOGGER.debug(msg, t); }
+            @Override boolean isEnabled(Logger logger) { return logger.isDebugEnabled(); }
+            @Override void log(Logger logger, String msg) { logger.debug(msg); }
+            @Override void logError(Logger logger, String msg, Throwable t) { logger.debug(msg, t); }
         },
         INFO {
-            @Override boolean isEnabled() { return LOGGER.isInfoEnabled(); }
-            @Override void log(String msg) { LOGGER.info(msg); }
-            @Override void logError(String msg, Throwable t) { LOGGER.info(msg, t); }
+            @Override boolean isEnabled(Logger logger) { return logger.isInfoEnabled(); }
+            @Override void log(Logger logger, String msg) { logger.info(msg); }
+            @Override void logError(Logger logger, String msg, Throwable t) { logger.info(msg, t); }
         },
         WARN {
-            @Override boolean isEnabled() { return LOGGER.isWarnEnabled(); }
-            @Override void log(String msg) { LOGGER.warn(msg); }
-            @Override void logError(String msg, Throwable t) { LOGGER.warn(msg, t); }
+            @Override boolean isEnabled(Logger logger) { return logger.isWarnEnabled(); }
+            @Override void log(Logger logger, String msg) { logger.warn(msg); }
+            @Override void logError(Logger logger, String msg, Throwable t) { logger.warn(msg, t); }
         },
         ERROR {
-            @Override boolean isEnabled() { return LOGGER.isErrorEnabled(); }
-            @Override void log(String msg) { LOGGER.error(msg); }
-            @Override void logError(String msg, Throwable t) { LOGGER.error(msg, t); }
+            @Override boolean isEnabled(Logger logger) { return logger.isErrorEnabled(); }
+            @Override void log(Logger logger, String msg) { logger.error(msg); }
+            @Override void logError(Logger logger, String msg, Throwable t) { logger.error(msg, t); }
         };
 
-        abstract boolean isEnabled();
-        abstract void log(String msg);
-        abstract void logError(String msg, Throwable t);
+        abstract boolean isEnabled(Logger logger);
+        abstract void log(Logger logger, String msg);
+        abstract void logError(Logger logger, String msg, Throwable t);
     }
 }

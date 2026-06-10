@@ -9,7 +9,6 @@ import io.github.luminion.velo.log.annotation.SlowLog;
 import io.github.luminion.velo.log.trace.TraceContext;
 import io.github.luminion.velo.spi.RuntimeJsonSerializer;
 import io.github.luminion.velo.spi.provider.HttpMessageConverterRuntimeJsonSerializer;
-import io.github.luminion.velo.util.InvocationUtils;
 import lombok.RequiredArgsConstructor;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -63,9 +62,11 @@ public class InvokeLogAspect {
     private InvocationLogRecord buildRecord(MethodSignature signature, String argsText, String resultText, long costMs,
             Throwable error) {
         InvocationLogRecord record = new InvocationLogRecord();
+        Class<?> declaringType = signature.getDeclaringType();
+        record.setLoggerName(declaringType != null ? declaringType.getName() : null);
         record.setTraceId(TraceContext.get(properties.getLog().getTrace().getMdcKey()));
         record.setSource(InvocationLogSource.INVOKE);
-        record.setTarget(InvocationUtils.getMethodName(signature));
+        record.setTarget(signature.getName() + "()");
         record.setCostMs(costMs);
         record.setArgs(argsText);
         record.setSuccess(error == null);
