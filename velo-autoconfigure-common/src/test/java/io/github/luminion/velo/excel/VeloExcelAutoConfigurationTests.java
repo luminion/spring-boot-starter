@@ -25,4 +25,14 @@ class VeloExcelAutoConfigurationTests {
                     assertThat(context).hasNotFailed();
                 });
     }
+
+    @Test
+    void booleanConvertersShouldDeclareStringCellType() {
+        assertThat(new EasyExcelHelper.BooleanConverter().supportExcelTypeKey())
+                .isEqualTo(com.alibaba.excel.enums.CellDataTypeEnum.STRING);
+        assertThat(new FastExcelHelper.BooleanConverter().supportExcelTypeKey())
+                .isEqualTo(cn.idev.excel.enums.CellDataTypeEnum.STRING);
+        assertThat(new FesodExcelHelper.BooleanConverter().supportExcelTypeKey())
+                .isEqualTo(org.apache.fesod.sheet.enums.CellDataTypeEnum.STRING);
+    }
 }

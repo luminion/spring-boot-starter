@@ -1,6 +1,8 @@
 package io.github.luminion.velo.cache;
 
 import io.github.luminion.velo.VeloProperties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.cache.CacheAutoConfiguration;
@@ -45,6 +47,8 @@ import org.springframework.util.StringUtils;
 @ConditionalOnProperty(prefix = "velo.cache", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloCacheAutoConfiguration {
 
+    private static final Logger log = LoggerFactory.getLogger(VeloCacheAutoConfiguration.class);
+
     private static String buildCacheKeyPrefix(VeloProperties.CacheProperties cacheProperties, String cacheName) {
         String separator = StringUtils.hasText(cacheProperties.getSeparator())
                 ? cacheProperties.getSeparator()
@@ -71,7 +75,10 @@ public class VeloCacheAutoConfiguration {
         @ConditionalOnMissingBean(RedisCacheConfiguration.class)
         public RedisCacheConfiguration redisCacheConfiguration(ObjectProvider<RedisSerializer<Object>> serializerProvider,
                 VeloProperties properties) {
-            RedisSerializer<Object> redisSerializer = serializerProvider.getIfAvailable(GenericJackson2JsonRedisSerializer::new);
+            RedisSerializer<Object> redisSerializer = serializerProvider.getIfAvailable(() -> {
+                log.debug("No RedisSerializer bean found, using GenericJackson2JsonRedisSerializer for Redis cache values");
+                return new GenericJackson2JsonRedisSerializer();
+            });
             VeloProperties.CacheProperties cacheProperties = properties.getCache();
 
             RedisCacheConfiguration redisCacheConfiguration = RedisCacheConfiguration.defaultCacheConfig();

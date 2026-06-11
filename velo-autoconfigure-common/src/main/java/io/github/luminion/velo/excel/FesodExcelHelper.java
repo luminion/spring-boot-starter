@@ -136,7 +136,7 @@ public abstract class FesodExcelHelper {
 
         @Override
         public CellDataTypeEnum supportExcelTypeKey() {
-            return CellDataTypeEnum.NUMBER;
+            return CellDataTypeEnum.STRING;
         }
 
         @Override

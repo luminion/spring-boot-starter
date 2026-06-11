@@ -137,7 +137,7 @@ public abstract class EasyExcelHelper {
 
         @Override
         public CellDataTypeEnum supportExcelTypeKey() {
-            return CellDataTypeEnum.NUMBER;
+            return CellDataTypeEnum.STRING;
         }
 
         @Override

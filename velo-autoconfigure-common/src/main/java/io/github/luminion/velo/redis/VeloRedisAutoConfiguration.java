@@ -1,5 +1,7 @@
 package io.github.luminion.velo.redis;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -27,6 +29,8 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 @ConditionalOnProperty(prefix = "velo.redis", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloRedisAutoConfiguration {
 
+    private static final Logger log = LoggerFactory.getLogger(VeloRedisAutoConfiguration.class);
+
     //
     //@Bean
     //@ConditionalOnMissingBean
@@ -43,7 +47,7 @@ public class VeloRedisAutoConfiguration {
     public RedisTemplate<String, Object> stringObjectRedisTemplate(RedisConnectionFactory redisConnectionFactory,
             ObjectProvider<RedisSerializer<Object>> redisSerializerProvider) {
         RedisSerializer<Object> redisSerializer = redisSerializerProvider.getIfAvailable(
-                GenericJackson2JsonRedisSerializer::new);
+                () -> defaultRedisSerializer("stringObjectRedisTemplate"));
         RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
         redisTemplate.setConnectionFactory(redisConnectionFactory);
         redisTemplate.setKeySerializer(new StringRedisSerializer());
@@ -62,7 +66,7 @@ public class VeloRedisAutoConfiguration {
     public RedisTemplate<Object, Object> redisTemplate(RedisConnectionFactory redisConnectionFactory,
             ObjectProvider<RedisSerializer<Object>> redisSerializerProvider) {
         RedisSerializer<Object> redisSerializer = redisSerializerProvider.getIfAvailable(
-                GenericJackson2JsonRedisSerializer::new);
+                () -> defaultRedisSerializer("redisTemplate"));
         RedisTemplate<Object, Object> redisTemplate = new RedisTemplate<>();
         redisTemplate.setConnectionFactory(redisConnectionFactory);
         redisTemplate.setDefaultSerializer(redisSerializer);
@@ -73,5 +77,10 @@ public class VeloRedisAutoConfiguration {
         redisTemplate.setEnableTransactionSupport(false);
         redisTemplate.afterPropertiesSet();
         return redisTemplate;
+    }
+
+    private RedisSerializer<Object> defaultRedisSerializer(String beanName) {
+        log.debug("No RedisSerializer bean found, using GenericJackson2JsonRedisSerializer for {}", beanName);
+        return new GenericJackson2JsonRedisSerializer();
     }
 }

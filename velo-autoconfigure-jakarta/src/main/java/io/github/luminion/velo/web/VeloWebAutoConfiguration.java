@@ -6,6 +6,8 @@ import io.github.luminion.velo.log.support.Slf4JInvocationLogWriter;
 import io.github.luminion.velo.spi.RuntimeJsonSerializer;
 import io.github.luminion.velo.spi.provider.HttpMessageConverterRuntimeJsonSerializer;
 import io.github.luminion.velo.xss.converter.XssStringConverter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -23,6 +25,8 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 @ConditionalOnProperty(prefix = "velo.web", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloWebAutoConfiguration {
 
+    private static final Logger log = LoggerFactory.getLogger(VeloWebAutoConfiguration.class);
+
     @Bean
     @ConditionalOnMissingBean
     public VeloWebMvcConfigurer veloWebMvcConfigurer(ObjectProvider<XssStringConverter> xssStringConverterProvider,
@@ -35,8 +39,12 @@ public class VeloWebAutoConfiguration {
     @ConditionalOnClass(RequestMappingHandlerAdapter.class)
     public RuntimeJsonSerializer runtimeJsonSerializer(ObjectProvider<RequestMappingHandlerAdapter> handlerAdapterProvider) {
         RequestMappingHandlerAdapter handlerAdapter = handlerAdapterProvider.getIfAvailable();
+        if (handlerAdapter == null) {
+            log.debug("No RequestMappingHandlerAdapter bean found, using empty HTTP message converter list for RuntimeJsonSerializer");
+            return new HttpMessageConverterRuntimeJsonSerializer(java.util.Collections.emptyList());
+        }
         return new HttpMessageConverterRuntimeJsonSerializer(
-                handlerAdapter == null ? java.util.Collections.emptyList() : handlerAdapter.getMessageConverters());
+                handlerAdapter.getMessageConverters());
     }
 
     @Bean
@@ -48,7 +56,10 @@ public class VeloWebAutoConfiguration {
     public ControllerLogAspect controllerLogAspect(VeloProperties properties, RuntimeJsonSerializer runtimeJsonSerializer,
             ObjectProvider<InvocationLogWriter> invocationLogWriterProvider) {
         InvocationLogWriter invocationLogWriter = invocationLogWriterProvider.getIfAvailable(
-                () -> new Slf4JInvocationLogWriter(properties));
+                () -> {
+                    log.debug("No InvocationLogWriter bean found, using Slf4JInvocationLogWriter for ControllerLogAspect");
+                    return new Slf4JInvocationLogWriter(properties);
+                });
         return new ControllerLogAspect(properties, runtimeJsonSerializer, invocationLogWriter);
     }
 
