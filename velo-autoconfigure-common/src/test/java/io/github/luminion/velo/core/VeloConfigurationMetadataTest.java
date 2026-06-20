@@ -33,6 +33,8 @@ class VeloConfigurationMetadataTest {
             assertTrue(metadata.contains("velo.cache.prefix"));
             assertTrue(metadata.contains("velo.cache.separator"));
             assertTrue(metadata.contains("velo.cache.ttl"));
+            assertTrue(metadata.contains("velo.cache.null-caching-enabled"));
+            assertTrue(metadata.contains("velo.cache.ttl-jitter-percentage"));
             assertFalse(metadata.contains("velo.cache.key-prefix"));
             assertFalse(metadata.contains("velo.cache.key-separator"));
             assertFalse(metadata.contains("velo.cache.ttl-map"));
@@ -88,7 +90,7 @@ class VeloConfigurationMetadataTest {
             assertTrue(metadata.contains("velo.log.invocation.include-args"));
             assertTrue(metadata.contains("velo.log.invocation.include-result"));
             assertTrue(metadata.contains("velo.log.invocation.include-error-stack-trace"));
-            assertTrue(metadata.contains("velo.log.invocation.sensitive-pattern"));
+            assertFalse(metadata.contains("velo.log.invocation.sensitive-pattern"));
             assertFalse(metadata.contains("velo.log.invocation.sensitive-fields"));
             assertTrue(metadata.contains("velo.log.invocation.controller.enabled"));
             assertTrue(metadata.contains("velo.log.invocation.feign.enabled"));

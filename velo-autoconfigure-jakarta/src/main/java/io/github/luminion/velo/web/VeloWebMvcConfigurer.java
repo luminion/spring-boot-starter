@@ -58,12 +58,14 @@ public class VeloWebMvcConfigurer implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        if (properties.getWeb().isAllowCors()) {
+        VeloProperties.WebProperties web = properties.getWeb();
+        VeloProperties.CorsProperties cors = web.getCors();
+        if (web.isAllowCors() || cors.isEnabled()) {
             registry.addMapping("/**")
-                    .allowedOriginPatterns("*")
-                    .allowCredentials(true)
-                    .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                    .maxAge(3600);
+                    .allowedOriginPatterns(cors.getAllowedOriginPatterns())
+                    .allowCredentials(cors.isAllowCredentials())
+                    .allowedMethods(cors.getAllowedMethods())
+                    .maxAge(cors.getMaxAge());
         }
     }
 }

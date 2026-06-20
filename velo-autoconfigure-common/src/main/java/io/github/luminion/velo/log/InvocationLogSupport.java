@@ -1,19 +1,18 @@
 package io.github.luminion.velo.log;
 
 import io.github.luminion.velo.VeloProperties;
+import io.github.luminion.velo.log.annotation.LogPayloadIgnore;
 import io.github.luminion.velo.spi.RuntimeJsonSerializer;
 import io.github.luminion.velo.util.InvocationUtils;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.IdentityHashMap;
+import java.lang.reflect.Method;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.regex.Pattern;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Shared helpers for unified invocation logging.
@@ -22,13 +21,30 @@ public final class InvocationLogSupport {
 
     public static final String EMPTY_PAYLOAD = "-";
 
-    public static final String MASKED_PAYLOAD = "******";
-
-    private static final String CIRCULAR_PAYLOAD = "[circular]";
-
-    private static final int MAX_SANITIZE_DEPTH = 8;
-
     private InvocationLogSupport() {
+    }
+
+    /**
+     * Resolves the {@link LogPayloadIgnore} annotation from the method or declaring
+     * class of the given signature, supporting meta-annotations and class-level
+     * inheritance.
+     *
+     * @param signature the join point method signature
+     * @return the merged {@link LogPayloadIgnore} annotation, or {@code null} if absent
+     */
+    public static LogPayloadIgnore findLogPayloadIgnore(MethodSignature signature) {
+        Method method = signature.getMethod();
+        if (method != null) {
+            LogPayloadIgnore logPayloadIgnore = AnnotatedElementUtils.findMergedAnnotation(method, LogPayloadIgnore.class);
+            if (logPayloadIgnore != null) {
+                return logPayloadIgnore;
+            }
+        }
+        Class<?> declaringType = signature.getDeclaringType();
+        if (declaringType != null) {
+            return AnnotatedElementUtils.findMergedAnnotation(declaringType, LogPayloadIgnore.class);
+        }
+        return null;
     }
 
     public static String buildArgsText(MethodSignature signature, Object target, Object[] args,
@@ -37,9 +53,7 @@ public final class InvocationLogSupport {
             return EMPTY_PAYLOAD;
         }
         Map<String, Object> argumentMap = buildArgumentMap(signature, target, args);
-        Pattern sensitivePattern = compileSensitivePattern(properties.getSensitivePattern());
-        Map<String, Object> sanitizedArgumentMap = sanitizeMap(argumentMap, sensitivePattern, new IdentityHashMap<>(), 0);
-        return normalizePayload(limit(runtimeJsonSerializer.toJson(sanitizedArgumentMap),
+        return normalizePayload(limit(runtimeJsonSerializer.toJson(argumentMap),
                 properties.getMaxPayloadLength()));
     }
 
@@ -74,6 +88,18 @@ public final class InvocationLogSupport {
         return (System.nanoTime() - startNs) / 1_000_000;
     }
 
+    /**
+     * Checks whether the elapsed time exceeds the slow-log threshold.
+     *
+     * @param elapsedMs elapsed time in milliseconds
+     * @param threshold threshold value
+     * @param unit      threshold time unit
+     * @return {@code true} if the elapsed time exceeds the threshold
+     */
+    public static boolean exceedsSlowThreshold(long elapsedMs, long threshold, TimeUnit unit) {
+        return elapsedMs * 1_000_000L > unit.toNanos(threshold);
+    }
+
     private static Map<String, Object> buildArgumentMap(MethodSignature signature, Object target, Object[] args) {
         Map<String, Object> argumentMap = new LinkedHashMap<>();
         if (args == null || args.length == 0) {
@@ -85,92 +111,6 @@ public final class InvocationLogSupport {
             argumentMap.put(parameterName, args[i]);
         }
         return argumentMap;
-    }
-
-    private static Pattern compileSensitivePattern(String patternStr) {
-        if (patternStr == null || patternStr.isEmpty()) {
-            return null;
-        }
-        return Pattern.compile(patternStr);
-    }
-
-    private static Map<String, Object> sanitizeMap(Map<String, Object> argumentMap,
-            Pattern sensitivePattern, IdentityHashMap<Object, Boolean> visited, int depth) {
-        Map<String, Object> sanitizedMap = new LinkedHashMap<>();
-        if (argumentMap.isEmpty() || sensitivePattern == null || depth > MAX_SANITIZE_DEPTH) {
-            sanitizedMap.putAll(argumentMap);
-            return sanitizedMap;
-        }
-        if (visited.containsKey(argumentMap)) {
-            sanitizedMap.put("value", CIRCULAR_PAYLOAD);
-            return sanitizedMap;
-        }
-        visited.put(argumentMap, Boolean.TRUE);
-        for (Map.Entry<String, Object> entry : argumentMap.entrySet()) {
-            sanitizedMap.put(entry.getKey(), sanitizeValue(entry.getKey(), entry.getValue(), sensitivePattern, visited,
-                    depth + 1));
-        }
-        visited.remove(argumentMap);
-        return sanitizedMap;
-    }
-
-    private static Object sanitizeValue(Object key, Object value, Pattern sensitivePattern,
-            IdentityHashMap<Object, Boolean> visited, int depth) {
-        if (isSensitiveField(key == null ? null : String.valueOf(key), sensitivePattern)) {
-            return MASKED_PAYLOAD;
-        }
-        if (value == null || depth > MAX_SANITIZE_DEPTH) {
-            return value;
-        }
-        if (value instanceof Map<?, ?>) {
-            if (visited.containsKey(value)) {
-                return CIRCULAR_PAYLOAD;
-            }
-            visited.put(value, Boolean.TRUE);
-            Map<?, ?> source = (Map<?, ?>) value;
-            Map<Object, Object> sanitizedMap = new LinkedHashMap<>(source.size());
-            for (Map.Entry<?, ?> entry : source.entrySet()) {
-                sanitizedMap.put(entry.getKey(), sanitizeValue(entry.getKey(), entry.getValue(), sensitivePattern, visited,
-                        depth + 1));
-            }
-            visited.remove(value);
-            return sanitizedMap;
-        }
-        if (value instanceof Collection<?>) {
-            if (visited.containsKey(value)) {
-                return CIRCULAR_PAYLOAD;
-            }
-            visited.put(value, Boolean.TRUE);
-            Collection<?> source = (Collection<?>) value;
-            List<Object> sanitizedValues = new ArrayList<>(source.size());
-            for (Object item : source) {
-                sanitizedValues.add(sanitizeValue(null, item, sensitivePattern, visited, depth + 1));
-            }
-            visited.remove(value);
-            return sanitizedValues;
-        }
-        if (value.getClass().isArray()) {
-            if (visited.containsKey(value)) {
-                return CIRCULAR_PAYLOAD;
-            }
-            visited.put(value, Boolean.TRUE);
-            int length = java.lang.reflect.Array.getLength(value);
-            List<Object> sanitizedValues = new ArrayList<>(length);
-            for (int i = 0; i < length; i++) {
-                sanitizedValues.add(sanitizeValue(null, java.lang.reflect.Array.get(value, i), sensitivePattern, visited,
-                        depth + 1));
-            }
-            visited.remove(value);
-            return sanitizedValues;
-        }
-        return value;
-    }
-
-    private static boolean isSensitiveField(String key, Pattern sensitivePattern) {
-        if (key == null || key.isEmpty() || sensitivePattern == null) {
-            return false;
-        }
-        return sensitivePattern.matcher(key).find();
     }
 
     private static String limit(String text, int maxPayloadLength) {

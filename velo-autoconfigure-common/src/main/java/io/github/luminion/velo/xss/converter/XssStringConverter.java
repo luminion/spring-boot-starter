@@ -22,7 +22,7 @@ public class XssStringConverter implements Converter<String, String>, Conditiona
 
     @Override
     public String convert(String source) {
-        if (source.isEmpty()) {
+        if (source == null || source.isEmpty()) {
             return source;
         }
         return xssCleaner.clean(source);

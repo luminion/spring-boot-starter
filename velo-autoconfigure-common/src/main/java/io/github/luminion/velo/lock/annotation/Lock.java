@@ -33,6 +33,9 @@ public @interface Lock {
      * <p>
      * 该语义主要由 Redis / Redisson 这类后端保证；本地 Caffeine / JDK 兜底实现仅保证同 JVM 内互斥，
      * 不提供强一致的自动过期释放能力。
+     * <p>
+     * 默认 30 秒，适用于绝大多数 CRUD 操作。对于执行时间可能超过 lease 的长任务
+     * （如批量处理、复杂计算），请显式设置更大的 lease 值以避免锁提前释放。
      */
     long lease() default 30;
 

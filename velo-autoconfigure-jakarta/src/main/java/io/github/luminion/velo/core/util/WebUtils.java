@@ -100,30 +100,11 @@ public abstract class WebUtils {
      * @param mimeType 文件的MIME类型
      */
     public static void setDownloadHeader(String fileName, String suffix, String mimeType) {
-        if (fileName == null || fileName.isEmpty()) {
-            fileName = String.valueOf(System.currentTimeMillis());
-        }
-        if (suffix != null && !suffix.isEmpty() && !fileName.endsWith(suffix)) {
-            fileName += suffix;
-        }
-
         HttpServletResponse response = getResponse();
         response.setContentType(mimeType);
         response.setCharacterEncoding("UTF-8");
-
-        try {
-            // URL编码，并将空格产生的 '+' 替换为标准的 '%20'
-            String encodedFileName = URLEncoder.encode(fileName, "UTF-8").replaceAll("\\+", "%20");
-            // 兼容现代浏览器和老版IE的标准写法 (RFC 5987)
-            String contentDisposition = String.format("attachment; filename=\"%s\"; filename*=utf-8''%s",
-                    encodedFileName, encodedFileName);
-
-            // 解决前端跨域获取不到 header 的问题
-            response.setHeader("Access-Control-Expose-Headers", "Content-Disposition");
-            response.setHeader("Content-Disposition", contentDisposition);
-        } catch (Exception e) {
-            throw new RuntimeException("设置文件下载响应头失败", e);
-        }
+        response.setHeader("Access-Control-Expose-Headers", "Content-Disposition");
+        response.setHeader("Content-Disposition", WebUtilsSupport.buildContentDisposition(fileName, suffix));
     }
 
 
@@ -251,36 +232,7 @@ public abstract class WebUtils {
      */
     public static String getRequestIp() {
         HttpServletRequest request = getRequest();
-        String ip = null;
-        String[] headers = {"x-forwarded-for", "Proxy-Client-IP", "WL-Proxy-Client-IP", "X-Real-IP"};
-        for (String header : headers) {
-            ip = request.getHeader(header);
-            if (ip != null && !ip.isEmpty() && !"unknown".equalsIgnoreCase(ip)) {
-                break;
-            }
-        }
-
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getRemoteAddr();
-        }
-
-        // 转换localhost的IPv6地址为IPv4格式
-        if ("0:0:0:0:0:0:0:1".equals(ip)) {
-            ip = "127.0.0.1";
-        }
-
-        // 处理多级代理，获取第一个有效IP
-        if (ip != null && ip.indexOf(',') > 0) {
-            final String[] ips = ip.trim().split(",");
-            for (String subIp : ips) {
-                String trimmedIp = subIp.trim();
-                if (!trimmedIp.isEmpty() && !"unknown".equalsIgnoreCase(trimmedIp)) {
-                    ip = trimmedIp;
-                    break;
-                }
-            }
-        }
-        return ip;
+        return WebUtilsSupport.resolveClientIp(request::getHeader, request.getRemoteAddr());
     }
 
     /**

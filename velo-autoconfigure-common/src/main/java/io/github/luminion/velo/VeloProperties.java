@@ -1,5 +1,6 @@
 package io.github.luminion.velo;
 
+import io.github.luminion.velo.core.VeloAdvisorOrder;
 import io.github.luminion.velo.xss.XssStrategy;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -90,6 +91,11 @@ public class VeloProperties {
      */
     private FeignProperties feign = new FeignProperties();
 
+    /**
+     * Aspect execution order settings.
+     */
+    private AspectOrderProperties aspectOrder = new AspectOrderProperties();
+
     @Data
     public static class IdempotentProperties {
 
@@ -178,6 +184,19 @@ public class VeloProperties {
          * Default cache TTL.
          */
         private Duration defaultTtl = Duration.ofMinutes(5);
+
+        /**
+         * Whether to cache null values. When enabled, null results are cached
+         * to prevent cache penetration. Default is true.
+         */
+        private boolean nullCachingEnabled = true;
+
+        /**
+         * Percentage of jitter applied to TTL values to prevent cache stampede.
+         * For example, a value of 10 means each cache name's TTL will vary by
+         * up to ±10% at startup. Set to 0 to disable jitter. Default is 0.
+         */
+        private int ttlJitterPercentage = 0;
 
         /**
          * Per-cache TTL overrides.
@@ -429,15 +448,6 @@ public class VeloProperties {
         private boolean includeErrorStackTrace;
 
         /**
-         * Regex pattern used to identify sensitive field names in argument maps before serialization.
-         * <p>
-         * Uses {@link java.util.regex.Matcher#find()} to perform substring matching.
-         * For exact matching, use anchors: {@code "(?i)^(password|token|secret)$"}.
-         * For prefix/suffix matching: {@code "(?i).*(password|secret)$"}.
-         */
-        private String sensitivePattern = "(?i)(password|token|authorization|secret|credential)";
-
-        /**
          * Controller invocation logging settings.
          */
         private InvocationSourceProperties controller = new InvocationSourceProperties();
@@ -472,13 +482,50 @@ public class VeloProperties {
 
         /**
          * Enables permissive CORS handling in the MVC configurer.
+         * @deprecated use {@code velo.web.cors.enabled} instead.
          */
+        @Deprecated
         private boolean allowCors;
+
+        /**
+         * CORS settings.
+         */
+        private CorsProperties cors = new CorsProperties();
 
         /**
          * Web XSS settings.
          */
         private XssProperties xss = new XssProperties();
+    }
+
+    @Data
+    public static class CorsProperties {
+
+        /**
+         * Enables CORS handling in the MVC configurer.
+         */
+        private boolean enabled;
+
+        /**
+         * Comma-separated or array-style list of allowed origin patterns.
+         * Defaults to {@code *} (all origins).
+         */
+        private String[] allowedOriginPatterns = {"*"};
+
+        /**
+         * Comma-separated or array-style list of allowed HTTP methods.
+         */
+        private String[] allowedMethods = {"GET", "POST", "PUT", "DELETE", "OPTIONS"};
+
+        /**
+         * Whether to allow credentials (cookies, authorization headers).
+         */
+        private boolean allowCredentials = true;
+
+        /**
+         * Max age of preflight cache in seconds.
+         */
+        private long maxAge = 3600;
     }
 
     @Data
@@ -560,5 +607,44 @@ public class VeloProperties {
          * Enables the block attack inner interceptor bean.
          */
         private boolean blockAttackEnabled = true;
+    }
+
+    @Data
+    public static class AspectOrderProperties {
+
+        /**
+         * Order for the idempotent aspect.
+         */
+        private int idempotent = VeloAdvisorOrder.CONCURRENCY_IDEMPOTENT;
+
+        /**
+         * Order for the rate-limit aspect.
+         */
+        private int rateLimit = VeloAdvisorOrder.CONCURRENCY_RATE_LIMIT;
+
+        /**
+         * Order for the lock aspect.
+         */
+        private int lock = VeloAdvisorOrder.CONCURRENCY_LOCK;
+
+        /**
+         * Order for the invoke-log aspect.
+         */
+        private int invokeLog = VeloAdvisorOrder.LOG_INVOKE;
+
+        /**
+         * Order for the slow-log aspect.
+         */
+        private int slowLog = VeloAdvisorOrder.LOG_SLOW;
+
+        /**
+         * Order for the controller-log aspect.
+         */
+        private int controllerLog = VeloAdvisorOrder.LOG_CONTROLLER;
+
+        /**
+         * Order for the feign-log aspect.
+         */
+        private int feignLog = VeloAdvisorOrder.LOG_FEIGN;
     }
 }

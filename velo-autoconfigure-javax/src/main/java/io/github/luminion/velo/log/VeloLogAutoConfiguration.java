@@ -36,7 +36,9 @@ public class VeloLogAutoConfiguration {
     public InvokeLogAspect invokeLogAspect(VeloProperties properties,
             ObjectProvider<RuntimeJsonSerializer> runtimeJsonSerializerProvider,
             InvocationLogWriter invocationLogWriter) {
-        return new InvokeLogAspect(properties, runtimeJsonSerializerProvider, invocationLogWriter);
+        InvokeLogAspect aspect = new InvokeLogAspect(properties, runtimeJsonSerializerProvider, invocationLogWriter);
+        aspect.setOrder(properties.getAspectOrder().getInvokeLog());
+        return aspect;
     }
 
     @Bean
@@ -46,6 +48,8 @@ public class VeloLogAutoConfiguration {
     public SlowLogAspect slowLogAspect(VeloProperties properties,
             ObjectProvider<RuntimeJsonSerializer> runtimeJsonSerializerProvider,
             InvocationLogWriter invocationLogWriter) {
-        return new SlowLogAspect(properties, runtimeJsonSerializerProvider, invocationLogWriter);
+        SlowLogAspect aspect = new SlowLogAspect(properties, runtimeJsonSerializerProvider, invocationLogWriter);
+        aspect.setOrder(properties.getAspectOrder().getSlowLog());
+        return aspect;
     }
 }

@@ -30,13 +30,15 @@ public class RedissonRateLimitHandler implements RateLimitHandler {
 
         RRateLimiter rateLimiter = redissonClient.getRateLimiter(key);
 
-        if (!rateLimiter.isExists()) {
-            rateLimiter.trySetRate(RateType.OVERALL, rateValue, interval, keepAlive);
-        }
-
-        RateLimiterConfig currentConfig = rateLimiter.getConfig();
-        if (!matches(currentConfig, rateValue, interval.toMillis())) {
-            rateLimiter.setRate(RateType.OVERALL, rateValue, interval, keepAlive);
+        // trySetRate 只在 rate limiter 不存在时才设置成功，返回 true 表示本次创建了配置。
+        // 利用返回值避免额外的 isExists() 调用，减少 Redis 往返。
+        boolean created = rateLimiter.trySetRate(RateType.OVERALL, rateValue, interval, keepAlive);
+        if (!created) {
+            // 已存在，检查配置是否匹配，不匹配则更新
+            RateLimiterConfig currentConfig = rateLimiter.getConfig();
+            if (!matches(currentConfig, rateValue, interval.toMillis())) {
+                rateLimiter.setRate(RateType.OVERALL, rateValue, interval, keepAlive);
+            }
         }
 
         rateLimiter.expire(keepAlive);

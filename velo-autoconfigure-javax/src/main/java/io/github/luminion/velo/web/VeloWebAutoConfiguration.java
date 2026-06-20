@@ -60,7 +60,9 @@ public class VeloWebAutoConfiguration {
                     log.debug("No InvocationLogWriter bean found, using Slf4JInvocationLogWriter for ControllerLogAspect");
                     return new Slf4JInvocationLogWriter(properties);
                 });
-        return new ControllerLogAspect(properties, runtimeJsonSerializer, invocationLogWriter);
+        ControllerLogAspect aspect = new ControllerLogAspect(properties, runtimeJsonSerializer, invocationLogWriter);
+        aspect.setOrder(properties.getAspectOrder().getControllerLog());
+        return aspect;
     }
 
     @Bean

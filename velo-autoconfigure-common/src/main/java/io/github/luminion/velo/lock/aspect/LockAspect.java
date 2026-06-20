@@ -1,5 +1,6 @@
 package io.github.luminion.velo.lock.aspect;
 
+import io.github.luminion.velo.core.VeloAdvisorOrder;
 import io.github.luminion.velo.spi.Fingerprinter;
 import io.github.luminion.velo.util.ConcurrencyAnnotationUtils;
 import io.github.luminion.velo.lock.LockHandler;
@@ -10,22 +11,34 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.core.Ordered;
 
 import java.lang.reflect.Method;
 
 /**
- * 分页锁切面
+ * 分布式锁切面
  *
  * @author luminion
  * @since 1.0.0
  */
 @Aspect
 @RequiredArgsConstructor
-public class LockAspect {
+public class LockAspect implements Ordered {
 
     private final String prefix;
     private final Fingerprinter fingerprinter;
     private final LockHandler lockHandler;
+
+    private int order = VeloAdvisorOrder.CONCURRENCY_LOCK;
+
+    public void setOrder(int order) {
+        this.order = order;
+    }
+
+    @Override
+    public int getOrder() {
+        return order;
+    }
 
     @Around("@annotation(lock)")
     public Object doLock(ProceedingJoinPoint joinPoint, Lock lock) throws Throwable {

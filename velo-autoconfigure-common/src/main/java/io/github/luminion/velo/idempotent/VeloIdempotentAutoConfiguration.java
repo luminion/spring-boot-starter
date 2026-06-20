@@ -29,6 +29,8 @@ public class VeloIdempotentAutoConfiguration {
     @ConditionalOnBean({Fingerprinter.class, IdempotentHandler.class})
     public IdempotentAspect idempotentAspect(VeloProperties properties, Fingerprinter fingerprinter,
             IdempotentHandler idempotentHandler) {
-        return new IdempotentAspect(properties.getIdempotent().getPrefix(), fingerprinter, idempotentHandler);
+        IdempotentAspect aspect = new IdempotentAspect(properties.getIdempotent().getPrefix(), fingerprinter, idempotentHandler);
+        aspect.setOrder(properties.getAspectOrder().getIdempotent());
+        return aspect;
     }
 }

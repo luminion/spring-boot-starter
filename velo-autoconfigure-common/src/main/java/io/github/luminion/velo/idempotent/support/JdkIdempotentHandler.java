@@ -2,6 +2,7 @@ package io.github.luminion.velo.idempotent.support;
 
 import io.github.luminion.velo.idempotent.IdempotentHandler;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.DisposableBean;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -10,7 +11,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
-public class JdkIdempotentHandler implements IdempotentHandler {
+public class JdkIdempotentHandler implements IdempotentHandler, DisposableBean {
 
     public JdkIdempotentHandler() {
         log.warn("[Velo Starter] JdkIdempotentHandler is used as a fallback implementation. " +
@@ -58,5 +59,10 @@ public class JdkIdempotentHandler implements IdempotentHandler {
     @Override
     public void remove(String key) {
         recordMap.remove(key);
+    }
+
+    @Override
+    public void destroy() {
+        cleanupExecutor.shutdownNow();
     }
 }

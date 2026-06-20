@@ -5,8 +5,10 @@ import io.github.luminion.velo.log.InvocationLogRecord;
 import io.github.luminion.velo.log.InvocationLogSource;
 import io.github.luminion.velo.log.InvocationLogSupport;
 import io.github.luminion.velo.log.InvocationLogWriter;
+import io.github.luminion.velo.log.annotation.LogPayloadIgnore;
 import io.github.luminion.velo.log.trace.TraceContext;
 import io.github.luminion.velo.spi.RuntimeJsonSerializer;
+import io.github.luminion.velo.core.VeloAdvisorOrder;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -16,12 +18,13 @@ import org.springframework.util.ReflectionUtils;
 import org.springframework.util.StringUtils;
 
 import java.lang.reflect.Method;
+import org.springframework.core.Ordered;
 
 /**
  * Feign 调用日志切面。
  */
 @Aspect
-public class FeignLogAspect {
+public class FeignLogAspect implements Ordered {
 
     private final VeloProperties properties;
 
@@ -29,11 +32,22 @@ public class FeignLogAspect {
 
     private final InvocationLogWriter invocationLogWriter;
 
+    private int order = VeloAdvisorOrder.LOG_FEIGN;
+
     public FeignLogAspect(VeloProperties properties, RuntimeJsonSerializer runtimeJsonSerializer,
             InvocationLogWriter invocationLogWriter) {
         this.properties = properties;
         this.runtimeJsonSerializer = runtimeJsonSerializer;
         this.invocationLogWriter = invocationLogWriter;
+    }
+
+    public void setOrder(int order) {
+        this.order = order;
+    }
+
+    @Override
+    public int getOrder() {
+        return order;
     }
 
     @Around("execution(public * *(..)) && (within(@org.springframework.cloud.openfeign.FeignClient *) || @within(org.springframework.cloud.openfeign.FeignClient))")
@@ -51,14 +65,19 @@ public class FeignLogAspect {
         FeignRequestMetadata requestMetadata = FeignClientMetadataResolver.resolveRequestMetadata(method);
         String target = FeignLogSupport.buildInvocationTarget(method, requestMetadata);
         VeloProperties.InvocationProperties invocationProperties = properties.getLog().getInvocation();
-        String argsText = InvocationLogSupport.buildArgsText(signature, joinPoint.getTarget(), joinPoint.getArgs(),
-                runtimeJsonSerializer, invocationProperties);
+        LogPayloadIgnore logPayloadIgnore = InvocationLogSupport.findLogPayloadIgnore(signature);
+        boolean ignoreArgs = logPayloadIgnore != null && logPayloadIgnore.args();
+        boolean ignoreResult = logPayloadIgnore != null && logPayloadIgnore.result();
+        String argsText = ignoreArgs ? InvocationLogSupport.EMPTY_PAYLOAD
+                : InvocationLogSupport.buildArgsText(signature, joinPoint.getTarget(), joinPoint.getArgs(),
+                        runtimeJsonSerializer, invocationProperties);
         String mdcKey = properties.getLog().getTrace().getMdcKey();
         boolean createdTraceId = ensureTraceId(mdcKey);
         long start = System.nanoTime();
         try {
             Object result = joinPoint.proceed();
-            InvocationLogRecord record = buildRecord(feignType.getName(), target, argsText, InvocationLogSupport.buildResultText(result,
+            InvocationLogRecord record = buildRecord(feignType.getName(), target, argsText, ignoreResult ? InvocationLogSupport.EMPTY_PAYLOAD
+                    : InvocationLogSupport.buildResultText(result,
                     runtimeJsonSerializer, invocationProperties), InvocationLogSupport.elapsedMs(start), null);
             invocationLogWriter.write(record);
             return result;

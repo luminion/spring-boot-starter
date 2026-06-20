@@ -29,6 +29,8 @@ public class VeloRateLimitAutoConfiguration {
     @ConditionalOnBean({Fingerprinter.class, RateLimitHandler.class})
     public RateLimitAspect rateLimitAspect(VeloProperties properties, Fingerprinter fingerprinter,
             RateLimitHandler rateLimitHandler) {
-        return new RateLimitAspect(properties.getRateLimit().getPrefix(), fingerprinter, rateLimitHandler);
+        RateLimitAspect aspect = new RateLimitAspect(properties.getRateLimit().getPrefix(), fingerprinter, rateLimitHandler);
+        aspect.setOrder(properties.getAspectOrder().getRateLimit());
+        return aspect;
     }
 }

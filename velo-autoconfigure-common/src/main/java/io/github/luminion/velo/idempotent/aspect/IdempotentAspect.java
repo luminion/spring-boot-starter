@@ -1,5 +1,6 @@
 package io.github.luminion.velo.idempotent.aspect;
 
+import io.github.luminion.velo.core.VeloAdvisorOrder;
 import io.github.luminion.velo.spi.Fingerprinter;
 import io.github.luminion.velo.util.ConcurrencyAnnotationUtils;
 import io.github.luminion.velo.idempotent.IdempotentHandler;
@@ -9,6 +10,7 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.core.Ordered;
 
 import java.lang.reflect.Method;
 
@@ -18,15 +20,26 @@ import java.lang.reflect.Method;
  * 语义是“TTL 窗口内拒绝重复提交”，而不是“方法结束后释放并发锁”。
  */
 @Aspect
-public class IdempotentAspect {
+public class IdempotentAspect implements Ordered {
     private final String prefix;
     private final Fingerprinter fingerprinter;
     private final IdempotentHandler idempotentHandler;
+
+    private int order = VeloAdvisorOrder.CONCURRENCY_IDEMPOTENT;
 
     public IdempotentAspect(String prefix, Fingerprinter fingerprinter, IdempotentHandler idempotentHandler) {
         this.prefix = prefix;
         this.fingerprinter = fingerprinter;
         this.idempotentHandler = idempotentHandler;
+    }
+
+    public void setOrder(int order) {
+        this.order = order;
+    }
+
+    @Override
+    public int getOrder() {
+        return order;
     }
 
     @Around("@annotation(idempotent)")
@@ -54,7 +67,7 @@ public class IdempotentAspect {
         try {
             return joinPoint.proceed();
         } catch (Throwable ex) {
-            // 业务方法执行失败时清除幂等记录，允许重试
+            // 任何下游失败时清除幂等记录，允许重试（包括限流拒绝、锁获取失败、业务异常等）
             idempotentHandler.remove(key);
             throw ex;
         }

@@ -5,28 +5,42 @@ import io.github.luminion.velo.log.InvocationLogRecord;
 import io.github.luminion.velo.log.InvocationLogSource;
 import io.github.luminion.velo.log.InvocationLogSupport;
 import io.github.luminion.velo.log.InvocationLogWriter;
+import io.github.luminion.velo.log.annotation.LogPayloadIgnore;
 import io.github.luminion.velo.log.trace.TraceContext;
 import io.github.luminion.velo.spi.RuntimeJsonSerializer;
 import io.github.luminion.velo.core.util.WebUtils;
+import io.github.luminion.velo.core.VeloAdvisorOrder;
 import lombok.RequiredArgsConstructor;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.web.servlet.HandlerMapping;
+import org.springframework.core.Ordered;
 
 /**
  * Controller 调用日志切面。
  */
 @Aspect
 @RequiredArgsConstructor
-public class ControllerLogAspect {
+public class ControllerLogAspect implements Ordered {
 
     private final VeloProperties properties;
 
     private final RuntimeJsonSerializer runtimeJsonSerializer;
 
     private final InvocationLogWriter invocationLogWriter;
+
+    private int order = VeloAdvisorOrder.LOG_CONTROLLER;
+
+    public void setOrder(int order) {
+        this.order = order;
+    }
+
+    @Override
+    public int getOrder() {
+        return order;
+    }
 
     @Around("execution(public * *(..)) && (within(@org.springframework.web.bind.annotation.RestController *) || @annotation(org.springframework.web.bind.annotation.ResponseBody) || @within(org.springframework.web.bind.annotation.ResponseBody))")
     public Object logControllerInvocation(ProceedingJoinPoint joinPoint) throws Throwable {
@@ -35,12 +49,17 @@ public class ControllerLogAspect {
         String loggerName = declaringType != null ? declaringType.getName() : null;
         String target = buildRequestTarget();
         VeloProperties.InvocationProperties invocationProperties = properties.getLog().getInvocation();
-        String argsText = InvocationLogSupport.buildArgsText(signature, joinPoint.getTarget(), joinPoint.getArgs(),
-                runtimeJsonSerializer, invocationProperties);
+        LogPayloadIgnore logPayloadIgnore = InvocationLogSupport.findLogPayloadIgnore(signature);
+        boolean ignoreArgs = logPayloadIgnore != null && logPayloadIgnore.args();
+        boolean ignoreResult = logPayloadIgnore != null && logPayloadIgnore.result();
+        String argsText = ignoreArgs ? InvocationLogSupport.EMPTY_PAYLOAD
+                : InvocationLogSupport.buildArgsText(signature, joinPoint.getTarget(), joinPoint.getArgs(),
+                        runtimeJsonSerializer, invocationProperties);
         long start = System.nanoTime();
         try {
             Object result = joinPoint.proceed();
-            InvocationLogRecord record = buildRecord(loggerName, target, argsText, InvocationLogSupport.buildResultText(result,
+            InvocationLogRecord record = buildRecord(loggerName, target, argsText, ignoreResult ? InvocationLogSupport.EMPTY_PAYLOAD
+                    : InvocationLogSupport.buildResultText(result,
                     runtimeJsonSerializer, invocationProperties), InvocationLogSupport.elapsedMs(start), null);
             invocationLogWriter.write(record);
             return result;

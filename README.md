@@ -364,7 +364,19 @@ public void pay(Long orderId) {
 - `lease` 默认 `30s`
 - `REDIS` / `REDISSON` 更适合分布式场景，`CAFFEINE` / `JDK` 只保证单 JVM 内互斥
 
-### 6. 日志
+### 6. 并发控制组合顺序
+
+当 `@Idempotent`、`@RateLimit`、`@Lock` 同时作用于同一个方法时，starter 内置顺序为：
+
+```text
+@Idempotent -> @RateLimit -> @Lock -> 业务方法
+```
+
+这意味着重复提交会最先被拒绝，不消耗限流令牌，也不会尝试加锁；限流失败时不会进入锁等待；只有真正允许执行业务的方法调用才会获取锁。
+
+这些切面使用接近 `Ordered.LOWEST_PRECEDENCE` 的低优先级顺序值，并在三者之间保留较大间隔，便于业务自定义切面通过 `@Order` 插入到合适位置。
+
+### 7. 日志
 
 Velo 提供一套统一调用日志能力，Controller、Feign 与 `@InvokeLog` 都按同一格式输出一次调用的最终状态。
 

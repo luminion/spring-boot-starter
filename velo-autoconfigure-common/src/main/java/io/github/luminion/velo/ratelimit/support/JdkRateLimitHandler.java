@@ -2,6 +2,7 @@ package io.github.luminion.velo.ratelimit.support;
 
 import io.github.luminion.velo.ratelimit.RateLimitHandler;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.DisposableBean;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -13,7 +14,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * 基于 JDK 的本地限流器。
  */
 @Slf4j
-public class JdkRateLimitHandler implements RateLimitHandler {
+public class JdkRateLimitHandler implements RateLimitHandler, DisposableBean {
     private static final long MIN_IDLE_EVICT_NANOS = TimeUnit.MINUTES.toNanos(5);
 
     public JdkRateLimitHandler() {
@@ -47,6 +48,11 @@ public class JdkRateLimitHandler implements RateLimitHandler {
             });
         }
         return acquired;
+    }
+
+    @Override
+    public void destroy() {
+        cleanupExecutor.shutdownNow();
     }
 
     private static final class TokenBucket {

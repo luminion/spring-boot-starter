@@ -11,13 +11,18 @@ import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * 基于 Caffeine 的本地锁实现。
- *
+ * <p>
  * 该实现只保证单 JVM 内互斥执行，不提供分布式一致性。
+ * 缓存配置了 {@code maximumSize=50000} 和 {@code expireAfterAccess=10min} 作为兜底保护，
+ * 防止在异常路径下 LockState 无法被引用计数清理时导致内存泄漏。
  */
 @Slf4j
 public class CaffeineLockHandler implements LockHandler {
 
-    private final Cache<String, LockState> lockCache = Caffeine.newBuilder().build();
+    private final Cache<String, LockState> lockCache = Caffeine.newBuilder()
+            .maximumSize(50_000)
+            .expireAfterAccess(10, TimeUnit.MINUTES)
+            .build();
 
     public CaffeineLockHandler() {
         log.warn("[Velo Starter] CaffeineLockHandler is used as a local fallback implementation. " +

@@ -1,5 +1,6 @@
 package io.github.luminion.velo.ratelimit.aspect;
 
+import io.github.luminion.velo.core.VeloAdvisorOrder;
 import io.github.luminion.velo.spi.Fingerprinter;
 import io.github.luminion.velo.util.ConcurrencyAnnotationUtils;
 import io.github.luminion.velo.ratelimit.RateLimitHandler;
@@ -10,6 +11,7 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.core.Ordered;
 import org.springframework.util.StringUtils;
 
 import java.lang.reflect.Method;
@@ -21,10 +23,21 @@ import java.lang.reflect.Method;
  */
 @Aspect
 @RequiredArgsConstructor
-public class RateLimitAspect {
+public class RateLimitAspect implements Ordered {
     private final String prefix;
     private final Fingerprinter fingerprinter;
     private final RateLimitHandler rateLimitHandler;
+
+    private int order = VeloAdvisorOrder.CONCURRENCY_RATE_LIMIT;
+
+    public void setOrder(int order) {
+        this.order = order;
+    }
+
+    @Override
+    public int getOrder() {
+        return order;
+    }
 
     @Around("@annotation(rateLimit)")
     public Object doRateLimit(ProceedingJoinPoint joinPoint, RateLimit rateLimit) throws Throwable {

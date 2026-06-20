@@ -156,7 +156,7 @@ class VeloWebAutoConfigurationTests {
     }
 
     @Test
-    void shouldMaskNestedSensitiveArgumentsBeforeSerialization() throws Throwable {
+    void shouldLogArgumentsAsIsWithoutFieldLevelMasking() throws Throwable {
         VeloProperties properties = new VeloProperties();
         CapturingRuntimeJsonSerializer serializer = new CapturingRuntimeJsonSerializer();
         CapturingInvocationLogWriter writer = new CapturingInvocationLogWriter();
@@ -177,11 +177,11 @@ class VeloWebAutoConfigurationTests {
         assertThat(serializer.values).hasSize(2);
         assertThat(serializer.values.get(0)).isInstanceOf(Map.class);
         Map<?, ?> arguments = (Map<?, ?>) serializer.values.get(0);
-        Object maskedCredential = arguments.get("request");
-        assertThat(maskedCredential).isInstanceOf(Map.class);
-        Map<?, ?> maskedCredentialMap = (Map<?, ?>) maskedCredential;
-        assertThat(maskedCredentialMap.get("username")).isEqualTo("tom");
-        assertThat(maskedCredentialMap.get("password")).isEqualTo("******");
+        Object loggedCredential = arguments.get("request");
+        assertThat(loggedCredential).isInstanceOf(Map.class);
+        Map<?, ?> loggedCredentialMap = (Map<?, ?>) loggedCredential;
+        assertThat(loggedCredentialMap.get("username")).isEqualTo("tom");
+        assertThat(loggedCredentialMap.get("password")).isEqualTo("123456");
     }
 
     @Test

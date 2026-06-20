@@ -26,6 +26,8 @@ import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.util.StringUtils;
 
+import java.time.Duration;
+
 /**
  * spring缓存自动配置
  *
@@ -68,7 +70,9 @@ public class VeloCacheAutoConfiguration {
         @Bean
         @ConditionalOnMissingBean(RedisCacheTimeMapProvider.class)
         public RedisCacheTimeMapProvider redisCacheTimeMapProvider(VeloProperties properties) {
-            return new RedisCacheTimeMapProvider(properties.getCache().getTtl());
+            return new RedisCacheTimeMapProvider(
+                    properties.getCache().getTtl(),
+                    properties.getCache().getTtlJitterPercentage());
         }
 
         @Bean
@@ -86,10 +90,19 @@ public class VeloCacheAutoConfiguration {
                     .SerializationPair
                     .fromSerializer(redisSerializer);
 
-            return redisCacheConfiguration
+            Duration defaultTtl = RedisCacheTimeMapProvider.applyJitter(
+                    cacheProperties.getDefaultTtl(), cacheProperties.getTtlJitterPercentage());
+
+            RedisCacheConfiguration config = redisCacheConfiguration
                     .serializeValuesWith(objectSerializationPair)
                     .computePrefixWith(cacheName -> buildCacheKeyPrefix(cacheProperties, cacheName))
-                    .entryTtl(cacheProperties.getDefaultTtl());
+                    .entryTtl(defaultTtl);
+
+            if (!cacheProperties.isNullCachingEnabled()) {
+                config = config.disableCachingNullValues();
+            }
+
+            return config;
         }
 
         @Bean

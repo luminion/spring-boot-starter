@@ -40,6 +40,10 @@ class VeloPropertiesDefaultsTest {
         assertThat(properties.getRateLimit().getPrefix()).isEqualTo("rateLimit:");
         assertThat(properties.getLock().getBackend()).isEqualTo(ConcurrencyBackend.AUTO);
         assertThat(properties.getLock().getPrefix()).isEqualTo("lock:");
+        assertThat(properties.getCache().isEnabled()).isTrue();
+        assertThat(properties.getCache().getDefaultTtl()).isEqualTo(java.time.Duration.ofMinutes(5));
+        assertThat(properties.getCache().isNullCachingEnabled()).isTrue();
+        assertThat(properties.getCache().getTtlJitterPercentage()).isEqualTo(0);
         assertThat(properties.getLog().isEnabled()).isTrue();
         assertThat(properties.getLog().getTrace().isEnabled()).isTrue();
         assertThat(properties.getLog().getTrace().getHeaderName()).isEqualTo("X-Trace-Id");
@@ -52,8 +56,6 @@ class VeloPropertiesDefaultsTest {
         assertThat(properties.getLog().getInvocation().isIncludeArgs()).isTrue();
         assertThat(properties.getLog().getInvocation().isIncludeResult()).isTrue();
         assertThat(properties.getLog().getInvocation().isIncludeErrorStackTrace()).isFalse();
-        assertThat(properties.getLog().getInvocation().getSensitivePattern())
-                .isEqualTo("(?i)(password|token|authorization|secret|credential)");
         assertThat(properties.getLog().getInvocation().getController().isEnabled()).isTrue();
         assertThat(properties.getLog().getInvocation().getFeign().isEnabled()).isTrue();
         assertThat(properties.getLog().getInvocation().getMethod().isEnabled()).isTrue();

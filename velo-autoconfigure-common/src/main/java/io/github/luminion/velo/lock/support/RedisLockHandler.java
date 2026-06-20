@@ -6,7 +6,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 
+import java.util.ArrayDeque;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -15,7 +17,8 @@ import java.util.concurrent.TimeUnit;
 /**
  * 基于 Redis 的分布式锁实现。
  *
- * 每次成功加锁都生成新的 owner token，并按线程保存，避免旧请求在锁过期后误删新锁。
+ * 每次成功加锁都生成新的 owner token，并按线程以栈结构保存，
+ * 避免同线程同 key 嵌套加锁时 token 被覆盖导致误删。
  */
 @Slf4j
 @RequiredArgsConstructor
@@ -26,7 +29,7 @@ public class RedisLockHandler implements LockHandler {
             "else return 0 end";
 
     private final StringRedisTemplate redisTemplate;
-    private final ThreadLocal<Map<String, String>> lockValues = ThreadLocal.withInitial(HashMap::new);
+    private final ThreadLocal<Map<String, Deque<String>>> lockValues = ThreadLocal.withInitial(HashMap::new);
 
     @Override
     public boolean lock(String key, long waitTime, long leaseTime, TimeUnit unit) {
@@ -39,7 +42,8 @@ public class RedisLockHandler implements LockHandler {
             Boolean success = redisTemplate.opsForValue().setIfAbsent(key, lockValue, leaseMillis, TimeUnit.MILLISECONDS);
             if (Boolean.TRUE.equals(success)) {
                 // 每次加锁都记录一份新的 token，解锁时用它和 Redis 当前值比对，避免误删已续租或被他人重建的锁。
-                lockValues.get().put(key, lockValue);
+                // 使用栈结构存储，支持同线程同 key 的嵌套加锁场景。
+                lockValues.get().computeIfAbsent(key, k -> new ArrayDeque<>()).push(lockValue);
                 return true;
             }
 
@@ -60,13 +64,18 @@ public class RedisLockHandler implements LockHandler {
 
     @Override
     public void unlock(String key) {
-        Map<String, String> values = lockValues.get();
-        String lockValue = values.remove(key);
-        if (lockValue == null) {
+        Map<String, Deque<String>> values = lockValues.get();
+        Deque<String> stack = values.get(key);
+        if (stack == null || stack.isEmpty()) {
             if (values.isEmpty()) {
                 lockValues.remove();
             }
             return;
+        }
+
+        String lockValue = stack.pop();
+        if (stack.isEmpty()) {
+            values.remove(key);
         }
 
         try {

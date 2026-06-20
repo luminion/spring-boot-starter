@@ -42,4 +42,51 @@ class VeloCacheAutoConfigurationTests {
                     assertThat(configuration.getTtl()).isEqualTo(Duration.ofSeconds(42));
                 });
     }
+
+    @Test
+    void shouldDisableNullCachingWhenConfigured() {
+        contextRunner
+                .withPropertyValues(
+                        "velo.cache.null-caching-enabled=false"
+                )
+                .run(context -> {
+                    RedisCacheConfiguration configuration = context.getBean(RedisCacheConfiguration.class);
+                    assertThat(configuration.getAllowCacheNullValues()).isFalse();
+                });
+    }
+
+    @Test
+    void shouldEnableNullCachingByDefault() {
+        contextRunner
+                .run(context -> {
+                    RedisCacheConfiguration configuration = context.getBean(RedisCacheConfiguration.class);
+                    assertThat(configuration.getAllowCacheNullValues()).isTrue();
+                });
+    }
+
+    @Test
+    void shouldApplyJitterToDefaultTtlWhenConfigured() {
+        contextRunner
+                .withPropertyValues(
+                        "velo.cache.default-ttl=100s",
+                        "velo.cache.ttl-jitter-percentage=20"
+                )
+                .run(context -> {
+                    RedisCacheConfiguration configuration = context.getBean(RedisCacheConfiguration.class);
+                    long ttlMillis = configuration.getTtl().toMillis();
+                    assertThat(ttlMillis).isBetween(80_000L, 120_000L);
+                });
+    }
+
+    @Test
+    void shouldNotApplyJitterByDefault() {
+        contextRunner
+                .withPropertyValues(
+                        "velo.cache.default-ttl=60s"
+                )
+                .run(context -> {
+                    RedisCacheConfiguration configuration = context.getBean(RedisCacheConfiguration.class);
+                    assertThat(configuration.getTtl()).isEqualTo(Duration.ofSeconds(60));
+                });
+    }
 }

@@ -1,5 +1,13 @@
 # 更新记录
 
+## 1.3.0
+- 新增 `@LogPayloadIgnore` 注解，可标注在方法或类上控制调用日志中参数和返回值的可见性，适用于 Controller、Feign、`@InvokeLog`、`@SlowLog` 所有日志切面
+- CORS 新增 `velo.web.cors.allowed-origin-patterns`（默认 `*`），支持灵活的跨域源匹配
+- 新增 `velo.aspect-order.*` 配置项，可自定义幂等、限流、锁、InvokeLog、SlowLog、ControllerLog、FeignLog 各切面的执行顺序
+- 新增 `velo.cache.null-caching-enabled`（默认 `true`），设为 `false` 时关闭 null 值缓存
+- 新增 `velo.cache.ttl-jitter-percentage`（默认 `0`），对缓存 TTL 添加 `±n%` 随机抖动，防止缓存雪崩
+- `WebUtils` 提取 servlet 无关逻辑到 common 模块，减少 jakarta/javax 重复代码
+
 ## 1.2.0
 - 新增 `velo.mode`，默认 `OPINIONATED` 保持开箱体验；可设置 `CONSERVATIVE` 关闭全局行为类默认项，显式注解能力仍可用
 - 重构日志能力为统一调用日志：Controller、Feign、`@InvokeLog`、`@SlowLog` 统一输出 `InvocationLogRecord`

@@ -1,11 +1,13 @@
 package io.github.luminion.velo.log.aspect;
 
 import io.github.luminion.velo.VeloProperties;
+import io.github.luminion.velo.core.VeloAdvisorOrder;
 import io.github.luminion.velo.log.InvocationLogRecord;
 import io.github.luminion.velo.log.InvocationLogSource;
 import io.github.luminion.velo.log.InvocationLogSupport;
 import io.github.luminion.velo.log.InvocationLogWriter;
 import io.github.luminion.velo.log.annotation.InvokeLog;
+import io.github.luminion.velo.log.annotation.LogPayloadIgnore;
 import io.github.luminion.velo.log.annotation.SlowLog;
 import io.github.luminion.velo.log.trace.TraceContext;
 import io.github.luminion.velo.spi.RuntimeJsonSerializer;
@@ -17,18 +19,30 @@ import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.core.annotation.AnnotatedElementUtils;
+import org.springframework.core.Ordered;
 
 import java.util.Collections;
 
 @Aspect
 @RequiredArgsConstructor
-public class SlowLogAspect {
+public class SlowLogAspect implements Ordered {
 
     private final VeloProperties properties;
 
     private final ObjectProvider<RuntimeJsonSerializer> runtimeJsonSerializerProvider;
 
     private final InvocationLogWriter invocationLogWriter;
+
+    private int order = VeloAdvisorOrder.LOG_SLOW;
+
+    public void setOrder(int order) {
+        this.order = order;
+    }
+
+    @Override
+    public int getOrder() {
+        return order;
+    }
 
     @Around("@within(io.github.luminion.velo.log.annotation.SlowLog) " +
             "|| @annotation(io.github.luminion.velo.log.annotation.SlowLog)")
@@ -49,22 +63,27 @@ public class SlowLogAspect {
 
         RuntimeJsonSerializer runtimeJsonSerializer = runtimeJsonSerializer();
         VeloProperties.InvocationProperties invocationProperties = properties.getLog().getInvocation();
-        String argsText = InvocationLogSupport.buildArgsText(signature, joinPoint.getTarget(), joinPoint.getArgs(),
-                runtimeJsonSerializer, invocationProperties);
+        LogPayloadIgnore logPayloadIgnore = InvocationLogSupport.findLogPayloadIgnore(signature);
+        boolean ignoreArgs = logPayloadIgnore != null && logPayloadIgnore.args();
+        boolean ignoreResult = logPayloadIgnore != null && logPayloadIgnore.result();
+        String argsText = ignoreArgs ? InvocationLogSupport.EMPTY_PAYLOAD
+                : InvocationLogSupport.buildArgsText(signature, joinPoint.getTarget(), joinPoint.getArgs(),
+                        runtimeJsonSerializer, invocationProperties);
         long start = System.nanoTime();
         try {
             Object result = joinPoint.proceed();
             long elapsedMs = InvocationLogSupport.elapsedMs(start);
-            if (elapsedMs * 1_000_000 > slowLog.timeUnit().toNanos(slowLog.value())) {
+            if (InvocationLogSupport.exceedsSlowThreshold(elapsedMs, slowLog.value(), slowLog.timeUnit())) {
                 InvocationLogRecord record = buildRecord(signature, argsText,
-                        InvocationLogSupport.buildResultText(result, runtimeJsonSerializer, invocationProperties),
+                        ignoreResult ? InvocationLogSupport.EMPTY_PAYLOAD
+                                : InvocationLogSupport.buildResultText(result, runtimeJsonSerializer, invocationProperties),
                         elapsedMs, null);
                 invocationLogWriter.write(record);
             }
             return result;
         } catch (Throwable ex) {
             long elapsedMs = InvocationLogSupport.elapsedMs(start);
-            if (elapsedMs * 1_000_000 > slowLog.timeUnit().toNanos(slowLog.value())) {
+            if (InvocationLogSupport.exceedsSlowThreshold(elapsedMs, slowLog.value(), slowLog.timeUnit())) {
                 InvocationLogRecord record = buildRecord(signature, argsText, null, elapsedMs, ex);
                 invocationLogWriter.write(record);
             }

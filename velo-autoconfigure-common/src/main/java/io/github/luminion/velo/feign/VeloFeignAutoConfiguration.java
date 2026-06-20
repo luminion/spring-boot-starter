@@ -45,7 +45,9 @@ public class VeloFeignAutoConfiguration {
                     log.debug("No RuntimeJsonSerializer bean found, using empty HTTP message converter list for FeignLogAspect");
                     return new HttpMessageConverterRuntimeJsonSerializer(Collections.emptyList());
                 });
-        return new FeignLogAspect(properties, runtimeJsonSerializer, invocationLogWriter);
+        FeignLogAspect aspect = new FeignLogAspect(properties, runtimeJsonSerializer, invocationLogWriter);
+        aspect.setOrder(properties.getAspectOrder().getFeignLog());
+        return aspect;
     }
 
     @Bean
