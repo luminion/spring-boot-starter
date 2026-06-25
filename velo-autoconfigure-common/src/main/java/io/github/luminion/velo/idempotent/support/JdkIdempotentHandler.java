@@ -19,7 +19,7 @@ public class JdkIdempotentHandler implements IdempotentHandler, DisposableBean {
                 "Consider using Redis or Redisson for distributed idempotent validation.");
     }
 
-    private final ConcurrentHashMap<String, Long> recordMap = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Record> recordMap = new ConcurrentHashMap<>();
     private final AtomicBoolean isCleaning = new AtomicBoolean(false);
     private final ExecutorService cleanupExecutor = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "velo-idempotent-cleanup");
@@ -28,16 +28,16 @@ public class JdkIdempotentHandler implements IdempotentHandler, DisposableBean {
     });
 
     @Override
-    public boolean tryRecord(String key, long timeout, TimeUnit unit) {
+    public boolean tryRecord(String key, String token, long timeout, TimeUnit unit) {
         long now = System.currentTimeMillis();
         long expireAt = now + unit.toMillis(timeout);
         AtomicBoolean success = new AtomicBoolean(false);
 
-        // compute 把“判断是否过期”和“写入新的过期时间”合并成一个原子操作，避免并发穿透。
+        // compute 把"判断是否过期"和"写入新的过期时间"合并成一个原子操作，避免并发穿透。
         recordMap.compute(key, (k, v) -> {
-            if (v == null || v <= now) {
+            if (v == null || v.expireAt <= now) {
                 success.set(true);
-                return expireAt;
+                return new Record(token, expireAt);
             }
             return v;
         });
@@ -47,7 +47,7 @@ public class JdkIdempotentHandler implements IdempotentHandler, DisposableBean {
             cleanupExecutor.execute(() -> {
                 try {
                     long currentTime = System.currentTimeMillis();
-                    recordMap.entrySet().removeIf(entry -> entry.getValue() <= currentTime);
+                    recordMap.entrySet().removeIf(entry -> entry.getValue().expireAt <= currentTime);
                 } finally {
                     isCleaning.set(false);
                 }
@@ -57,12 +57,23 @@ public class JdkIdempotentHandler implements IdempotentHandler, DisposableBean {
     }
 
     @Override
-    public void remove(String key) {
-        recordMap.remove(key);
+    public void removeIfMatch(String key, String token) {
+        // 仅当存储的 token 与传入一致时才删除，避免误删并发请求写入的新记录
+        recordMap.computeIfPresent(key, (k, v) -> v.token.equals(token) ? null : v);
     }
 
     @Override
     public void destroy() {
         cleanupExecutor.shutdownNow();
+    }
+
+    private static final class Record {
+        private final String token;
+        private final long expireAt;
+
+        private Record(String token, long expireAt) {
+            this.token = token;
+            this.expireAt = expireAt;
+        }
     }
 }

@@ -26,8 +26,6 @@ import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.util.StringUtils;
 
-import java.time.Duration;
-
 /**
  * spring缓存自动配置
  *
@@ -70,9 +68,9 @@ public class VeloCacheAutoConfiguration {
         @Bean
         @ConditionalOnMissingBean(RedisCacheTimeMapProvider.class)
         public RedisCacheTimeMapProvider redisCacheTimeMapProvider(VeloProperties properties) {
-            return new RedisCacheTimeMapProvider(
-                    properties.getCache().getTtl(),
-                    properties.getCache().getTtlJitterPercentage());
+            // TTL 抖动统一由 JitterRedisCacheWriter 在写入时按 key 应用，
+            // 这里不再预计算抖动，避免双重抖动。
+            return new RedisCacheTimeMapProvider(properties.getCache().getTtl());
         }
 
         @Bean
@@ -90,13 +88,10 @@ public class VeloCacheAutoConfiguration {
                     .SerializationPair
                     .fromSerializer(redisSerializer);
 
-            Duration defaultTtl = RedisCacheTimeMapProvider.applyJitter(
-                    cacheProperties.getDefaultTtl(), cacheProperties.getTtlJitterPercentage());
-
             RedisCacheConfiguration config = redisCacheConfiguration
                     .serializeValuesWith(objectSerializationPair)
                     .computePrefixWith(cacheName -> buildCacheKeyPrefix(cacheProperties, cacheName))
-                    .entryTtl(defaultTtl);
+                    .entryTtl(cacheProperties.getDefaultTtl());
 
             if (!cacheProperties.isNullCachingEnabled()) {
                 config = config.disableCachingNullValues();
@@ -111,9 +106,15 @@ public class VeloCacheAutoConfiguration {
         public CacheManager cacheManager(RedisConnectionFactory redisConnectionFactory,
                                          RedisCacheConfiguration redisCacheConfiguration,
                                          RedisCacheTimeMapProvider redisCacheTimeMapProvider,
+                                         VeloProperties properties,
                                          ObjectProvider<RedisSerializer<Object>> serializerProvider) {
-            RedisCacheManager redisCacheManager = new RedisCacheManager(
+            // 每 key 独立抖动：包装 cache writer，在每次写入时对该条目的 TTL 叠加随机偏移，
+            // 使同一缓存名称下不同 key 也获得不同过期时间，缓解同类型缓存批量同时过期。
+            RedisCacheWriter cacheWriter = JitterRedisCacheWriter.wrap(
                     RedisCacheWriter.nonLockingRedisCacheWriter(redisConnectionFactory),
+                    properties.getCache().getTtlJitterPercentage());
+            RedisCacheManager redisCacheManager = new RedisCacheManager(
+                    cacheWriter,
                     redisCacheConfiguration,
                     redisCacheTimeMapProvider.cacheConfigurationHashMap(redisCacheConfiguration)
             );

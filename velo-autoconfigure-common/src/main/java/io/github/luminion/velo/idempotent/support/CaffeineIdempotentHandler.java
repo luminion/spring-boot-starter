@@ -39,21 +39,29 @@ public class CaffeineIdempotentHandler implements IdempotentHandler {
             .build();
 
     @Override
-    public boolean tryRecord(String key, long timeout, TimeUnit unit) {
-        Marker existing = cache.asMap().putIfAbsent(key, new Marker(unit.toNanos(timeout)));
+    public boolean tryRecord(String key, String token, long timeout, TimeUnit unit) {
+        Marker existing = cache.asMap().putIfAbsent(key, new Marker(token, unit.toNanos(timeout)));
         return existing == null;
     }
 
     @Override
-    public void remove(String key) {
-        cache.invalidate(key);
+    public void removeIfMatch(String key, String token) {
+        // 仅当存储的 token 与传入一致时才删除，避免误删并发请求写入的新记录
+        cache.asMap().computeIfPresent(key, (k, marker) ->
+                marker.token().equals(token) ? null : marker);
     }
 
     private static final class Marker {
+        private final String token;
         private final long ttlNanos;
 
-        private Marker(long ttlNanos) {
+        private Marker(String token, long ttlNanos) {
+            this.token = token;
             this.ttlNanos = ttlNanos;
+        }
+
+        private String token() {
+            return token;
         }
 
         private long ttlNanos() {

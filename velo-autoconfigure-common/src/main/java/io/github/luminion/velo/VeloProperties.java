@@ -4,7 +4,6 @@ import io.github.luminion.velo.core.VeloAdvisorOrder;
 import io.github.luminion.velo.xss.XssStrategy;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.context.properties.DeprecatedConfigurationProperty;
 import org.springframework.boot.logging.LogLevel;
 
 import java.time.Duration;
@@ -25,6 +24,11 @@ public class VeloProperties {
      * Starter default behavior profile.
      */
     private VeloMode mode = VeloMode.OPINIONATED;
+
+    /**
+     * Startup banner settings.
+     */
+    private BannerProperties banner = new BannerProperties();
 
     /**
      * Date and time formatting settings shared by web, Jackson and Excel features.
@@ -292,14 +296,16 @@ public class VeloProperties {
         private boolean dateTimeEnabled = true;
 
         /**
-         * Serializes long values as strings.
+         * Serializes long values as strings on write, to avoid precision loss on the
+         * front-end (JavaScript Number cannot safely represent integers beyond 2^53).
+         * Only affects serialization (write); deserialization accepts both numbers and strings.
          */
-        private boolean longAsString = true;
+        private boolean serializeLongAsString = true;
 
         /**
-         * Serializes BigDecimal values as strings.
+         * Serializes BigDecimal values as strings on write.
          */
-        private boolean bigDecimalAsString = true;
+        private boolean serializeBigDecimalAsString = true;
 
         /**
          * Removes trailing zeros before serializing BigDecimal values.
@@ -307,9 +313,9 @@ public class VeloProperties {
         private boolean bigDecimalStripTrailingZeros = false;
 
         /**
-         * Serializes float and double values as strings.
+         * Serializes float and double values as strings on write.
          */
-        private boolean floatingAsString = false;
+        private boolean serializeFloatingAsString = false;
 
         /**
          * Adds enum description fields during serialization.
@@ -330,17 +336,6 @@ public class VeloProperties {
          * Enables automatic registration of starter managed String converters.
          */
         private boolean stringConverterEnabled = true;
-
-        @Deprecated
-        @DeprecatedConfigurationProperty(replacement = "velo.jackson.long-as-string")
-        public boolean isUnsafeIntegerAsString() {
-            return longAsString;
-        }
-
-        @Deprecated
-        public void setUnsafeIntegerAsString(boolean unsafeIntegerAsString) {
-            this.longAsString = unsafeIntegerAsString;
-        }
 
         private static Map<String, String> defaultEnumMappings() {
             Map<String, String> mappings = new LinkedHashMap<>();
@@ -646,5 +641,15 @@ public class VeloProperties {
          * Order for the feign-log aspect.
          */
         private int feignLog = VeloAdvisorOrder.LOG_FEIGN;
+    }
+
+    @Data
+    public static class BannerProperties {
+
+        /**
+         * Prints the Velo startup banner with a summary of enabled features.
+         * Enabled by default.
+         */
+        private boolean enabled = true;
     }
 }

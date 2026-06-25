@@ -82,18 +82,18 @@ public class VeloJacksonAutoConfiguration {
                 DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern(timeFormat);
 
                 SimpleModule module = new SimpleModule("velo-jackson3");
-                if (jacksonProperties.isLongAsString()) {
+                if (jacksonProperties.isSerializeLongAsString()) {
                     LongToStringSerializer longSerializer = new LongToStringSerializer();
                     module.addSerializer(Long.class, longSerializer);
                     module.addSerializer(Long.TYPE, longSerializer);
                     module.addSerializer(BigInteger.class, new UnsafeBigIntegerToStringSerializer());
                 }
-                if (jacksonProperties.isBigDecimalAsString() || jacksonProperties.isBigDecimalStripTrailingZeros()) {
+                if (jacksonProperties.isSerializeBigDecimalAsString() || jacksonProperties.isBigDecimalStripTrailingZeros()) {
                     module.addSerializer(BigDecimal.class, new ConfigurableBigDecimalSerializer(
-                            jacksonProperties.isBigDecimalAsString(),
+                            jacksonProperties.isSerializeBigDecimalAsString(),
                             jacksonProperties.isBigDecimalStripTrailingZeros()));
                 }
-                if (jacksonProperties.isFloatingAsString()) {
+                if (jacksonProperties.isSerializeFloatingAsString()) {
                     module.addSerializer(Double.class, ToStringSerializer.instance);
                     module.addSerializer(Double.TYPE, ToStringSerializer.instance);
                     module.addSerializer(Float.class, ToStringSerializer.instance);

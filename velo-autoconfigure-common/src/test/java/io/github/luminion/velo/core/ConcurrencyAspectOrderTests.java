@@ -52,7 +52,7 @@ class ConcurrencyAspectOrderTests {
         proxyFactory.setProxyTargetClass(true);
         // Add aspects in @Order ascending sequence (lowest precedence value = outermost layer).
         // AspectJProxyFactory chains advisors in add-order, so the first added wraps the rest.
-        proxyFactory.addAspect(new IdempotentAspect("idempotent:", new SpelFingerprinter(), (key, timeout, unit) -> {
+        proxyFactory.addAspect(new IdempotentAspect("idempotent:", new SpelFingerprinter(), (key, token, timeout, unit) -> {
             events.add("idempotent");
             return true;
         }));

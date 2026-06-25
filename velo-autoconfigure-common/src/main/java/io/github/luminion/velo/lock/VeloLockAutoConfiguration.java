@@ -1,9 +1,13 @@
 package io.github.luminion.velo.lock;
 
 import io.github.luminion.velo.VeloProperties;
+import io.github.luminion.velo.core.VeloMessageResolver;
 import io.github.luminion.velo.spi.Fingerprinter;
 import io.github.luminion.velo.lock.aspect.LockAspect;
 import org.aspectj.weaver.Advice;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -24,11 +28,16 @@ import org.springframework.context.annotation.Bean;
 @ConditionalOnProperty(prefix = "velo.lock", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloLockAutoConfiguration {
 
+    private static final Logger log = LoggerFactory.getLogger(VeloLockAutoConfiguration.class);
+
     @Bean
     @ConditionalOnMissingBean(LockAspect.class)
     @ConditionalOnBean({Fingerprinter.class, LockHandler.class})
-    public LockAspect lockAspect(VeloProperties properties, Fingerprinter fingerprinter, LockHandler lockHandler) {
-        LockAspect aspect = new LockAspect(properties.getLock().getPrefix(), fingerprinter, lockHandler);
+    public LockAspect lockAspect(VeloProperties properties, Fingerprinter fingerprinter, LockHandler lockHandler,
+            ObjectProvider<VeloMessageResolver> messageResolver) {
+        log.info("[Velo Starter] Lock enabled, backend handler: {}", lockHandler.getClass().getSimpleName());
+        LockAspect aspect = new LockAspect(properties.getLock().getPrefix(), fingerprinter, lockHandler,
+                messageResolver.getIfAvailable());
         aspect.setOrder(properties.getAspectOrder().getLock());
         return aspect;
     }

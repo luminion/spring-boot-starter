@@ -19,13 +19,26 @@ class RedissonIdempotentHandlerTests {
         RedissonClient redissonClient = mock(RedissonClient.class);
         RBucket<String> bucket = mockBucket();
         when(redissonClient.<String>getBucket("demo")).thenReturn(bucket);
-        when(bucket.setIfAbsent("LOCKED", Duration.ofMillis(1500L))).thenReturn(true);
+        when(bucket.setIfAbsent("token-1", Duration.ofMillis(1500L))).thenReturn(true);
 
         RedissonIdempotentHandler handler = new RedissonIdempotentHandler(redissonClient);
-        boolean recorded = handler.tryRecord("demo", 1500L, TimeUnit.MILLISECONDS);
+        boolean recorded = handler.tryRecord("demo", "token-1", 1500L, TimeUnit.MILLISECONDS);
 
         assertThat(recorded).isTrue();
-        verify(bucket).setIfAbsent("LOCKED", Duration.ofMillis(1500L));
+        verify(bucket).setIfAbsent("token-1", Duration.ofMillis(1500L));
+    }
+
+    @Test
+    void shouldRemoveOnlyWhenTokenMatches() {
+        RedissonClient redissonClient = mock(RedissonClient.class);
+        RBucket<String> bucket = mockBucket();
+        when(redissonClient.<String>getBucket("demo")).thenReturn(bucket);
+
+        RedissonIdempotentHandler handler = new RedissonIdempotentHandler(redissonClient);
+        handler.removeIfMatch("demo", "token-1");
+
+        // compareAndSet(token, null) 等价于"值匹配才删除"
+        verify(bucket).compareAndSet("token-1", null);
     }
 
     @SuppressWarnings("unchecked")

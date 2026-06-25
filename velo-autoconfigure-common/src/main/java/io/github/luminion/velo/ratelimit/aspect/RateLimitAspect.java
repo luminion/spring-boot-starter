@@ -1,12 +1,12 @@
 package io.github.luminion.velo.ratelimit.aspect;
 
 import io.github.luminion.velo.core.VeloAdvisorOrder;
+import io.github.luminion.velo.core.VeloMessageResolver;
 import io.github.luminion.velo.spi.Fingerprinter;
 import io.github.luminion.velo.util.ConcurrencyAnnotationUtils;
 import io.github.luminion.velo.ratelimit.RateLimitHandler;
 import io.github.luminion.velo.ratelimit.annotation.RateLimit;
 import io.github.luminion.velo.ratelimit.exception.RateLimitException;
-import lombok.RequiredArgsConstructor;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -22,13 +22,25 @@ import java.lang.reflect.Method;
  * @author luminion
  */
 @Aspect
-@RequiredArgsConstructor
 public class RateLimitAspect implements Ordered {
     private final String prefix;
     private final Fingerprinter fingerprinter;
     private final RateLimitHandler rateLimitHandler;
+    private final VeloMessageResolver messageResolver;
 
     private int order = VeloAdvisorOrder.CONCURRENCY_RATE_LIMIT;
+
+    public RateLimitAspect(String prefix, Fingerprinter fingerprinter, RateLimitHandler rateLimitHandler) {
+        this(prefix, fingerprinter, rateLimitHandler, null);
+    }
+
+    public RateLimitAspect(String prefix, Fingerprinter fingerprinter, RateLimitHandler rateLimitHandler,
+            VeloMessageResolver messageResolver) {
+        this.prefix = prefix;
+        this.fingerprinter = fingerprinter;
+        this.rateLimitHandler = rateLimitHandler;
+        this.messageResolver = messageResolver;
+    }
 
     public void setOrder(int order) {
         this.order = order;
@@ -75,9 +87,13 @@ public class RateLimitAspect implements Ordered {
 
         // 2. 执行限流
         if (!rateLimitHandler.tryAcquire(key, permits, ttl, rateLimit.unit())) {
-            throw new RateLimitException(rateLimit.message());
+            throw new RateLimitException(resolveMessage(rateLimit.message()), key, permits, ttl, rateLimit.unit());
         }
 
         return joinPoint.proceed();
+    }
+
+    private String resolveMessage(String message) {
+        return messageResolver != null ? messageResolver.resolve(message) : message;
     }
 }

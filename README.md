@@ -39,6 +39,18 @@ velo:
 - `CONSERVATIVE`：关闭容易自动影响应用行为的默认项，但 `@Idempotent`、`@RateLimit`、`@Lock`、`@InvokeLog`、`@SlowLog` 等显式注解仍可用
 - `CONSERVATIVE` 只提供低优先级默认值，业务项目显式配置的属性优先级更高
 - 保守模式下重新打开某类能力时，需要显式设置对应的 `enabled` 项，例如 `velo.jackson.enabled=true`
+- 启用 `CONSERVATIVE` 后，starter 会在启动日志中输出一条 INFO，列出被默认关闭的能力，便于排查"为什么某全局增强没生效"
+
+配置优先级（从高到低）：
+
+| 优先级 | 来源 | 示例 |
+| --- | --- | --- |
+| 1 最高 | 命令行参数 | `--velo.log.trace.enabled=true` |
+| 2 | application.yml / properties | `velo.log.trace.enabled: true` |
+| 3 | 环境变量 | `VELO_LOG_TRACE_ENABLED=true` |
+| 4 最低 | `velo.mode` 默认值 | `OPINIONATED` / `CONSERVATIVE` 注入的默认值 |
+
+也就是说 `velo.mode` 注入的只是**最低优先级默认值**，业务项目任何显式配置都会覆盖它。
 
 例如保守模式下重新打开 traceId：
 
@@ -148,6 +160,7 @@ velo:
     prefix: app
     separator: ":"
     default-ttl: 5m
+    ttl-jitter-percentage: 0
     ttl:
       user: 10m
       order: 30m
@@ -177,6 +190,12 @@ public UserDTO getById(Long id) {
 - `ttl.<cacheName>` 可按缓存名单独覆盖 TTL
 - key 前缀格式为 `prefix + separator + cacheName + separator`
 - 业务侧仍然需要自己开启 `@EnableCaching`
+
+缓存雪崩防护（TTL 抖动）：
+
+- `ttl-jitter-percentage` 默认 `0`（关闭）。设为 `10` 表示每条缓存写入时 TTL 在原值 ±10% 内随机偏移
+- 抖动在**每次写入时按 key 独立计算**，因此同一缓存名称下不同 key 也会获得不同过期时间，可同时缓解「不同缓存类型同时过期」和「同一类型大量 key 同时过期」两类雪崩
+- 抖动只影响实际写入 Redis 的过期时间，不改变 `default-ttl` / `ttl.<cacheName>` 的配置语义
 
 ### 2. Excel 自动配置
 
@@ -285,7 +304,21 @@ public void submitOrder(Long userId) {
 - `backend` 可选 `AUTO`、`REDISSON`、`REDIS`、`CAFFEINE`、`JDK`
 - `AUTO` 模式下按自动配置顺序选择后端：`REDISSON -> REDIS -> CAFFEINE -> JDK`
 - `prefix` 默认 `idempotent:`
-- `key` 为空时会退化成 `类名#方法名`，同一方法不同参数会被视为同一请求，业务通常建议显式给出 SpEL key
+- 业务失败（抛异常）时会清除本次幂等记录以允许重试；清除采用 token 比对，只删除本次请求写入的记录，不会误删并发请求在窗口内刚写入的新记录
+
+> ⚠️ `key` 必须显式指定。`key` 为空时会退化成 `类名#方法名`，意味着**该方法的所有调用（不分参数、不分调用者）共享同一个幂等窗口**，这通常不是期望行为。此时 starter 会打印一条 WARN 提醒。
+>
+> ```java
+> // ❌ 危险：userId=1 提交后，3 秒内 userId=2 也会被拦截
+> @Idempotent(ttl = 3)
+> public void submitOrder(Long userId) { }
+>
+> // ✅ 正确：每个用户独立幂等
+> @Idempotent(key = "#userId", ttl = 3)
+> public void submitOrder(Long userId) { }
+> ```
+>
+> 若确实需要「全局同一时刻只能执行一次」的语义（如系统级初始化），更推荐用 `@Lock`。
 
 ### 4. 限流
 
@@ -320,10 +353,37 @@ public Object query(Long userId) {
 
 说明：
 
-- `permits` 表示一个时间窗口内允许通过的最大请求数，支持小数；小数会向上取整容量并拉长窗口，近似保持平均速率
+- `permits` 表示一个时间窗口内允许通过的最大请求数
 - `ttl + unit` 定义窗口大小
 - `backend` 与幂等一致，也支持 `AUTO/REDISSON/REDIS/CAFFEINE/JDK`
 - `AUTO` 模式下默认选择顺序同幂等：`REDISSON -> REDIS -> CAFFEINE -> JDK`
+
+关于 `key` 的分桶语义（重要）：
+
+- `key` 为空：方法级全局限流，该方法的**所有调用者共享同一个配额**
+- `key` 非空：按 SpEL 表达式结果分桶，**每个桶独立计算配额**
+
+| 写法 | 实际行为 |
+| --- | --- |
+| `@RateLimit(permits=10)` | 所有调用共享 10 次/窗口 |
+| `@RateLimit(key="#userId", permits=10)` | 每个 userId 独立 10 次/窗口 |
+
+> ⚠️ 如果你期望「每个用户 / 每个资源独立限流」，必须显式指定 `key`，否则会退化为全局共享配额。
+
+关于小数 `permits`：
+
+`permits` 支持小数，用于表达「低于 1 次 / 窗口」的限流需求。换算规则：
+
+- 实际容量 `capacity = ceil(permits)`（向上取整）
+- 实际窗口 `interval = ttl × (capacity / permits)`（拉长窗口以保持平均速率）
+
+| 配置 | 含义 | 实际实现 |
+| --- | --- | --- |
+| `permits=10, ttl=1s` | 10 次/秒 | 容量=10，窗口=1s |
+| `permits=0.5, ttl=1s` | 0.5 次/秒（即 2 秒 1 次） | 容量=1，窗口=2s |
+| `permits=0.2, ttl=1s` | 0.2 次/秒（即 5 秒 1 次） | 容量=1，窗口=5s |
+
+多数场景用整数更直观，例如「每 5 秒 1 次」可直接写 `@RateLimit(permits=1, ttl=5)`，等价于 `permits=0.2, ttl=1`。
 
 ### 5. 锁
 
@@ -363,6 +423,7 @@ public void pay(Long orderId) {
 - `waitTimeout` 默认 `0`，表示拿不到锁立即失败
 - `lease` 默认 `30s`
 - `REDIS` / `REDISSON` 更适合分布式场景，`CAFFEINE` / `JDK` 只保证单 JVM 内互斥
+- `key` 为空时降级为方法级锁（基于 `类名#方法名`），表示「该方法全局串行执行」，是一个有意义的语义，因此安静降级、不打告警；需要按业务维度加锁时请显式指定，例如 `@Lock(key = "#orderId")`
 
 ### 6. 并发控制组合顺序
 
@@ -402,7 +463,6 @@ velo:
       include-args: true
       include-result: true
       include-error-stack-trace: false
-      sensitive-pattern: "(?i)(password|token|authorization|secret|credential)"
       controller:
         enabled: true
       feign:
@@ -433,6 +493,28 @@ public Object createOrder(CreateOrderCmd cmd) {
 - 同时使用 `@InvokeLog` 与 `@SlowLog` 时不会重复打印，统一日志中会带 `slow=true`
 - 如果需要写入 MQ、数据库或审计系统，提供自定义 `InvocationLogWriter` Bean 即可
 - `velo.log.level=OFF` 会关闭默认 Slf4J 调用日志 writer 的成功和异常输出；自定义 `InvocationLogWriter` 不受该日志级别约束
+
+敏感参数不打印（`@LogPayloadIgnore`）：
+
+如果某些方法的入参或返回值包含密码、token 等敏感信息，可用 `@LogPayloadIgnore` 抑制其打印。被忽略的内容在日志中显示为 `-`，但调用本身（方法名、耗时、成功/异常状态）仍会记录。该注解对 Controller、Feign、`@InvokeLog`、`@SlowLog` 所有调用日志切面均生效，可标注在方法或类上。
+
+```java
+import io.github.luminion.velo.log.annotation.LogPayloadIgnore;
+
+// 同时忽略入参与返回值
+@LogPayloadIgnore
+public void deleteUser(Long userId) { }
+
+// 只忽略返回值，仍打印入参
+@LogPayloadIgnore(args = false)
+public UserDTO login(LoginRequest req) { }
+
+// 只忽略入参，仍打印返回值
+@LogPayloadIgnore(result = false)
+public Token issueToken(Credential credential) { }
+```
+
+> 说明：starter 不内置基于字段名正则的自动脱敏，敏感信息控制统一通过 `@LogPayloadIgnore` 按方法显式声明，语义更明确、无误伤风险。
 
 ### 7. XSS
 
@@ -494,9 +576,9 @@ velo:
   jackson:
     enabled: true
     date-time-enabled: true
-    long-as-string: true
-    big-decimal-as-string: true
-    floating-as-string: false
+    serialize-long-as-string: true
+    serialize-big-decimal-as-string: true
+    serialize-floating-as-string: false
     enum-desc-enabled: true
     enum-name-suffix: name
     string-converter-enabled: true
@@ -524,8 +606,9 @@ public class OrderVO {
 说明：
 
 - Boot 2 / 3 使用 Jackson 2 自动配置，Boot 4 使用 Jackson 3 自动配置
-- `long-as-string=true` 时，`Long` 默认统一序列化为字符串，保持字段类型一致
-- `big-decimal-as-string=true` 默认开启
+- `serialize-long-as-string=true` 时，`Long` / `BigInteger` 在**序列化（写出给前端）**时统一转为字符串，避免 JS Number 超过 2^53 精度丢失
+- 这些 `serialize-*` 开关**只影响序列化方向**；反序列化（前端传入）时数字和字符串都能正常绑定，无需前端特殊处理
+- `serialize-big-decimal-as-string=true` 默认开启
 - `enum-desc-enabled=true` 时，`@JsonEnum` 可为数值字段派生出描述字段，例如 `statusName`
 - `string-converter-enabled=true` 时，`@JsonEncode` / `@JsonDecode` 会按函数类做字符串转换
 - 日期时间格式依然复用 `velo.date-time-format.*`
@@ -782,3 +865,47 @@ velo:
 ```
 
 ---
+
+## 故障排查 FAQ
+
+### Q1：`@Idempotent` / `@RateLimit` / `@Lock` 不生效？
+
+按以下顺序排查：
+
+- 方法是否被 Spring 代理：`private`、`final`、`static` 方法以及类内部自调用（`this.method()`）都无法被 AOP 拦截，需通过注入的代理对象调用
+- 对应能力是否开启：确认未被 `velo.idempotent.enabled=false` 等关闭，也未处于 `velo.mode=CONSERVATIVE`（注意：这三类注解在 CONSERVATIVE 下仍可用，但需对应后端依赖存在）
+- 后端依赖是否就绪：`backend=AUTO` 会按 `REDISSON -> REDIS -> CAFFEINE -> JDK` 选择；若期望用 Redis 却走了本地实现，检查 classpath 与连接配置
+- 开启调试日志观察：
+
+```yaml
+logging:
+  level:
+    io.github.luminion.velo: DEBUG
+```
+
+启动日志中也会有一条 INFO，显示各能力最终选用的后端，例如 `Idempotent enabled, backend handler: RedisIdempotentHandler`。
+
+### Q2：Redis 连接失败时会怎样？
+
+- `backend=AUTO`：Redis 不可用时会按顺序降级到 Caffeine 或 JDK 本地实现（仅单 JVM 有效，分布式场景下幂等/限流/锁会失去跨节点一致性）
+- `backend=REDIS` / `REDISSON`：缺少对应依赖或连接 Bean 时应用启动失败（快速失败）
+
+生产环境建议显式指定分布式后端，并配合健康检查确保 Redis 可用。
+
+### Q3：如何调试 SpEL `key` 表达式？
+
+- 确认已开启编译参数 `-parameters`，否则 `#userId` 这类按参数名引用无法解析，只能用 `#p0`、`#p1`
+- 表达式解析为空字符串会抛出异常（幂等/限流的分桶 key 不允许解析为空白）
+- 可单独用 `SpelExpressionParser` 写单测验证表达式取值是否符合预期
+
+### Q4：限流被拒绝后多久可以重试？
+
+令牌桶按固定速率恢复令牌，平均恢复一个令牌的间隔约为 `ttl / permits`。例如 `permits=10, ttl=1s` 约每 0.1 秒恢复 1 个令牌，被拒绝后立即重试可能仍失败，建议按该间隔退避重试。
+
+### Q5：异常信息能否做国际化？
+
+可以。注解的 `message` 写成 `{i18n.key}` 形式时会从 Spring `MessageSource` 解析；普通文本则原样输出。未配置国际化的项目行为不变。详见「日志 / 异常提示」相关说明与 `velo/messages*.properties` 示例文件。
+
+### Q6：缓存大量 key 同时过期（缓存雪崩）？
+
+开启 TTL 抖动：`velo.cache.ttl-jitter-percentage=10`。抖动按 key 在写入时独立计算，可同时缓解「不同缓存类型同时过期」和「同一类型大量 key 同时过期」两类问题。

@@ -3,7 +3,10 @@ package io.github.luminion.velo.idempotent.support;
 import io.github.luminion.velo.idempotent.IdempotentHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.data.redis.core.script.RedisScript;
 
+import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -16,16 +19,30 @@ public class RedisIdempotentHandler implements IdempotentHandler {
 
     private final RedisTemplate<Object, Object> redisTemplate;
 
+    /**
+     * 仅当 value 等于传入 token 时才删除，保证只清除本次请求写入的记录。
+     */
+    private static final RedisScript<Long> REMOVE_IF_MATCH_SCRIPT = new DefaultRedisScript<>(
+            "if redis.call('get', KEYS[1]) == ARGV[1] then\n" +
+            "    return redis.call('del', KEYS[1])\n" +
+            "else\n" +
+            "    return 0\n" +
+            "end",
+            Long.class);
+
     @Override
-    public boolean tryRecord(String key, long timeout, TimeUnit unit) {
-        // 使用 SET NX EX 命令
-        Boolean success = redisTemplate.opsForValue().setIfAbsent(key, "LOCKED", timeout, unit);
+    public boolean tryRecord(String key, String token, long timeout, TimeUnit unit) {
+        // SET NX EX：首次写入 token 并设置过期时间
+        Boolean success = redisTemplate.opsForValue().setIfAbsent(key, token, timeout, unit);
         return success != null && success;
     }
 
     @Override
-    public void remove(String key) {
-        redisTemplate.delete(key);
+    public void removeIfMatch(String key, String token) {
+        redisTemplate.execute(
+                REMOVE_IF_MATCH_SCRIPT,
+                Collections.singletonList(key),
+                token);
     }
 
 }

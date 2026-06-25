@@ -1,6 +1,7 @@
 package io.github.luminion.velo.idempotent.aspect;
 
 import io.github.luminion.velo.core.VeloAdvisorOrder;
+import io.github.luminion.velo.core.VeloMessageResolver;
 import io.github.luminion.velo.spi.Fingerprinter;
 import io.github.luminion.velo.util.ConcurrencyAnnotationUtils;
 import io.github.luminion.velo.idempotent.IdempotentHandler;
@@ -10,9 +11,13 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.Ordered;
+import org.springframework.util.StringUtils;
 
 import java.lang.reflect.Method;
+import java.util.UUID;
 
 /**
  * 接口幂等性切面。
@@ -21,16 +26,26 @@ import java.lang.reflect.Method;
  */
 @Aspect
 public class IdempotentAspect implements Ordered {
+
+    private static final Logger log = LoggerFactory.getLogger(IdempotentAspect.class);
+
     private final String prefix;
     private final Fingerprinter fingerprinter;
     private final IdempotentHandler idempotentHandler;
+    private final VeloMessageResolver messageResolver;
 
     private int order = VeloAdvisorOrder.CONCURRENCY_IDEMPOTENT;
 
     public IdempotentAspect(String prefix, Fingerprinter fingerprinter, IdempotentHandler idempotentHandler) {
+        this(prefix, fingerprinter, idempotentHandler, null);
+    }
+
+    public IdempotentAspect(String prefix, Fingerprinter fingerprinter, IdempotentHandler idempotentHandler,
+            VeloMessageResolver messageResolver) {
         this.prefix = prefix;
         this.fingerprinter = fingerprinter;
         this.idempotentHandler = idempotentHandler;
+        this.messageResolver = messageResolver;
     }
 
     public void setOrder(int order) {
@@ -51,6 +66,16 @@ public class IdempotentAspect implements Ordered {
             throw new IllegalArgumentException("Idempotent ttl must be greater than zero.");
         }
 
+        // 空 key 会降级为方法级幂等（类名#方法名），同一方法的所有调用共享一个幂等窗口，
+        // 不区分参数与调用者。这通常不是期望行为，因此打 WARN 提醒业务显式指定 key。
+        if (!StringUtils.hasText(idempotent.key())) {
+            log.warn("[Velo Starter] @Idempotent on {}#{} has no 'key' expression. " +
+                            "It will fall back to method-level idempotency, meaning all invocations of this method " +
+                            "(regardless of arguments or caller) share a single idempotency window. " +
+                            "Specify a SpEL key (e.g. key=\"#userId\") unless this is intended.",
+                    method.getDeclaringClass().getName(), method.getName());
+        }
+
         String key = ConcurrencyAnnotationUtils.buildPrefixedKey(
                 prefix,
                 fingerprinter.resolveMethodFingerprint(
@@ -59,17 +84,25 @@ public class IdempotentAspect implements Ordered {
                         joinPoint.getArgs(),
                         idempotent.key()));
 
-        boolean accepted = idempotentHandler.tryRecord(key, ttl, idempotent.unit());
+        // 为本次请求生成唯一 token，失败回滚时只清除自己写入的记录，避免误删并发请求的新记录。
+        String token = UUID.randomUUID().toString();
+
+        boolean accepted = idempotentHandler.tryRecord(key, token, ttl, idempotent.unit());
         if (!accepted) {
-            throw new IdempotentException(idempotent.message());
+            throw new IdempotentException(resolveMessage(idempotent.message()), key, ttl, idempotent.unit());
         }
 
         try {
             return joinPoint.proceed();
         } catch (Throwable ex) {
-            // 任何下游失败时清除幂等记录，允许重试（包括限流拒绝、锁获取失败、业务异常等）
-            idempotentHandler.remove(key);
+            // 任何下游失败时清除幂等记录，允许重试（包括限流拒绝、锁获取失败、业务异常等）。
+            // removeIfMatch 只删除与本次 token 一致的记录，避免误删并发请求刚写入的记录。
+            idempotentHandler.removeIfMatch(key, token);
             throw ex;
         }
+    }
+
+    private String resolveMessage(String message) {
+        return messageResolver != null ? messageResolver.resolve(message) : message;
     }
 }

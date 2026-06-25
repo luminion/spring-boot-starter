@@ -86,18 +86,18 @@ public class VeloJacksonAutoConfiguration {
                             .timeZone(timeZone);
                 }
 
-                if (jacksonProperties.isLongAsString()) {
+                if (jacksonProperties.isSerializeLongAsString()) {
                     LongToStringSerializer longSerializer = new LongToStringSerializer();
                     builder.serializerByType(Long.class, longSerializer)
                             .serializerByType(Long.TYPE, longSerializer)
                             .serializerByType(BigInteger.class, new UnsafeBigIntegerToStringSerializer());
                 }
-                if (jacksonProperties.isBigDecimalAsString() || jacksonProperties.isBigDecimalStripTrailingZeros()) {
+                if (jacksonProperties.isSerializeBigDecimalAsString() || jacksonProperties.isBigDecimalStripTrailingZeros()) {
                     builder.serializerByType(BigDecimal.class, new ConfigurableBigDecimalSerializer(
-                            jacksonProperties.isBigDecimalAsString(),
+                            jacksonProperties.isSerializeBigDecimalAsString(),
                             jacksonProperties.isBigDecimalStripTrailingZeros()));
                 }
-                if (jacksonProperties.isFloatingAsString()) {
+                if (jacksonProperties.isSerializeFloatingAsString()) {
                     builder.serializerByType(Double.class, ToStringSerializer.instance)
                             .serializerByType(Double.TYPE, ToStringSerializer.instance)
                             .serializerByType(Float.class, ToStringSerializer.instance)

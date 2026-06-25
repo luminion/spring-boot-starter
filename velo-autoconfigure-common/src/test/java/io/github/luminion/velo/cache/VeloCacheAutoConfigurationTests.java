@@ -65,7 +65,9 @@ class VeloCacheAutoConfigurationTests {
     }
 
     @Test
-    void shouldApplyJitterToDefaultTtlWhenConfigured() {
+    void shouldKeepConfigurationTtlUnchangedRegardlessOfJitter() {
+        // 抖动已移至 JitterRedisCacheWriter 在写入时按 key 应用，
+        // RedisCacheConfiguration 上的 TTL 始终保持原始配置值。
         contextRunner
                 .withPropertyValues(
                         "velo.cache.default-ttl=100s",
@@ -73,13 +75,12 @@ class VeloCacheAutoConfigurationTests {
                 )
                 .run(context -> {
                     RedisCacheConfiguration configuration = context.getBean(RedisCacheConfiguration.class);
-                    long ttlMillis = configuration.getTtl().toMillis();
-                    assertThat(ttlMillis).isBetween(80_000L, 120_000L);
+                    assertThat(configuration.getTtl()).isEqualTo(Duration.ofSeconds(100));
                 });
     }
 
     @Test
-    void shouldNotApplyJitterByDefault() {
+    void shouldKeepDefaultTtlWhenNoJitterConfigured() {
         contextRunner
                 .withPropertyValues(
                         "velo.cache.default-ttl=60s"

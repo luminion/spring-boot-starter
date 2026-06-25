@@ -22,11 +22,10 @@ class VeloPropertiesDefaultsTest {
         assertThat(properties.getSpringConverter().isDateTimeEnabled()).isTrue();
         assertThat(properties.getExcel().getConverters().isEnabled()).isTrue();
         assertThat(properties.getExcel().isEnabled()).isTrue();
-        assertThat(properties.getJackson().isLongAsString()).isTrue();
-        assertThat(properties.getJackson().isUnsafeIntegerAsString()).isTrue();
-        assertThat(properties.getJackson().isBigDecimalAsString()).isTrue();
+        assertThat(properties.getJackson().isSerializeLongAsString()).isTrue();
+        assertThat(properties.getJackson().isSerializeBigDecimalAsString()).isTrue();
         assertThat(properties.getJackson().isBigDecimalStripTrailingZeros()).isFalse();
-        assertThat(properties.getJackson().isFloatingAsString()).isFalse();
+        assertThat(properties.getJackson().isSerializeFloatingAsString()).isFalse();
         assertThat(properties.getJackson().isDateTimeEnabled()).isTrue();
         assertThat(properties.getJackson().isEnumDescEnabled()).isTrue();
         assertThat(properties.getJackson().isStringConverterEnabled()).isTrue();

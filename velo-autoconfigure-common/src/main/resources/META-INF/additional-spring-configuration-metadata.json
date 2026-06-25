@@ -1,0 +1,58 @@
+{
+  "hints": [
+    {
+      "name": "velo.mode",
+      "values": [
+        {
+          "value": "OPINIONATED",
+          "description": "默认模式：开启偏开箱即用的全局增强（traceId、调用日志、Jackson 增强、日期转换、MyBatis-Plus 拦截器、缓存、Redis 模板、Excel 转换器等）。"
+        },
+        {
+          "value": "CONSERVATIVE",
+          "description": "保守模式：关闭容易自动影响应用行为的默认项，仅保留 @Idempotent / @RateLimit / @Lock / @InvokeLog / @SlowLog 等显式注解能力。"
+        }
+      ]
+    },
+    {
+      "name": "velo.idempotent.backend",
+      "values": [
+        {"value": "AUTO", "description": "按自动配置顺序选择首个可用后端：REDISSON -> REDIS -> CAFFEINE -> JDK。"},
+        {"value": "REDISSON", "description": "基于 Redisson，适合分布式场景。"},
+        {"value": "REDIS", "description": "基于 Spring Data Redis，适合分布式场景。"},
+        {"value": "CAFFEINE", "description": "基于 Caffeine 的本地实现，仅保证单 JVM 内有效。"},
+        {"value": "JDK", "description": "基于 JDK 的本地兜底实现，仅保证单 JVM 内有效。"}
+      ]
+    },
+    {
+      "name": "velo.rate-limit.backend",
+      "values": [
+        {"value": "AUTO", "description": "按自动配置顺序选择首个可用后端：REDISSON -> REDIS -> CAFFEINE -> JDK。"},
+        {"value": "REDISSON", "description": "基于 Redisson，适合分布式场景。"},
+        {"value": "REDIS", "description": "基于 Spring Data Redis，适合分布式场景。"},
+        {"value": "CAFFEINE", "description": "基于 Caffeine 的本地实现，仅保证单 JVM 内有效。"},
+        {"value": "JDK", "description": "基于 JDK 的本地兜底实现，仅保证单 JVM 内有效。"}
+      ]
+    },
+    {
+      "name": "velo.lock.backend",
+      "values": [
+        {"value": "AUTO", "description": "按自动配置顺序选择首个可用后端：REDISSON -> REDIS -> CAFFEINE -> JDK。"},
+        {"value": "REDISSON", "description": "基于 Redisson，适合分布式场景，支持可重入等高级特性。"},
+        {"value": "REDIS", "description": "基于 Spring Data Redis，适合分布式场景。"},
+        {"value": "CAFFEINE", "description": "基于 Caffeine 的本地实现，仅保证单 JVM 内互斥。"},
+        {"value": "JDK", "description": "基于 JDK 的本地兜底实现，仅保证单 JVM 内互斥。"}
+      ]
+    },
+    {
+      "name": "velo.web.xss.strategy",
+      "values": [
+        {"value": "NONE", "description": "不清洗。"},
+        {"value": "ESCAPE", "description": "HTML 转义，不依赖 jsoup。"},
+        {"value": "SIMPLE_TEXT", "description": "仅保留纯文本，移除所有标签。"},
+        {"value": "BASIC", "description": "jsoup basic 白名单，允许基础格式化标签。"},
+        {"value": "BASIC_WITH_IMAGES", "description": "jsoup basic 白名单并额外允许图片。"},
+        {"value": "RELAXED", "description": "jsoup relaxed 白名单，允许较丰富的 HTML（默认）。"}
+      ]
+    }
+  ]
+}

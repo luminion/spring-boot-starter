@@ -60,7 +60,7 @@ class VeloJacksonAutoConfigurationTests {
     @Test
     void shouldAllowDisablingLongStringSerialization() throws Exception {
         VeloProperties properties = new VeloProperties();
-        properties.getJackson().setLongAsString(false);
+        properties.getJackson().setSerializeLongAsString(false);
 
         contextRunner
                 .withBean(VeloProperties.class, () -> properties)
@@ -84,7 +84,7 @@ class VeloJacksonAutoConfigurationTests {
     @Test
     void shouldAllowDisablingBigDecimalStringSerialization() throws Exception {
         VeloProperties properties = new VeloProperties();
-        properties.getJackson().setBigDecimalAsString(false);
+        properties.getJackson().setSerializeBigDecimalAsString(false);
 
         contextRunner
                 .withBean(VeloProperties.class, () -> properties)
@@ -146,7 +146,7 @@ class VeloJacksonAutoConfigurationTests {
     @Test
     void shouldStripBigDecimalTrailingZerosWhenSerializingAsNumber() throws Exception {
         VeloProperties properties = new VeloProperties();
-        properties.getJackson().setBigDecimalAsString(false);
+        properties.getJackson().setSerializeBigDecimalAsString(false);
         properties.getJackson().setBigDecimalStripTrailingZeros(true);
 
         contextRunner
@@ -204,7 +204,7 @@ class VeloJacksonAutoConfigurationTests {
     @Test
     void shouldSerializeFloatingPointValuesAsStringWhenConfigured() throws Exception {
         VeloProperties properties = new VeloProperties();
-        properties.getJackson().setFloatingAsString(true);
+        properties.getJackson().setSerializeFloatingAsString(true);
 
         contextRunner
                 .withBean(VeloProperties.class, () -> properties)

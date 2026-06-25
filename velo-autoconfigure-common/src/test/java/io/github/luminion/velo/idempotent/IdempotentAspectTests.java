@@ -18,7 +18,7 @@ class IdempotentAspectTests {
         AtomicReference<String> capturedKey = new AtomicReference<>();
         IdempotentAspect aspect = new IdempotentAspect("idempotent:", new SpelFingerprinter(), new IdempotentHandler() {
             @Override
-            public boolean tryRecord(String key, long timeout, TimeUnit unit) {
+            public boolean tryRecord(String key, String token, long timeout, TimeUnit unit) {
                 capturedKey.set(key);
                 return true;
             }

@@ -36,4 +36,16 @@ public class VeloCoreAutoConfiguration {
     public JsonProcessorProvider jsonProcessorProvider(BeanFactory beanFactory) {
         return new DefaultJsonProcessorProvider(beanFactory);
     }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public VeloMessageResolver veloMessageResolver() {
+        return new VeloMessageResolver();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public VeloBannerPrinter veloBannerPrinter(VeloProperties properties) {
+        return new VeloBannerPrinter(properties);
+    }
 }
