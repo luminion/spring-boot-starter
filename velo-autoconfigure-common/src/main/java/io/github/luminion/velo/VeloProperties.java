@@ -648,8 +648,8 @@ public class VeloProperties {
 
         /**
          * Prints the Velo startup banner with a summary of enabled features.
-         * Enabled by default.
+         * Disabled by default; enable to print the banner on startup.
          */
-        private boolean enabled = true;
+        private boolean enabled = false;
     }
 }

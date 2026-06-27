@@ -5,8 +5,6 @@ import io.github.luminion.velo.core.VeloMessageResolver;
 import io.github.luminion.velo.spi.Fingerprinter;
 import io.github.luminion.velo.idempotent.aspect.IdempotentAspect;
 import org.aspectj.weaver.Advice;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -28,14 +26,11 @@ import org.springframework.context.annotation.Bean;
 @ConditionalOnProperty(prefix = "velo.idempotent", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloIdempotentAutoConfiguration {
 
-    private static final Logger log = LoggerFactory.getLogger(VeloIdempotentAutoConfiguration.class);
-
     @Bean
     @ConditionalOnMissingBean(IdempotentAspect.class)
     @ConditionalOnBean({Fingerprinter.class, IdempotentHandler.class})
     public IdempotentAspect idempotentAspect(VeloProperties properties, Fingerprinter fingerprinter,
             IdempotentHandler idempotentHandler, ObjectProvider<VeloMessageResolver> messageResolver) {
-        log.info("[Velo Starter] Idempotent enabled, backend handler: {}", idempotentHandler.getClass().getSimpleName());
         IdempotentAspect aspect = new IdempotentAspect(properties.getIdempotent().getPrefix(), fingerprinter,
                 idempotentHandler, messageResolver.getIfAvailable());
         aspect.setOrder(properties.getAspectOrder().getIdempotent());

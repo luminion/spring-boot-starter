@@ -10,7 +10,7 @@
 - 新增 `@LogPayloadIgnore` 注解，可标注在方法或类上控制调用日志中参数和返回值的可见性，适用于 Controller、Feign、`@InvokeLog`、`@SlowLog` 所有日志切面
 - 异常结构化：`IdempotentException` / `RateLimitException` / `LockException` 携带 key、窗口、限额等字段，便于上层做友好提示
 - 异常消息国际化：注解 `message` 写成 `{i18n.key}` 形式时从 `MessageSource` 解析，普通文本原样输出，未配置国际化的项目行为不变；附带 `velo/messages*.properties` 中英示例
-- 新增 `velo.banner.enabled`（默认 `true`），启动时打印各能力开关概览横幅，可设为 `false` 关闭
+- 新增 `velo.banner.enabled`（默认 `false`），开启后启动时在控制台打印各能力开关概览横幅（直接输出到 `System.out`，不进入日志框架）；幂等/限流/锁展示实际生效的 handler 实现类，便于确认 `AUTO` 模式下的真实后端
 - 幂等、限流、锁启用时打印 INFO 日志，显示实际选用的后端实现
 - `velo.mode=CONSERVATIVE` 启动时输出 INFO 日志，列出被默认关闭的全局增强能力
 - 配置元数据 hints：`velo.mode`、各 `backend`、`web.xss.strategy` 等枚举项在 IDE 中显示候选值下拉与中文说明
