@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -54,7 +55,7 @@ public class VeloWebExceptionHandler<R> implements Ordered {
     public R handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
         BindingResult bindingResult = e.getBindingResult();
         String message = getBindingResultMessage(bindingResult);
-        log.debug("[参数校验异常][RequestBody] 校验失败: {}", message);
+        log.debug("[Validation][RequestBody] validation failed: {}", message);
         return failed.apply(message);
     }
 
@@ -65,7 +66,7 @@ public class VeloWebExceptionHandler<R> implements Ordered {
     public R handleBindException(BindException e) {
         BindingResult bindingResult = e.getBindingResult();
         String message = getBindingResultMessage(bindingResult);
-        log.debug("[参数绑定异常] 表单/URL参数绑定失败: {}", message);
+        log.debug("[BindException] form/url parameter binding failed: {}", message);
         return failed.apply(message);
     }
 
@@ -74,7 +75,7 @@ public class VeloWebExceptionHandler<R> implements Ordered {
      */
     @ExceptionHandler(MissingServletRequestParameterException.class)
     public R handleMissingServletRequestParameterException(MissingServletRequestParameterException e) {
-        log.debug("[缺少必要参数] 参数名: {}", e.getParameterName());
+        log.debug("[MissingParameter] parameter name: {}", e.getParameterName());
         return failed.apply("缺少必要参数: " + e.getParameterName());
     }
 
@@ -83,7 +84,7 @@ public class VeloWebExceptionHandler<R> implements Ordered {
      */
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public R handleMethodArgumentTypeMismatchException(MethodArgumentTypeMismatchException e) {
-        log.debug("[参数类型不匹配] 参数名: {}, 期望类型: {}", e.getName(), e.getRequiredType());
+        log.debug("[TypeMismatch] parameter: {}, expected type: {}", e.getName(), e.getRequiredType());
         return failed.apply(String.format("参数 '%s' 类型错误", e.getName()));
     }
 
@@ -92,7 +93,7 @@ public class VeloWebExceptionHandler<R> implements Ordered {
      */
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public R handleHttpMessageNotReadableException(HttpMessageNotReadableException e) {
-        log.debug("[HTTP消息不可读] 解析失败: {}", e.getLocalizedMessage());
+        log.debug("[MessageNotReadable] parse failed: {}", e.getLocalizedMessage());
         return failed.apply("请求数据格式错误");
     }
 
@@ -101,7 +102,7 @@ public class VeloWebExceptionHandler<R> implements Ordered {
      */
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public R handleMethodNotSupported(HttpRequestMethodNotSupportedException e) {
-        log.debug("[不支持的请求方式] Method: {}", e.getMethod());
+        log.debug("[MethodNotSupported] method: {}", e.getMethod());
         return failed.apply("不支持 " + e.getMethod() + " 请求方式");
     }
 
@@ -110,7 +111,7 @@ public class VeloWebExceptionHandler<R> implements Ordered {
      */
     @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
     public R handleHttpMediaTypeNotSupported(HttpMediaTypeNotSupportedException e) {
-        log.debug("[不支持的媒体类型] Content-Type: {}", e.getContentType());
+        log.debug("[MediaTypeNotSupported] content-type: {}", e.getContentType());
         return failed.apply("不支持的媒体类型: " + e.getContentType());
     }
 
@@ -119,7 +120,7 @@ public class VeloWebExceptionHandler<R> implements Ordered {
      */
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public R handleMaxSizeException(MaxUploadSizeExceededException e) {
-        log.debug("[文件上传异常] 文件大小超出限制: {}", e.getLocalizedMessage());
+        log.debug("[MaxUploadSizeExceeded] size limit exceeded: {}", e.getLocalizedMessage());
         return failed.apply("上传文件超出大小限制");
     }
 
@@ -128,7 +129,7 @@ public class VeloWebExceptionHandler<R> implements Ordered {
      */
     @ExceptionHandler(IllegalArgumentException.class)
     public R handleIllegalArgumentException(IllegalArgumentException e) {
-        log.debug("[非法参数] 异常信息: {}", e.getMessage());
+        log.debug("[IllegalArgument] message: {}", e.getMessage());
         return failed.apply(e.getMessage());
     }
 
@@ -137,7 +138,16 @@ public class VeloWebExceptionHandler<R> implements Ordered {
      */
     @ExceptionHandler(RateLimitException.class)
     public R handleRateLimitException(RateLimitException e) {
-        log.debug("[限流异常] 访问频率过高: {}", e.getMessage());
+        if (e.getKey() != null && e.getUnit() != null) {
+            log.warn("[RateLimit] key={}, limit={}/{}{}, message={}",
+                    e.getKey(),
+                    e.getPermits(),
+                    e.getTtl(),
+                    formatTimeUnit(e.getUnit()),
+                    e.getMessage());
+        } else {
+            log.warn("[RateLimit] {}", e.getMessage());
+        }
         return failed.apply(e.getMessage());
     }
 
@@ -146,7 +156,15 @@ public class VeloWebExceptionHandler<R> implements Ordered {
      */
     @ExceptionHandler(IdempotentException.class)
     public R handleIdempotentException(IdempotentException e) {
-        log.debug("[幂等异常] 触发重复请求拦截: {}", e.getMessage());
+        if (e.getKey() != null && e.getUnit() != null) {
+            log.warn("[Idempotent] key={}, window={}{}, message={}",
+                    e.getKey(),
+                    e.getTtl(),
+                    formatTimeUnit(e.getUnit()),
+                    e.getMessage());
+        } else {
+            log.warn("[Idempotent] {}", e.getMessage());
+        }
         return failed.apply(e.getMessage());
     }
 
@@ -155,8 +173,31 @@ public class VeloWebExceptionHandler<R> implements Ordered {
      */
     @ExceptionHandler(LockException.class)
     public R handleLockException(LockException e) {
-        log.debug("[锁异常] 获取分布式锁失败: {}", e.getMessage());
+        if (e.getKey() != null && e.getUnit() != null) {
+            log.warn("[Lock] key={}, waitTimeout={}{}, lease={}{}, message={}",
+                    e.getKey(),
+                    e.getWaitTimeout(),
+                    formatTimeUnit(e.getUnit()),
+                    e.getLease(),
+                    formatTimeUnit(e.getUnit()),
+                    e.getMessage());
+        } else {
+            log.warn("[Lock] {}", e.getMessage());
+        }
         return failed.apply(e.getMessage());
+    }
+
+    private String formatTimeUnit(TimeUnit unit) {
+        switch (unit) {
+            case NANOSECONDS: return "ns";
+            case MICROSECONDS: return "us";
+            case MILLISECONDS: return "ms";
+            case SECONDS: return "s";
+            case MINUTES: return "m";
+            case HOURS: return "h";
+            case DAYS: return "d";
+            default: return unit.toString().toLowerCase();
+        }
     }
 
     /**
@@ -165,10 +206,10 @@ public class VeloWebExceptionHandler<R> implements Ordered {
     @ExceptionHandler(Exception.class)
     public R handleGlobalException(Exception e) {
         if (bizExceptionClass != null && bizExceptionClass.isAssignableFrom(e.getClass())) {
-            log.debug("自定义业务异常: {}", e.getMessage());
+            log.debug("[BizException] message: {}", e.getMessage());
             return failed.apply(e.getMessage());
         }
-        log.error("[系统内部异常] 未捕获的系统级异常: ", e);
+        log.error("[InternalError] uncaught system exception: ", e);
         return error.apply(e);
     }
 
