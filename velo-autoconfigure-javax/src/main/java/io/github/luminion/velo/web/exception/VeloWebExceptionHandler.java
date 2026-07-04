@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -112,7 +113,8 @@ public class VeloWebExceptionHandler<R> implements Ordered {
     @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
     public R handleHttpMediaTypeNotSupported(HttpMediaTypeNotSupportedException e) {
         log.debug("[MediaTypeNotSupported] content-type: {}", e.getContentType());
-        return failed.apply("不支持的媒体类型: " + e.getContentType());
+        // getContentType() 可能为 null，兜底避免提示文案出现 "null"
+        return failed.apply("不支持的媒体类型: " + Objects.toString(e.getContentType(), "未知"));
     }
 
     /**
@@ -130,7 +132,8 @@ public class VeloWebExceptionHandler<R> implements Ordered {
     @ExceptionHandler(IllegalArgumentException.class)
     public R handleIllegalArgumentException(IllegalArgumentException e) {
         log.debug("[IllegalArgument] message: {}", e.getMessage());
-        return failed.apply(e.getMessage());
+        // getMessage() 可能为 null，兜底避免注入的 failed 实现对入参解引用时 NPE
+        return failed.apply(Objects.toString(e.getMessage(), "请求参数非法"));
     }
 
     /**
@@ -207,7 +210,8 @@ public class VeloWebExceptionHandler<R> implements Ordered {
     public R handleGlobalException(Exception e) {
         if (bizExceptionClass != null && bizExceptionClass.isAssignableFrom(e.getClass())) {
             log.debug("[BizException] message: {}", e.getMessage());
-            return failed.apply(e.getMessage());
+            // 业务异常 message 可能为 null，兜底避免注入的 failed 实现对入参解引用时 NPE
+            return failed.apply(Objects.toString(e.getMessage(), "系统繁忙，请稍后再试"));
         }
         log.error("[InternalError] uncaught system exception: ", e);
         return error.apply(e);

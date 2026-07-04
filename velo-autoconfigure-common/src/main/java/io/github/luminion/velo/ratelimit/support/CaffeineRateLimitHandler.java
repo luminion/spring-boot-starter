@@ -42,7 +42,8 @@ public class CaffeineRateLimitHandler implements RateLimitHandler {
 
             long now = System.nanoTime();
             long nanosSinceLastRefill = now - lastRefillNanos;
-            double newTokens = nanosSinceLastRefill * capacity / (double) intervalNanos;
+            // 先转 double 再乘，避免 long * long 中间结果在高速率+长空闲时静默溢出为负导致令牌永不补充
+            double newTokens = (double) nanosSinceLastRefill * capacity / (double) intervalNanos;
             if (newTokens > 0D) {
                 tokens = Math.min(capacity, tokens + newTokens);
                 lastRefillNanos = now;

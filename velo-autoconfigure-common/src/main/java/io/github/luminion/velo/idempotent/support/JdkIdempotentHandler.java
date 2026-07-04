@@ -7,6 +7,7 @@ import org.springframework.beans.factory.DisposableBean;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -44,14 +45,19 @@ public class JdkIdempotentHandler implements IdempotentHandler, DisposableBean {
 
         // 过期清理只在 Map 膨胀后异步触发，避免请求主路径反复扫描整个表。
         if (recordMap.mappingCount() > 1024 && isCleaning.compareAndSet(false, true)) {
-            cleanupExecutor.execute(() -> {
-                try {
-                    long currentTime = System.currentTimeMillis();
-                    recordMap.entrySet().removeIf(entry -> entry.getValue().expireAt <= currentTime);
-                } finally {
-                    isCleaning.set(false);
-                }
-            });
+            try {
+                cleanupExecutor.execute(() -> {
+                    try {
+                        long currentTime = System.currentTimeMillis();
+                        recordMap.entrySet().removeIf(entry -> entry.getValue().expireAt <= currentTime);
+                    } finally {
+                        isCleaning.set(false);
+                    }
+                });
+            } catch (RejectedExecutionException ignored) {
+                // 容器关闭后线程池已 shutdown，清理提交被拒属正常；复位标志避免永久 true 再不触发清理
+                isCleaning.set(false);
+            }
         }
         return success.get();
     }

@@ -201,7 +201,8 @@ public abstract class FesodExcelHelper {
 
         @Override
         public CellDataTypeEnum supportExcelTypeKey() {
-            return CellDataTypeEnum.NUMBER;
+            // 读取走 getStringValue()，类型须为 STRING；NUMBER 时该方法返回 null 会把所有浮点单元格读成 null
+            return CellDataTypeEnum.STRING;
         }
 
         @Override

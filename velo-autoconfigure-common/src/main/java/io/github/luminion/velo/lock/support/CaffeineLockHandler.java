@@ -1,28 +1,28 @@
 package io.github.luminion.velo.lock.support;
 
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 import io.github.luminion.velo.lock.LockHandler;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * 基于 Caffeine 的本地锁实现。
+ * 基于 Caffeine 场景下的本地锁实现（兜底方案）。
  * <p>
  * 该实现只保证单 JVM 内互斥执行，不提供分布式一致性。
- * 缓存配置了 {@code maximumSize=50000} 和 {@code expireAfterAccess=10min} 作为兜底保护，
- * 防止在异常路径下 LockState 无法被引用计数清理时导致内存泄漏。
+ * <p>
+ * 用 {@link ConcurrentHashMap} + 引用计数管理 LockState，而非带淘汰策略的 Caffeine 缓存：
+ * Caffeine 的 {@code maximumSize} / {@code expireAfterAccess} 淘汰由缓存内部触发、感知不到引用计数，
+ * 可能在锁仍被持有时淘汰 LockState，下个线程拿到全新 {@link ReentrantLock} 从而打破互斥。
+ * 引用计数在 lock 时 retain、unlock 时 release，计数归零且未被持有才移除，生命周期与 lock/unlock 配对绑定，
+ * 不依赖时间或容量淘汰，也不会泄漏。
  */
 @Slf4j
 public class CaffeineLockHandler implements LockHandler {
 
-    private final Cache<String, LockState> lockCache = Caffeine.newBuilder()
-            .maximumSize(50_000)
-            .expireAfterAccess(10, TimeUnit.MINUTES)
-            .build();
+    private final ConcurrentHashMap<String, LockState> lockMap = new ConcurrentHashMap<>();
 
     public CaffeineLockHandler() {
         log.warn("[Velo Starter] CaffeineLockHandler is used as a local fallback implementation. " +
@@ -32,7 +32,7 @@ public class CaffeineLockHandler implements LockHandler {
 
     @Override
     public boolean lock(String key, long waitTime, long leaseTime, TimeUnit unit) {
-        LockState state = lockCache.asMap().compute(key, (k, existing) -> {
+        LockState state = lockMap.compute(key, (k, existing) -> {
             LockState resolved = existing != null ? existing : new LockState();
             resolved.retain();
             return resolved;
@@ -54,7 +54,7 @@ public class CaffeineLockHandler implements LockHandler {
 
     @Override
     public void unlock(String key) {
-        LockState state = lockCache.getIfPresent(key);
+        LockState state = lockMap.get(key);
         if (state == null) {
             return;
         }
@@ -68,7 +68,7 @@ public class CaffeineLockHandler implements LockHandler {
     }
 
     private void releaseState(String key, LockState state) {
-        lockCache.asMap().computeIfPresent(key, (k, existing) -> {
+        lockMap.computeIfPresent(key, (k, existing) -> {
             if (existing != state) {
                 return existing;
             }

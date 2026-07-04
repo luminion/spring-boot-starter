@@ -7,6 +7,7 @@ import org.springframework.beans.factory.DisposableBean;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -38,14 +39,19 @@ public class JdkRateLimitHandler implements RateLimitHandler, DisposableBean {
         boolean acquired = bucketMap.computeIfAbsent(key, unused -> new TokenBucket())
                 .tryAcquire(window.capacity(), window.intervalNanos(), now);
         if (bucketMap.mappingCount() > 1024 && isCleaning.compareAndSet(false, true)) {
-            cleanupExecutor.execute(() -> {
-                try {
-                    long current = System.nanoTime();
-                    bucketMap.entrySet().removeIf(entry -> entry.getValue().isExpired(current));
-                } finally {
-                    isCleaning.set(false);
-                }
-            });
+            try {
+                cleanupExecutor.execute(() -> {
+                    try {
+                        long current = System.nanoTime();
+                        bucketMap.entrySet().removeIf(entry -> entry.getValue().isExpired(current));
+                    } finally {
+                        isCleaning.set(false);
+                    }
+                });
+            } catch (RejectedExecutionException ignored) {
+                // 容器关闭后线程池已 shutdown，清理提交被拒属正常；复位标志避免永久 true 再不触发清理
+                isCleaning.set(false);
+            }
         }
         return acquired;
     }
@@ -75,7 +81,8 @@ public class JdkRateLimitHandler implements RateLimitHandler, DisposableBean {
             }
 
             long nanosSinceLastRefill = now - lastRefillNanos;
-            double newTokens = nanosSinceLastRefill * capacity / (double) intervalNanos;
+            // 先转 double 再乘，避免 long * long 中间结果在高速率+长空闲时静默溢出为负导致令牌永不补充
+            double newTokens = (double) nanosSinceLastRefill * capacity / (double) intervalNanos;
             if (newTokens > 0D) {
                 tokens = Math.min(capacity, tokens + newTokens);
                 lastRefillNanos = now;

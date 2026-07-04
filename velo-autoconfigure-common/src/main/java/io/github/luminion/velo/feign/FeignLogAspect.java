@@ -93,7 +93,9 @@ public class FeignLogAspect implements Ordered {
     }
 
     private boolean ensureTraceId(String mdcKey) {
-        if (!properties.getLog().getTrace().isEnabled() || StringUtils.hasText(TraceContext.get(mdcKey))) {
+        // mdcKey 未配置时用空 key 操作 MDC 会静默丢失 trace，直接跳过
+        if (!StringUtils.hasText(mdcKey) || !properties.getLog().getTrace().isEnabled()
+                || StringUtils.hasText(TraceContext.get(mdcKey))) {
             return false;
         }
         TraceContext.put(mdcKey, TraceContext.createTraceId());

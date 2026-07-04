@@ -97,7 +97,12 @@ public class IdempotentAspect implements Ordered {
         } catch (Throwable ex) {
             // 任何下游失败时清除幂等记录，允许重试（包括限流拒绝、锁获取失败、业务异常等）。
             // removeIfMatch 只删除与本次 token 一致的记录，避免误删并发请求刚写入的记录。
-            idempotentHandler.removeIfMatch(key, token);
+            try {
+                idempotentHandler.removeIfMatch(key, token);
+            } catch (Throwable cleanupEx) {
+                // 清理失败（如 Redis 超时）不能覆盖原始业务异常，附加到 suppressed 上保留现场
+                ex.addSuppressed(cleanupEx);
+            }
             throw ex;
         }
     }

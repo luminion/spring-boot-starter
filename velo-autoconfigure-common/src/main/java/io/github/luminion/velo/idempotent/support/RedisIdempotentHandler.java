@@ -2,6 +2,7 @@ package io.github.luminion.velo.idempotent.support;
 
 import io.github.luminion.velo.idempotent.IdempotentHandler;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.core.script.RedisScript;
@@ -14,6 +15,7 @@ import java.util.concurrent.TimeUnit;
  *
  * @author luminion
  */
+@Slf4j
 @RequiredArgsConstructor
 public class RedisIdempotentHandler implements IdempotentHandler {
 
@@ -34,7 +36,15 @@ public class RedisIdempotentHandler implements IdempotentHandler {
     public boolean tryRecord(String key, String token, long timeout, TimeUnit unit) {
         // SET NX EX：首次写入 token 并设置过期时间
         Boolean success = redisTemplate.opsForValue().setIfAbsent(key, token, timeout, unit);
-        return success != null && success;
+        if (success == null) {
+            // setIfAbsent 返回 null 说明命令被 Redis 事务/pipeline 排队而非立即执行，此时幂等判定失效。
+            // 幂等操作不应包裹在 Redis 事务里，打 WARN 提示误用。
+            log.warn("[Velo Starter] Idempotent tryRecord got null from setIfAbsent for key '{}'. " +
+                    "This usually means the operation is wrapped in a Redis transaction/pipeline, " +
+                    "which defers execution and breaks idempotency. Avoid running idempotent checks inside a Redis transaction.", key);
+            return false;
+        }
+        return success;
     }
 
     @Override

@@ -61,8 +61,9 @@ public class LockAspect implements Ordered {
         if (wait < 0L) {
             throw new IllegalArgumentException("Lock waitTimeout must not be negative.");
         }
-        if (lease <= 0L) {
-            throw new IllegalArgumentException("Lock lease must be greater than zero.");
+        // -1 是看门狗特殊值（Redisson 据此自动续约），需放行；其余非正值仍非法
+        if (lease <= 0L && lease != -1L) {
+            throw new IllegalArgumentException("Lock lease must be greater than zero, or -1 to enable watchdog auto-renewal.");
         }
 
         // 1. 生成锁 Key

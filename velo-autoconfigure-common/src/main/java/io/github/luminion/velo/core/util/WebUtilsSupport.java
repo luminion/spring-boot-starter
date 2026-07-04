@@ -29,31 +29,48 @@ public final class WebUtilsSupport {
     public static String resolveClientIp(java.util.function.Function<String, String> headerResolver, String remoteAddr) {
         String ip = null;
         for (String header : IP_HEADERS) {
-            ip = headerResolver.apply(header);
-            if (ip != null && !ip.isEmpty() && !"unknown".equalsIgnoreCase(ip)) {
+            ip = firstValidIp(headerResolver.apply(header));
+            if (ip != null) {
                 break;
             }
         }
 
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+        // 头部均无有效值时回退到直连地址；X-Forwarded-For 为 "unknown, unknown" 这类全无效串也走此分支
+        if (ip == null) {
+            ip = firstValidIp(remoteAddr);
+        }
+        if (ip == null) {
             ip = remoteAddr;
         }
 
+        // IPv6 环回转换放在取出单个 IP 之后，才能覆盖 "0:0:...:1, 10.0.0.1" 这类代理链首段为环回的情况
         if ("0:0:0:0:0:0:0:1".equals(ip)) {
             ip = "127.0.0.1";
         }
+        return ip;
+    }
 
-        if (ip != null && ip.indexOf(',') > 0) {
-            String[] ips = ip.trim().split(",");
-            for (String subIp : ips) {
+    /**
+     * 从可能含逗号的头部值中取第一个有效 IP（非空、非 unknown）。
+     *
+     * @param raw 原始头部值，可能为 null、单个 IP 或逗号分隔的代理链
+     * @return 第一个有效 IP；整体为空或全部无效时返回 {@code null}
+     */
+    private static String firstValidIp(String raw) {
+        if (raw == null || raw.isEmpty() || "unknown".equalsIgnoreCase(raw)) {
+            return null;
+        }
+        // indexOf 用 >= 0 覆盖前导逗号（如 ",1.2.3.4"）：首段为空会被下面的有效性判断跳过
+        if (raw.indexOf(',') >= 0) {
+            for (String subIp : raw.split(",")) {
                 String trimmedIp = subIp.trim();
                 if (!trimmedIp.isEmpty() && !"unknown".equalsIgnoreCase(trimmedIp)) {
-                    ip = trimmedIp;
-                    break;
+                    return trimmedIp;
                 }
             }
+            return null;
         }
-        return ip;
+        return raw.trim();
     }
 
     /**
