@@ -197,8 +197,8 @@ public class VeloProperties {
 
         /**
          * Percentage of jitter applied to TTL values to prevent cache stampede.
-         * For example, a value of 10 means each cache name's TTL will vary by
-         * up to ±10% at startup. Set to 0 to disable jitter. Default is 0.
+         * For example, a value of 10 means each entry's TTL is randomly shifted by up to ±10%
+         * when it is written, independently per key. Set to 0 to disable jitter. Default is 0.
          */
         private int ttlJitterPercentage = 0;
 
@@ -401,17 +401,6 @@ public class VeloProperties {
          * Adds trace id to Spring Boot default log level pattern when no pattern is customized.
          */
         private boolean loggingPatternEnabled = true;
-
-        /**
-         * Applies a simplified date format ({@code yyyy-MM-dd HH:mm:ss.SSS}) to Spring Boot default log pattern
-         * when no date format is customized.
-         */
-        private boolean loggingDateFormatEnabled = true;
-
-        /**
-         * Custom log date format used when {@link #loggingDateFormatEnabled} is true.
-         */
-        private String loggingDateFormat = "yyyy-MM-dd HH:mm:ss.SSS";
     }
 
     @Data

@@ -19,10 +19,6 @@ public class VeloTraceEnvironmentPostProcessor implements EnvironmentPostProcess
 
     private static final String LOG_LEVEL_PATTERN_PROPERTY = "logging.pattern.level";
 
-    private static final String LOG_DATE_FORMAT_PROPERTY = "logging.pattern.date-format";
-
-    private static final String DEFAULT_DATE_FORMAT = "yyyy-MM-dd HH:mm:ss.SSS";
-
     @Override
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         boolean logEnabled = environment.getProperty("velo.log.enabled", Boolean.class, true);
@@ -32,18 +28,11 @@ public class VeloTraceEnvironmentPostProcessor implements EnvironmentPostProcess
                 || StringUtils.hasText(environment.getProperty(LOG_LEVEL_PATTERN_PROPERTY))) {
             return;
         }
+        // 只把 traceId 追加到默认 level pattern，作为增强；日期格式保持 Spring Boot 默认，不改变全局行为。
         String mdcKey = environment.getProperty("velo.log.trace.mdc-key", "traceId");
         String levelPattern = "%5p [%X{" + mdcKey + "}]";
         Map<String, Object> props = new HashMap<>();
         props.put(LOG_LEVEL_PATTERN_PROPERTY, levelPattern);
-        boolean dateFormatEnabled = environment.getProperty(
-                "velo.log.trace.logging-date-format-enabled", Boolean.class, true);
-        if (dateFormatEnabled
-                && !StringUtils.hasText(environment.getProperty(LOG_DATE_FORMAT_PROPERTY))) {
-            String dateFormat = environment.getProperty(
-                    "velo.log.trace.logging-date-format", DEFAULT_DATE_FORMAT);
-            props.put(LOG_DATE_FORMAT_PROPERTY, dateFormat);
-        }
         environment.getPropertySources().addLast(new MapPropertySource(PROPERTY_SOURCE_NAME, props));
     }
 

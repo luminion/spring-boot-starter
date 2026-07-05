@@ -25,6 +25,10 @@ public class JacksonStringSerializer extends StdSerializer<String> {
 
     @Override
     public void serialize(String value, JsonGenerator gen, SerializationContext ctxt) throws JacksonException {
+        if (value == null) {
+            gen.writeNull();
+            return;
+        }
         gen.writeString(value);
     }
 
@@ -50,6 +54,11 @@ public class JacksonStringSerializer extends StdSerializer<String> {
 
         @Override
         public void serialize(String value, JsonGenerator gen, SerializationContext ctxt) throws JacksonException {
+            // 与 jackson2 实现对齐：null 直接 writeNull，不把 null 传入用户的 encode 函数，避免其未防 null 时 NPE
+            if (value == null) {
+                gen.writeNull();
+                return;
+            }
             String result = function == null ? value : function.apply(value);
             if (result == null) {
                 gen.writeNull();

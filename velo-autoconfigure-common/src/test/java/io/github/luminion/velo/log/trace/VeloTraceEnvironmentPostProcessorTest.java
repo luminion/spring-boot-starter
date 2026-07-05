@@ -28,42 +28,14 @@ class VeloTraceEnvironmentPostProcessorTest {
     }
 
     @Test
-    void shouldAddDefaultDateFormat() {
+    void shouldNotInjectAnyDateFormatProperty() {
         MockEnvironment environment = new MockEnvironment();
 
         new VeloTraceEnvironmentPostProcessor().postProcessEnvironment(environment, new SpringApplication());
 
-        assertThat(environment.getProperty("logging.pattern.date-format")).isEqualTo("yyyy-MM-dd HH:mm:ss.SSS");
-    }
-
-    @Test
-    void shouldSkipDateFormatWhenDisabled() {
-        MockEnvironment environment = new MockEnvironment()
-                .withProperty("velo.log.trace.logging-date-format-enabled", "false");
-
-        new VeloTraceEnvironmentPostProcessor().postProcessEnvironment(environment, new SpringApplication());
-
+        // traceId 增强不应改变日期格式，保持 Spring Boot 默认
+        assertThat(environment.getProperty("logging.pattern.dateformat")).isNull();
         assertThat(environment.getProperty("logging.pattern.date-format")).isNull();
-    }
-
-    @Test
-    void shouldSkipDateFormatWhenAlreadyCustomized() {
-        MockEnvironment environment = new MockEnvironment()
-                .withProperty("logging.pattern.date-format", "HH:mm:ss");
-
-        new VeloTraceEnvironmentPostProcessor().postProcessEnvironment(environment, new SpringApplication());
-
-        assertThat(environment.getProperty("logging.pattern.date-format")).isEqualTo("HH:mm:ss");
-    }
-
-    @Test
-    void shouldUseCustomDateFormat() {
-        MockEnvironment environment = new MockEnvironment()
-                .withProperty("velo.log.trace.logging-date-format", "yy-MM-dd HH:mm:ss");
-
-        new VeloTraceEnvironmentPostProcessor().postProcessEnvironment(environment, new SpringApplication());
-
-        assertThat(environment.getProperty("logging.pattern.date-format")).isEqualTo("yy-MM-dd HH:mm:ss");
     }
 
     @Test

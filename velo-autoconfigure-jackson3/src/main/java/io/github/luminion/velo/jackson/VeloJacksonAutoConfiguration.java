@@ -5,7 +5,7 @@ import io.github.luminion.velo.jackson.deserializer.JacksonStringDeserializer;
 import io.github.luminion.velo.jackson.serializer.ConfigurableBigDecimalSerializer;
 import io.github.luminion.velo.jackson.serializer.JacksonStringSerializer;
 import io.github.luminion.velo.jackson.serializer.JsonEnumSerializerModifier;
-import io.github.luminion.velo.jackson.serializer.UnsafeBigIntegerToStringSerializer;
+import io.github.luminion.velo.jackson.serializer.BigIntegerToStringSerializer;
 import io.github.luminion.velo.jackson.serializer.LongToStringSerializer;
 import io.github.luminion.velo.spi.JsonProcessorProvider;
 import io.github.luminion.velo.xss.XssCleaner;
@@ -86,7 +86,7 @@ public class VeloJacksonAutoConfiguration {
                     LongToStringSerializer longSerializer = new LongToStringSerializer();
                     module.addSerializer(Long.class, longSerializer);
                     module.addSerializer(Long.TYPE, longSerializer);
-                    module.addSerializer(BigInteger.class, new UnsafeBigIntegerToStringSerializer());
+                    module.addSerializer(BigInteger.class, new BigIntegerToStringSerializer());
                 }
                 if (jacksonProperties.isSerializeBigDecimalAsString() || jacksonProperties.isBigDecimalStripTrailingZeros()) {
                     module.addSerializer(BigDecimal.class, new ConfigurableBigDecimalSerializer(

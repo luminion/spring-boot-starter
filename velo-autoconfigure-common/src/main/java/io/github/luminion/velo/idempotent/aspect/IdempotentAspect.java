@@ -76,13 +76,16 @@ public class IdempotentAspect implements Ordered {
                     method.getDeclaringClass().getName(), method.getName());
         }
 
-        String key = ConcurrencyAnnotationUtils.buildPrefixedKey(
-                prefix,
-                fingerprinter.resolveMethodFingerprint(
-                        joinPoint.getTarget(),
-                        method,
-                        joinPoint.getArgs(),
-                        idempotent.key()));
+        // key 始终以方法指纹（类名#方法名）为前缀，再拼接 SpEL 结果，与限流分桶语义保持一致。
+        // 这样不同方法即便用相同的 SpEL key（如都用 #orderId）也不会互相碰撞、共享同一幂等窗口。
+        String methodFingerprint = fingerprinter.resolveMethodFingerprint(
+                joinPoint.getTarget(), method, joinPoint.getArgs(), "");
+        String keyFingerprint = methodFingerprint;
+        if (StringUtils.hasText(idempotent.key())) {
+            keyFingerprint += ':' + fingerprinter.resolveMethodFingerprint(
+                    joinPoint.getTarget(), method, joinPoint.getArgs(), idempotent.key());
+        }
+        String key = ConcurrencyAnnotationUtils.buildPrefixedKey(prefix, keyFingerprint);
 
         // 为本次请求生成唯一 token，失败回滚时只清除自己写入的记录，避免误删并发请求的新记录。
         String token = UUID.randomUUID().toString();

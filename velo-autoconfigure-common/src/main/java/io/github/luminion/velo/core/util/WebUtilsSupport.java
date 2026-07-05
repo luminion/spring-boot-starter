@@ -43,8 +43,9 @@ public final class WebUtilsSupport {
             ip = remoteAddr;
         }
 
-        // IPv6 环回转换放在取出单个 IP 之后，才能覆盖 "0:0:...:1, 10.0.0.1" 这类代理链首段为环回的情况
-        if ("0:0:0:0:0:0:0:1".equals(ip)) {
+        // IPv6 环回转换放在取出单个 IP 之后，才能覆盖 "0:0:...:1, 10.0.0.1" 这类代理链首段为环回的情况。
+        // 同时兼容全展开形（Tomcat getRemoteAddr）与压缩形 "::1"（nginx 经 X-Real-IP/X-Forwarded-For 传入常见）。
+        if ("0:0:0:0:0:0:0:1".equals(ip) || "::1".equals(ip)) {
             ip = "127.0.0.1";
         }
         return ip;

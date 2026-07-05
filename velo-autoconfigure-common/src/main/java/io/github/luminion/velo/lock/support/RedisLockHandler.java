@@ -19,8 +19,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * 基于 Redis 的分布式锁实现。
  *
- * 每次成功加锁都生成新的 owner token，并按线程以栈结构保存，
- * 避免同线程同 key 嵌套加锁时 token 被覆盖导致误删。
+ * <p>支持同线程可重入：按线程以栈结构记录持有情况，同一线程对同一 key 再次加锁时只在本地增加持有计数、
+ * 不再访问 Redis，避免自己等待自己导致的死锁；只有最外层 unlock 才真正删除 Redis 锁。
+ *
+ * <p>重入不刷新 Redis TTL——续约由最外层首次设置的 lease 兜底。若重入链整体执行时间可能超过 lease，
+ * 需显式调大 lease 或改用 Redisson 看门狗。
  */
 @Slf4j
 @RequiredArgsConstructor
@@ -43,6 +46,13 @@ public class RedisLockHandler implements LockHandler {
 
     @Override
     public boolean lock(String key, long waitTime, long leaseTime, TimeUnit unit) {
+        Deque<String> stack = lockValues.get().computeIfAbsent(key, k -> new ArrayDeque<>());
+        // 同线程已持有该 key：本地重入，仅增加持有计数(压入同一 owner token)，不再访问 Redis
+        if (!stack.isEmpty()) {
+            stack.push(stack.peek());
+            return true;
+        }
+
         long waitMillis = unit.toMillis(waitTime);
         // 该后端基于 setIfAbsent 固定 TTL，无续约线程，不支持看门狗(-1)；
         // 降级为固定租约避免负 TTL 直接报错，并提示改用 Redisson 以获得自动续约。
@@ -70,9 +80,8 @@ public class RedisLockHandler implements LockHandler {
                         "which defers execution and breaks locking. Avoid acquiring locks inside a Redis transaction.", key);
             }
             if (Boolean.TRUE.equals(success)) {
-                // 每次加锁都记录一份新的 token，解锁时用它和 Redis 当前值比对，避免误删已续租或被他人重建的锁。
-                // 使用栈结构存储，支持同线程同 key 的嵌套加锁场景。
-                lockValues.get().computeIfAbsent(key, k -> new ArrayDeque<>()).push(lockValue);
+                // 首次获取成功，记录 owner token，解锁时用它和 Redis 当前值比对，避免误删已续租或被他人重建的锁。
+                stack.push(lockValue);
                 return true;
             }
 
@@ -84,10 +93,13 @@ public class RedisLockHandler implements LockHandler {
                 Thread.sleep(100);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
+                cleanupIfEmpty(key, stack);
                 return false;
             }
         } while (System.currentTimeMillis() - start < waitMillis);
 
+        // 首次获取失败，清理刚创建的空栈，避免 ThreadLocal 中残留空条目
+        cleanupIfEmpty(key, stack);
         return false;
     }
 
@@ -103,16 +115,30 @@ public class RedisLockHandler implements LockHandler {
         }
 
         String lockValue = stack.pop();
-        if (stack.isEmpty()) {
+        boolean outermost = stack.isEmpty();
+        if (outermost) {
             values.remove(key);
         }
 
         try {
-            // 删除动作必须和 token 校验放在同一个 Lua 脚本里，才能保证“检查后删除”是原子的。
-            redisTemplate.execute(RELEASE_SCRIPT, Collections.singletonList(key), lockValue);
+            // 仅最外层释放时才真正删除 Redis 锁；重入的内层释放只递减本地持有计数。
+            // 删除动作必须和 token 校验放在同一个 Lua 脚本里，才能保证"检查后删除"是原子的。
+            if (outermost) {
+                redisTemplate.execute(RELEASE_SCRIPT, Collections.singletonList(key), lockValue);
+            }
         } catch (Exception e) {
             log.warn("Redis unlock failed for key: {}", key, e);
         } finally {
+            if (values.isEmpty()) {
+                lockValues.remove();
+            }
+        }
+    }
+
+    private void cleanupIfEmpty(String key, Deque<String> stack) {
+        if (stack.isEmpty()) {
+            Map<String, Deque<String>> values = lockValues.get();
+            values.remove(key);
             if (values.isEmpty()) {
                 lockValues.remove();
             }

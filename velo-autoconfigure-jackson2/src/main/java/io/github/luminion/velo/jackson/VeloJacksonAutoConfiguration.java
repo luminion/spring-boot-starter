@@ -20,7 +20,7 @@ import io.github.luminion.velo.jackson.deserializer.JacksonStringDeserializer;
 import io.github.luminion.velo.jackson.serializer.ConfigurableBigDecimalSerializer;
 import io.github.luminion.velo.jackson.serializer.JacksonStringSerializer;
 import io.github.luminion.velo.jackson.serializer.JsonEnumSerializerModifier;
-import io.github.luminion.velo.jackson.serializer.UnsafeBigIntegerToStringSerializer;
+import io.github.luminion.velo.jackson.serializer.BigIntegerToStringSerializer;
 import io.github.luminion.velo.jackson.serializer.LongToStringSerializer;
 import io.github.luminion.velo.xss.XssCleaner;
 import org.springframework.beans.factory.BeanFactory;
@@ -90,7 +90,7 @@ public class VeloJacksonAutoConfiguration {
                     LongToStringSerializer longSerializer = new LongToStringSerializer();
                     builder.serializerByType(Long.class, longSerializer)
                             .serializerByType(Long.TYPE, longSerializer)
-                            .serializerByType(BigInteger.class, new UnsafeBigIntegerToStringSerializer());
+                            .serializerByType(BigInteger.class, new BigIntegerToStringSerializer());
                 }
                 if (jacksonProperties.isSerializeBigDecimalAsString() || jacksonProperties.isBigDecimalStripTrailingZeros()) {
                     builder.serializerByType(BigDecimal.class, new ConfigurableBigDecimalSerializer(

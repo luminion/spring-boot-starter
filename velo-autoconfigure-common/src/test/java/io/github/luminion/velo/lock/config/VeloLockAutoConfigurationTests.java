@@ -5,7 +5,6 @@ import io.github.luminion.velo.spi.Fingerprinter;
 import io.github.luminion.velo.lock.LockHandler;
 import io.github.luminion.velo.lock.VeloLockAutoConfiguration;
 import io.github.luminion.velo.lock.aspect.LockAspect;
-import io.github.luminion.velo.lock.support.CaffeineLockHandler;
 import io.github.luminion.velo.lock.support.JdkLockHandler;
 import io.github.luminion.velo.lock.support.RedisLockHandler;
 import io.github.luminion.velo.lock.support.RedissonLockHandler;
@@ -33,9 +32,10 @@ class VeloLockAutoConfigurationTests {
 
     @Test
     void shouldCreateDefaultLockHandler() {
+        // 本地后端统一为 JDK 实现：AUTO 默认落到 Caffeine 档位，但该档位复用 JdkLockHandler
         contextRunner
                 .run(context -> assertThat(context.getBean(LockHandler.class))
-                        .isInstanceOf(CaffeineLockHandler.class));
+                        .isInstanceOf(JdkLockHandler.class));
     }
 
     @Test

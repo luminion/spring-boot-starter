@@ -58,6 +58,25 @@ class VeloJacksonAutoConfigurationTests {
     }
 
     @Test
+    void shouldSerializeBigIntegerAsStringUnconditionallyEvenForSmallValues() throws Exception {
+        contextRunner
+                .withBean(VeloProperties.class, VeloProperties::new)
+                .run(context -> {
+                    ObjectMapper objectMapper = objectMapper(context);
+                    // 小值 BigInteger 也应转字符串，保证与 Long 行为一致、契约稳定
+                    JsonNode small = objectMapper.readTree(objectMapper.writeValueAsString(
+                            new BigIntegerPayload(java.math.BigInteger.valueOf(5))));
+                    assertThat(small.get("value").isTextual()).isTrue();
+                    assertThat(small.get("value").textValue()).isEqualTo("5");
+
+                    JsonNode large = objectMapper.readTree(objectMapper.writeValueAsString(
+                            new BigIntegerPayload(new java.math.BigInteger("100000000000000000000"))));
+                    assertThat(large.get("value").isTextual()).isTrue();
+                    assertThat(large.get("value").textValue()).isEqualTo("100000000000000000000");
+                });
+    }
+
+    @Test
     void shouldAllowDisablingLongStringSerialization() throws Exception {
         VeloProperties properties = new VeloProperties();
         properties.getJackson().setSerializeLongAsString(false);
@@ -437,6 +456,18 @@ class VeloJacksonAutoConfigurationTests {
 
         public BigDecimal getAmount() {
             return amount;
+        }
+    }
+
+    static class BigIntegerPayload {
+        private final java.math.BigInteger value;
+
+        BigIntegerPayload(java.math.BigInteger value) {
+            this.value = value;
+        }
+
+        public java.math.BigInteger getValue() {
+            return value;
         }
     }
 
