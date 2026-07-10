@@ -4,6 +4,7 @@ import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.log.aspect.InvokeLogAspect;
 import io.github.luminion.velo.log.aspect.SlowLogAspect;
 import io.github.luminion.velo.log.support.Slf4JInvocationLogWriter;
+import io.github.luminion.velo.log.trace.MdcTaskDecorator;
 import io.github.luminion.velo.spi.RuntimeJsonSerializer;
 import org.aspectj.weaver.Advice;
 import org.springframework.beans.factory.ObjectProvider;
@@ -12,6 +13,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
+import org.springframework.core.task.TaskDecorator;
 
 /**
  * 日志自动配置。
@@ -20,6 +22,17 @@ import org.springframework.context.annotation.Bean;
 @ConditionalOnClass(Advice.class)
 @ConditionalOnProperty(prefix = "velo.log", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloLogAutoConfiguration {
+
+    /**
+     * 传播 MDC(含 traceId) 到 {@code @Async} 线程池。用户已自定义 TaskDecorator 时自动退让，不覆盖、不冲突。
+     * 无需任何额外依赖；trace 关闭时不注册。
+     */
+    @Bean
+    @ConditionalOnMissingBean(TaskDecorator.class)
+    @ConditionalOnProperty(prefix = "velo.log.trace", name = "enabled", havingValue = "true", matchIfMissing = true)
+    public TaskDecorator mdcTaskDecorator() {
+        return new MdcTaskDecorator();
+    }
 
     @Bean
     @ConditionalOnMissingBean

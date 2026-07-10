@@ -5,6 +5,8 @@ import io.github.luminion.velo.log.annotation.LogPayloadIgnore;
 import io.github.luminion.velo.spi.RuntimeJsonSerializer;
 import io.github.luminion.velo.util.InvocationUtils;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
@@ -18,6 +20,8 @@ import java.util.concurrent.TimeUnit;
  * Shared helpers for unified invocation logging.
  */
 public final class InvocationLogSupport {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(InvocationLogSupport.class);
 
     public static final String EMPTY_PAYLOAD = "-";
 
@@ -57,6 +61,16 @@ public final class InvocationLogSupport {
                 properties.getMaxPayloadLength()));
     }
 
+    public static String safeBuildArgsText(MethodSignature signature, Object target, Object[] args,
+            RuntimeJsonSerializer runtimeJsonSerializer, VeloProperties.InvocationProperties properties) {
+        try {
+            return buildArgsText(signature, target, args, runtimeJsonSerializer, properties);
+        } catch (RuntimeException ex) {
+            LOGGER.warn("Invocation argument serialization failed, payload omitted: {}", ex.toString());
+            return EMPTY_PAYLOAD;
+        }
+    }
+
     public static String buildResultText(Object result, RuntimeJsonSerializer runtimeJsonSerializer,
             VeloProperties.InvocationProperties properties) {
         if (!properties.isIncludeResult()) {
@@ -64,6 +78,24 @@ public final class InvocationLogSupport {
         }
         Object resultBody = result instanceof ResponseEntity<?> ? ((ResponseEntity<?>) result).getBody() : result;
         return normalizePayload(limit(runtimeJsonSerializer.toJson(resultBody), properties.getMaxPayloadLength()));
+    }
+
+    public static String safeBuildResultText(Object result, RuntimeJsonSerializer runtimeJsonSerializer,
+            VeloProperties.InvocationProperties properties) {
+        try {
+            return buildResultText(result, runtimeJsonSerializer, properties);
+        } catch (RuntimeException ex) {
+            LOGGER.warn("Invocation result serialization failed, payload omitted: {}", ex.toString());
+            return EMPTY_PAYLOAD;
+        }
+    }
+
+    public static void safeWrite(InvocationLogWriter invocationLogWriter, InvocationLogRecord record) {
+        try {
+            invocationLogWriter.write(record);
+        } catch (RuntimeException ex) {
+            LOGGER.warn("Invocation log writer failed for {}, record dropped: {}", record.getTarget(), ex.toString());
+        }
     }
 
     public static String normalizePayload(String text) {

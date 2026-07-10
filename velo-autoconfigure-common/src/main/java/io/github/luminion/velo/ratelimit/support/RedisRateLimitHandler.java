@@ -2,7 +2,7 @@ package io.github.luminion.velo.ratelimit.support;
 
 import io.github.luminion.velo.ratelimit.RateLimitHandler;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.core.script.RedisScript;
 
@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class RedisRateLimitHandler implements RateLimitHandler {
 
-    private final RedisTemplate<Object, Object> redisTemplate;
+    private final StringRedisTemplate redisTemplate;
     private static final RedisScript<Long> RATE_LIMIT_SCRIPT = createLimitScript();
 
     @Override
@@ -23,18 +23,16 @@ public class RedisRateLimitHandler implements RateLimitHandler {
 
         // 脚本内部按毫秒时间差补充令牌，这里提前把速率换算到“每毫秒恢复多少令牌”。
         double fillRate = capacity / (double) intervalMillis;
-        long nowMs = System.currentTimeMillis();
-
         // 令牌桶至少保留一个完整窗口，再加一点冗余，避免边界时间频繁初始化。
-        long expireSec = Math.max(1L, (intervalMillis + 999L) / 1000L) + 10L;
+        long expireSec = Math.max(1L, intervalMillis / 1000L + (intervalMillis % 1000L == 0L ? 0L : 1L));
+        expireSec = expireSec > Long.MAX_VALUE - 10L ? Long.MAX_VALUE : expireSec + 10L;
 
         Long result = redisTemplate.execute(
                 RATE_LIMIT_SCRIPT,
                 Collections.singletonList(key),
-                capacity,
-                fillRate,
-                nowMs,
-                expireSec
+                Long.toString(capacity),
+                Double.toString(fillRate),
+                Long.toString(expireSec)
         );
 
         return Long.valueOf(1L).equals(result);
@@ -45,8 +43,9 @@ public class RedisRateLimitHandler implements RateLimitHandler {
                 "local key        = KEYS[1]\n" +
                 "local capacity   = tonumber(ARGV[1])\n" +
                 "local fill_rate  = tonumber(ARGV[2])\n" +
-                "local now_ms     = tonumber(ARGV[3])\n" +
-                "local expire_sec = tonumber(ARGV[4])\n" +
+                "local expire_sec = tonumber(ARGV[3])\n" +
+                "local redis_time = redis.call('time')\n" +
+                "local now_ms     = redis_time[1] * 1000 + math.floor(redis_time[2] / 1000)\n" +
                 "\n" +
                 "local bucket    = redis.call('hmget', key, 'tokens', 'last_ms')\n" +
                 "local tokens    = tonumber(bucket[1])\n" +

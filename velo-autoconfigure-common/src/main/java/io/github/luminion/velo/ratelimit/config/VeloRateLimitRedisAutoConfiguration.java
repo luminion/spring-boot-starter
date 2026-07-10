@@ -4,13 +4,12 @@ import io.github.luminion.velo.ConcurrencyBackend;
 import io.github.luminion.velo.condition.ConditionalOnConcurrencyBackend;
 import io.github.luminion.velo.ratelimit.RateLimitHandler;
 import io.github.luminion.velo.ratelimit.support.RedisRateLimitHandler;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration;
 import org.springframework.context.annotation.Bean;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 /**
  * 限流自动配置 (Redis 实现)
@@ -27,10 +26,10 @@ public class VeloRateLimitRedisAutoConfiguration {
 
     @Bean
     @ConditionalOnConcurrencyBackend(prefix = "velo.rate-limit", value = ConcurrencyBackend.REDIS,
-            autoBeanNames = "redisTemplate")
+            autoBeanNames = "stringRedisTemplate")
     @ConditionalOnMissingBean(RateLimitHandler.class)
-    public RateLimitHandler rateLimitHandler(@Qualifier("redisTemplate") RedisTemplate<Object, Object> redisTemplate) {
-        return new RedisRateLimitHandler(redisTemplate);
+    public RateLimitHandler rateLimitHandler(StringRedisTemplate stringRedisTemplate) {
+        return new RedisRateLimitHandler(stringRedisTemplate);
     }
 
 }

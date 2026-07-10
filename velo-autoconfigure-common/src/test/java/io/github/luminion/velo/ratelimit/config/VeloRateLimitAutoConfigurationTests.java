@@ -10,11 +10,13 @@ import io.github.luminion.velo.ratelimit.support.JdkRateLimitHandler;
 import io.github.luminion.velo.ratelimit.support.RedisRateLimitHandler;
 import io.github.luminion.velo.ratelimit.support.RedissonRateLimitHandler;
 import io.github.luminion.velo.test.TestRedisTemplate;
+import io.github.luminion.velo.test.TestStringRedisTemplate;
 import org.junit.jupiter.api.Test;
 import org.redisson.api.RedissonClient;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 import java.util.concurrent.TimeUnit;
 
@@ -43,17 +45,17 @@ class VeloRateLimitAutoConfigurationTests {
         contextRunner
                 .withBean(RedissonClient.class, () -> mock(RedissonClient.class))
                 .withBean("redisTemplate", RedisTemplate.class, TestRedisTemplate::new)
-                .withBean("stringObjectRedisTemplate", RedisTemplate.class, TestRedisTemplate::new)
+                .withBean("stringRedisTemplate", StringRedisTemplate.class, TestStringRedisTemplate::new)
                 .run(context -> assertThat(context.getBean(RateLimitHandler.class))
                         .isInstanceOf(RedissonRateLimitHandler.class));
     }
 
     @Test
-    void shouldUseNamedRedisTemplateWhenRedissonBackendIsDisabled() {
+    void shouldUseStringRedisTemplateWhenRedissonBackendIsDisabled() {
         contextRunner
                 .withPropertyValues("velo.rate-limit.backend=redis")
                 .withBean("redisTemplate", RedisTemplate.class, TestRedisTemplate::new)
-                .withBean("stringObjectRedisTemplate", RedisTemplate.class, TestRedisTemplate::new)
+                .withBean("stringRedisTemplate", StringRedisTemplate.class, TestStringRedisTemplate::new)
                 .run(context -> assertThat(context.getBean(RateLimitHandler.class))
                         .isInstanceOf(RedisRateLimitHandler.class));
     }

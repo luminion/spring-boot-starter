@@ -127,16 +127,6 @@ public class VeloWebExceptionHandler<R> implements Ordered {
     }
 
     /**
-     * 非法参数异常
-     */
-    @ExceptionHandler(IllegalArgumentException.class)
-    public R handleIllegalArgumentException(IllegalArgumentException e) {
-        log.debug("[IllegalArgument] message: {}", e.getMessage());
-        // getMessage() 可能为 null，兜底避免注入的 failed 实现对入参解引用时 NPE
-        return failed.apply(Objects.toString(e.getMessage(), "请求参数非法"));
-    }
-
-    /**
      * 业务异常：限流
      */
     @ExceptionHandler(RateLimitException.class)

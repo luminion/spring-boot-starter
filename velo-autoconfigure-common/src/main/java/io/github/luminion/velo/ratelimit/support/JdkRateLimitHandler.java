@@ -36,14 +36,21 @@ public class JdkRateLimitHandler implements RateLimitHandler, DisposableBean {
     public boolean tryAcquire(String key, double rate, long timeout, TimeUnit unit) {
         RateLimitWindow window = RateLimitWindow.from(rate, timeout, unit);
         long now = System.nanoTime();
-        boolean acquired = bucketMap.computeIfAbsent(key, unused -> new TokenBucket())
-                .tryAcquire(window.capacity(), window.intervalNanos(), now);
+        AtomicBoolean acquired = new AtomicBoolean(false);
+        bucketMap.compute(key, (unused, existing) -> {
+            TokenBucket bucket = existing != null ? existing : new TokenBucket();
+            acquired.set(bucket.tryAcquire(window.capacity(), window.intervalNanos(), now));
+            return bucket;
+        });
         if (bucketMap.mappingCount() > 1024 && isCleaning.compareAndSet(false, true)) {
             try {
                 cleanupExecutor.execute(() -> {
                     try {
                         long current = System.nanoTime();
-                        bucketMap.entrySet().removeIf(entry -> entry.getValue().isExpired(current));
+                        for (String bucketKey : bucketMap.keySet()) {
+                            bucketMap.computeIfPresent(bucketKey,
+                                    (unused, bucket) -> bucket.isExpired(current) ? null : bucket);
+                        }
                     } finally {
                         isCleaning.set(false);
                     }
@@ -53,7 +60,7 @@ public class JdkRateLimitHandler implements RateLimitHandler, DisposableBean {
                 isCleaning.set(false);
             }
         }
-        return acquired;
+        return acquired.get();
     }
 
     @Override
@@ -66,9 +73,10 @@ public class JdkRateLimitHandler implements RateLimitHandler, DisposableBean {
         private long lastRefillNanos;
         private long capacity;
         private long intervalNanos;
-        private long evictAtNanos;
+        private long lastAccessNanos;
+        private long idleEvictNanos;
 
-        private synchronized boolean tryAcquire(long resolvedCapacity, long resolvedIntervalNanos, long now) {
+        private boolean tryAcquire(long resolvedCapacity, long resolvedIntervalNanos, long now) {
             if (lastRefillNanos == 0L) {
                 capacity = resolvedCapacity;
                 intervalNanos = resolvedIntervalNanos;
@@ -87,7 +95,8 @@ public class JdkRateLimitHandler implements RateLimitHandler, DisposableBean {
                 tokens = Math.min(capacity, tokens + newTokens);
                 lastRefillNanos = now;
             }
-            evictAtNanos = saturatingAdd(now, Math.max(MIN_IDLE_EVICT_NANOS, intervalNanos));
+            lastAccessNanos = now;
+            idleEvictNanos = Math.max(MIN_IDLE_EVICT_NANOS, intervalNanos);
 
             if (tokens >= 1D) {
                 tokens -= 1D;
@@ -96,13 +105,8 @@ public class JdkRateLimitHandler implements RateLimitHandler, DisposableBean {
             return false;
         }
 
-        private synchronized boolean isExpired(long now) {
-            return evictAtNanos > 0L && now >= evictAtNanos;
-        }
-
-        private long saturatingAdd(long left, long right) {
-            long result = left + right;
-            return result < 0L ? Long.MAX_VALUE : result;
+        private boolean isExpired(long now) {
+            return lastAccessNanos != 0L && now - lastAccessNanos >= idleEvictNanos;
         }
     }
 }

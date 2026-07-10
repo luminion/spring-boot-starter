@@ -15,13 +15,10 @@ import java.util.concurrent.TimeUnit;
  */
 public class CaffeineIdempotentHandler implements IdempotentHandler {
 
-    /**
-     * 容器设置兜底过期，防止内存泄漏
-     * 具体的幂等时效由 Value (时间戳) 控制
-     */
-    // 核心优化：使用自定义过期策略 (Expiry) 来动态控制每个 Key 的存活时间
+    // 仅按 TTL 过期，不设 maximumSize：容量驱逐会赶走仍在幂等窗口内的记录，
+    // 导致被驱逐 key 的重复请求重新通过，破坏“TTL 内拒绝重复提交”语义。
+    // 每个 key 的存活时间由自定义 Expiry 按其 TTL 独立控制，到期即自动清理。
     private final Cache<String, Marker> cache = Caffeine.newBuilder()
-            .maximumSize(50_000)
             .expireAfter(new Expiry<String, Marker>() {
                 @Override
                 public long expireAfterCreate(String key, Marker marker, long currentTime) {

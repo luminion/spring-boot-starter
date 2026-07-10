@@ -1,7 +1,6 @@
 package io.github.luminion.velo.lock.support;
 
 import io.github.luminion.velo.lock.LockHandler;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -13,6 +12,7 @@ import java.util.Deque;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -26,7 +26,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * 需显式调大 lease 或改用 Redisson 看门狗。
  */
 @Slf4j
-@RequiredArgsConstructor
 public class RedisLockHandler implements LockHandler {
 
     private static final String RELEASE_LUA = "if redis.call('get', KEYS[1]) == ARGV[1] then " +
@@ -38,11 +37,25 @@ public class RedisLockHandler implements LockHandler {
 
     // 看门狗降级后的默认租约，与 @Lock 注解默认 lease(30s) 保持一致
     private static final long WATCHDOG_FALLBACK_LEASE_MILLIS = TimeUnit.SECONDS.toMillis(30);
+    private static final Duration DEFAULT_RETRY_INTERVAL = Duration.ofMillis(10);
 
     private final StringRedisTemplate redisTemplate;
+    private final long retryIntervalNanos;
     private final ThreadLocal<Map<String, Deque<String>>> lockValues = ThreadLocal.withInitial(HashMap::new);
     // 看门狗降级告警只打一次，避免每次加锁刷屏
     private final AtomicBoolean watchdogFallbackWarned = new AtomicBoolean(false);
+
+    public RedisLockHandler(StringRedisTemplate redisTemplate) {
+        this(redisTemplate, DEFAULT_RETRY_INTERVAL);
+    }
+
+    public RedisLockHandler(StringRedisTemplate redisTemplate, Duration retryInterval) {
+        if (retryInterval == null || retryInterval.isZero() || retryInterval.isNegative()) {
+            throw new IllegalArgumentException("Redis lock retry interval must be greater than zero.");
+        }
+        this.redisTemplate = redisTemplate;
+        this.retryIntervalNanos = retryInterval.toNanos();
+    }
 
     @Override
     public boolean lock(String key, long waitTime, long leaseTime, TimeUnit unit) {
@@ -53,7 +66,7 @@ public class RedisLockHandler implements LockHandler {
             return true;
         }
 
-        long waitMillis = unit.toMillis(waitTime);
+        long waitNanos = unit.toNanos(waitTime);
         // 该后端基于 setIfAbsent 固定 TTL，无续约线程，不支持看门狗(-1)；
         // 降级为固定租约避免负 TTL 直接报错，并提示改用 Redisson 以获得自动续约。
         long leaseMillis;
@@ -67,9 +80,9 @@ public class RedisLockHandler implements LockHandler {
         } else {
             leaseMillis = unit.toMillis(leaseTime);
         }
-        long start = System.currentTimeMillis();
+        long startNanos = System.nanoTime();
 
-        do {
+        while (true) {
             String lockValue = UUID.randomUUID().toString();
             Boolean success = redisTemplate.opsForValue().setIfAbsent(key, lockValue, leaseMillis, TimeUnit.MILLISECONDS);
             if (success == null) {
@@ -85,18 +98,22 @@ public class RedisLockHandler implements LockHandler {
                 return true;
             }
 
-            if (waitMillis <= 0) {
+            if (waitNanos <= 0L) {
                 break;
             }
 
+            long remainingNanos = waitNanos - (System.nanoTime() - startNanos);
+            if (remainingNanos <= 0L) {
+                break;
+            }
             try {
-                Thread.sleep(100);
+                TimeUnit.NANOSECONDS.sleep(Math.min(remainingNanos, retryIntervalNanos));
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 cleanupIfEmpty(key, stack);
                 return false;
             }
-        } while (System.currentTimeMillis() - start < waitMillis);
+        }
 
         // 首次获取失败，清理刚创建的空栈，避免 ThreadLocal 中残留空条目
         cleanupIfEmpty(key, stack);

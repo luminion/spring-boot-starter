@@ -13,6 +13,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * XSS 自动配置。
@@ -21,6 +23,8 @@ import org.springframework.context.annotation.Configuration;
 @ConditionalOnWebApplication
 @ConditionalOnProperty(prefix = "velo.web.xss", name = "enabled", havingValue = "true")
 public class VeloXssAutoConfiguration {
+
+    private static final Logger log = LoggerFactory.getLogger(VeloXssAutoConfiguration.class);
 
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnClass(name = "org.jsoup.Jsoup")
@@ -36,6 +40,14 @@ public class VeloXssAutoConfiguration {
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnMissingClass("org.jsoup.Jsoup")
     static class SpringXssConfiguration {
+
+        SpringXssConfiguration(VeloProperties properties) {
+            XssStrategy strategy = properties.getWeb().getXss().getStrategy();
+            if (strategy != XssStrategy.NONE && strategy != XssStrategy.ESCAPE) {
+                log.warn("[Velo Starter] XSS protection is enabled with strategy {}, but jsoup is not present. " +
+                        "No XssCleaner will be registered. Add org.jsoup:jsoup or use strategy=ESCAPE.", strategy);
+            }
+        }
 
         @Bean
         @ConditionalOnMissingBean

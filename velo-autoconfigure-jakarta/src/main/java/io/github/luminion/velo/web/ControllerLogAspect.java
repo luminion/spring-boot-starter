@@ -53,21 +53,24 @@ public class ControllerLogAspect implements Ordered {
         boolean ignoreArgs = logPayloadIgnore != null && logPayloadIgnore.args();
         boolean ignoreResult = logPayloadIgnore != null && logPayloadIgnore.result();
         String argsText = ignoreArgs ? InvocationLogSupport.EMPTY_PAYLOAD
-                : InvocationLogSupport.buildArgsText(signature, joinPoint.getTarget(), joinPoint.getArgs(),
+                : InvocationLogSupport.safeBuildArgsText(signature, joinPoint.getTarget(), joinPoint.getArgs(),
                         runtimeJsonSerializer, invocationProperties);
         long start = System.nanoTime();
+        Object result;
         try {
-            Object result = joinPoint.proceed();
-            InvocationLogRecord record = buildRecord(loggerName, target, argsText, ignoreResult ? InvocationLogSupport.EMPTY_PAYLOAD
-                    : InvocationLogSupport.buildResultText(result,
-                    runtimeJsonSerializer, invocationProperties), InvocationLogSupport.elapsedMs(start), null);
-            invocationLogWriter.write(record);
-            return result;
+            result = joinPoint.proceed();
         } catch (Throwable ex) {
             InvocationLogRecord record = buildRecord(loggerName, target, argsText, null, InvocationLogSupport.elapsedMs(start), ex);
-            invocationLogWriter.write(record);
+            InvocationLogSupport.safeWrite(invocationLogWriter, record);
             throw ex;
         }
+
+        InvocationLogRecord record = buildRecord(loggerName, target, argsText,
+                ignoreResult ? InvocationLogSupport.EMPTY_PAYLOAD
+                        : InvocationLogSupport.safeBuildResultText(result, runtimeJsonSerializer, invocationProperties),
+                InvocationLogSupport.elapsedMs(start), null);
+        InvocationLogSupport.safeWrite(invocationLogWriter, record);
+        return result;
     }
 
     private InvocationLogRecord buildRecord(String loggerName, String target, String argsText, String resultText, long costMs,

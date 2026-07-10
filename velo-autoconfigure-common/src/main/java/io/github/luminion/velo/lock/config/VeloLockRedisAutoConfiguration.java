@@ -8,6 +8,8 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.convert.DurationStyle;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
@@ -28,8 +30,9 @@ public class VeloLockRedisAutoConfiguration {
     @ConditionalOnConcurrencyBackend(prefix = "velo.lock", value = ConcurrencyBackend.REDIS,
             autoBeanNames = "stringRedisTemplate")
     @ConditionalOnMissingBean(LockHandler.class)
-    public LockHandler lockHandler(StringRedisTemplate stringRedisTemplate) {
-        return new RedisLockHandler(stringRedisTemplate);
+    public LockHandler lockHandler(StringRedisTemplate stringRedisTemplate,
+            @Value("${velo.lock.retry-interval:10ms}") String retryInterval) {
+        return new RedisLockHandler(stringRedisTemplate, DurationStyle.detectAndParse(retryInterval));
     }
 
 }

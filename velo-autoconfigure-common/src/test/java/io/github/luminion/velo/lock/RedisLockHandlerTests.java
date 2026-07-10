@@ -8,6 +8,7 @@ import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.data.redis.core.script.RedisScript;
 
 import java.util.List;
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -90,5 +91,26 @@ class RedisLockHandlerTests {
 
         handler.unlock("order:1");
         handler.unlock("order:1");
+    }
+
+    @Test
+    void shouldRetryWithinShortWaitTimeout() {
+        handler = new RedisLockHandler(redisTemplate, Duration.ofMillis(1));
+        when(valueOperations.setIfAbsent(anyString(), anyString(), anyLong(), any(TimeUnit.class)))
+                .thenReturn(false, true);
+
+        assertThat(handler.lock("order:1", 50, 30, TimeUnit.MILLISECONDS)).isTrue();
+        verify(valueOperations, times(2))
+                .setIfAbsent(eq("order:1"), anyString(), anyLong(), any(TimeUnit.class));
+
+        handler.unlock("order:1");
+    }
+
+    @Test
+    void shouldRejectNonPositiveRetryInterval() {
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                        () -> new RedisLockHandler(redisTemplate, Duration.ZERO))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("retry interval");
     }
 }

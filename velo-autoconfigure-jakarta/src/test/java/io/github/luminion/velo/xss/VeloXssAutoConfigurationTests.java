@@ -45,4 +45,15 @@ class VeloXssAutoConfigurationTests {
                     assertThat(context).hasSingleBean(XssStringConverter.class);
                 });
     }
+
+    @Test
+    void shouldNotSilentlyRegisterFallbackForJsoupStrategy() {
+        contextRunner
+                .withClassLoader(new FilteredClassLoader("org.jsoup"))
+                .withPropertyValues("velo.web.xss.enabled=true")
+                .run(context -> {
+                    assertThat(context).doesNotHaveBean(XssCleaner.class);
+                    assertThat(context).doesNotHaveBean(XssStringConverter.class);
+                });
+    }
 }

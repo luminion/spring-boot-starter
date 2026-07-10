@@ -155,6 +155,11 @@ public class VeloProperties {
          * Prefix used by lock related keys.
          */
         private String prefix = "lock:";
+
+        /**
+         * Polling interval used by the simple Redis lock while waiting for acquisition.
+         */
+        private Duration retryInterval = Duration.ofMillis(10);
     }
 
     @Data
@@ -200,7 +205,14 @@ public class VeloProperties {
          * For example, a value of 10 means each entry's TTL is randomly shifted by up to ±10%
          * when it is written, independently per key. Set to 0 to disable jitter. Default is 0.
          */
-        private int ttlJitterPercentage = 0;
+        private int ttlJitterPercentage;
+
+        public void setTtlJitterPercentage(int ttlJitterPercentage) {
+            if (ttlJitterPercentage < 0 || ttlJitterPercentage > 100) {
+                throw new IllegalArgumentException("Cache TTL jitter percentage must be between 0 and 100.");
+            }
+            this.ttlJitterPercentage = ttlJitterPercentage;
+        }
 
         /**
          * Per-cache TTL overrides.

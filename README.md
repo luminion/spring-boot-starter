@@ -193,7 +193,7 @@ public UserDTO getById(Long id) {
 
 缓存雪崩防护（TTL 抖动）：
 
-- `ttl-jitter-percentage` 默认 `0`（关闭）。设为 `10` 表示每条缓存写入时 TTL 在原值 ±10% 内随机偏移
+- `ttl-jitter-percentage` 默认 `0`（关闭），有效范围为 `0..100`。设为 `10` 表示每条缓存写入时 TTL 在原值 ±10% 内随机偏移；超出范围会导致应用启动失败
 - 抖动在**每次写入时按 key 独立计算**，因此同一缓存名称下不同 key 也会获得不同过期时间，可同时缓解「不同缓存类型同时过期」和「同一类型大量 key 同时过期」两类雪崩
 - 抖动只影响实际写入 Redis 的过期时间，不改变 `default-ttl` / `ttl.<cacheName>` 的配置语义
 
@@ -358,6 +358,7 @@ public Object query(Long userId) {
 - `ttl + unit` 定义窗口大小
 - `backend` 与幂等一致，也支持 `AUTO/REDISSON/REDIS/CAFFEINE/JDK`
 - `AUTO` 模式下默认选择顺序同幂等：`REDISSON -> REDIS -> CAFFEINE -> JDK`
+- `REDIS` 后端使用 Boot 默认的 `stringRedisTemplate` 执行 Lua，脚本通过 Redis `TIME` 获取统一时钟，不受应用节点时间偏差影响
 
 关于 `key` 的分桶语义（重要）：
 
@@ -404,6 +405,7 @@ velo:
     enabled: true
     backend: AUTO
     prefix: "lock:"
+    retry-interval: 10ms
 ```
 
 使用示例：
@@ -422,6 +424,7 @@ public void pay(Long orderId) {
 - `backend` 也支持 `AUTO`、`REDISSON`、`REDIS`、`CAFFEINE`、`JDK`
 - `AUTO` 默认顺序为 `REDISSON -> REDIS -> CAFFEINE -> JDK`
 - `waitTimeout` 默认 `0`，表示拿不到锁立即失败
+- `retry-interval` 默认 `10ms`，仅用于简单 Redis 后端等待锁时的轮询；值越小获取越及时，但 Redis 请求频率越高
 - `lease` 默认 `30s`
 - `REDIS` / `REDISSON` 更适合分布式场景，`CAFFEINE` / `JDK` 只保证单 JVM 内互斥
 - 本地锁只有一份实现：Caffeine 是纯缓存库、不提供互斥锁 API，因此 `CAFFEINE` 档位与 `JDK` 完全一致（复用同一实现），`backend=CAFFEINE` 仍可用，只是不再单独维护
@@ -443,6 +446,8 @@ public void pay(Long orderId) {
 ### 7. 日志
 
 Velo 提供一套统一调用日志能力，Controller、Feign 与 `@InvokeLog` 都按同一格式输出一次调用的最终状态。
+
+日志序列化器或 `InvocationLogWriter` 发生运行时异常时会记录内部 WARN 并丢弃本次日志，不会阻止业务执行或覆盖原始业务异常。
 
 基础 starter 默认可用，无需额外依赖。
 
@@ -562,8 +567,8 @@ public class UserQuery {
 
 - `velo.web.xss.enabled` 默认 `false`
 - `strategy` 可选 `NONE`、`ESCAPE`、`SIMPLE_TEXT`、`BASIC`、`BASIC_WITH_IMAGES`、`RELAXED`
-- `ESCAPE` 不依赖 `jsoup`，其余 HTML 清洗策略仍建议引入 `jsoup`
-- 开启后会注册 `XssCleaner`；`ESCAPE` 且无 `jsoup` 时会走 Spring 转义
+- `ESCAPE` 不依赖 `jsoup`；其他 HTML 清洗策略必须引入 `jsoup`
+- `ESCAPE` 且无 `jsoup` 时会走 Spring 转义；其他策略缺少 `jsoup` 时只打印 WARN，不注册 `XssCleaner`，也不会自动降级
 - 清洗发生在 Web MVC 的字符串参数绑定阶段，包括 query/form/path 和普通对象参数中通过 MVC binder 绑定的 `String` 字段；不会接管 Jackson JSON 请求体反序列化，也不会全局处理所有字符串字段
 
 ### 8. Jackson

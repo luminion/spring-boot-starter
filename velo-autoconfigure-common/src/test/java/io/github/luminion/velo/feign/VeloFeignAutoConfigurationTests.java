@@ -28,6 +28,7 @@ import java.util.Collection;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -156,6 +157,115 @@ class VeloFeignAutoConfigurationTests {
         assertThat(record.getTarget()).isEqualTo("GET /users/fail");
         assertThat(record.getError()).isInstanceOf(IllegalStateException.class);
         assertThat(record.getErrorMessage()).isEqualTo("boom");
+    }
+
+    @Test
+    void shouldKeepSuccessfulInvocationWhenPayloadSerializationFails() throws Throwable {
+        VeloProperties properties = new VeloProperties();
+        CapturingInvocationLogWriter writer = new CapturingInvocationLogWriter();
+        RuntimeJsonSerializer serializer = value -> {
+            throw new IllegalStateException("serialization failed");
+        };
+        FeignLogAspect aspect = new FeignLogAspect(properties, serializer, writer);
+        ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
+        MethodSignature signature = mock(MethodSignature.class);
+        ResponseEntity<DemoPayload> expected = ResponseEntity.ok(new DemoPayload("tom"));
+
+        when(joinPoint.getSignature()).thenReturn(signature);
+        when(joinPoint.getTarget()).thenReturn(new DemoFeignClientImpl());
+        when(joinPoint.getArgs()).thenReturn(new Object[] {1L});
+        when(joinPoint.proceed()).thenReturn(expected);
+        when(signature.getMethod()).thenReturn(DemoFeignClient.class.getDeclaredMethod("findById", Long.class));
+        when(signature.getParameterNames()).thenReturn(new String[] {"id"});
+
+        assertThat(aspect.logFeignInvocation(joinPoint)).isSameAs(expected);
+        assertThat(writer.records).hasSize(1);
+        assertThat(writer.records.get(0).getArgs()).isEqualTo("-");
+        assertThat(writer.records.get(0).getResult()).isEqualTo("-");
+    }
+
+    @Test
+    void shouldKeepSuccessfulInvocationWhenWriterFails() throws Throwable {
+        VeloProperties properties = new VeloProperties();
+        InvocationLogWriter writer = record -> {
+            throw new IllegalStateException("writer failed");
+        };
+        FeignLogAspect aspect = new FeignLogAspect(properties, runtimeJsonSerializer(), writer);
+        ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
+        MethodSignature signature = mock(MethodSignature.class);
+        ResponseEntity<DemoPayload> expected = ResponseEntity.ok(new DemoPayload("tom"));
+
+        when(joinPoint.getSignature()).thenReturn(signature);
+        when(joinPoint.getTarget()).thenReturn(new DemoFeignClientImpl());
+        when(joinPoint.getArgs()).thenReturn(new Object[] {1L});
+        when(joinPoint.proceed()).thenReturn(expected);
+        when(signature.getMethod()).thenReturn(DemoFeignClient.class.getDeclaredMethod("findById", Long.class));
+        when(signature.getParameterNames()).thenReturn(new String[] {"id"});
+
+        assertThat(aspect.logFeignInvocation(joinPoint)).isSameAs(expected);
+    }
+
+    @Test
+    void shouldPreserveBusinessExceptionWhenWriterFails() throws Throwable {
+        VeloProperties properties = new VeloProperties();
+        InvocationLogWriter writer = record -> {
+            throw new IllegalStateException("writer failed");
+        };
+        FeignLogAspect aspect = new FeignLogAspect(properties, runtimeJsonSerializer(), writer);
+        ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
+        MethodSignature signature = mock(MethodSignature.class);
+        IllegalArgumentException businessError = new IllegalArgumentException("business failed");
+
+        when(joinPoint.getSignature()).thenReturn(signature);
+        when(joinPoint.getTarget()).thenReturn(new DemoFeignClientImpl());
+        when(joinPoint.getArgs()).thenReturn(new Object[0]);
+        when(joinPoint.proceed()).thenThrow(businessError);
+        when(signature.getMethod()).thenReturn(DemoFeignClient.class.getDeclaredMethod("fail"));
+        when(signature.getParameterNames()).thenReturn(new String[0]);
+
+        assertThatThrownBy(() -> aspect.logFeignInvocation(joinPoint)).isSameAs(businessError);
+    }
+
+    @Test
+    void shouldPreserveBusinessExceptionWhenArgumentSerializationFails() throws Throwable {
+        VeloProperties properties = new VeloProperties();
+        RuntimeJsonSerializer serializer = value -> {
+            throw new IllegalStateException("serialization failed");
+        };
+        FeignLogAspect aspect = new FeignLogAspect(properties, serializer, new CapturingInvocationLogWriter());
+        ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
+        MethodSignature signature = mock(MethodSignature.class);
+        IllegalArgumentException businessError = new IllegalArgumentException("business failed");
+
+        when(joinPoint.getSignature()).thenReturn(signature);
+        when(joinPoint.getTarget()).thenReturn(new DemoFeignClientImpl());
+        when(joinPoint.getArgs()).thenReturn(new Object[] {1L});
+        when(joinPoint.proceed()).thenThrow(businessError);
+        when(signature.getMethod()).thenReturn(DemoFeignClient.class.getDeclaredMethod("findById", Long.class));
+        when(signature.getParameterNames()).thenReturn(new String[] {"id"});
+
+        assertThatThrownBy(() -> aspect.logFeignInvocation(joinPoint)).isSameAs(businessError);
+    }
+
+    @Test
+    void shouldNotSwallowWriterError() throws Throwable {
+        VeloProperties properties = new VeloProperties();
+        AssertionError writerError = new AssertionError("writer error");
+        InvocationLogWriter writer = record -> {
+            throw writerError;
+        };
+        FeignLogAspect aspect = new FeignLogAspect(properties, runtimeJsonSerializer(), writer);
+        ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
+        MethodSignature signature = mock(MethodSignature.class);
+
+        when(joinPoint.getSignature()).thenReturn(signature);
+        when(joinPoint.getTarget()).thenReturn(new DemoFeignClientImpl());
+        when(joinPoint.getArgs()).thenReturn(new Object[] {1L});
+        when(joinPoint.proceed()).thenReturn(ResponseEntity.ok(new DemoPayload("tom")));
+        when(signature.getMethod()).thenReturn(DemoFeignClient.class.getDeclaredMethod("findById", Long.class));
+        when(signature.getParameterNames()).thenReturn(new String[] {"id"});
+
+        assertThatThrownBy(() -> aspect.logFeignInvocation(joinPoint)).isSameAs(writerError);
     }
 
     @Test

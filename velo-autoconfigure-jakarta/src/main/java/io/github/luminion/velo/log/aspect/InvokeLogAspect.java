@@ -56,26 +56,28 @@ public class InvokeLogAspect implements Ordered {
         boolean ignoreArgs = logPayloadIgnore != null && logPayloadIgnore.args();
         boolean ignoreResult = logPayloadIgnore != null && logPayloadIgnore.result();
         String argsText = ignoreArgs ? InvocationLogSupport.EMPTY_PAYLOAD
-                : InvocationLogSupport.buildArgsText(signature, joinPoint.getTarget(), joinPoint.getArgs(),
+                : InvocationLogSupport.safeBuildArgsText(signature, joinPoint.getTarget(), joinPoint.getArgs(),
                         runtimeJsonSerializer, invocationProperties);
         long start = System.nanoTime();
+        Object result;
         try {
-            Object result = joinPoint.proceed();
-            long elapsedMs = InvocationLogSupport.elapsedMs(start);
-            InvocationLogRecord record = buildRecord(signature, argsText,
-                    ignoreResult ? InvocationLogSupport.EMPTY_PAYLOAD
-                            : InvocationLogSupport.buildResultText(result, runtimeJsonSerializer, invocationProperties),
-                    elapsedMs, null);
-            record.setSlow(isSlow(signature, elapsedMs));
-            invocationLogWriter.write(record);
-            return result;
+            result = joinPoint.proceed();
         } catch (Throwable ex) {
             long elapsedMs = InvocationLogSupport.elapsedMs(start);
             InvocationLogRecord record = buildRecord(signature, argsText, null, elapsedMs, ex);
             record.setSlow(isSlow(signature, elapsedMs));
-            invocationLogWriter.write(record);
+            InvocationLogSupport.safeWrite(invocationLogWriter, record);
             throw ex;
         }
+
+        long elapsedMs = InvocationLogSupport.elapsedMs(start);
+        InvocationLogRecord record = buildRecord(signature, argsText,
+                ignoreResult ? InvocationLogSupport.EMPTY_PAYLOAD
+                        : InvocationLogSupport.safeBuildResultText(result, runtimeJsonSerializer, invocationProperties),
+                elapsedMs, null);
+        record.setSlow(isSlow(signature, elapsedMs));
+        InvocationLogSupport.safeWrite(invocationLogWriter, record);
+        return result;
     }
 
     private InvocationLogRecord buildRecord(MethodSignature signature, String argsText, String resultText, long costMs,

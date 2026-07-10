@@ -39,6 +39,7 @@ class VeloPropertiesDefaultsTest {
         assertThat(properties.getRateLimit().getPrefix()).isEqualTo("rateLimit:");
         assertThat(properties.getLock().getBackend()).isEqualTo(ConcurrencyBackend.AUTO);
         assertThat(properties.getLock().getPrefix()).isEqualTo("lock:");
+        assertThat(properties.getLock().getRetryInterval()).isEqualTo(java.time.Duration.ofMillis(10));
         assertThat(properties.getCache().isEnabled()).isTrue();
         assertThat(properties.getCache().getDefaultTtl()).isEqualTo(java.time.Duration.ofMinutes(5));
         assertThat(properties.getCache().isNullCachingEnabled()).isTrue();
@@ -76,5 +77,14 @@ class VeloPropertiesDefaultsTest {
                             .containsEntry("key", "name")
                             .containsEntry("value", "desc");
                 });
+    }
+
+    @Test
+    void shouldRejectOutOfRangeCacheTtlJitterPercentage() {
+        contextRunner
+                .withPropertyValues("velo.cache.ttl-jitter-percentage=101")
+                .run(context -> assertThat(context.getStartupFailure())
+                        .isNotNull()
+                        .hasRootCauseMessage("Cache TTL jitter percentage must be between 0 and 100."));
     }
 }
