@@ -6,6 +6,7 @@ import io.github.luminion.velo.core.VeloCoreAutoConfiguration;
 import io.github.luminion.velo.log.InvocationLogRecord;
 import io.github.luminion.velo.log.InvocationLogSource;
 import io.github.luminion.velo.log.InvocationLogWriter;
+import io.github.luminion.velo.log.InvocationPhase;
 import io.github.luminion.velo.log.trace.TraceContext;
 import io.github.luminion.velo.spi.RuntimeJsonSerializer;
 import io.github.luminion.velo.spi.provider.HttpMessageConverterRuntimeJsonSerializer;
@@ -151,8 +152,10 @@ class VeloWebAutoConfigurationTests {
         assertThat(arguments.get("id")).isEqualTo(1L);
         assertThat(arguments.get("name")).isEqualTo("Tom");
         assertThat(serializer.values.get(1)).isSameAs(body);
-        assertThat(writer.records).hasSize(1);
+        assertThat(writer.records).hasSize(2);
+        assertThat(writer.records.get(0).getPhase()).isEqualTo(InvocationPhase.ENTRY);
         assertThat(writer.records.get(0).getSource()).isEqualTo(InvocationLogSource.CONTROLLER);
+        assertThat(writer.records.get(1).getPhase()).isEqualTo(InvocationPhase.EXIT);
     }
 
     @Test
@@ -190,7 +193,7 @@ class VeloWebAutoConfigurationTests {
             request.setQueryString("date1=2010-10-10%2010:10:10&localDate=2010-10-10");
         });
 
-        assertThat(writer.records).hasSize(1);
+        assertThat(writer.records).hasSize(2);
         assertThat(writer.records.get(0).getTarget()).isEqualTo("127.0.0.1 GET /converter/query");
         assertThat(writer.records.get(0).getTarget()).doesNotContain("date1=");
     }
@@ -200,7 +203,7 @@ class VeloWebAutoConfigurationTests {
         CapturingInvocationLogWriter writer = invokeWithRequest("GET", "/converter/query/123", request ->
                 request.setAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE, "/converter/query/{id}"));
 
-        assertThat(writer.records).hasSize(1);
+        assertThat(writer.records).hasSize(2);
         assertThat(writer.records.get(0).getTarget()).isEqualTo("127.0.0.1 GET /converter/query/{id}");
     }
 
@@ -211,9 +214,9 @@ class VeloWebAutoConfigurationTests {
         String longJson = "{\"value\":\"" + String.join("", Collections.nCopies(2100, "a")) + "\"}";
         CapturingInvocationLogWriter writer = invokeWithRequest(properties, value -> longJson);
 
-        assertThat(writer.records).hasSize(1);
-        assertThat(writer.records.get(0).getArgs()).isEqualTo("{\"value\":\"...");
-        assertThat(writer.records.get(0).getResult()).isEqualTo("{\"value\":\"...");
+        assertThat(writer.records).hasSize(2);
+        assertThat(writer.records.get(0).getArgs()).isEqualTo("{\"value\":\"...");   // ENTRY
+        assertThat(writer.records.get(1).getResult()).isEqualTo("{\"value\":\"..."); // EXIT
     }
 
     @Test
@@ -223,9 +226,9 @@ class VeloWebAutoConfigurationTests {
         String longJson = "{\"value\":\"abcdefghijklmnopqrstuvwxyz\"}";
         CapturingInvocationLogWriter writer = invokeWithRequest(properties, value -> longJson);
 
-        assertThat(writer.records).hasSize(1);
-        assertThat(writer.records.get(0).getArgs()).isEqualTo(longJson);
-        assertThat(writer.records.get(0).getResult()).isEqualTo(longJson);
+        assertThat(writer.records).hasSize(2);
+        assertThat(writer.records.get(0).getArgs()).isEqualTo(longJson);   // ENTRY
+        assertThat(writer.records.get(1).getResult()).isEqualTo(longJson); // EXIT
     }
 
     @Test
@@ -243,8 +246,8 @@ class VeloWebAutoConfigurationTests {
 
         aspect.logControllerInvocation(joinPoint);
 
-        assertThat(writer.records).hasSize(1);
-        assertThat(writer.records.get(0).getResult()).isEqualTo("-");
+        assertThat(writer.records).hasSize(2);
+        assertThat(writer.records.get(1).getResult()).isEqualTo("-"); // EXIT
     }
 
     @Test

@@ -5,6 +5,7 @@ import io.github.luminion.velo.log.InvocationLogRecord;
 import io.github.luminion.velo.log.InvocationLogSource;
 import io.github.luminion.velo.log.InvocationLogSupport;
 import io.github.luminion.velo.log.InvocationLogWriter;
+import io.github.luminion.velo.log.InvocationPhase;
 import io.github.luminion.velo.log.annotation.LogPayloadIgnore;
 import io.github.luminion.velo.log.trace.TraceContext;
 import io.github.luminion.velo.spi.RuntimeJsonSerializer;
@@ -22,6 +23,9 @@ import org.springframework.core.Ordered;
 
 /**
  * Feign 调用日志切面。
+ *
+ * <p>每次调用写两条记录：进入时写 {@link InvocationPhase#ENTRY}（含入参），
+ * 退出时写 {@link InvocationPhase#EXIT}（含耗时与返回值或异常）。</p>
  */
 @Aspect
 public class FeignLogAspect implements Ordered {
@@ -73,23 +77,28 @@ public class FeignLogAspect implements Ordered {
                         runtimeJsonSerializer, invocationProperties);
         String mdcKey = properties.getLog().getTrace().getMdcKey();
         boolean createdTraceId = ensureTraceId(mdcKey);
+
+        // 进入日志：记录调用目标与入参
+        InvocationLogSupport.safeWrite(invocationLogWriter,
+                buildEntryRecord(feignType.getName(), target, argsText));
+
         long start = System.nanoTime();
         try {
             Object result;
             try {
                 result = joinPoint.proceed();
             } catch (Throwable ex) {
-                InvocationLogRecord record = buildRecord(feignType.getName(), target, argsText, null,
-                        InvocationLogSupport.elapsedMs(start), ex);
-                InvocationLogSupport.safeWrite(invocationLogWriter, record);
+                InvocationLogRecord exitRecord = buildExitRecord(feignType.getName(), target,
+                        null, InvocationLogSupport.elapsedMs(start), ex);
+                InvocationLogSupport.safeWrite(invocationLogWriter, exitRecord);
                 throw ex;
             }
 
-            InvocationLogRecord record = buildRecord(feignType.getName(), target, argsText,
+            InvocationLogRecord exitRecord = buildExitRecord(feignType.getName(), target,
                     ignoreResult ? InvocationLogSupport.EMPTY_PAYLOAD
                             : InvocationLogSupport.safeBuildResultText(result, runtimeJsonSerializer, invocationProperties),
                     InvocationLogSupport.elapsedMs(start), null);
-            InvocationLogSupport.safeWrite(invocationLogWriter, record);
+            InvocationLogSupport.safeWrite(invocationLogWriter, exitRecord);
             return result;
         } finally {
             if (createdTraceId) {
@@ -108,15 +117,27 @@ public class FeignLogAspect implements Ordered {
         return true;
     }
 
-    private InvocationLogRecord buildRecord(String loggerName, String target, String argsText, String resultText, long costMs,
-            Throwable error) {
+    private InvocationLogRecord buildEntryRecord(String loggerName, String target, String argsText) {
         InvocationLogRecord record = new InvocationLogRecord();
         record.setLoggerName(loggerName);
         record.setTraceId(TraceContext.get(properties.getLog().getTrace().getMdcKey()));
         record.setSource(InvocationLogSource.FEIGN);
         record.setTarget(target);
-        record.setCostMs(costMs);
+        record.setPhase(InvocationPhase.ENTRY);
         record.setArgs(argsText);
+        record.setSuccess(true);
+        return record;
+    }
+
+    private InvocationLogRecord buildExitRecord(String loggerName, String target,
+            String resultText, long costMs, Throwable error) {
+        InvocationLogRecord record = new InvocationLogRecord();
+        record.setLoggerName(loggerName);
+        record.setTraceId(TraceContext.get(properties.getLog().getTrace().getMdcKey()));
+        record.setSource(InvocationLogSource.FEIGN);
+        record.setTarget(target);
+        record.setPhase(InvocationPhase.EXIT);
+        record.setCostMs(costMs);
         record.setSuccess(error == null);
         if (error == null) {
             record.setResult(resultText);

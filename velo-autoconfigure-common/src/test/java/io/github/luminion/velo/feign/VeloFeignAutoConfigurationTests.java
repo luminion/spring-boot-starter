@@ -6,6 +6,7 @@ import io.github.luminion.velo.core.VeloCoreAutoConfiguration;
 import io.github.luminion.velo.log.InvocationLogRecord;
 import io.github.luminion.velo.log.InvocationLogSource;
 import io.github.luminion.velo.log.InvocationLogWriter;
+import io.github.luminion.velo.log.InvocationPhase;
 import io.github.luminion.velo.log.trace.TraceContext;
 import io.github.luminion.velo.spi.RuntimeJsonSerializer;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -96,13 +97,20 @@ class VeloFeignAutoConfigurationTests {
     void shouldLogFeignInvocationWithArgumentsAndResponse() throws Throwable {
         CapturingInvocationLogWriter writer = invokeFindById(new VeloProperties(), runtimeJsonSerializer());
 
-        assertThat(writer.records).hasSize(1);
-        InvocationLogRecord record = writer.records.get(0);
-        assertThat(record.getSource()).isEqualTo(InvocationLogSource.FEIGN);
-        assertThat(record.getTarget()).isEqualTo("GET /users/{id}");
-        assertThat(record.isSuccess()).isTrue();
-        assertThat(record.getArgs()).contains("\"id\":1");
-        assertThat(record.getResult()).isEqualTo("{\"userName\":\"tom\"}");
+        // 进入记录（index 0）：含入参，不含返回值
+        assertThat(writer.records).hasSize(2);
+        InvocationLogRecord entry = writer.records.get(0);
+        assertThat(entry.getPhase()).isEqualTo(InvocationPhase.ENTRY);
+        assertThat(entry.getSource()).isEqualTo(InvocationLogSource.FEIGN);
+        assertThat(entry.getTarget()).isEqualTo("GET /users/{id}");
+        assertThat(entry.isSuccess()).isTrue();
+        assertThat(entry.getArgs()).contains("\"id\":1");
+
+        // 退出记录（index 1）：含耗时与返回值
+        InvocationLogRecord exit = writer.records.get(1);
+        assertThat(exit.getPhase()).isEqualTo(InvocationPhase.EXIT);
+        assertThat(exit.isSuccess()).isTrue();
+        assertThat(exit.getResult()).isEqualTo("{\"userName\":\"tom\"}");
     }
 
     @Test
@@ -112,8 +120,8 @@ class VeloFeignAutoConfigurationTests {
 
         CapturingInvocationLogWriter writer = invokeFindById(properties, runtimeJsonSerializer());
 
-        assertThat(writer.records).hasSize(1);
-        assertThat(writer.records.get(0).getResult()).isEqualTo("{\"userName...");
+        assertThat(writer.records).hasSize(2);
+        assertThat(writer.records.get(1).getResult()).isEqualTo("{\"userName...");
     }
 
     @Test
@@ -123,8 +131,8 @@ class VeloFeignAutoConfigurationTests {
 
         CapturingInvocationLogWriter writer = invokeFindById(properties, runtimeJsonSerializer());
 
-        assertThat(writer.records).hasSize(1);
-        assertThat(writer.records.get(0).getResult()).isEqualTo("{\"userName\":\"tom\"}");
+        assertThat(writer.records).hasSize(2);
+        assertThat(writer.records.get(1).getResult()).isEqualTo("{\"userName\":\"tom\"}");
     }
 
     @Test
@@ -134,29 +142,34 @@ class VeloFeignAutoConfigurationTests {
 
         CapturingInvocationLogWriter writer = invokeFindById(properties, runtimeJsonSerializer());
 
-        assertThat(writer.records).hasSize(1);
-        assertThat(writer.records.get(0).getArgs()).isEqualTo("-");
-        assertThat(writer.records.get(0).getResult()).isEqualTo("-");
+        assertThat(writer.records).hasSize(2);
+        assertThat(writer.records.get(0).getArgs()).isEqualTo("-");   // ENTRY
+        assertThat(writer.records.get(1).getResult()).isEqualTo("-"); // EXIT
     }
 
     @Test
     void shouldLogDashWhenResponseBodyIsNull() throws Throwable {
         CapturingInvocationLogWriter writer = invokePing();
 
-        assertThat(writer.records).hasSize(1);
-        assertThat(writer.records.get(0).getResult()).isEqualTo("-");
+        assertThat(writer.records).hasSize(2);
+        assertThat(writer.records.get(1).getResult()).isEqualTo("-"); // EXIT
     }
 
     @Test
     void shouldLogFailuresWithoutSwallowingException() throws Throwable {
         CapturingInvocationLogWriter writer = invokeFail();
 
-        assertThat(writer.records).hasSize(1);
-        InvocationLogRecord record = writer.records.get(0);
-        assertThat(record.isSuccess()).isFalse();
-        assertThat(record.getTarget()).isEqualTo("GET /users/fail");
-        assertThat(record.getError()).isInstanceOf(IllegalStateException.class);
-        assertThat(record.getErrorMessage()).isEqualTo("boom");
+        assertThat(writer.records).hasSize(2);
+        // ENTRY 记录：入参已写入，方法尚未执行
+        assertThat(writer.records.get(0).getPhase()).isEqualTo(InvocationPhase.ENTRY);
+        assertThat(writer.records.get(0).isSuccess()).isTrue();
+        // EXIT 记录：包含异常信息
+        InvocationLogRecord exit = writer.records.get(1);
+        assertThat(exit.getPhase()).isEqualTo(InvocationPhase.EXIT);
+        assertThat(exit.isSuccess()).isFalse();
+        assertThat(exit.getTarget()).isEqualTo("GET /users/fail");
+        assertThat(exit.getError()).isInstanceOf(IllegalStateException.class);
+        assertThat(exit.getErrorMessage()).isEqualTo("boom");
     }
 
     @Test
@@ -179,9 +192,9 @@ class VeloFeignAutoConfigurationTests {
         when(signature.getParameterNames()).thenReturn(new String[] {"id"});
 
         assertThat(aspect.logFeignInvocation(joinPoint)).isSameAs(expected);
-        assertThat(writer.records).hasSize(1);
-        assertThat(writer.records.get(0).getArgs()).isEqualTo("-");
-        assertThat(writer.records.get(0).getResult()).isEqualTo("-");
+        assertThat(writer.records).hasSize(2);
+        assertThat(writer.records.get(0).getArgs()).isEqualTo("-");   // ENTRY：序列化失败降级为 -
+        assertThat(writer.records.get(1).getResult()).isEqualTo("-"); // EXIT：序列化失败降级为 -
     }
 
     @Test

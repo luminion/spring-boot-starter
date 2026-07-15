@@ -379,6 +379,22 @@ public class VeloProperties {
          * Unified invocation logging settings.
          */
         private InvocationProperties invocation = new InvocationProperties();
+
+        /**
+         * Slow invocation log settings. Slow log is always printed independently at its
+         * own level regardless of whether the method is also covered by other log sources.
+         */
+        private SlowProperties slow = new SlowProperties();
+    }
+
+    @Data
+    public static class SlowProperties {
+
+        /**
+         * Log level used by slow invocation records. Defaults to WARN so that slow calls
+         * are distinguishable from normal invocation traces logged at INFO.
+         */
+        private LogLevel level = LogLevel.WARN;
     }
 
     @Data

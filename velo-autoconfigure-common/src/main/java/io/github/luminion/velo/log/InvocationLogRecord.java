@@ -121,11 +121,25 @@ public class InvocationLogRecord {
         this.slow = slow;
     }
 
+    /**
+     * 日志阶段。{@link InvocationPhase#ENTRY} 为进入记录，{@link InvocationPhase#EXIT}
+     * 为退出记录。为 null 时以旧单行格式输出（慢日志等兼容场景）。
+     */
+    private InvocationPhase phase;
+
     public String getLoggerName() {
         return loggerName;
     }
 
     public void setLoggerName(String loggerName) {
         this.loggerName = loggerName;
+    }
+
+    public InvocationPhase getPhase() {
+        return phase;
+    }
+
+    public void setPhase(InvocationPhase phase) {
+        this.phase = phase;
     }
 }

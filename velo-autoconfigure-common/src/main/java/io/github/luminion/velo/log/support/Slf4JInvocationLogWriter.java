@@ -4,6 +4,7 @@ import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.log.InvocationLogRecord;
 import io.github.luminion.velo.log.InvocationLogSupport;
 import io.github.luminion.velo.log.InvocationLogWriter;
+import io.github.luminion.velo.log.InvocationPhase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.logging.LogLevel;
@@ -14,6 +15,20 @@ import java.util.concurrent.ConcurrentMap;
 
 /**
  * SLF4J based unified invocation log writer.
+ *
+ * <p>写入规则：
+ * <ul>
+ *   <li>慢日志记录（{@code isSlow=true}）：使用 {@code velo.log.slow.level}（默认 WARN）</li>
+ *   <li>异常记录（{@code !isSuccess}）：使用 ERROR 级别</li>
+ *   <li>正常记录：使用 {@code velo.log.level}（默认 INFO）</li>
+ * </ul>
+ *
+ * <p>格式规则：
+ * <ul>
+ *   <li>{@link InvocationPhase#ENTRY}：{@code [target] => args=...}</li>
+ *   <li>{@link InvocationPhase#EXIT}：{@code [target] <= cost=Xms result=...}</li>
+ *   <li>phase 为 null（慢日志等）：{@code [target] cost=Xms slow=true args=... result=...}</li>
+ * </ul>
  */
 public class Slf4JInvocationLogWriter implements InvocationLogWriter {
 
@@ -23,10 +38,13 @@ public class Slf4JInvocationLogWriter implements InvocationLogWriter {
 
     private final LogLevel level;
 
+    private final LogLevel slowLevel;
+
     private final boolean includeErrorStackTrace;
 
     public Slf4JInvocationLogWriter(VeloProperties properties) {
         this.level = properties.getLog().getLevel();
+        this.slowLevel = properties.getLog().getSlow().getLevel();
         this.includeErrorStackTrace = properties.getLog().getInvocation().isIncludeErrorStackTrace();
     }
 
@@ -35,9 +53,22 @@ public class Slf4JInvocationLogWriter implements InvocationLogWriter {
         if (record == null) {
             return;
         }
+        // 慢日志用独立级别（默认 WARN），与正常调用轨迹区分
+        if (record.isSlow()) {
+            if (slowLevel == LogLevel.OFF) {
+                return;
+            }
+            LogOperations slowOps = resolveLevel(slowLevel);
+            Logger logger = resolveLogger(record.getLoggerName());
+            if (slowOps.isEnabled(logger)) {
+                slowOps.log(logger, buildMessage(record));
+            }
+            return;
+        }
         if (level == LogLevel.OFF) {
             return;
         }
+        // 异常记录：始终用 ERROR
         if (!record.isSuccess()) {
             String message = buildMessage(record);
             Logger logger = resolveLogger(record.getLoggerName());
@@ -48,6 +79,7 @@ public class Slf4JInvocationLogWriter implements InvocationLogWriter {
             }
             return;
         }
+        // 正常记录：用配置级别
         LogOperations ops = resolveLevel(level);
         Logger logger = resolveLogger(record.getLoggerName());
         if (!ops.isEnabled(logger)) {
@@ -57,6 +89,42 @@ public class Slf4JInvocationLogWriter implements InvocationLogWriter {
     }
 
     private String buildMessage(InvocationLogRecord record) {
+        InvocationPhase phase = record.getPhase();
+        if (phase == InvocationPhase.ENTRY) {
+            return buildEntryMessage(record);
+        }
+        if (phase == InvocationPhase.EXIT) {
+            return buildExitMessage(record);
+        }
+        // phase 为 null：旧单行格式（慢日志使用）
+        return buildSingleLineMessage(record);
+    }
+
+    /** 进入阶段：{@code [target] => args=...} */
+    private String buildEntryMessage(InvocationLogRecord record) {
+        StringBuilder builder = new StringBuilder();
+        builder.append('[').append(text(record.getTarget())).append(']');
+        builder.append(" =>");
+        append(builder, "args", text(record.getArgs()));
+        return builder.toString();
+    }
+
+    /** 退出阶段：{@code [target] <= cost=Xms result=...} 或 {@code <= cost=Xms error="..."} */
+    private String buildExitMessage(InvocationLogRecord record) {
+        StringBuilder builder = new StringBuilder();
+        builder.append('[').append(text(record.getTarget())).append(']');
+        builder.append(" <=");
+        append(builder, "cost", record.getCostMs() + "ms");
+        if (record.isSuccess()) {
+            append(builder, "result", text(record.getResult()));
+        } else {
+            appendQuoted(builder, "error", InvocationLogSupport.errorSummary(record.getError()));
+        }
+        return builder.toString();
+    }
+
+    /** 单行格式：慢日志 / 旧行为兼容 */
+    private String buildSingleLineMessage(InvocationLogRecord record) {
         StringBuilder builder = new StringBuilder();
         builder.append('[').append(text(record.getTarget())).append(']');
         append(builder, "cost", record.getCostMs() + "ms");

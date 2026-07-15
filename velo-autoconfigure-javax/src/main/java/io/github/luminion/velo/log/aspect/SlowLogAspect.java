@@ -6,7 +6,6 @@ import io.github.luminion.velo.log.InvocationLogRecord;
 import io.github.luminion.velo.log.InvocationLogSource;
 import io.github.luminion.velo.log.InvocationLogSupport;
 import io.github.luminion.velo.log.InvocationLogWriter;
-import io.github.luminion.velo.log.annotation.InvokeLog;
 import io.github.luminion.velo.log.annotation.LogPayloadIgnore;
 import io.github.luminion.velo.log.annotation.SlowLog;
 import io.github.luminion.velo.log.trace.TraceContext;
@@ -23,6 +22,13 @@ import org.springframework.core.Ordered;
 
 import java.util.Collections;
 
+/**
+ * 慢调用日志切面。
+ *
+ * <p>超过 {@link SlowLog} 阈值时独立打印一条慢日志，级别由
+ * {@code velo.log.slow.level} 控制（默认 WARN）。
+ * 慢日志与 Controller / Feign / {@code @InvokeLog} 的进出日志相互独立，各自打印，不退避。</p>
+ */
 @Aspect
 @RequiredArgsConstructor
 public class SlowLogAspect implements Ordered {
@@ -48,15 +54,11 @@ public class SlowLogAspect implements Ordered {
             "|| @annotation(io.github.luminion.velo.log.annotation.SlowLog)")
     public Object logTime(ProceedingJoinPoint joinPoint) throws Throwable {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
-        if (hasInvokeLog(signature)) {
-            return joinPoint.proceed();
-        }
 
         SlowLog slowLog = AnnotatedElementUtils.findMergedAnnotation(signature.getMethod(), SlowLog.class);
         if (slowLog == null) {
             slowLog = AnnotatedElementUtils.findMergedAnnotation(signature.getDeclaringType(), SlowLog.class);
         }
-
         if (slowLog == null) {
             return joinPoint.proceed();
         }
@@ -114,11 +116,6 @@ public class SlowLogAspect implements Ordered {
             record.setErrorMessage(error.getMessage());
         }
         return record;
-    }
-
-    private boolean hasInvokeLog(MethodSignature signature) {
-        return AnnotatedElementUtils.findMergedAnnotation(signature.getMethod(), InvokeLog.class) != null
-                || AnnotatedElementUtils.findMergedAnnotation(signature.getDeclaringType(), InvokeLog.class) != null;
     }
 
     private RuntimeJsonSerializer runtimeJsonSerializer() {
