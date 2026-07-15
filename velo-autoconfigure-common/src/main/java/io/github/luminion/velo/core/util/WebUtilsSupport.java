@@ -58,12 +58,16 @@ public final class WebUtilsSupport {
      * @return 第一个有效 IP；整体为空或全部无效时返回 {@code null}
      */
     private static String firstValidIp(String raw) {
-        if (raw == null || raw.isEmpty() || "unknown".equalsIgnoreCase(raw)) {
+        if (raw == null) {
+            return null;
+        }
+        String normalized = raw.trim();
+        if (normalized.isEmpty() || "unknown".equalsIgnoreCase(normalized)) {
             return null;
         }
         // indexOf 用 >= 0 覆盖前导逗号（如 ",1.2.3.4"）：首段为空会被下面的有效性判断跳过
-        if (raw.indexOf(',') >= 0) {
-            for (String subIp : raw.split(",")) {
+        if (normalized.indexOf(',') >= 0) {
+            for (String subIp : normalized.split(",")) {
                 String trimmedIp = subIp.trim();
                 if (!trimmedIp.isEmpty() && !"unknown".equalsIgnoreCase(trimmedIp)) {
                     return trimmedIp;
@@ -71,7 +75,7 @@ public final class WebUtilsSupport {
             }
             return null;
         }
-        return raw.trim();
+        return normalized;
     }
 
     /**

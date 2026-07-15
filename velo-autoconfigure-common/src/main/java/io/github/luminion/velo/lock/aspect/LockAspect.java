@@ -67,7 +67,7 @@ public class LockAspect implements Ordered {
         }
 
         // 1. 生成锁 Key
-        // 空 key 会降级为方法级锁（类名#方法名），表示"该方法全局串行"，这是一个有意义的语义，
+        // 空 key 会降级为方法级锁（类名#方法名(参数类型...)），表示"该方法全局串行"，这是一个有意义的语义，
         // 因此与 @Idempotent 不同，这里安静降级、不打告警。
         String key = ConcurrencyAnnotationUtils.buildPrefixedKey(
                 prefix,

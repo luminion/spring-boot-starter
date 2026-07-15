@@ -117,7 +117,15 @@ public final class InvocationLogSupport {
     }
 
     public static long elapsedMs(long startNs) {
-        return (System.nanoTime() - startNs) / 1_000_000;
+        return TimeUnit.NANOSECONDS.toMillis(elapsedNanos(startNs));
+    }
+
+    public static long elapsedNanos(long startNs) {
+        return System.nanoTime() - startNs;
+    }
+
+    public static long nanosToMillis(long elapsedNanos) {
+        return TimeUnit.NANOSECONDS.toMillis(elapsedNanos);
     }
 
     /**
@@ -129,7 +137,11 @@ public final class InvocationLogSupport {
      * @return {@code true} if the elapsed time exceeds the threshold
      */
     public static boolean exceedsSlowThreshold(long elapsedMs, long threshold, TimeUnit unit) {
-        return elapsedMs * 1_000_000L > unit.toNanos(threshold);
+        return TimeUnit.MILLISECONDS.toNanos(elapsedMs) > unit.toNanos(threshold);
+    }
+
+    public static boolean exceedsSlowThresholdNanos(long elapsedNanos, long threshold, TimeUnit unit) {
+        return elapsedNanos > unit.toNanos(threshold);
     }
 
     private static Map<String, Object> buildArgumentMap(MethodSignature signature, Object target, Object[] args) {

@@ -63,19 +63,20 @@ public class InvokeLogAspect implements Ordered {
         try {
             result = joinPoint.proceed();
         } catch (Throwable ex) {
-            long elapsedMs = InvocationLogSupport.elapsedMs(start);
-            InvocationLogRecord record = buildRecord(signature, argsText, null, elapsedMs, ex);
-            record.setSlow(isSlow(signature, elapsedMs));
+            long elapsedNanos = InvocationLogSupport.elapsedNanos(start);
+            InvocationLogRecord record = buildRecord(signature, argsText, null,
+                    InvocationLogSupport.nanosToMillis(elapsedNanos), ex);
+            record.setSlow(isSlow(signature, elapsedNanos));
             InvocationLogSupport.safeWrite(invocationLogWriter, record);
             throw ex;
         }
 
-        long elapsedMs = InvocationLogSupport.elapsedMs(start);
+        long elapsedNanos = InvocationLogSupport.elapsedNanos(start);
         InvocationLogRecord record = buildRecord(signature, argsText,
                 ignoreResult ? InvocationLogSupport.EMPTY_PAYLOAD
                         : InvocationLogSupport.safeBuildResultText(result, runtimeJsonSerializer, invocationProperties),
-                elapsedMs, null);
-        record.setSlow(isSlow(signature, elapsedMs));
+                InvocationLogSupport.nanosToMillis(elapsedNanos), null);
+        record.setSlow(isSlow(signature, elapsedNanos));
         InvocationLogSupport.safeWrite(invocationLogWriter, record);
         return result;
     }
@@ -101,9 +102,10 @@ public class InvokeLogAspect implements Ordered {
         return record;
     }
 
-    private boolean isSlow(MethodSignature signature, long elapsedMs) {
+    private boolean isSlow(MethodSignature signature, long elapsedNanos) {
         SlowLog slowLog = findSlowLog(signature);
-        return slowLog != null && InvocationLogSupport.exceedsSlowThreshold(elapsedMs, slowLog.value(), slowLog.timeUnit());
+        return slowLog != null
+                && InvocationLogSupport.exceedsSlowThresholdNanos(elapsedNanos, slowLog.value(), slowLog.timeUnit());
     }
 
     private SlowLog findSlowLog(MethodSignature signature) {

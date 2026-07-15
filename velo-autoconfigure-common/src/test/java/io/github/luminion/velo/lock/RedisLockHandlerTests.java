@@ -7,11 +7,14 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.data.redis.core.script.RedisScript;
 
-import java.util.List;
+import java.lang.reflect.Field;
 import java.time.Duration;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -108,9 +111,35 @@ class RedisLockHandlerTests {
 
     @Test
     void shouldRejectNonPositiveRetryInterval() {
-        org.assertj.core.api.Assertions.assertThatThrownBy(
-                        () -> new RedisLockHandler(redisTemplate, Duration.ZERO))
+        assertThatThrownBy(() -> new RedisLockHandler(redisTemplate, Duration.ZERO))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("retry interval");
     }
+
+    @Test
+    void shouldNotCreateThreadLocalStateWhenRedisAcquisitionFails() throws Exception {
+        when(valueOperations.setIfAbsent(anyString(), anyString(), anyLong(), any(TimeUnit.class)))
+                .thenThrow(new IllegalStateException("redis unavailable"));
+
+        assertThatThrownBy(() -> handler.lock("order:1", 0, 30, TimeUnit.SECONDS))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("redis unavailable");
+
+        Field field = RedisLockHandler.class.getDeclaredField("lockValues");
+        field.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        ThreadLocal<Map<String, ?>> lockValues = (ThreadLocal<Map<String, ?>>) field.get(handler);
+        assertThat(lockValues.get()).isNull();
+    }
+
+    @Test
+    void shouldRoundPositiveSubMillisecondLeaseUpToNextMillisecond() {
+        when(valueOperations.setIfAbsent(anyString(), anyString(), anyLong(), any(TimeUnit.class))).thenReturn(true);
+
+        assertThat(handler.lock("order:1", 0, 1500, TimeUnit.MICROSECONDS)).isTrue();
+
+        verify(valueOperations).setIfAbsent(eq("order:1"), anyString(), eq(2L), eq(TimeUnit.MILLISECONDS));
+        handler.unlock("order:1");
+    }
+
 }

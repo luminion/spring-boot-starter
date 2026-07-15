@@ -41,7 +41,7 @@ public class RedisLockHandler implements LockHandler {
 
     private final StringRedisTemplate redisTemplate;
     private final long retryIntervalNanos;
-    private final ThreadLocal<Map<String, Deque<String>>> lockValues = ThreadLocal.withInitial(HashMap::new);
+    private final ThreadLocal<Map<String, Deque<String>>> lockValues = new ThreadLocal<>();
     // 看门狗降级告警只打一次，避免每次加锁刷屏
     private final AtomicBoolean watchdogFallbackWarned = new AtomicBoolean(false);
 
@@ -59,9 +59,10 @@ public class RedisLockHandler implements LockHandler {
 
     @Override
     public boolean lock(String key, long waitTime, long leaseTime, TimeUnit unit) {
-        Deque<String> stack = lockValues.get().computeIfAbsent(key, k -> new ArrayDeque<>());
+        Map<String, Deque<String>> values = lockValues.get();
+        Deque<String> stack = values == null ? null : values.get(key);
         // 同线程已持有该 key：本地重入，仅增加持有计数(压入同一 owner token)，不再访问 Redis
-        if (!stack.isEmpty()) {
+        if (stack != null && !stack.isEmpty()) {
             stack.push(stack.peek());
             return true;
         }
@@ -79,6 +80,13 @@ public class RedisLockHandler implements LockHandler {
             }
         } else {
             leaseMillis = unit.toMillis(leaseTime);
+            boolean hasSubMillisecondRemainder = unit == TimeUnit.NANOSECONDS
+                    ? leaseTime % TimeUnit.MILLISECONDS.toNanos(1L) != 0L
+                    : unit == TimeUnit.MICROSECONDS
+                            && leaseTime % TimeUnit.MILLISECONDS.toMicros(1L) != 0L;
+            if (hasSubMillisecondRemainder && leaseMillis < Long.MAX_VALUE) {
+                leaseMillis++;
+            }
         }
         long startNanos = System.nanoTime();
 
@@ -94,7 +102,11 @@ public class RedisLockHandler implements LockHandler {
             }
             if (Boolean.TRUE.equals(success)) {
                 // 首次获取成功，记录 owner token，解锁时用它和 Redis 当前值比对，避免误删已续租或被他人重建的锁。
-                stack.push(lockValue);
+                if (values == null) {
+                    values = new HashMap<>();
+                    lockValues.set(values);
+                }
+                values.computeIfAbsent(key, k -> new ArrayDeque<>()).push(lockValue);
                 return true;
             }
 
@@ -110,19 +122,19 @@ public class RedisLockHandler implements LockHandler {
                 TimeUnit.NANOSECONDS.sleep(Math.min(remainingNanos, retryIntervalNanos));
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                cleanupIfEmpty(key, stack);
                 return false;
             }
         }
 
-        // 首次获取失败，清理刚创建的空栈，避免 ThreadLocal 中残留空条目
-        cleanupIfEmpty(key, stack);
         return false;
     }
 
     @Override
     public void unlock(String key) {
         Map<String, Deque<String>> values = lockValues.get();
+        if (values == null) {
+            return;
+        }
         Deque<String> stack = values.get(key);
         if (stack == null || stack.isEmpty()) {
             if (values.isEmpty()) {
@@ -152,13 +164,4 @@ public class RedisLockHandler implements LockHandler {
         }
     }
 
-    private void cleanupIfEmpty(String key, Deque<String> stack) {
-        if (stack.isEmpty()) {
-            Map<String, Deque<String>> values = lockValues.get();
-            values.remove(key);
-            if (values.isEmpty()) {
-                lockValues.remove();
-            }
-        }
-    }
 }

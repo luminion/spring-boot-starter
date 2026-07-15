@@ -46,7 +46,8 @@ class RateLimitAspectTests {
 
         assertThat(resolvedMethod.get()).isNotNull();
         assertThat(resolvedMethod.get().getDeclaringClass()).isEqualTo(ClassLevelRateLimitedService.class);
-        assertThat(resolvedKey.get()).isEqualTo("rateLimit:" + ClassLevelRateLimitedService.class.getName() + "#execute:tenant:u-1001");
+        assertThat(resolvedKey.get()).isEqualTo("rateLimit:" + ClassLevelRateLimitedService.class.getName()
+                + "#execute:tenant:u-1001");
     }
 
     @Test
@@ -67,8 +68,8 @@ class RateLimitAspectTests {
         proxy.detail("u-1001");
 
         assertThat(resolvedKeys).containsExactly(
-                "rateLimit:" + MultiMethodRateLimitedService.class.getName() + "#query:u-1001",
-                "rateLimit:" + MultiMethodRateLimitedService.class.getName() + "#detail:u-1001");
+                "rateLimit:" + MultiMethodRateLimitedService.class.getName() + "#query(java.lang.String):u-1001",
+                "rateLimit:" + MultiMethodRateLimitedService.class.getName() + "#detail(java.lang.String):u-1001");
     }
 
     interface SampleService {

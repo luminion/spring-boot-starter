@@ -66,7 +66,7 @@ public class IdempotentAspect implements Ordered {
             throw new IllegalArgumentException("Idempotent ttl must be greater than zero.");
         }
 
-        // 空 key 会降级为方法级幂等（类名#方法名），同一方法的所有调用共享一个幂等窗口，
+        // 空 key 会降级为方法级幂等（类名#方法名(参数类型...)），同一方法的所有调用共享一个幂等窗口，
         // 不区分参数与调用者。这通常不是期望行为，因此打 WARN 提醒业务显式指定 key。
         if (!StringUtils.hasText(idempotent.key())) {
             log.warn("[Velo Starter] @Idempotent on {}#{} has no 'key' expression. " +
@@ -76,7 +76,7 @@ public class IdempotentAspect implements Ordered {
                     method.getDeclaringClass().getName(), method.getName());
         }
 
-        // key 始终以方法指纹（类名#方法名）为前缀，再拼接 SpEL 结果，与限流分桶语义保持一致。
+        // key 始终以方法指纹（类名#方法名(参数类型...)）为前缀，再拼接 SpEL 结果，与限流分桶语义保持一致。
         // 这样不同方法即便用相同的 SpEL key（如都用 #orderId）也不会互相碰撞、共享同一幂等窗口。
         String methodFingerprint = fingerprinter.resolveMethodFingerprint(
                 joinPoint.getTarget(), method, joinPoint.getArgs(), "");

@@ -74,20 +74,21 @@ public class SlowLogAspect implements Ordered {
         try {
             result = joinPoint.proceed();
         } catch (Throwable ex) {
-            long elapsedMs = InvocationLogSupport.elapsedMs(start);
-            if (InvocationLogSupport.exceedsSlowThreshold(elapsedMs, slowLog.value(), slowLog.timeUnit())) {
-                InvocationLogRecord record = buildRecord(signature, argsText, null, elapsedMs, ex);
+            long elapsedNanos = InvocationLogSupport.elapsedNanos(start);
+            if (InvocationLogSupport.exceedsSlowThresholdNanos(elapsedNanos, slowLog.value(), slowLog.timeUnit())) {
+                InvocationLogRecord record = buildRecord(signature, argsText, null,
+                        InvocationLogSupport.nanosToMillis(elapsedNanos), ex);
                 InvocationLogSupport.safeWrite(invocationLogWriter, record);
             }
             throw ex;
         }
 
-        long elapsedMs = InvocationLogSupport.elapsedMs(start);
-        if (InvocationLogSupport.exceedsSlowThreshold(elapsedMs, slowLog.value(), slowLog.timeUnit())) {
+        long elapsedNanos = InvocationLogSupport.elapsedNanos(start);
+        if (InvocationLogSupport.exceedsSlowThresholdNanos(elapsedNanos, slowLog.value(), slowLog.timeUnit())) {
             InvocationLogRecord record = buildRecord(signature, argsText,
                     ignoreResult ? InvocationLogSupport.EMPTY_PAYLOAD
                             : InvocationLogSupport.safeBuildResultText(result, runtimeJsonSerializer, invocationProperties),
-                    elapsedMs, null);
+                    InvocationLogSupport.nanosToMillis(elapsedNanos), null);
             InvocationLogSupport.safeWrite(invocationLogWriter, record);
         }
         return result;

@@ -43,4 +43,13 @@ class WebUtilsSupportTest {
         headers.put("x-forwarded-for", "unknown, unknown");
         assertThat(resolve(headers, "192.168.1.5")).isEqualTo("192.168.1.5");
     }
+
+    @Test
+    void shouldIgnoreBlankAndPaddedUnknownHeaders() {
+        Map<String, String> headers = new HashMap<>();
+        headers.put("x-forwarded-for", "   ");
+        headers.put("Proxy-Client-IP", " unknown ");
+
+        assertThat(resolve(headers, "10.0.0.8")).isEqualTo("10.0.0.8");
+    }
 }

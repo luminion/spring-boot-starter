@@ -30,7 +30,8 @@ class IdempotentAspectTests {
         DefaultKeyIdempotentService proxy = proxyFactory.getProxy();
         proxy.submit("u-1001");
 
-        assertThat(capturedKey.get()).isEqualTo("idempotent:" + DefaultKeyIdempotentService.class.getName() + "#submit");
+        assertThat(capturedKey.get()).isEqualTo("idempotent:" + DefaultKeyIdempotentService.class.getName()
+                + "#submit(java.lang.String)");
     }
 
     @Test
@@ -52,7 +53,8 @@ class IdempotentAspectTests {
 
         // 显式 key 也带方法指纹前缀：idempotent:类名#方法名:SpEL结果
         assertThat(capturedKey.get())
-                .isEqualTo("idempotent:" + ExplicitKeyIdempotentService.class.getName() + "#submit:order-1");
+                .isEqualTo("idempotent:" + ExplicitKeyIdempotentService.class.getName()
+                        + "#submit(java.lang.String):order-1");
     }
 
     @Test
@@ -81,8 +83,8 @@ class IdempotentAspectTests {
 
         // 相同 SpEL 结果，但不同方法，key 必须不同（不共享幂等窗口）
         assertThat(keyA.get()).isNotEqualTo(keyB.get());
-        assertThat(keyA.get()).contains("#methodA:same-id");
-        assertThat(keyB.get()).contains("#methodB:same-id");
+        assertThat(keyA.get()).contains("#methodA(java.lang.String):same-id");
+        assertThat(keyB.get()).contains("#methodB(java.lang.String):same-id");
     }
 
     static class DefaultKeyIdempotentService {

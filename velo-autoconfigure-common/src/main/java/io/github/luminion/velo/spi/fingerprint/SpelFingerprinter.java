@@ -43,6 +43,17 @@ public class SpelFingerprinter implements Fingerprinter {
             }
             return resolved.trim();
         }
-        return method.getDeclaringClass().getName() + "#" + method.getName();
+        StringBuilder fingerprint = new StringBuilder(method.getDeclaringClass().getName())
+                .append('#')
+                .append(method.getName())
+                .append('(');
+        Class<?>[] parameterTypes = method.getParameterTypes();
+        for (int i = 0; i < parameterTypes.length; i++) {
+            if (i > 0) {
+                fingerprint.append(',');
+            }
+            fingerprint.append(parameterTypes[i].getTypeName());
+        }
+        return fingerprint.append(')').toString();
     }
 }

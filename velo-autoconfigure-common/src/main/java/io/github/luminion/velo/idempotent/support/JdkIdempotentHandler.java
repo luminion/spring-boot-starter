@@ -10,16 +10,23 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.LongSupplier;
 
 @Slf4j
 public class JdkIdempotentHandler implements IdempotentHandler, DisposableBean {
 
     public JdkIdempotentHandler() {
+        this(System::nanoTime);
+    }
+
+    JdkIdempotentHandler(LongSupplier nanoTimeSupplier) {
+        this.nanoTimeSupplier = nanoTimeSupplier;
         log.warn("[Velo Starter] JdkIdempotentHandler is used as a fallback implementation. " +
                 "This handler is not suitable for distributed environments and may cause idempotent validation to fail. " +
                 "Consider using Redis or Redisson for distributed idempotent validation.");
     }
 
+    private final LongSupplier nanoTimeSupplier;
     private final ConcurrentHashMap<String, Record> recordMap = new ConcurrentHashMap<>();
     private final AtomicBoolean isCleaning = new AtomicBoolean(false);
     private final ExecutorService cleanupExecutor = Executors.newSingleThreadExecutor(r -> {
@@ -30,15 +37,15 @@ public class JdkIdempotentHandler implements IdempotentHandler, DisposableBean {
 
     @Override
     public boolean tryRecord(String key, String token, long timeout, TimeUnit unit) {
-        long now = System.currentTimeMillis();
-        long expireAt = now + unit.toMillis(timeout);
+        long now = nanoTimeSupplier.getAsLong();
+        long ttlNanos = unit.toNanos(timeout);
         AtomicBoolean success = new AtomicBoolean(false);
 
         // compute 把"判断是否过期"和"写入新的过期时间"合并成一个原子操作，避免并发穿透。
         recordMap.compute(key, (k, v) -> {
-            if (v == null || v.expireAt <= now) {
+            if (v == null || now - v.createdAtNanos >= v.ttlNanos) {
                 success.set(true);
-                return new Record(token, expireAt);
+                return new Record(token, now, ttlNanos);
             }
             return v;
         });
@@ -48,8 +55,9 @@ public class JdkIdempotentHandler implements IdempotentHandler, DisposableBean {
             try {
                 cleanupExecutor.execute(() -> {
                     try {
-                        long currentTime = System.currentTimeMillis();
-                        recordMap.entrySet().removeIf(entry -> entry.getValue().expireAt <= currentTime);
+                        long currentTime = nanoTimeSupplier.getAsLong();
+                        recordMap.entrySet().removeIf(entry ->
+                                currentTime - entry.getValue().createdAtNanos >= entry.getValue().ttlNanos);
                     } finally {
                         isCleaning.set(false);
                     }
@@ -75,11 +83,13 @@ public class JdkIdempotentHandler implements IdempotentHandler, DisposableBean {
 
     private static final class Record {
         private final String token;
-        private final long expireAt;
+        private final long createdAtNanos;
+        private final long ttlNanos;
 
-        private Record(String token, long expireAt) {
+        private Record(String token, long createdAtNanos, long ttlNanos) {
             this.token = token;
-            this.expireAt = expireAt;
+            this.createdAtNanos = createdAtNanos;
+            this.ttlNanos = ttlNanos;
         }
     }
 }

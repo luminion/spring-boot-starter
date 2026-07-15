@@ -5,6 +5,7 @@
 ### 不兼容变更
 - Jackson 配置项改名：`velo.jackson.long-as-string` → `serialize-long-as-string`、`big-decimal-as-string` → `serialize-big-decimal-as-string`、`floating-as-string` → `serialize-floating-as-string`，并移除已弃用的 `unsafe-integer-as-string`（需更新配置文件）
 - `IdempotentHandler` SPI 方法签名变更：`tryRecord` 增加 `token` 参数，`remove(key)` 改为 `removeIfMatch(key, token)`（仅影响自定义实现者）
+- 默认方法指纹由 `全限定类名#方法名` 调整为 `全限定类名#方法名(参数类型...)`，避免重载方法共享幂等窗口、限流桶或锁；滚动发布期间新旧实例不会使用同一组并发控制 key，需避免混合版本同时处理相关请求（自定义 `Fingerprinter` 不受影响）
 
 ### 新增
 - 新增 `@LogPayloadIgnore` 注解，可标注在方法或类上控制调用日志中参数和返回值的可见性，适用于 Controller、Feign、`@InvokeLog`、`@SlowLog` 所有日志切面
@@ -27,15 +28,19 @@
 - 幂等切面异常修复：业务失败回滚幂等记录时若清理动作自身抛异常（如 Redis 超时），不再覆盖原始业务异常，改为附加到 suppressed 保留现场
 - 本地锁实现合并：Caffeine 不提供互斥锁 API，锁的本地实现只能基于 `ConcurrentHashMap + ReentrantLock`，与 JDK 完全一致；移除单独的 `CaffeineLockHandler`，`CAFFEINE` 档位复用 `JdkLockHandler`（`backend=CAFFEINE` 仍可用），本地锁只保留一份实现，用引用计数管理锁对象生命周期
 - Redis 锁可重入修复：同线程重复获取同一把锁时按本地计数重入、不再自锁死，仅最外层释放才删除 Redis 锁；解锁仍用 Lua 脚本比对 owner token 保证原子
-- 幂等 key 隔离修复：幂等 key 现以 `全限定类名#方法名` 为前缀再拼接 SpEL 结果，与限流分桶语义一致，避免不同方法使用相同 SpEL key（如都用 `#orderId`）时误共享同一幂等窗口
+- 幂等 key 隔离修复：幂等 key 现以 `全限定类名#方法名(参数类型...)` 为前缀再拼接 SpEL 结果，与限流分桶语义一致，避免不同方法或重载方法使用相同 SpEL key（如都用 `#orderId`）时误共享同一幂等窗口
 - 客户端 IP 解析修复：多级代理头全部为 `unknown` 时正确回退到直连地址；IPv6 环回地址（全展开 `0:0:0:0:0:0:0:1` 与压缩形 `::1`）在代理链场景下也能正确转换为 `127.0.0.1`
 - 本地限流/幂等清理修复：容器关闭后并发请求触发的清理任务提交被拒不再向调用方抛出异常
 - traceId 日志格式修复：移除失效的日期格式注入（属性名 `logging.pattern.date-format` 拼写错误，Spring Boot 实际读取 `logging.pattern.dateformat` 且不走 relaxed binding，从未生效）；traceId 仅作为增强追加到 level pattern，日期格式保持 Spring Boot 默认、不改变全局行为
 - Jackson 大整数序列化统一：开启 `serialize-long-as-string` 时 `Long` 与 `BigInteger` 均无条件转字符串（此前 `BigInteger` 仅在超过 2^53 时才转，导致同类型字段时而 number 时而 string、契约不稳定）
 - Jackson 3 String 序列化 null 处理对齐 Jackson 2：`null` 直接输出 JSON null、不再传入 `@JsonEncode` 转换函数，避免用户函数未防 null 时 NPE
+- Redis 锁异常状态修复：仅在 Redis 成功加锁后登记线程重入状态，连接异常不再向工作线程的 `ThreadLocal` 累积空 key；非整毫秒租约向上取整到下一毫秒，避免 Redis 收到非法或短于配置值的 TTL
+- JDK 幂等时间窗口修复：改用单调纳秒时钟记录 TTL，微秒/纳秒窗口不再因毫秒截断而立即失效，同时不受系统时间回拨和绝对时间戳加法溢出影响
+- 慢日志时间精度修复：阈值判断直接使用纳秒耗时，`@SlowLog` 配置微秒/纳秒单位时不再先截断为整毫秒
+- 客户端 IP 空白头修复：仅含空白或两侧带空白的 `unknown` 代理头会继续查找后续头部，并在没有有效代理地址时正确回退到直连地址
 
 ### 调整
-- `@Lock` 空 key 行为：移除强制非空校验，安静降级为方法级锁（基于 `全限定类名#方法名`）
+- `@Lock` 空 key 行为：移除强制非空校验，安静降级为方法级锁（基于 `全限定类名#方法名(参数类型...)`）
 - `@Idempotent` 空 key 行为：降级为方法级幂等，并打印 WARN 日志提醒（通常不是期望行为）
 - `WebUtils` 提取 servlet 无关逻辑到 common 模块，减少 jakarta/javax 重复代码
 - `@Lock` 支持看门狗：`lease = -1` 请求自动续约，锁随业务执行自动延长、结束时释放，适合耗时不确定的长任务；仅 Redisson 后端真正支持，Redis 简单实现会降级为固定默认租约并打印告警，本地实现忽略该值靠方法结束释放

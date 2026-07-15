@@ -27,7 +27,7 @@ class LockAspectTests {
 
         // 空 key 降级为方法级锁（类名#方法名）
         assertThat(capturedKey.get())
-                .isEqualTo("lock:" + BlankKeyLockService.class.getName() + "#execute");
+                .isEqualTo("lock:" + BlankKeyLockService.class.getName() + "#execute()");
     }
 
     private static LockHandler capturingLockHandler(AtomicReference<String> capturedKey) {
