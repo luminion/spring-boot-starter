@@ -1,7 +1,5 @@
 package io.github.luminion.velo.idempotent.exception;
 
-import java.util.concurrent.TimeUnit;
-
 /**
  * 幂等校验未通过（窗口内重复提交）时抛出。
  *
@@ -11,17 +9,15 @@ public class IdempotentException extends RuntimeException {
 
     private final String key;
     private final long ttl;
-    private final TimeUnit unit;
 
     public IdempotentException(String message) {
-        this(message, null, 0L, null);
+        this(message, null, 0L);
     }
 
-    public IdempotentException(String message, String key, long ttl, TimeUnit unit) {
+    public IdempotentException(String message, String key, long ttl) {
         super(message);
         this.key = key;
         this.ttl = ttl;
-        this.unit = unit;
     }
 
     /**
@@ -32,16 +28,10 @@ public class IdempotentException extends RuntimeException {
     }
 
     /**
-     * 幂等窗口时长。
+     * 幂等窗口时长，单位为毫秒。
      */
     public long getTtl() {
         return ttl;
     }
 
-    /**
-     * 幂等窗口时间单位。可能为 {@code null}（旧构造方式）。
-     */
-    public TimeUnit getUnit() {
-        return unit;
-    }
 }

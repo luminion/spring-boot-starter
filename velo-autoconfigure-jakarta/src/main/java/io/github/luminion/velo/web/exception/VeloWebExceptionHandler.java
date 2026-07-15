@@ -20,7 +20,6 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -131,12 +130,11 @@ public class VeloWebExceptionHandler<R> implements Ordered {
      */
     @ExceptionHandler(RateLimitException.class)
     public R handleRateLimitException(RateLimitException e) {
-        if (e.getKey() != null && e.getUnit() != null) {
-            log.warn("[RateLimit] key={}, limit={}/{}{}, message={}",
+        if (e.getKey() != null) {
+            log.warn("[RateLimit] key={}, limit={}/{}ms, message={}",
                     e.getKey(),
                     e.getPermits(),
-                    e.getTtl(),
-                    formatTimeUnit(e.getUnit()),
+                    e.getWindow(),
                     e.getMessage());
         } else {
             log.warn("[RateLimit] {}", e.getMessage());
@@ -149,11 +147,10 @@ public class VeloWebExceptionHandler<R> implements Ordered {
      */
     @ExceptionHandler(IdempotentException.class)
     public R handleIdempotentException(IdempotentException e) {
-        if (e.getKey() != null && e.getUnit() != null) {
-            log.warn("[Idempotent] key={}, window={}{}, message={}",
+        if (e.getKey() != null) {
+            log.warn("[Idempotent] key={}, window={}ms, message={}",
                     e.getKey(),
                     e.getTtl(),
-                    formatTimeUnit(e.getUnit()),
                     e.getMessage());
         } else {
             log.warn("[Idempotent] {}", e.getMessage());
@@ -166,31 +163,16 @@ public class VeloWebExceptionHandler<R> implements Ordered {
      */
     @ExceptionHandler(LockException.class)
     public R handleLockException(LockException e) {
-        if (e.getKey() != null && e.getUnit() != null) {
-            log.warn("[Lock] key={}, waitTimeout={}{}, lease={}{}, message={}",
+        if (e.getKey() != null) {
+            log.warn("[Lock] key={}, waitTimeout={}ms, lease={}ms, message={}",
                     e.getKey(),
                     e.getWaitTimeout(),
-                    formatTimeUnit(e.getUnit()),
                     e.getLease(),
-                    formatTimeUnit(e.getUnit()),
                     e.getMessage());
         } else {
             log.warn("[Lock] {}", e.getMessage());
         }
         return failed.apply(e.getMessage());
-    }
-
-    private String formatTimeUnit(TimeUnit unit) {
-        switch (unit) {
-            case NANOSECONDS: return "ns";
-            case MICROSECONDS: return "us";
-            case MILLISECONDS: return "ms";
-            case SECONDS: return "s";
-            case MINUTES: return "m";
-            case HOURS: return "h";
-            case DAYS: return "d";
-            default: return unit.toString().toLowerCase();
-        }
     }
 
     /**

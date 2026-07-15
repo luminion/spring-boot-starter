@@ -44,7 +44,7 @@ class RedisLockHandlerTests {
     void shouldAcquireLockViaSetIfAbsentOnFirstLock() {
         when(valueOperations.setIfAbsent(anyString(), anyString(), anyLong(), any(TimeUnit.class))).thenReturn(true);
 
-        assertThat(handler.lock("order:1", 0, 30, TimeUnit.SECONDS)).isTrue();
+        assertThat(handler.lock("order:1", 0, 30000)).isTrue();
 
         verify(valueOperations, times(1))
                 .setIfAbsent(eq("order:1"), anyString(), anyLong(), any(TimeUnit.class));
@@ -56,9 +56,9 @@ class RedisLockHandlerTests {
     void shouldReenterWithoutHittingRedisWhenSameThreadLocksAgain() {
         when(valueOperations.setIfAbsent(anyString(), anyString(), anyLong(), any(TimeUnit.class))).thenReturn(true);
 
-        assertThat(handler.lock("order:1", 0, 30, TimeUnit.SECONDS)).isTrue();
+        assertThat(handler.lock("order:1", 0, 30000)).isTrue();
         // 同线程重入：不应再次访问 Redis
-        assertThat(handler.lock("order:1", 0, 30, TimeUnit.SECONDS)).isTrue();
+        assertThat(handler.lock("order:1", 0, 30000)).isTrue();
 
         verify(valueOperations, times(1))
                 .setIfAbsent(eq("order:1"), anyString(), anyLong(), any(TimeUnit.class));
@@ -72,8 +72,8 @@ class RedisLockHandlerTests {
     void shouldReleaseRedisLockOnlyAtOutermostUnlock() {
         when(valueOperations.setIfAbsent(anyString(), anyString(), anyLong(), any(TimeUnit.class))).thenReturn(true);
 
-        handler.lock("order:1", 0, 30, TimeUnit.SECONDS);
-        handler.lock("order:1", 0, 30, TimeUnit.SECONDS);
+        handler.lock("order:1", 0, 30000);
+        handler.lock("order:1", 0, 30000);
 
         // 内层 unlock：只递减本地计数，不删 Redis
         handler.unlock("order:1");
@@ -88,9 +88,9 @@ class RedisLockHandlerTests {
     void shouldNotDeadlockOnSameThreadReentrantLock() {
         when(valueOperations.setIfAbsent(anyString(), anyString(), anyLong(), any(TimeUnit.class))).thenReturn(true);
 
-        assertThat(handler.lock("order:1", 0, 30, TimeUnit.SECONDS)).isTrue();
+        assertThat(handler.lock("order:1", 0, 30000)).isTrue();
         // 即便首次持有后 Redis 已被占用，本线程重入仍应立刻成功（走本地计数分支）
-        assertThat(handler.lock("order:1", 0, 30, TimeUnit.SECONDS)).isTrue();
+        assertThat(handler.lock("order:1", 0, 30000)).isTrue();
 
         handler.unlock("order:1");
         handler.unlock("order:1");
@@ -102,7 +102,7 @@ class RedisLockHandlerTests {
         when(valueOperations.setIfAbsent(anyString(), anyString(), anyLong(), any(TimeUnit.class)))
                 .thenReturn(false, true);
 
-        assertThat(handler.lock("order:1", 50, 30, TimeUnit.MILLISECONDS)).isTrue();
+        assertThat(handler.lock("order:1", 50, 30000)).isTrue();
         verify(valueOperations, times(2))
                 .setIfAbsent(eq("order:1"), anyString(), anyLong(), any(TimeUnit.class));
 
@@ -121,7 +121,7 @@ class RedisLockHandlerTests {
         when(valueOperations.setIfAbsent(anyString(), anyString(), anyLong(), any(TimeUnit.class)))
                 .thenThrow(new IllegalStateException("redis unavailable"));
 
-        assertThatThrownBy(() -> handler.lock("order:1", 0, 30, TimeUnit.SECONDS))
+        assertThatThrownBy(() -> handler.lock("order:1", 0, 30000))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessage("redis unavailable");
 
@@ -133,10 +133,10 @@ class RedisLockHandlerTests {
     }
 
     @Test
-    void shouldRoundPositiveSubMillisecondLeaseUpToNextMillisecond() {
+    void shouldUseConfiguredMillisecondLeaseDirectly() {
         when(valueOperations.setIfAbsent(anyString(), anyString(), anyLong(), any(TimeUnit.class))).thenReturn(true);
 
-        assertThat(handler.lock("order:1", 0, 1500, TimeUnit.MICROSECONDS)).isTrue();
+        assertThat(handler.lock("order:1", 0, 2)).isTrue();
 
         verify(valueOperations).setIfAbsent(eq("order:1"), anyString(), eq(2L), eq(TimeUnit.MILLISECONDS));
         handler.unlock("order:1");

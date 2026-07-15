@@ -6,7 +6,6 @@ import org.redisson.api.RBucket;
 import org.redisson.api.RedissonClient;
 
 import java.time.Duration;
-import java.util.concurrent.TimeUnit;
 
 /**
  * 基于 Redisson 的分布式幂等处理器
@@ -20,9 +19,9 @@ public class RedissonIdempotentHandler implements IdempotentHandler {
     private final RedissonClient redissonClient;
 
     @Override
-    public boolean tryRecord(String key, String token, long timeout, TimeUnit unit) {
+    public boolean tryRecord(String key, String token, long timeout) {
         RBucket<String> bucket = redissonClient.getBucket(key);
-        return bucket.setIfAbsent(token, Duration.ofNanos(unit.toNanos(timeout)));
+        return bucket.setIfAbsent(token, Duration.ofMillis(timeout));
     }
 
     @Override

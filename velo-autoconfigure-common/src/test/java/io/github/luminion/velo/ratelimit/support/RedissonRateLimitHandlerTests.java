@@ -7,7 +7,6 @@ import org.redisson.api.RateType;
 import org.redisson.api.RedissonClient;
 
 import java.time.Duration;
-import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -29,7 +28,7 @@ class RedissonRateLimitHandlerTests {
         when(rateLimiter.tryAcquire()).thenReturn(true);
 
         RedissonRateLimitHandler handler = new RedissonRateLimitHandler(redissonClient);
-        boolean acquired = handler.tryAcquire("demo", 1.5D, 1L, TimeUnit.SECONDS);
+        boolean acquired = handler.tryAcquire("demo", 1.5D, 1000L);
 
         assertThat(acquired).isTrue();
         verify(rateLimiter).trySetRate(
@@ -51,7 +50,7 @@ class RedissonRateLimitHandlerTests {
         when(rateLimiter.tryAcquire()).thenReturn(true);
 
         RedissonRateLimitHandler handler = new RedissonRateLimitHandler(redissonClient);
-        boolean acquired = handler.tryAcquire("demo", 1.5D, 1L, TimeUnit.SECONDS);
+        boolean acquired = handler.tryAcquire("demo", 1.5D, 1000L);
 
         assertThat(acquired).isTrue();
         verify(rateLimiter).setRate(

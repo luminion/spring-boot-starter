@@ -95,11 +95,11 @@ class Slf4JInvocationLogWriterTest {
         writer.write(record);
 
         assertThat(output.getOut())
-                .contains("[127.0.0.1 GET /users/{id}] =>")
+                .contains("[127.0.0.1 GET /users/{id}] ==>")
                 .contains("args={\"id\":1}")
                 .doesNotContain("cost=")
                 .doesNotContain("result=")
-                .doesNotContain("<=");
+                .doesNotContain("<==");
     }
 
     @Test
@@ -117,11 +117,11 @@ class Slf4JInvocationLogWriterTest {
         writer.write(record);
 
         assertThat(output.getOut())
-                .contains("[127.0.0.1 GET /users/{id}] <=")
+                .contains("[127.0.0.1 GET /users/{id}] <==")
                 .contains("cost=12ms")
                 .contains("result={\"name\":\"Tom\"}")
                 .doesNotContain("args=")
-                .doesNotContain("=>");
+                .doesNotContain("==>");
     }
 
     @Test
@@ -139,7 +139,7 @@ class Slf4JInvocationLogWriterTest {
         writer.write(record);
 
         assertThat(output.getOut())
-                .contains("[GET /users/fail] <=")
+                .contains("[GET /users/fail] <==")
                 .contains("cost=8ms")
                 .contains("error=\"IllegalStateException: boom\"")
                 .doesNotContain("args=");
@@ -155,6 +155,7 @@ class Slf4JInvocationLogWriterTest {
         record.setCostMs(800);
         record.setSuccess(true);
         record.setSlow(true);
+        record.setSlowThreshold(300);
         record.setArgs("{\"item\":\"book\"}");
         record.setResult("{\"ok\":true}");
 
@@ -164,9 +165,58 @@ class Slf4JInvocationLogWriterTest {
         assertThat(output.getOut())
                 .contains("[placeOrder()]")
                 .contains("cost=800ms")
-                .contains("slow=true")
+                .contains("threshold=300ms")
+                .doesNotContain("slow=true")
                 .contains("args=")
                 .contains("WARN");
+    }
+
+    @Test
+    void shouldWriteSlowErrorAtErrorLevelWithConfiguredStackTrace(CapturedOutput output) {
+        VeloProperties properties = new VeloProperties();
+        properties.getLog().setLevel(LogLevel.OFF);
+        properties.getLog().getInvocation().setIncludeErrorStackTrace(true);
+        Slf4JInvocationLogWriter writer = new Slf4JInvocationLogWriter(properties);
+        InvocationLogRecord record = new InvocationLogRecord();
+        record.setLoggerName("com.example.OrderService");
+        record.setSource(InvocationLogSource.INVOKE);
+        record.setTarget("placeOrder()");
+        record.setCostMs(800);
+        record.setSuccess(false);
+        record.setSlow(true);
+        record.setSlowThreshold(300);
+        record.setArgs("{\"item\":\"book\"}");
+        record.setError(new IllegalStateException("boom"));
+
+        writer.write(record);
+
+        assertThat(output.getOut())
+                .contains("ERROR")
+                .contains("threshold=300ms")
+                .doesNotContain("slow=true")
+                .contains("error=\"IllegalStateException: boom\"")
+                .contains("at io.github.luminion.velo.log.support.Slf4JInvocationLogWriterTest");
+    }
+
+    @Test
+    void shouldSkipSlowErrorWhenSlowLevelIsOff(CapturedOutput output) {
+        VeloProperties properties = new VeloProperties();
+        properties.getLog().getSlow().setLevel(LogLevel.OFF);
+        Slf4JInvocationLogWriter writer = new Slf4JInvocationLogWriter(properties);
+        InvocationLogRecord record = new InvocationLogRecord();
+        record.setLoggerName("com.example.OrderService");
+        record.setSource(InvocationLogSource.INVOKE);
+        record.setTarget("cancelOrder()");
+        record.setCostMs(800);
+        record.setSuccess(false);
+        record.setSlow(true);
+        record.setSlowThreshold(300);
+        record.setArgs("{\"item\":\"book\"}");
+        record.setError(new IllegalStateException("boom"));
+
+        writer.write(record);
+
+        assertThat(output.getOut()).doesNotContain("[cancelOrder()]");
     }
 
     @Test
@@ -185,6 +235,6 @@ class Slf4JInvocationLogWriterTest {
 
         writer.write(record);
 
-        assertThat(output.getOut()).doesNotContain("traceId=trace-001");
+        assertThat(output.getOut()).doesNotContain("[demo-client GET /fail]");
     }
 }

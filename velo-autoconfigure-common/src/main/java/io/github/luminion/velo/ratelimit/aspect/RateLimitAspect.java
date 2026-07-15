@@ -66,7 +66,7 @@ public class RateLimitAspect implements Ordered {
         Method method = ConcurrencyAnnotationUtils.resolveSpecificMethod(joinPoint.getTarget(), signature.getMethod());
 
         double permits = rateLimit.permits();
-        long ttl = rateLimit.ttl();
+        long window = rateLimit.window();
 
         String methodFingerprint = fingerprinter.resolveMethodFingerprint(
                 joinPoint.getTarget(),
@@ -86,8 +86,8 @@ public class RateLimitAspect implements Ordered {
         String key = ConcurrencyAnnotationUtils.buildPrefixedKey(prefix, keyFingerprint);
 
         // 2. 执行限流
-        if (!rateLimitHandler.tryAcquire(key, permits, ttl, rateLimit.unit())) {
-            throw new RateLimitException(resolveMessage(rateLimit.message()), key, permits, ttl, rateLimit.unit());
+        if (!rateLimitHandler.tryAcquire(key, permits, window)) {
+            throw new RateLimitException(resolveMessage(rateLimit.message()), key, permits, window);
         }
 
         return joinPoint.proceed();

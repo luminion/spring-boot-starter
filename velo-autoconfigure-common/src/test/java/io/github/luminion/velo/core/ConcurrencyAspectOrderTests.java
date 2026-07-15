@@ -14,7 +14,6 @@ import org.springframework.aop.aspectj.annotation.AspectJProxyFactory;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -52,17 +51,17 @@ class ConcurrencyAspectOrderTests {
         proxyFactory.setProxyTargetClass(true);
         // Add aspects in @Order ascending sequence (lowest precedence value = outermost layer).
         // AspectJProxyFactory chains advisors in add-order, so the first added wraps the rest.
-        proxyFactory.addAspect(new IdempotentAspect("idempotent:", new SpelFingerprinter(), (key, token, timeout, unit) -> {
+        proxyFactory.addAspect(new IdempotentAspect("idempotent:", new SpelFingerprinter(), (key, token, timeout) -> {
             events.add("idempotent");
             return true;
         }));
-        proxyFactory.addAspect(new RateLimitAspect("rateLimit:", new SpelFingerprinter(), (key, rate, timeout, unit) -> {
+        proxyFactory.addAspect(new RateLimitAspect("rateLimit:", new SpelFingerprinter(), (key, rate, window) -> {
             events.add("rateLimit");
             return rateLimitAccepted;
         }));
         proxyFactory.addAspect(new LockAspect("lock:", new SpelFingerprinter(), new LockHandler() {
             @Override
-            public boolean lock(String key, long waitTime, long leaseTime, TimeUnit unit) {
+            public boolean lock(String key, long waitTime, long leaseTime) {
                 events.add("lock");
                 return true;
             }

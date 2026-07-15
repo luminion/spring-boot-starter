@@ -1,7 +1,6 @@
 package io.github.luminion.velo.ratelimit.annotation;
 
 import java.lang.annotation.*;
-import java.util.concurrent.TimeUnit;
 
 /**
  * 限流注解
@@ -20,14 +19,9 @@ public @interface RateLimit {
     double permits() default 50;
 
     /**
-     * 限流时间窗口大小。
+     * 限流时间窗口大小，单位为毫秒。
      */
-    long ttl() default 1;
-
-    /**
-     * 限流时间窗口单位
-     */
-    TimeUnit unit() default TimeUnit.SECONDS;
+    long window() default 1000;
 
     /**
      * 用于生成限流分桶后缀的 SpEL 表达式。

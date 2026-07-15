@@ -58,7 +58,7 @@ public class RedisLockHandler implements LockHandler {
     }
 
     @Override
-    public boolean lock(String key, long waitTime, long leaseTime, TimeUnit unit) {
+    public boolean lock(String key, long waitTime, long leaseTime) {
         Map<String, Deque<String>> values = lockValues.get();
         Deque<String> stack = values == null ? null : values.get(key);
         // 同线程已持有该 key：本地重入，仅增加持有计数(压入同一 owner token)，不再访问 Redis
@@ -67,7 +67,7 @@ public class RedisLockHandler implements LockHandler {
             return true;
         }
 
-        long waitNanos = unit.toNanos(waitTime);
+        long waitNanos = TimeUnit.MILLISECONDS.toNanos(waitTime);
         // 该后端基于 setIfAbsent 固定 TTL，无续约线程，不支持看门狗(-1)；
         // 降级为固定租约避免负 TTL 直接报错，并提示改用 Redisson 以获得自动续约。
         long leaseMillis;
@@ -79,14 +79,7 @@ public class RedisLockHandler implements LockHandler {
                         "set an explicit lease or switch to RedissonLockHandler.", WATCHDOG_FALLBACK_LEASE_MILLIS);
             }
         } else {
-            leaseMillis = unit.toMillis(leaseTime);
-            boolean hasSubMillisecondRemainder = unit == TimeUnit.NANOSECONDS
-                    ? leaseTime % TimeUnit.MILLISECONDS.toNanos(1L) != 0L
-                    : unit == TimeUnit.MICROSECONDS
-                            && leaseTime % TimeUnit.MILLISECONDS.toMicros(1L) != 0L;
-            if (hasSubMillisecondRemainder && leaseMillis < Long.MAX_VALUE) {
-                leaseMillis++;
-            }
+            leaseMillis = leaseTime;
         }
         long startNanos = System.nanoTime();
 

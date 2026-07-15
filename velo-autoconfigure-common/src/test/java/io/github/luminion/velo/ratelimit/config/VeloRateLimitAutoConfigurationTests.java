@@ -18,7 +18,6 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
-import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -102,7 +101,7 @@ class VeloRateLimitAutoConfigurationTests {
     static class CustomRateLimitHandler implements RateLimitHandler {
 
         @Override
-        public boolean tryAcquire(String key, double rate, long timeout, TimeUnit unit) {
+        public boolean tryAcquire(String key, double rate, long window) {
             return true;
         }
     }

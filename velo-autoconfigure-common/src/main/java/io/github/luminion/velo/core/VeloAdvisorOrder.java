@@ -7,7 +7,7 @@ import org.springframework.core.Ordered;
  */
 public final class VeloAdvisorOrder {
 
-    private static final int CONCURRENCY_BASE = Ordered.LOWEST_PRECEDENCE - 30_000;
+    private static final int CONCURRENCY_BASE = Ordered.LOWEST_PRECEDENCE - 50_000;
 
     public static final int CONCURRENCY_IDEMPOTENT = CONCURRENCY_BASE;
 
@@ -22,11 +22,10 @@ public final class VeloAdvisorOrder {
     public static final int LOG_INVOKE = CONCURRENCY_BASE + 25_000;
 
     /**
-     * Slow log aspect order. Positioned inside {@link #LOG_INVOKE} so that when both
-     * {@code @InvokeLog} and {@code @SlowLog} are present, {@code InvokeLogAspect} wraps
-     * {@code SlowLogAspect} and the latter skips via {@code hasInvokeLog} guard.
+     * Slow log aspect order. It wraps the invocation log aspects so that its record is
+     * written last while the advisor chain unwinds after the business invocation.
      */
-    public static final int LOG_SLOW = CONCURRENCY_BASE + 30_000;
+    public static final int LOG_SLOW = CONCURRENCY_BASE + 24_000;
 
     /**
      * Controller log aspect order.

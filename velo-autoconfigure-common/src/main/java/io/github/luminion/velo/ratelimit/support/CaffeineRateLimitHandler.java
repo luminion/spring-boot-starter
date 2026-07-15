@@ -49,13 +49,13 @@ public class CaffeineRateLimitHandler implements RateLimitHandler {
     }
 
     @Override
-    public boolean tryAcquire(String key, double rate, long timeout, TimeUnit unit) {
-        RateLimitWindow window = RateLimitWindow.from(rate, timeout, unit);
+    public boolean tryAcquire(String key, double rate, long window) {
+        RateLimitWindow resolvedWindow = RateLimitWindow.from(rate, window);
         long now = ticker.read();
         AtomicBoolean acquired = new AtomicBoolean(false);
         buckets.asMap().compute(key, (unused, existing) -> {
             TokenBucket bucket = existing != null ? existing : new TokenBucket();
-            acquired.set(bucket.tryAcquire(window.capacity(), window.intervalNanos(), now));
+            acquired.set(bucket.tryAcquire(resolvedWindow.capacity(), resolvedWindow.intervalNanos(), now));
             return bucket;
         });
         return acquired.get();

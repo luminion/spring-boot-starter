@@ -293,7 +293,7 @@ velo:
 ```java
 import io.github.luminion.velo.idempotent.annotation.Idempotent;
 
-@Idempotent(key = "#userId", ttl = 3)
+@Idempotent(key = "#userId", ttl = 3000)
 public void submitOrder(Long userId) {
     // ...
 }
@@ -304,6 +304,7 @@ public void submitOrder(Long userId) {
 - `backend` 可选 `AUTO`、`REDISSON`、`REDIS`、`CAFFEINE`、`JDK`
 - `AUTO` 模式下按自动配置顺序选择后端：`REDISSON -> REDIS -> CAFFEINE -> JDK`
 - `prefix` 默认 `idempotent:`
+- `ttl` 单位固定为毫秒，默认 `3000`（3 秒）
 - 业务失败（抛异常）时会清除本次幂等记录以允许重试；清除采用 token 比对，只删除本次请求写入的记录，不会误删并发请求在窗口内刚写入的新记录
 - 幂等 key 始终以方法（`全限定类名#方法名(参数类型...)`）为前缀，再拼接 SpEL 结果，与限流分桶语义一致：**不同方法或同名重载方法即使用相同的 SpEL key（如都用 `#orderId`）也不会互相碰撞、共享同一幂等窗口**
 
@@ -311,11 +312,11 @@ public void submitOrder(Long userId) {
 >
 > ```java
 > // ❌ 危险：userId=1 提交后，3 秒内 userId=2 也会被拦截
-> @Idempotent(ttl = 3)
+> @Idempotent(ttl = 3000)
 > public void submitOrder(Long userId) { }
 >
 > // ✅ 正确：每个用户独立幂等
-> @Idempotent(key = "#userId", ttl = 3)
+> @Idempotent(key = "#userId", ttl = 3000)
 > public void submitOrder(Long userId) { }
 > ```
 >
@@ -346,7 +347,7 @@ velo:
 ```java
 import io.github.luminion.velo.ratelimit.annotation.RateLimit;
 
-@RateLimit(key = "#userId", permits = 10, ttl = 1)
+@RateLimit(key = "#userId", permits = 10, window = 1000)
 public Object query(Long userId) {
     return null;
 }
@@ -355,7 +356,7 @@ public Object query(Long userId) {
 说明：
 
 - `permits` 表示一个时间窗口内允许通过的最大请求数
-- `ttl + unit` 定义窗口大小
+- `window` 定义窗口大小，单位固定为毫秒，默认 `1000`（1 秒）
 - `backend` 与幂等一致，也支持 `AUTO/REDISSON/REDIS/CAFFEINE/JDK`
 - `AUTO` 模式下默认选择顺序同幂等：`REDISSON -> REDIS -> CAFFEINE -> JDK`
 - `REDIS` 后端使用 Boot 默认的 `stringRedisTemplate` 执行 Lua，脚本通过 Redis `TIME` 获取统一时钟，不受应用节点时间偏差影响
@@ -377,15 +378,15 @@ public Object query(Long userId) {
 `permits` 支持小数，用于表达「低于 1 次 / 窗口」的限流需求。换算规则：
 
 - 实际容量 `capacity = ceil(permits)`（向上取整）
-- 实际窗口 `interval = ttl × (capacity / permits)`（拉长窗口以保持平均速率）
+- 实际窗口 `interval = window × (capacity / permits)`（拉长窗口以保持平均速率）
 
 | 配置 | 含义 | 实际实现 |
 | --- | --- | --- |
-| `permits=10, ttl=1s` | 10 次/秒 | 容量=10，窗口=1s |
-| `permits=0.5, ttl=1s` | 0.5 次/秒（即 2 秒 1 次） | 容量=1，窗口=2s |
-| `permits=0.2, ttl=1s` | 0.2 次/秒（即 5 秒 1 次） | 容量=1，窗口=5s |
+| `permits=10, window=1000` | 10 次/秒 | 容量=10，窗口=1000ms |
+| `permits=0.5, window=1000` | 0.5 次/秒（即 2 秒 1 次） | 容量=1，窗口=2000ms |
+| `permits=0.2, window=1000` | 0.2 次/秒（即 5 秒 1 次） | 容量=1，窗口=5000ms |
 
-多数场景用整数更直观，例如「每 5 秒 1 次」可直接写 `@RateLimit(permits=1, ttl=5)`，等价于 `permits=0.2, ttl=1`。
+多数场景用整数更直观，例如「每 5 秒 1 次」可直接写 `@RateLimit(permits=1, window=5000)`，等价于 `permits=0.2, window=1000`。
 
 ### 5. 锁
 
@@ -413,7 +414,7 @@ velo:
 ```java
 import io.github.luminion.velo.lock.annotation.Lock;
 
-@Lock(key = "#orderId", waitTimeout = 1, lease = 30)
+@Lock(key = "#orderId", waitTimeout = 1000, lease = 30000)
 public void pay(Long orderId) {
     // ...
 }
@@ -423,9 +424,9 @@ public void pay(Long orderId) {
 
 - `backend` 也支持 `AUTO`、`REDISSON`、`REDIS`、`CAFFEINE`、`JDK`
 - `AUTO` 默认顺序为 `REDISSON -> REDIS -> CAFFEINE -> JDK`
-- `waitTimeout` 默认 `0`，表示拿不到锁立即失败
+- `waitTimeout` 单位固定为毫秒，默认 `0`，表示拿不到锁立即失败
 - `retry-interval` 默认 `10ms`，仅用于简单 Redis 后端等待锁时的轮询；值越小获取越及时，但 Redis 请求频率越高
-- `lease` 默认 `30s`
+- `lease` 单位固定为毫秒，默认 `30000`（30 秒）
 - `REDIS` / `REDISSON` 更适合分布式场景，`CAFFEINE` / `JDK` 只保证单 JVM 内互斥
 - 本地锁只有一份实现：Caffeine 是纯缓存库、不提供互斥锁 API，因此 `CAFFEINE` 档位与 `JDK` 完全一致（复用同一实现），`backend=CAFFEINE` 仍可用，只是不再单独维护
 - `REDIS` 后端支持同线程可重入（同一线程重复加同一把锁不会自锁死），最外层释放时才真正删除 Redis 锁
@@ -445,7 +446,7 @@ public void pay(Long orderId) {
 
 ### 7. 日志
 
-Velo 提供一套统一调用日志能力，Controller、Feign 与 `@InvokeLog` 都按同一格式输出一次调用的最终状态。
+Velo 提供一套统一调用日志能力。Controller、Feign 与 `@InvokeLog` 每次调用分别输出进入和退出两条记录：进入记录包含入参，退出记录包含耗时以及返回值或异常。
 
 日志序列化器或 `InvocationLogWriter` 发生运行时异常时会记录内部 WARN 并丢弃本次日志，不会阻止业务执行或覆盖原始业务异常。
 
@@ -458,6 +459,8 @@ velo:
   log:
     enabled: true
     level: INFO
+    slow:
+      level: WARN
     trace:
       enabled: true
       header-name: X-Trace-Id
@@ -496,11 +499,13 @@ public Object createOrder(CreateOrderCmd cmd) {
 
 - `traceId` 默认开启，会写入 MDC、响应头，并在 Feign 调用中透传
 - 如果没有自定义 `logging.pattern.level`，会自动把 `%X{traceId}` 加到用户自己的日志中
-- `@InvokeLog` 只输出一条完成态日志，成功包含 `args` 与 `result`，异常包含 `args` 与异常摘要
-- `@SlowLog` 保留慢调用语义，单独使用时只在超过阈值后输出统一调用日志
-- 同时使用 `@InvokeLog` 与 `@SlowLog` 时不会重复打印，统一日志中会带 `slow=true`
+- Controller、Feign 与 `@InvokeLog` 的进入日志格式为 `[target] ==> args=...`
+- Controller、Feign 与 `@InvokeLog` 的退出日志格式为 `[target] <== cost=Xms result=...`；调用失败时输出异常摘要并使用 ERROR 级别
+- `@SlowLog` 的阈值单位固定为毫秒，只在调用耗时超过阈值后输出一条独立慢日志，格式包含 `cost=Xms threshold=Yms`
+- 慢日志级别由 `velo.log.slow.level` 控制，默认 WARN；调用异常且超过阈值时提升为 ERROR，设置为 `OFF` 时完全关闭独立慢日志
+- 同时命中其他调用日志切面时，慢日志默认在 ENTRY、EXIT 日志之后最后输出
 - 如果需要写入 MQ、数据库或审计系统，提供自定义 `InvocationLogWriter` Bean 即可
-- `velo.log.level=OFF` 会关闭默认 Slf4J 调用日志 writer 的成功和异常输出；自定义 `InvocationLogWriter` 不受该日志级别约束
+- `velo.log.level=OFF` 会关闭 Controller、Feign、`@InvokeLog` 的成功和异常输出；`velo.log.slow.level=OFF` 会关闭 `@SlowLog` 的独立慢日志；自定义 `InvocationLogWriter` 不受这些日志级别约束
 
 敏感参数不打印（`@LogPayloadIgnore`）：
 
@@ -767,7 +772,7 @@ velo:
 说明：
 
 - 默认开启
-- 每次调用输出一条完成态日志，包含请求方法、controller 映射模板路径、耗时、入参与响应体或异常摘要
+- 每次调用输出进入和退出两条日志；进入日志包含请求方法、controller 映射模板路径和入参，退出日志包含耗时、响应体或异常摘要
 - 会过滤掉原始 query string，避免把敏感查询串直接打到日志中
 - `max-payload-length` 为正数时，过长 payload 会按配置长度截断
 - 当前默认 `max-payload-length=-1`，表示不限制长度；`0` 表示 payload 记录为 `-`
@@ -797,7 +802,7 @@ velo:
 说明：
 
 - 默认开启
-- 会记录 client 名、HTTP 方法、映射路径、耗时、入参与响应体或异常摘要
+- 每次调用输出进入和退出两条日志，记录 client 名、HTTP 方法、映射路径、耗时、入参与响应体或异常摘要
 - 日志格式和 Controller、`@InvokeLog` 保持一致，便于联调排查
 - 暂不记录 header，只保留调试常用关键信息
 - `max-payload-length` 为正数时，过长 payload 会按配置长度截断
@@ -911,7 +916,7 @@ logging:
 
 ### Q4：限流被拒绝后多久可以重试？
 
-令牌桶按固定速率恢复令牌，平均恢复一个令牌的间隔约为 `ttl / permits`。例如 `permits=10, ttl=1s` 约每 0.1 秒恢复 1 个令牌，被拒绝后立即重试可能仍失败，建议按该间隔退避重试。
+令牌桶按固定速率恢复令牌，平均恢复一个令牌的间隔约为 `window / permits`。例如 `permits=10, window=1000` 约每 100ms 恢复 1 个令牌，被拒绝后立即重试可能仍失败，建议按该间隔退避重试。
 
 ### Q5：异常信息能否做国际化？
 

@@ -33,9 +33,8 @@ public class RedisIdempotentHandler implements IdempotentHandler {
             Long.class);
 
     @Override
-    public boolean tryRecord(String key, String token, long timeout, TimeUnit unit) {
-        // SET NX EX：首次写入 token 并设置过期时间
-        Boolean success = redisTemplate.opsForValue().setIfAbsent(key, token, timeout, unit);
+    public boolean tryRecord(String key, String token, long timeout) {
+        Boolean success = redisTemplate.opsForValue().setIfAbsent(key, token, timeout, TimeUnit.MILLISECONDS);
         if (success == null) {
             // setIfAbsent 返回 null 说明命令被 Redis 事务/pipeline 排队而非立即执行，此时幂等判定失效。
             // 幂等操作不应包裹在 Redis 事务里，打 WARN 提示误用。

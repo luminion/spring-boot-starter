@@ -129,19 +129,10 @@ public final class InvocationLogSupport {
     }
 
     /**
-     * Checks whether the elapsed time exceeds the slow-log threshold.
-     *
-     * @param elapsedMs elapsed time in milliseconds
-     * @param threshold threshold value
-     * @param unit      threshold time unit
-     * @return {@code true} if the elapsed time exceeds the threshold
+     * Compares a monotonic nanosecond duration against a millisecond threshold.
      */
-    public static boolean exceedsSlowThreshold(long elapsedMs, long threshold, TimeUnit unit) {
-        return TimeUnit.MILLISECONDS.toNanos(elapsedMs) > unit.toNanos(threshold);
-    }
-
-    public static boolean exceedsSlowThresholdNanos(long elapsedNanos, long threshold, TimeUnit unit) {
-        return elapsedNanos > unit.toNanos(threshold);
+    public static boolean exceedsSlowThresholdNanos(long elapsedNanos, long threshold) {
+        return elapsedNanos > TimeUnit.MILLISECONDS.toNanos(threshold);
     }
 
     private static Map<String, Object> buildArgumentMap(MethodSignature signature, Object target, Object[] args) {

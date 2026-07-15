@@ -16,7 +16,6 @@ import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.data.redis.core.RedisTemplate;
 
-import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -100,7 +99,7 @@ class VeloIdempotentAutoConfigurationTests {
     static class CustomIdempotentHandler implements IdempotentHandler {
 
         @Override
-        public boolean tryRecord(String key, String token, long timeout, TimeUnit unit) {
+        public boolean tryRecord(String key, String token, long timeout) {
             return true;
         }
     }

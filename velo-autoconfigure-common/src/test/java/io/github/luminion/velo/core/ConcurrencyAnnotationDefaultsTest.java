@@ -15,7 +15,7 @@ class ConcurrencyAnnotationDefaultsTest {
     void shouldExposeSafeIdempotentDefaults() throws NoSuchMethodException {
         Idempotent idempotent = annotation("idempotent", Idempotent.class);
 
-        assertThat(idempotent.ttl()).isEqualTo(3);
+        assertThat(idempotent.ttl()).isEqualTo(3000);
     }
 
     @Test
@@ -23,7 +23,7 @@ class ConcurrencyAnnotationDefaultsTest {
         Lock lock = annotation("lock", Lock.class);
 
         assertThat(lock.waitTimeout()).isZero();
-        assertThat(lock.lease()).isEqualTo(30);
+        assertThat(lock.lease()).isEqualTo(30000);
     }
 
     @Test
@@ -31,7 +31,7 @@ class ConcurrencyAnnotationDefaultsTest {
         RateLimit rateLimit = annotation("rateLimit", RateLimit.class);
 
         assertThat(rateLimit.permits()).isEqualTo(50);
-        assertThat(rateLimit.ttl()).isEqualTo(1);
+        assertThat(rateLimit.window()).isEqualTo(1000);
     }
 
     private static <A extends java.lang.annotation.Annotation> A annotation(String methodName, Class<A> type)

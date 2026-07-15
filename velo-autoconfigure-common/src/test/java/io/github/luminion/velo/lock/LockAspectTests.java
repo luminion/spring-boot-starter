@@ -7,7 +7,6 @@ import io.github.luminion.velo.lock.aspect.LockAspect;
 import org.junit.jupiter.api.Test;
 import org.springframework.aop.aspectj.annotation.AspectJProxyFactory;
 
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -33,7 +32,7 @@ class LockAspectTests {
     private static LockHandler capturingLockHandler(AtomicReference<String> capturedKey) {
         return new LockHandler() {
             @Override
-            public boolean lock(String key, long waitTime, long leaseTime, TimeUnit unit) {
+            public boolean lock(String key, long waitTime, long leaseTime) {
                 capturedKey.set(key);
                 return true;
             }

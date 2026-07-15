@@ -1,7 +1,5 @@
 package io.github.luminion.velo.ratelimit.exception;
 
-import java.util.concurrent.TimeUnit;
-
 /**
  * 触发限流时抛出。
  *
@@ -11,27 +9,24 @@ public class RateLimitException extends RuntimeException {
 
     private final String key;
     private final double permits;
-    private final long ttl;
-    private final TimeUnit unit;
+    private final long window;
 
     public RateLimitException(String message) {
-        this(message, null, 0D, 0L, null);
+        this(message, null, 0D, 0L);
     }
 
     public RateLimitException(String message, Throwable cause) {
         super(message, cause);
         this.key = null;
         this.permits = 0D;
-        this.ttl = 0L;
-        this.unit = null;
+        this.window = 0L;
     }
 
-    public RateLimitException(String message, String key, double permits, long ttl, TimeUnit unit) {
+    public RateLimitException(String message, String key, double permits, long window) {
         super(message);
         this.key = key;
         this.permits = permits;
-        this.ttl = ttl;
-        this.unit = unit;
+        this.window = window;
     }
 
     /**
@@ -49,16 +44,9 @@ public class RateLimitException extends RuntimeException {
     }
 
     /**
-     * 限流时间窗口大小。
+     * 限流时间窗口大小，单位为毫秒。
      */
-    public long getTtl() {
-        return ttl;
-    }
-
-    /**
-     * 限流时间窗口单位。可能为 {@code null}（旧构造方式）。
-     */
-    public TimeUnit getUnit() {
-        return unit;
+    public long getWindow() {
+        return window;
     }
 }

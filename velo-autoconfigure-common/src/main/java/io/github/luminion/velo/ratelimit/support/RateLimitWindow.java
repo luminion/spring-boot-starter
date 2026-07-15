@@ -17,18 +17,18 @@ final class RateLimitWindow {
         this.intervalNanos = intervalNanos;
     }
 
-    static RateLimitWindow from(double permits, long timeout, TimeUnit unit) {
+    static RateLimitWindow from(double permits, long window) {
         if (!Double.isFinite(permits) || permits <= 0D) {
             throw new IllegalArgumentException("Rate limit permits must be a finite positive number.");
         }
-        if (timeout <= 0L) {
-            throw new IllegalArgumentException("Rate limit timeout must be greater than zero.");
+        if (window <= 0L) {
+            throw new IllegalArgumentException("Rate limit window must be greater than zero.");
         }
 
         long capacity = Math.max(1L, (long) Math.ceil(permits));
         double scale = capacity / permits;
-        long baseMillis = Math.max(1L, unit.toMillis(timeout));
-        long baseNanos = Math.max(1L, unit.toNanos(timeout));
+        long baseMillis = window;
+        long baseNanos = TimeUnit.MILLISECONDS.toNanos(window);
 
         return new RateLimitWindow(
                 capacity,

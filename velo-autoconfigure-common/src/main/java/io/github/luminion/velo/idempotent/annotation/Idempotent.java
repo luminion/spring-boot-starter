@@ -1,7 +1,6 @@
 package io.github.luminion.velo.idempotent.annotation;
 
 import java.lang.annotation.*;
-import java.util.concurrent.TimeUnit;
 
 /**
  * 接口幂等性注解
@@ -23,14 +22,9 @@ public @interface Idempotent {
     String key() default "";
 
     /**
-     * 幂等窗口 TTL。
+     * 幂等窗口 TTL，单位为毫秒。
      */
-    long ttl() default 3;
-
-    /**
-     * 时间单位，默认秒
-     */
-    TimeUnit unit() default TimeUnit.SECONDS;
+    long ttl() default 3000;
 
     /**
      * 提示信息

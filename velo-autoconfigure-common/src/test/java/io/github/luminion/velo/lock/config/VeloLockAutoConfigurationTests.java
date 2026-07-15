@@ -15,7 +15,6 @@ import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
-import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -106,7 +105,7 @@ class VeloLockAutoConfigurationTests {
     static class CustomLockHandler implements LockHandler {
 
         @Override
-        public boolean lock(String key, long waitTime, long leaseTime, TimeUnit unit) {
+        public boolean lock(String key, long waitTime, long leaseTime) {
             return true;
         }
 

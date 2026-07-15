@@ -78,9 +78,9 @@ public class LockAspect implements Ordered {
                         lock.key()));
 
         // 2. 尝试获取锁
-        boolean lockSuccess = lockHandler.lock(key, wait, lease, lock.unit());
+        boolean lockSuccess = lockHandler.lock(key, wait, lease);
         if (!lockSuccess) {
-            throw new LockException(resolveMessage(lock.message()), key, wait, lease, lock.unit());
+            throw new LockException(resolveMessage(lock.message()), key, wait, lease);
         }
 
         try {

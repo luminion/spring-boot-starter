@@ -1,7 +1,5 @@
 package io.github.luminion.velo.lock.exception;
 
-import java.util.concurrent.TimeUnit;
-
 /**
  * 获取锁失败时抛出。
  *
@@ -12,18 +10,16 @@ public class LockException extends RuntimeException {
     private final String key;
     private final long waitTimeout;
     private final long lease;
-    private final TimeUnit unit;
 
     public LockException(String message) {
-        this(message, null, 0L, 0L, null);
+        this(message, null, 0L, 0L);
     }
 
-    public LockException(String message, String key, long waitTimeout, long lease, TimeUnit unit) {
+    public LockException(String message, String key, long waitTimeout, long lease) {
         super(message);
         this.key = key;
         this.waitTimeout = waitTimeout;
         this.lease = lease;
-        this.unit = unit;
     }
 
     /**
@@ -34,23 +30,17 @@ public class LockException extends RuntimeException {
     }
 
     /**
-     * 等待获取锁的时间。
+     * 等待获取锁的时间，单位为毫秒。
      */
     public long getWaitTimeout() {
         return waitTimeout;
     }
 
     /**
-     * 锁的持有时间。
+     * 锁的持有时间，单位为毫秒。
      */
     public long getLease() {
         return lease;
     }
 
-    /**
-     * 时间单位。可能为 {@code null}（旧构造方式）。
-     */
-    public TimeUnit getUnit() {
-        return unit;
-    }
 }

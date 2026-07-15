@@ -19,6 +19,7 @@ class VeloPropertiesDefaultsTest {
 
         assertThat(properties.getMode()).isEqualTo(VeloMode.OPINIONATED);
         assertThat(properties.getLog().getLevel()).isEqualTo(LogLevel.INFO);
+        assertThat(properties.getLog().getSlow().getLevel()).isEqualTo(LogLevel.WARN);
         assertThat(properties.getSpringConverter().isDateTimeEnabled()).isTrue();
         assertThat(properties.getExcel().getConverters().isEnabled()).isTrue();
         assertThat(properties.getExcel().isEnabled()).isTrue();
@@ -59,6 +60,18 @@ class VeloPropertiesDefaultsTest {
         assertThat(properties.getLog().getInvocation().getController().isEnabled()).isTrue();
         assertThat(properties.getLog().getInvocation().getFeign().isEnabled()).isTrue();
         assertThat(properties.getLog().getInvocation().getMethod().isEnabled()).isTrue();
+        assertThat(properties.getAspectOrder().getIdempotent())
+                .isLessThan(properties.getAspectOrder().getRateLimit());
+        assertThat(properties.getAspectOrder().getRateLimit())
+                .isLessThan(properties.getAspectOrder().getLock());
+        assertThat(properties.getAspectOrder().getLock())
+                .isLessThan(properties.getAspectOrder().getSlowLog());
+        assertThat(properties.getAspectOrder().getSlowLog())
+                .isLessThan(properties.getAspectOrder().getInvokeLog());
+        assertThat(properties.getAspectOrder().getInvokeLog())
+                .isLessThan(properties.getAspectOrder().getControllerLog());
+        assertThat(properties.getAspectOrder().getControllerLog())
+                .isLessThan(properties.getAspectOrder().getFeignLog());
         assertThat(properties.getWeb().isEnabled()).isTrue();
         assertThat(properties.getFeign().isEnabled()).isTrue();
     }

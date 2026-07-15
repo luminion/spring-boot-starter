@@ -36,8 +36,9 @@ public class CaffeineIdempotentHandler implements IdempotentHandler {
             .build();
 
     @Override
-    public boolean tryRecord(String key, String token, long timeout, TimeUnit unit) {
-        Marker existing = cache.asMap().putIfAbsent(key, new Marker(token, unit.toNanos(timeout)));
+    public boolean tryRecord(String key, String token, long timeout) {
+        Marker existing = cache.asMap().putIfAbsent(
+                key, new Marker(token, TimeUnit.MILLISECONDS.toNanos(timeout)));
         return existing == null;
     }
 

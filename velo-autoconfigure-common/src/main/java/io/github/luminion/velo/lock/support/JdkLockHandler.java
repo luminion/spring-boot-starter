@@ -26,7 +26,7 @@ public class JdkLockHandler implements LockHandler {
     private final ConcurrentHashMap<String, LockState> lockMap = new ConcurrentHashMap<>();
 
     @Override
-    public boolean lock(String key, long waitTime, long leaseTime, TimeUnit unit) {
+    public boolean lock(String key, long waitTime, long leaseTime) {
         LockState state = lockMap.compute(key, (k, existing) -> {
             LockState resolved = existing != null ? existing : new LockState();
             resolved.retain();
@@ -35,7 +35,7 @@ public class JdkLockHandler implements LockHandler {
 
         boolean locked = false;
         try {
-            locked = state.lock.tryLock(waitTime, unit);
+            locked = state.lock.tryLock(waitTime, TimeUnit.MILLISECONDS);
             return locked;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();

@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -15,7 +14,7 @@ class JdkLockHandlerTests {
     void shouldRemoveIdleLockStateAfterUnlock() throws Exception {
         JdkLockHandler handler = new JdkLockHandler();
 
-        assertThat(handler.lock("demo", 0, 30, TimeUnit.SECONDS)).isTrue();
+        assertThat(handler.lock("demo", 0, 30000)).isTrue();
         handler.unlock("demo");
 
         assertThat(lockMap(handler)).isEmpty();

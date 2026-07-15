@@ -5,7 +5,6 @@ import org.redisson.api.RBucket;
 import org.redisson.api.RedissonClient;
 
 import java.time.Duration;
-import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -22,7 +21,7 @@ class RedissonIdempotentHandlerTests {
         when(bucket.setIfAbsent("token-1", Duration.ofMillis(1500L))).thenReturn(true);
 
         RedissonIdempotentHandler handler = new RedissonIdempotentHandler(redissonClient);
-        boolean recorded = handler.tryRecord("demo", "token-1", 1500L, TimeUnit.MILLISECONDS);
+        boolean recorded = handler.tryRecord("demo", "token-1", 1500L);
 
         assertThat(recorded).isTrue();
         verify(bucket).setIfAbsent("token-1", Duration.ofMillis(1500L));

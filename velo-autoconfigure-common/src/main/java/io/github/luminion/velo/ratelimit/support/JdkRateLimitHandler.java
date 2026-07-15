@@ -33,13 +33,13 @@ public class JdkRateLimitHandler implements RateLimitHandler, DisposableBean {
     });
 
     @Override
-    public boolean tryAcquire(String key, double rate, long timeout, TimeUnit unit) {
-        RateLimitWindow window = RateLimitWindow.from(rate, timeout, unit);
+    public boolean tryAcquire(String key, double rate, long window) {
+        RateLimitWindow resolvedWindow = RateLimitWindow.from(rate, window);
         long now = System.nanoTime();
         AtomicBoolean acquired = new AtomicBoolean(false);
         bucketMap.compute(key, (unused, existing) -> {
             TokenBucket bucket = existing != null ? existing : new TokenBucket();
-            acquired.set(bucket.tryAcquire(window.capacity(), window.intervalNanos(), now));
+            acquired.set(bucket.tryAcquire(resolvedWindow.capacity(), resolvedWindow.intervalNanos(), now));
             return bucket;
         });
         if (bucketMap.mappingCount() > 1024 && isCleaning.compareAndSet(false, true)) {

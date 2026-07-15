@@ -28,6 +28,11 @@ public class InvocationLogRecord {
     private boolean slow;
 
     /**
+     * Configured threshold in milliseconds that caused this invocation to be treated as slow.
+     */
+    private long slowThreshold;
+
+    /**
      * Logger name used by the log writer. When set, the writer logs under this class name
      * instead of its own, so the log output shows the actual intercepted class.
      */
@@ -119,6 +124,14 @@ public class InvocationLogRecord {
 
     public void setSlow(boolean slow) {
         this.slow = slow;
+    }
+
+    public long getSlowThreshold() {
+        return slowThreshold;
+    }
+
+    public void setSlowThreshold(long slowThreshold) {
+        this.slowThreshold = slowThreshold;
     }
 
     /**

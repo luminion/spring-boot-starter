@@ -90,9 +90,9 @@ public class IdempotentAspect implements Ordered {
         // 为本次请求生成唯一 token，失败回滚时只清除自己写入的记录，避免误删并发请求的新记录。
         String token = UUID.randomUUID().toString();
 
-        boolean accepted = idempotentHandler.tryRecord(key, token, ttl, idempotent.unit());
+        boolean accepted = idempotentHandler.tryRecord(key, token, ttl);
         if (!accepted) {
-            throw new IdempotentException(resolveMessage(idempotent.message()), key, ttl, idempotent.unit());
+            throw new IdempotentException(resolveMessage(idempotent.message()), key, ttl);
         }
 
         try {

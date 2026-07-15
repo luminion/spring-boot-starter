@@ -11,7 +11,6 @@ import org.springframework.util.StringUtils;
 import java.util.ArrayList;
 import java.util.List;
 import java.lang.reflect.Method;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -30,7 +29,7 @@ class RateLimitAspectTests {
             }
             return "tenant:" + args[0];
         };
-        RateLimitHandler handler = (key, rate, timeout, unit) -> {
+        RateLimitHandler handler = (key, rate, window) -> {
             resolvedKey.set(key);
             return true;
         };
@@ -53,7 +52,7 @@ class RateLimitAspectTests {
     @Test
     void shouldKeepMethodDimensionWhenDifferentMethodsUseSameSpelKey() {
         List<String> resolvedKeys = new ArrayList<>();
-        RateLimitHandler handler = (key, rate, timeout, unit) -> {
+        RateLimitHandler handler = (key, rate, window) -> {
             resolvedKeys.add(key);
             return true;
         };
@@ -76,7 +75,7 @@ class RateLimitAspectTests {
         void execute(String userId);
     }
 
-    @RateLimit(key = "#p0", permits = 5, ttl = 1, unit = TimeUnit.SECONDS)
+    @RateLimit(key = "#p0", permits = 5, window = 1000)
     static class ClassLevelRateLimitedService implements SampleService {
         @Override
         public void execute(String userId) {

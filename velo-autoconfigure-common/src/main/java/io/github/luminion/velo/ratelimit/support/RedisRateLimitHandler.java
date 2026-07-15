@@ -7,7 +7,6 @@ import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.core.script.RedisScript;
 
 import java.util.Collections;
-import java.util.concurrent.TimeUnit;
 
 @RequiredArgsConstructor
 public class RedisRateLimitHandler implements RateLimitHandler {
@@ -16,10 +15,10 @@ public class RedisRateLimitHandler implements RateLimitHandler {
     private static final RedisScript<Long> RATE_LIMIT_SCRIPT = createLimitScript();
 
     @Override
-    public boolean tryAcquire(String key, double rate, long timeout, TimeUnit unit) {
-        RateLimitWindow window = RateLimitWindow.from(rate, timeout, unit);
-        long capacity = window.capacity();
-        long intervalMillis = window.intervalMillis();
+    public boolean tryAcquire(String key, double rate, long window) {
+        RateLimitWindow resolvedWindow = RateLimitWindow.from(rate, window);
+        long capacity = resolvedWindow.capacity();
+        long intervalMillis = resolvedWindow.intervalMillis();
 
         // 脚本内部按毫秒时间差补充令牌，这里提前把速率换算到“每毫秒恢复多少令牌”。
         double fillRate = capacity / (double) intervalMillis;

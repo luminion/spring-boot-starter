@@ -5,6 +5,7 @@
 ### 不兼容变更
 - Jackson 配置项改名：`velo.jackson.long-as-string` → `serialize-long-as-string`、`big-decimal-as-string` → `serialize-big-decimal-as-string`、`floating-as-string` → `serialize-floating-as-string`，并移除已弃用的 `unsafe-integer-as-string`（需更新配置文件）
 - `IdempotentHandler` SPI 方法签名变更：`tryRecord` 增加 `token` 参数，`remove(key)` 改为 `removeIfMatch(key, token)`（仅影响自定义实现者）
+- 并发控制与慢日志注解的时间参数统一为毫秒：移除 `TimeUnit`，`@Idempotent.ttl` 默认改为 `3000`、`@RateLimit.ttl` 改名为 `window` 且默认 `1000`、`@Lock.lease` 默认改为 `30000`，相关 Handler SPI 与异常结构同步移除时间单位参数
 - 默认方法指纹由 `全限定类名#方法名` 调整为 `全限定类名#方法名(参数类型...)`，避免重载方法共享幂等窗口、限流桶或锁；滚动发布期间新旧实例不会使用同一组并发控制 key，需避免混合版本同时处理相关请求（自定义 `Fingerprinter` 不受影响）
 
 ### 新增
@@ -21,6 +22,8 @@
 - 新增 `velo.cache.ttl-jitter-percentage`（默认 `0`），对缓存 TTL 添加 `±n%` 随机抖动，防止缓存雪崩
 
 ### 修复
+- 慢日志级别语义修复：启用时，超阈值异常固定按 ERROR 输出并遵循异常堆栈配置；`velo.log.slow.level=OFF` 作为硬关闭，不再输出独立慢日志
+- 默认切面顺序修复：为所有顺序值预留足够空间，避免 ControllerLog、FeignLog 因整数溢出变为负数并错误进入最外层
 - 幂等竞态修复：业务失败清除幂等记录时采用 token 比对，只删除本次请求写入的记录，不会误删并发请求在窗口内刚写入的新记录
 - 缓存雪崩防护增强：TTL 抖动改为写入时按 key 独立计算，可同时缓解「不同缓存类型同时过期」和「同一缓存类型大量 key 同时过期」两类问题
 - 限流令牌桶补充计算修复：高速率叠加长时间空闲时，令牌补充量因整型溢出变负导致限流永久卡死，现已修正（影响 JDK 与 Caffeine 两种本地限流器）
@@ -34,12 +37,14 @@
 - traceId 日志格式修复：移除失效的日期格式注入（属性名 `logging.pattern.date-format` 拼写错误，Spring Boot 实际读取 `logging.pattern.dateformat` 且不走 relaxed binding，从未生效）；traceId 仅作为增强追加到 level pattern，日期格式保持 Spring Boot 默认、不改变全局行为
 - Jackson 大整数序列化统一：开启 `serialize-long-as-string` 时 `Long` 与 `BigInteger` 均无条件转字符串（此前 `BigInteger` 仅在超过 2^53 时才转，导致同类型字段时而 number 时而 string、契约不稳定）
 - Jackson 3 String 序列化 null 处理对齐 Jackson 2：`null` 直接输出 JSON null、不再传入 `@JsonEncode` 转换函数，避免用户函数未防 null 时 NPE
-- Redis 锁异常状态修复：仅在 Redis 成功加锁后登记线程重入状态，连接异常不再向工作线程的 `ThreadLocal` 累积空 key；非整毫秒租约向上取整到下一毫秒，避免 Redis 收到非法或短于配置值的 TTL
-- JDK 幂等时间窗口修复：改用单调纳秒时钟记录 TTL，微秒/纳秒窗口不再因毫秒截断而立即失效，同时不受系统时间回拨和绝对时间戳加法溢出影响
-- 慢日志时间精度修复：阈值判断直接使用纳秒耗时，`@SlowLog` 配置微秒/纳秒单位时不再先截断为整毫秒
+- Redis 锁异常状态修复：仅在 Redis 成功加锁后登记线程重入状态，连接异常不再向工作线程的 `ThreadLocal` 累积空 key
+- JDK 幂等时间窗口修复：内部使用单调纳秒时钟记录毫秒 TTL，不受系统时间回拨和绝对时间戳加法溢出影响
+- 慢日志时间精度修复：阈值判断使用纳秒耗时与毫秒阈值直接比较，不再先截断实际耗时
 - 客户端 IP 空白头修复：仅含空白或两侧带空白的 `unknown` 代理头会继续查找后续头部，并在没有有效代理地址时正确回退到直连地址
 
 ### 调整
+- 调整 SlowLog 默认切面顺序，使独立慢日志在 InvokeLog、ControllerLog、FeignLog 的退出日志之后最后输出
+- 慢日志文本使用 `threshold=<value>ms` 替代 `slow=true`，直接展示触发慢日志的期望阈值
 - `@Lock` 空 key 行为：移除强制非空校验，安静降级为方法级锁（基于 `全限定类名#方法名(参数类型...)`）
 - `@Idempotent` 空 key 行为：降级为方法级幂等，并打印 WARN 日志提醒（通常不是期望行为）
 - `WebUtils` 提取 servlet 无关逻辑到 common 模块，减少 jakarta/javax 重复代码
@@ -49,6 +54,7 @@
 - Feign 调用日志：未配置 traceId 的 MDC key 时跳过 trace 处理，避免链路标识静默丢失
 
 ### 文档
+- 调用日志文档更新为 ENTRY/EXIT 双记录格式，并补充独立慢日志级别与默认输出顺序
 - 新增配置优先级表格（命令行参数 > 配置文件 > 环境变量 > `velo.mode` 默认值）
 - 新增限流 `key` 分桶语义对比表，以及小数 `permits` 换算公式和示例
 - 补充幂等、限流、锁的 `key` 语义说明，以及 `@LogPayloadIgnore` 用法

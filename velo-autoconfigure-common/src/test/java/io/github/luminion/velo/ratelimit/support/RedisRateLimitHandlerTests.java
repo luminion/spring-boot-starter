@@ -5,7 +5,6 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.RedisScript;
 
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
@@ -17,7 +16,7 @@ class RedisRateLimitHandlerTests {
         CapturingRedisTemplate redisTemplate = new CapturingRedisTemplate();
         RedisRateLimitHandler handler = new RedisRateLimitHandler(redisTemplate);
 
-        boolean acquired = handler.tryAcquire("demo", 2D, 1L, TimeUnit.SECONDS);
+        boolean acquired = handler.tryAcquire("demo", 2D, 1000L);
 
         assertThat(acquired).isTrue();
         assertThat(redisTemplate.keys).containsExactly("demo");

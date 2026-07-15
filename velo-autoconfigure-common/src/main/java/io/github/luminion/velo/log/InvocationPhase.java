@@ -9,9 +9,9 @@ package io.github.luminion.velo.log;
  */
 public enum InvocationPhase {
 
-    /** 方法进入时记录，包含入参。对应日志格式：{@code [target] => args=...} */
+    /** 方法进入时记录，包含入参。对应日志格式：{@code [target] ==> args=...} */
     ENTRY,
 
-    /** 方法退出时记录，包含耗时与返回值或异常。对应日志格式：{@code [target] <= cost=Xms result=...} */
+    /** 方法退出时记录，包含耗时与返回值或异常。对应日志格式：{@code [target] <== cost=Xms result=...} */
     EXIT
 }

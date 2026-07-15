@@ -62,6 +62,9 @@ public class SlowLogAspect implements Ordered {
         if (slowLog == null) {
             return joinPoint.proceed();
         }
+        if (slowLog.value() <= 0L) {
+            throw new IllegalArgumentException("Slow log threshold must be greater than zero.");
+        }
 
         RuntimeJsonSerializer runtimeJsonSerializer = runtimeJsonSerializer();
         VeloProperties.InvocationProperties invocationProperties = properties.getLog().getInvocation();
@@ -77,27 +80,27 @@ public class SlowLogAspect implements Ordered {
             result = joinPoint.proceed();
         } catch (Throwable ex) {
             long elapsedNanos = InvocationLogSupport.elapsedNanos(start);
-            if (InvocationLogSupport.exceedsSlowThresholdNanos(elapsedNanos, slowLog.value(), slowLog.timeUnit())) {
+            if (InvocationLogSupport.exceedsSlowThresholdNanos(elapsedNanos, slowLog.value())) {
                 InvocationLogRecord record = buildRecord(signature, argsText, null,
-                        InvocationLogSupport.nanosToMillis(elapsedNanos), ex);
+                        InvocationLogSupport.nanosToMillis(elapsedNanos), ex, slowLog);
                 InvocationLogSupport.safeWrite(invocationLogWriter, record);
             }
             throw ex;
         }
 
         long elapsedNanos = InvocationLogSupport.elapsedNanos(start);
-        if (InvocationLogSupport.exceedsSlowThresholdNanos(elapsedNanos, slowLog.value(), slowLog.timeUnit())) {
+        if (InvocationLogSupport.exceedsSlowThresholdNanos(elapsedNanos, slowLog.value())) {
             InvocationLogRecord record = buildRecord(signature, argsText,
                     ignoreResult ? InvocationLogSupport.EMPTY_PAYLOAD
                             : InvocationLogSupport.safeBuildResultText(result, runtimeJsonSerializer, invocationProperties),
-                    InvocationLogSupport.nanosToMillis(elapsedNanos), null);
+                    InvocationLogSupport.nanosToMillis(elapsedNanos), null, slowLog);
             InvocationLogSupport.safeWrite(invocationLogWriter, record);
         }
         return result;
     }
 
     private InvocationLogRecord buildRecord(MethodSignature signature, String argsText, String resultText, long costMs,
-            Throwable error) {
+            Throwable error, SlowLog slowLog) {
         InvocationLogRecord record = new InvocationLogRecord();
         Class<?> declaringType = signature.getDeclaringType();
         record.setLoggerName(declaringType != null ? declaringType.getName() : null);
@@ -107,6 +110,7 @@ public class SlowLogAspect implements Ordered {
         record.setCostMs(costMs);
         record.setArgs(argsText);
         record.setSlow(true);
+        record.setSlowThreshold(slowLog.value());
         record.setSuccess(error == null);
         if (error == null) {
             record.setResult(resultText);

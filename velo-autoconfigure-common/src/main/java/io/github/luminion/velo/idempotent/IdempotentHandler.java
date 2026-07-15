@@ -1,7 +1,5 @@
 package io.github.luminion.velo.idempotent;
 
-import java.util.concurrent.TimeUnit;
-
 /**
  * 幂等执行器 SPI
  *
@@ -17,11 +15,10 @@ public interface IdempotentHandler {
      *
      * @param key     唯一键
      * @param token   本次请求的唯一标识（通常为 UUID）
-     * @param timeout 过期时间
-     * @param unit    时间单位
+     * @param timeout 过期时间，单位为毫秒
      * @return true: 记录成功（首次进入）; false: 记录失败（重复请求）
      */
-    boolean tryRecord(String key, String token, long timeout, TimeUnit unit);
+    boolean tryRecord(String key, String token, long timeout);
 
     /**
      * 仅当存储的 token 与传入 token 一致时，才移除该幂等记录。

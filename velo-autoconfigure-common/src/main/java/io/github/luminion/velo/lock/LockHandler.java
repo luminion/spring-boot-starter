@@ -1,7 +1,5 @@
 package io.github.luminion.velo.lock;
 
-import java.util.concurrent.TimeUnit;
-
 /**
  * 锁处理器 SPI
  *
@@ -24,12 +22,11 @@ public interface LockHandler {
      * </ul>
      *
      * @param key       锁的唯一标识
-     * @param waitTime  等待时间
-     * @param leaseTime 持有时间；{@code -1} 表示请求看门狗式自动续约，具体行为见上方各后端说明
-     * @param unit      时间单位
+     * @param waitTime  等待时间，单位为毫秒
+     * @param leaseTime 持有时间，单位为毫秒；{@code -1} 表示请求看门狗式自动续约，具体行为见上方各后端说明
      * @return true: 加锁成功; false: 加锁失败
      */
-    boolean lock(String key, long waitTime, long leaseTime, TimeUnit unit);
+    boolean lock(String key, long waitTime, long leaseTime);
 
     /**
      * 释放锁

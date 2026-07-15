@@ -36,9 +36,9 @@ public class JdkIdempotentHandler implements IdempotentHandler, DisposableBean {
     });
 
     @Override
-    public boolean tryRecord(String key, String token, long timeout, TimeUnit unit) {
+    public boolean tryRecord(String key, String token, long timeout) {
         long now = nanoTimeSupplier.getAsLong();
-        long ttlNanos = unit.toNanos(timeout);
+        long ttlNanos = TimeUnit.MILLISECONDS.toNanos(timeout);
         AtomicBoolean success = new AtomicBoolean(false);
 
         // compute 把"判断是否过期"和"写入新的过期时间"合并成一个原子操作，避免并发穿透。

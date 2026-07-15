@@ -22,13 +22,13 @@ public class RedissonLockHandler implements LockHandler {
     private final RedissonClient redissonClient;
 
     @Override
-    public boolean lock(String key, long waitTime, long leaseTime, TimeUnit unit) {
+    public boolean lock(String key, long waitTime, long leaseTime) {
         RLock lock = redissonClient.getLock(key);
         try {
             // waitTime: 等待获取锁的最大时间
             // leaseTime: 释放锁的时间
             // 如果 leaseTime 为 -1，则会启用看门狗机制
-            return lock.tryLock(waitTime, leaseTime, unit);
+            return lock.tryLock(waitTime, leaseTime, TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             return false;

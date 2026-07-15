@@ -9,10 +9,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 class InvocationLogSupportTest {
 
     @Test
-    void shouldCompareSubMillisecondSlowThresholdAtNanosecondPrecision() {
+    void shouldCompareMillisecondSlowThresholdUsingMonotonicNanoseconds() {
         assertThat(InvocationLogSupport.exceedsSlowThresholdNanos(
-                TimeUnit.MICROSECONDS.toNanos(900L), 500L, TimeUnit.MICROSECONDS)).isTrue();
+                TimeUnit.MICROSECONDS.toNanos(1500L), 1L)).isTrue();
         assertThat(InvocationLogSupport.exceedsSlowThresholdNanos(
-                TimeUnit.MICROSECONDS.toNanos(400L), 500L, TimeUnit.MICROSECONDS)).isFalse();
+                TimeUnit.MICROSECONDS.toNanos(900L), 1L)).isFalse();
     }
 }

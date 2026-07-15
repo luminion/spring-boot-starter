@@ -6,7 +6,6 @@ import io.github.luminion.velo.spi.fingerprint.SpelFingerprinter;
 import org.junit.jupiter.api.Test;
 import org.springframework.aop.aspectj.annotation.AspectJProxyFactory;
 
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -18,7 +17,7 @@ class IdempotentAspectTests {
         AtomicReference<String> capturedKey = new AtomicReference<>();
         IdempotentAspect aspect = new IdempotentAspect("idempotent:", new SpelFingerprinter(), new IdempotentHandler() {
             @Override
-            public boolean tryRecord(String key, String token, long timeout, TimeUnit unit) {
+            public boolean tryRecord(String key, String token, long timeout) {
                 capturedKey.set(key);
                 return true;
             }
@@ -39,7 +38,7 @@ class IdempotentAspectTests {
         AtomicReference<String> capturedKey = new AtomicReference<>();
         IdempotentAspect aspect = new IdempotentAspect("idempotent:", new SpelFingerprinter(), new IdempotentHandler() {
             @Override
-            public boolean tryRecord(String key, String token, long timeout, TimeUnit unit) {
+            public boolean tryRecord(String key, String token, long timeout) {
                 capturedKey.set(key);
                 return true;
             }
@@ -63,7 +62,7 @@ class IdempotentAspectTests {
         AtomicReference<String> keyB = new AtomicReference<>();
         IdempotentAspect aspect = new IdempotentAspect("idempotent:", new SpelFingerprinter(), new IdempotentHandler() {
             @Override
-            public boolean tryRecord(String key, String token, long timeout, TimeUnit unit) {
+            public boolean tryRecord(String key, String token, long timeout) {
                 // 两个方法各记录一次自己的 key，用于比对是否碰撞
                 if (keyA.get() == null) {
                     keyA.set(key);

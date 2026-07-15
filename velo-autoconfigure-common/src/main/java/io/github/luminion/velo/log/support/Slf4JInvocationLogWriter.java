@@ -18,16 +18,16 @@ import java.util.concurrent.ConcurrentMap;
  *
  * <p>写入规则：
  * <ul>
- *   <li>慢日志记录（{@code isSlow=true}）：使用 {@code velo.log.slow.level}（默认 WARN）</li>
- *   <li>异常记录（{@code !isSuccess}）：使用 ERROR 级别</li>
- *   <li>正常记录：使用 {@code velo.log.level}（默认 INFO）</li>
+ *   <li>慢日志记录（{@code isSlow=true}）：由 {@code velo.log.slow.level} 控制（默认 WARN）</li>
+ *   <li>普通调用记录：由 {@code velo.log.level} 控制（默认 INFO）</li>
+ *   <li>已启用的异常记录（{@code !isSuccess}）：提升到 ERROR 级别</li>
  * </ul>
  *
  * <p>格式规则：
  * <ul>
- *   <li>{@link InvocationPhase#ENTRY}：{@code [target] => args=...}</li>
- *   <li>{@link InvocationPhase#EXIT}：{@code [target] <= cost=Xms result=...}</li>
- *   <li>phase 为 null（慢日志等）：{@code [target] cost=Xms slow=true args=... result=...}</li>
+ *   <li>{@link InvocationPhase#ENTRY}：{@code [target] ==> args=...}</li>
+ *   <li>{@link InvocationPhase#EXIT}：{@code [target] <== cost=Xms result=...}</li>
+ *   <li>phase 为 null（慢日志等）：{@code [target] cost=Xms threshold=Yms args=... result=...}</li>
  * </ul>
  */
 public class Slf4JInvocationLogWriter implements InvocationLogWriter {
@@ -53,22 +53,11 @@ public class Slf4JInvocationLogWriter implements InvocationLogWriter {
         if (record == null) {
             return;
         }
-        // 慢日志用独立级别（默认 WARN），与正常调用轨迹区分
-        if (record.isSlow()) {
-            if (slowLevel == LogLevel.OFF) {
-                return;
-            }
-            LogOperations slowOps = resolveLevel(slowLevel);
-            Logger logger = resolveLogger(record.getLoggerName());
-            if (slowOps.isEnabled(logger)) {
-                slowOps.log(logger, buildMessage(record));
-            }
+        LogLevel configuredLevel = record.isSlow() ? slowLevel : level;
+        if (configuredLevel == LogLevel.OFF) {
             return;
         }
-        if (level == LogLevel.OFF) {
-            return;
-        }
-        // 异常记录：始终用 ERROR
+
         if (!record.isSuccess()) {
             String message = buildMessage(record);
             Logger logger = resolveLogger(record.getLoggerName());
@@ -79,8 +68,8 @@ public class Slf4JInvocationLogWriter implements InvocationLogWriter {
             }
             return;
         }
-        // 正常记录：用配置级别
-        LogOperations ops = resolveLevel(level);
+
+        LogOperations ops = resolveLevel(configuredLevel);
         Logger logger = resolveLogger(record.getLoggerName());
         if (!ops.isEnabled(logger)) {
             return;
@@ -100,20 +89,20 @@ public class Slf4JInvocationLogWriter implements InvocationLogWriter {
         return buildSingleLineMessage(record);
     }
 
-    /** 进入阶段：{@code [target] => args=...} */
+    /** 进入阶段：{@code [target] ==> args=...} */
     private String buildEntryMessage(InvocationLogRecord record) {
         StringBuilder builder = new StringBuilder();
         builder.append('[').append(text(record.getTarget())).append(']');
-        builder.append(" =>");
+        builder.append(" ==>");
         append(builder, "args", text(record.getArgs()));
         return builder.toString();
     }
 
-    /** 退出阶段：{@code [target] <= cost=Xms result=...} 或 {@code <= cost=Xms error="..."} */
+    /** 退出阶段：{@code [target] <== cost=Xms result=...} 或 {@code <== cost=Xms error="..."} */
     private String buildExitMessage(InvocationLogRecord record) {
         StringBuilder builder = new StringBuilder();
         builder.append('[').append(text(record.getTarget())).append(']');
-        builder.append(" <=");
+        builder.append(" <==");
         append(builder, "cost", record.getCostMs() + "ms");
         if (record.isSuccess()) {
             append(builder, "result", text(record.getResult()));
@@ -129,7 +118,7 @@ public class Slf4JInvocationLogWriter implements InvocationLogWriter {
         builder.append('[').append(text(record.getTarget())).append(']');
         append(builder, "cost", record.getCostMs() + "ms");
         if (record.isSlow()) {
-            append(builder, "slow", "true");
+            append(builder, "threshold", record.getSlowThreshold() + "ms");
         }
         append(builder, "args", text(record.getArgs()));
         if (record.isSuccess()) {
