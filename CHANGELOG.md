@@ -1,5 +1,10 @@
 # 更新记录
 
+## 1.4.0
+
+### 新增
+- `@InvokeLog` 新增 `argsOnFinish` 开关，可在正常返回或异常结束时记录当前参数状态；无返回值的方法记录为 `result=void`，返回 `null` 时记录为 `result=null`；payload 被忽略、配置关闭或序列化失败时分别记录 `ignored`、`disabled`、`serialization-failed`
+
 ## 1.3.0
 
 ### 不兼容变更

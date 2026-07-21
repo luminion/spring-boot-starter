@@ -68,10 +68,10 @@ public class SlowLogAspect implements Ordered {
 
         RuntimeJsonSerializer runtimeJsonSerializer = runtimeJsonSerializer();
         VeloProperties.InvocationProperties invocationProperties = properties.getLog().getInvocation();
-        LogPayloadIgnore logPayloadIgnore = InvocationLogSupport.findLogPayloadIgnore(signature);
+        LogPayloadIgnore logPayloadIgnore = InvocationLogSupport.findLogPayloadIgnore(signature, joinPoint.getTarget());
         boolean ignoreArgs = logPayloadIgnore != null && logPayloadIgnore.args();
         boolean ignoreResult = logPayloadIgnore != null && logPayloadIgnore.result();
-        String argsText = ignoreArgs ? InvocationLogSupport.EMPTY_PAYLOAD
+        String argsText = ignoreArgs ? InvocationLogSupport.IGNORED_PAYLOAD
                 : InvocationLogSupport.safeBuildArgsText(signature, joinPoint.getTarget(), joinPoint.getArgs(),
                         runtimeJsonSerializer, invocationProperties);
         long start = System.nanoTime();
@@ -91,8 +91,10 @@ public class SlowLogAspect implements Ordered {
         long elapsedNanos = InvocationLogSupport.elapsedNanos(start);
         if (InvocationLogSupport.exceedsSlowThresholdNanos(elapsedNanos, slowLog.value())) {
             InvocationLogRecord record = buildRecord(signature, argsText,
-                    ignoreResult ? InvocationLogSupport.EMPTY_PAYLOAD
-                            : InvocationLogSupport.safeBuildResultText(result, runtimeJsonSerializer, invocationProperties),
+                    signature.getReturnType() == Void.TYPE ? InvocationLogSupport.VOID_RESULT
+                            : ignoreResult ? InvocationLogSupport.IGNORED_PAYLOAD
+                                    : InvocationLogSupport.safeBuildResultText(result, runtimeJsonSerializer,
+                                            invocationProperties),
                     InvocationLogSupport.nanosToMillis(elapsedNanos), null, slowLog);
             InvocationLogSupport.safeWrite(invocationLogWriter, record);
         }

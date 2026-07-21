@@ -177,7 +177,7 @@ class VeloWebAutoConfigurationTests {
 
         aspect.logControllerInvocation(joinPoint);
 
-        assertThat(serializer.values).hasSize(2);
+        assertThat(serializer.values).hasSize(1);
         assertThat(serializer.values.get(0)).isInstanceOf(Map.class);
         Map<?, ?> arguments = (Map<?, ?>) serializer.values.get(0);
         Object loggedCredential = arguments.get("request");
@@ -185,6 +185,7 @@ class VeloWebAutoConfigurationTests {
         Map<?, ?> loggedCredentialMap = (Map<?, ?>) loggedCredential;
         assertThat(loggedCredentialMap.get("username")).isEqualTo("tom");
         assertThat(loggedCredentialMap.get("password")).isEqualTo("123456");
+        assertThat(writer.records.get(1).getResult()).isEqualTo("null");
     }
 
     @Test
@@ -232,7 +233,7 @@ class VeloWebAutoConfigurationTests {
     }
 
     @Test
-    void shouldLogDashWhenResponseBodyIsNull() throws Throwable {
+    void shouldLogNullWhenResponseBodyIsNull() throws Throwable {
         VeloProperties properties = new VeloProperties();
         CapturingInvocationLogWriter writer = new CapturingInvocationLogWriter();
         ControllerLogAspect aspect = new ControllerLogAspect(properties, value -> "null", writer);
@@ -247,7 +248,7 @@ class VeloWebAutoConfigurationTests {
         aspect.logControllerInvocation(joinPoint);
 
         assertThat(writer.records).hasSize(2);
-        assertThat(writer.records.get(1).getResult()).isEqualTo("-"); // EXIT
+        assertThat(writer.records.get(1).getResult()).isEqualTo("null"); // EXIT
     }
 
     @Test
@@ -269,11 +270,12 @@ class VeloWebAutoConfigurationTests {
 
         aspect.logControllerInvocation(joinPoint);
 
-        assertThat(serializer.values).hasSize(2);
+        assertThat(serializer.values).hasSize(1);
         assertThat(serializer.values.get(0)).isInstanceOf(Map.class);
         Map<?, ?> arguments = (Map<?, ?>) serializer.values.get(0);
         assertThat(arguments.get("id")).isEqualTo(1L);
         assertThat(arguments.get("name")).isEqualTo("Tom");
+        assertThat(writer.records.get(1).getResult()).isEqualTo("null");
     }
 
     @Test

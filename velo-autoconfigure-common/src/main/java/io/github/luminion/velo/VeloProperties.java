@@ -440,7 +440,8 @@ public class VeloProperties {
         private boolean enabled = true;
 
         /**
-         * Maximum length of logged argument and result payloads. Use -1 for unlimited output.
+         * Maximum length of logged argument and result payloads. Use -1 for unlimited output
+         * and 0 to record the {@code disabled} payload status without serializing values.
          */
         private int maxPayloadLength = -1;
 

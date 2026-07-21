@@ -53,10 +53,10 @@ public class ControllerLogAspect implements Ordered {
         String loggerName = declaringType != null ? declaringType.getName() : null;
         String target = buildRequestTarget();
         VeloProperties.InvocationProperties invocationProperties = properties.getLog().getInvocation();
-        LogPayloadIgnore logPayloadIgnore = InvocationLogSupport.findLogPayloadIgnore(signature);
+        LogPayloadIgnore logPayloadIgnore = InvocationLogSupport.findLogPayloadIgnore(signature, joinPoint.getTarget());
         boolean ignoreArgs = logPayloadIgnore != null && logPayloadIgnore.args();
         boolean ignoreResult = logPayloadIgnore != null && logPayloadIgnore.result();
-        String argsText = ignoreArgs ? InvocationLogSupport.EMPTY_PAYLOAD
+        String argsText = ignoreArgs ? InvocationLogSupport.IGNORED_PAYLOAD
                 : InvocationLogSupport.safeBuildArgsText(signature, joinPoint.getTarget(), joinPoint.getArgs(),
                         runtimeJsonSerializer, invocationProperties);
 
@@ -75,8 +75,10 @@ public class ControllerLogAspect implements Ordered {
         }
 
         InvocationLogRecord exitRecord = buildExitRecord(loggerName, target,
-                ignoreResult ? InvocationLogSupport.EMPTY_PAYLOAD
-                        : InvocationLogSupport.safeBuildResultText(result, runtimeJsonSerializer, invocationProperties),
+                signature.getReturnType() == Void.TYPE ? InvocationLogSupport.VOID_RESULT
+                        : ignoreResult ? InvocationLogSupport.IGNORED_PAYLOAD
+                                : InvocationLogSupport.safeBuildResultText(result, runtimeJsonSerializer,
+                                        invocationProperties),
                 InvocationLogSupport.elapsedMs(start), null);
         InvocationLogSupport.safeWrite(invocationLogWriter, exitRecord);
         return result;

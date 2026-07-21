@@ -3,6 +3,7 @@ package io.github.luminion.velo.log.support;
 import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.log.InvocationLogRecord;
 import io.github.luminion.velo.log.InvocationLogSource;
+import io.github.luminion.velo.log.InvocationLogSupport;
 import io.github.luminion.velo.log.InvocationPhase;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -70,8 +71,8 @@ class Slf4JInvocationLogWriterTest {
         record.setTarget("127.0.0.1 GET /test");
         record.setCostMs(1);
         record.setSuccess(true);
-        record.setArgs("-");
-        record.setResult("-");
+        record.setArgs(InvocationLogSupport.DISABLED_PAYLOAD);
+        record.setResult(InvocationLogSupport.DISABLED_PAYLOAD);
 
         writer.write(record);
 
@@ -103,7 +104,7 @@ class Slf4JInvocationLogWriterTest {
     }
 
     @Test
-    void shouldWriteExitLineWithBackArrowCostAndResult(CapturedOutput output) {
+    void shouldWriteExitLineWithFinishArgsAndVoidResult(CapturedOutput output) {
         Slf4JInvocationLogWriter writer = new Slf4JInvocationLogWriter(new VeloProperties());
         InvocationLogRecord record = new InvocationLogRecord();
         record.setLoggerName("com.example.UserController");
@@ -112,15 +113,16 @@ class Slf4JInvocationLogWriterTest {
         record.setPhase(InvocationPhase.EXIT);
         record.setCostMs(12);
         record.setSuccess(true);
-        record.setResult("{\"name\":\"Tom\"}");
+        record.setArgs("{\"name\":\"Tom\"}");
+        record.setResult("void");
 
         writer.write(record);
 
         assertThat(output.getOut())
                 .contains("[127.0.0.1 GET /users/{id}] <==")
                 .contains("cost=12ms")
-                .contains("result={\"name\":\"Tom\"}")
-                .doesNotContain("args=")
+                .contains("args={\"name\":\"Tom\"}")
+                .contains("result=void")
                 .doesNotContain("==>");
     }
 

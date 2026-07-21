@@ -6,7 +6,7 @@ import java.lang.annotation.*;
  * Controls payload visibility in invocation logs.
  * <p>
  * When present on a method or class, the annotated method's arguments and/or
- * return value are replaced with {@code "-"} in log output. The invocation
+ * return value are replaced with {@code "ignored"} in log output. The invocation
  * itself is still logged (method name, cost, success/error status).
  * <p>
  * Works across all Velo log aspects: {@code ControllerLogAspect},
@@ -14,7 +14,7 @@ import java.lang.annotation.*;
  * <p>
  * There is no conflict with {@code @SlowLog}: when a slow invocation is
  * detected, the log record is still emitted, but args/result show as
- * {@code "-"} if {@code @LogPayloadIgnore} is present.
+ * {@code "ignored"} if {@code @LogPayloadIgnore} is present.
  *
  * <pre>{@code
  * // Skip both args and result

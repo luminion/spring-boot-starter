@@ -136,23 +136,23 @@ class VeloFeignAutoConfigurationTests {
     }
 
     @Test
-    void shouldLogDashWhenPayloadLimitIsZero() throws Throwable {
+    void shouldLogDisabledWhenPayloadLimitIsZero() throws Throwable {
         VeloProperties properties = new VeloProperties();
         properties.getLog().getInvocation().setMaxPayloadLength(0);
 
         CapturingInvocationLogWriter writer = invokeFindById(properties, runtimeJsonSerializer());
 
         assertThat(writer.records).hasSize(2);
-        assertThat(writer.records.get(0).getArgs()).isEqualTo("-");   // ENTRY
-        assertThat(writer.records.get(1).getResult()).isEqualTo("-"); // EXIT
+        assertThat(writer.records.get(0).getArgs()).isEqualTo("disabled");   // ENTRY
+        assertThat(writer.records.get(1).getResult()).isEqualTo("disabled"); // EXIT
     }
 
     @Test
-    void shouldLogDashWhenResponseBodyIsNull() throws Throwable {
+    void shouldLogNullWhenResponseBodyIsNull() throws Throwable {
         CapturingInvocationLogWriter writer = invokePing();
 
         assertThat(writer.records).hasSize(2);
-        assertThat(writer.records.get(1).getResult()).isEqualTo("-"); // EXIT
+        assertThat(writer.records.get(1).getResult()).isEqualTo("null"); // EXIT
     }
 
     @Test
@@ -193,8 +193,8 @@ class VeloFeignAutoConfigurationTests {
 
         assertThat(aspect.logFeignInvocation(joinPoint)).isSameAs(expected);
         assertThat(writer.records).hasSize(2);
-        assertThat(writer.records.get(0).getArgs()).isEqualTo("-");   // ENTRY：序列化失败降级为 -
-        assertThat(writer.records.get(1).getResult()).isEqualTo("-"); // EXIT：序列化失败降级为 -
+        assertThat(writer.records.get(0).getArgs()).isEqualTo("serialization-failed");   // ENTRY
+        assertThat(writer.records.get(1).getResult()).isEqualTo("serialization-failed"); // EXIT
     }
 
     @Test

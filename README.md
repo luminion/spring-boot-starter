@@ -493,6 +493,11 @@ import io.github.luminion.velo.log.annotation.SlowLog;
 public Object createOrder(CreateOrderCmd cmd) {
     return null;
 }
+
+@InvokeLog(argsOnFinish = true)
+public void enrichOrder(OrderDTO order) {
+    order.setStatus("READY");
+}
 ```
 
 说明：
@@ -500,7 +505,9 @@ public Object createOrder(CreateOrderCmd cmd) {
 - `traceId` 默认开启，会写入 MDC、响应头，并在 Feign 调用中透传
 - 如果没有自定义 `logging.pattern.level`，会自动把 `%X{traceId}` 加到用户自己的日志中
 - Controller、Feign 与 `@InvokeLog` 的进入日志格式为 `[target] ==> args=...`
-- Controller、Feign 与 `@InvokeLog` 的退出日志格式为 `[target] <== cost=Xms result=...`；调用失败时输出异常摘要并使用 ERROR 级别
+- Controller、Feign 与 `@InvokeLog` 的退出日志格式为 `[target] <== cost=Xms result=...`；无返回值时记录 `result=void`，返回 `null` 时记录 `result=null`，调用失败时输出异常摘要并使用 ERROR 级别
+- `@InvokeLog(argsOnFinish = true)` 会在正常返回和异常结束的退出日志中增加 `args=...`，记录方法结束时的参数状态
+- payload 无法打印时会明确标记原因：`ignored`（注解忽略）、`disabled`（配置关闭）或 `serialization-failed`（序列化失败）
 - `@SlowLog` 的阈值单位固定为毫秒，只在调用耗时超过阈值后输出一条独立慢日志，格式包含 `cost=Xms threshold=Yms`
 - 慢日志级别由 `velo.log.slow.level` 控制，默认 WARN；调用异常且超过阈值时提升为 ERROR，设置为 `OFF` 时完全关闭独立慢日志
 - 同时命中其他调用日志切面时，慢日志默认在 ENTRY、EXIT 日志之后最后输出
@@ -509,7 +516,7 @@ public Object createOrder(CreateOrderCmd cmd) {
 
 敏感参数不打印（`@LogPayloadIgnore`）：
 
-如果某些方法的入参或返回值包含密码、token 等敏感信息，可用 `@LogPayloadIgnore` 抑制其打印。被忽略的内容在日志中显示为 `-`，但调用本身（方法名、耗时、成功/异常状态）仍会记录。该注解对 Controller、Feign、`@InvokeLog`、`@SlowLog` 所有调用日志切面均生效，可标注在方法或类上。
+如果某些方法的入参或返回值包含密码、token 等敏感信息，可用 `@LogPayloadIgnore` 抑制其打印。被忽略的内容在日志中显示为 `ignored`，但调用本身（方法名、耗时、成功/异常状态）仍会记录。该注解对 Controller、Feign、`@InvokeLog`、`@SlowLog` 所有调用日志切面均生效，可标注在方法或类上。
 
 ```java
 import io.github.luminion.velo.log.annotation.LogPayloadIgnore;
@@ -775,7 +782,7 @@ velo:
 - 每次调用输出进入和退出两条日志；进入日志包含请求方法、controller 映射模板路径和入参，退出日志包含耗时、响应体或异常摘要
 - 会过滤掉原始 query string，避免把敏感查询串直接打到日志中
 - `max-payload-length` 为正数时，过长 payload 会按配置长度截断
-- 当前默认 `max-payload-length=-1`，表示不限制长度；`0` 表示 payload 记录为 `-`
+- 当前默认 `max-payload-length=-1`，表示不限制长度；`0` 表示不序列化 payload 并记录为 `disabled`
 - 如果不需要这层日志，关闭 `velo.log.invocation.controller.enabled`
 
 ### 4. Feign 调用日志
@@ -806,7 +813,7 @@ velo:
 - 日志格式和 Controller、`@InvokeLog` 保持一致，便于联调排查
 - 暂不记录 header，只保留调试常用关键信息
 - `max-payload-length` 为正数时，过长 payload 会按配置长度截断
-- 当前默认 `max-payload-length=-1`，表示不限制长度；`0` 表示 payload 记录为 `-`
+- 当前默认 `max-payload-length=-1`，表示不限制长度；`0` 表示不序列化 payload 并记录为 `disabled`
 - 如果不需要这层日志，关闭 `velo.log.invocation.feign.enabled`
 
 ### 5. CORS

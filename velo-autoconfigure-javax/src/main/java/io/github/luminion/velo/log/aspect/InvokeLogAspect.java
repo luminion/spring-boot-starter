@@ -7,6 +7,7 @@ import io.github.luminion.velo.log.InvocationLogSource;
 import io.github.luminion.velo.log.InvocationLogSupport;
 import io.github.luminion.velo.log.InvocationLogWriter;
 import io.github.luminion.velo.log.InvocationPhase;
+import io.github.luminion.velo.log.annotation.InvokeLog;
 import io.github.luminion.velo.log.annotation.LogPayloadIgnore;
 import io.github.luminion.velo.log.trace.TraceContext;
 import io.github.luminion.velo.spi.RuntimeJsonSerializer;
@@ -16,9 +17,12 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.core.Ordered;
 
+import java.lang.reflect.Method;
 import java.util.Collections;
 
 /**
@@ -55,10 +59,20 @@ public class InvokeLogAspect implements Ordered {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         RuntimeJsonSerializer runtimeJsonSerializer = runtimeJsonSerializer();
         VeloProperties.InvocationProperties invocationProperties = properties.getLog().getInvocation();
-        LogPayloadIgnore logPayloadIgnore = InvocationLogSupport.findLogPayloadIgnore(signature);
+        LogPayloadIgnore logPayloadIgnore = InvocationLogSupport.findLogPayloadIgnore(signature, joinPoint.getTarget());
         boolean ignoreArgs = logPayloadIgnore != null && logPayloadIgnore.args();
         boolean ignoreResult = logPayloadIgnore != null && logPayloadIgnore.result();
-        String argsText = ignoreArgs ? InvocationLogSupport.EMPTY_PAYLOAD
+        Object target = joinPoint.getTarget();
+        Class<?> targetType = target != null ? AopUtils.getTargetClass(target) : signature.getDeclaringType();
+        Method targetMethod = targetType != null
+                ? AopUtils.getMostSpecificMethod(signature.getMethod(), targetType)
+                : signature.getMethod();
+        InvokeLog invokeLog = AnnotatedElementUtils.findMergedAnnotation(targetMethod, InvokeLog.class);
+        if (invokeLog == null) {
+            invokeLog = AnnotatedElementUtils.findMergedAnnotation(targetType, InvokeLog.class);
+        }
+        boolean argsOnFinish = invokeLog != null && invokeLog.argsOnFinish();
+        String argsText = ignoreArgs ? InvocationLogSupport.IGNORED_PAYLOAD
                 : InvocationLogSupport.safeBuildArgsText(signature, joinPoint.getTarget(), joinPoint.getArgs(),
                         runtimeJsonSerializer, invocationProperties);
 
@@ -71,16 +85,29 @@ public class InvokeLogAspect implements Ordered {
             result = joinPoint.proceed();
         } catch (Throwable ex) {
             long elapsedNanos = InvocationLogSupport.elapsedNanos(start);
+            String finishArgsText = argsOnFinish
+                    ? (ignoreArgs ? InvocationLogSupport.IGNORED_PAYLOAD
+                            : InvocationLogSupport.safeBuildArgsText(signature, joinPoint.getTarget(), joinPoint.getArgs(),
+                                    runtimeJsonSerializer, invocationProperties))
+                    : null;
             InvocationLogRecord exitRecord = buildExitRecord(signature,
-                    null, InvocationLogSupport.nanosToMillis(elapsedNanos), ex);
+                    finishArgsText, null, InvocationLogSupport.nanosToMillis(elapsedNanos), ex);
             InvocationLogSupport.safeWrite(invocationLogWriter, exitRecord);
             throw ex;
         }
 
         long elapsedNanos = InvocationLogSupport.elapsedNanos(start);
+        String finishArgsText = argsOnFinish
+                ? (ignoreArgs ? InvocationLogSupport.IGNORED_PAYLOAD
+                        : InvocationLogSupport.safeBuildArgsText(signature, joinPoint.getTarget(), joinPoint.getArgs(),
+                                runtimeJsonSerializer, invocationProperties))
+                : null;
         InvocationLogRecord exitRecord = buildExitRecord(signature,
-                ignoreResult ? InvocationLogSupport.EMPTY_PAYLOAD
-                        : InvocationLogSupport.safeBuildResultText(result, runtimeJsonSerializer, invocationProperties),
+                finishArgsText,
+                signature.getReturnType() == Void.TYPE ? InvocationLogSupport.VOID_RESULT
+                        : ignoreResult ? InvocationLogSupport.IGNORED_PAYLOAD
+                                : InvocationLogSupport.safeBuildResultText(result, runtimeJsonSerializer,
+                                        invocationProperties),
                 InvocationLogSupport.nanosToMillis(elapsedNanos), null);
         InvocationLogSupport.safeWrite(invocationLogWriter, exitRecord);
         return result;
@@ -99,7 +126,7 @@ public class InvokeLogAspect implements Ordered {
         return record;
     }
 
-    private InvocationLogRecord buildExitRecord(MethodSignature signature, String resultText,
+    private InvocationLogRecord buildExitRecord(MethodSignature signature, String argsText, String resultText,
             long costMs, Throwable error) {
         InvocationLogRecord record = new InvocationLogRecord();
         Class<?> declaringType = signature.getDeclaringType();
@@ -109,6 +136,7 @@ public class InvokeLogAspect implements Ordered {
         record.setTarget(signature.getName() + "()");
         record.setPhase(InvocationPhase.EXIT);
         record.setCostMs(costMs);
+        record.setArgs(argsText);
         record.setSuccess(error == null);
         if (error == null) {
             record.setResult(resultText);

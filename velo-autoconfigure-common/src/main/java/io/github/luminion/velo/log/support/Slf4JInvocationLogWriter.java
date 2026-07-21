@@ -98,12 +98,15 @@ public class Slf4JInvocationLogWriter implements InvocationLogWriter {
         return builder.toString();
     }
 
-    /** 退出阶段：{@code [target] <== cost=Xms result=...} 或 {@code <== cost=Xms error="..."} */
+    /** 退出阶段：{@code [target] <== cost=Xms args=... result=...} 或 {@code error="..."} */
     private String buildExitMessage(InvocationLogRecord record) {
         StringBuilder builder = new StringBuilder();
         builder.append('[').append(text(record.getTarget())).append(']');
         builder.append(" <==");
         append(builder, "cost", record.getCostMs() + "ms");
+        if (record.getArgs() != null) {
+            append(builder, "args", text(record.getArgs()));
+        }
         if (record.isSuccess()) {
             append(builder, "result", text(record.getResult()));
         } else {
@@ -130,7 +133,7 @@ public class Slf4JInvocationLogWriter implements InvocationLogWriter {
     }
 
     private String text(String value) {
-        return StringUtils.hasText(value) ? value : InvocationLogSupport.EMPTY_PAYLOAD;
+        return StringUtils.hasText(value) ? value : "unknown";
     }
 
     private void append(StringBuilder builder, String key, String value) {
