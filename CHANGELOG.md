@@ -1,9 +1,15 @@
 # 更新记录
 
-## 1.4.0
+## 1.3.1
+
+<!-- 2026-07-24 00:04：追加 Redis 自动配置与日志注解继承修复记录。 -->
 
 ### 新增
 - `@InvokeLog` 新增 `argsOnFinish` 开关，可在正常返回或异常结束时记录当前参数状态；无返回值的方法记录为 `result=void`，返回 `null` 时记录为 `result=null`；payload 被忽略、配置关闭或序列化失败时分别记录 `ignored`、`disabled`、`serialization-failed`
+
+### 修复
+- Redis 自动配置顺序修复：Velo Redis 模板优先于 Spring Boot 官方模板创建，缺省序列化使用带类型信息的 JSON 序列化，避免意外退回 JDK 序列化。
+- 日志注解继承修复：`@InvokeLog` 与 `@SlowLog` 在 jakarta/javax 模块增加 `@Inherited`，类级注解可被子类继承，避免子类方法漏记日志。
 
 ## 1.3.0
 

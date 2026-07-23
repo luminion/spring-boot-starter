@@ -14,7 +14,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
@@ -24,7 +23,7 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
  * @author luminion
  * @see org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
  */
-@AutoConfiguration(after = RedisAutoConfiguration.class)
+@AutoConfiguration(before = RedisAutoConfiguration.class)
 @ConditionalOnClass(RedisOperations.class)
 @ConditionalOnProperty(prefix = "velo.redis", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloRedisAutoConfiguration {
@@ -80,7 +79,7 @@ public class VeloRedisAutoConfiguration {
     }
 
     private RedisSerializer<Object> defaultRedisSerializer(String beanName) {
-        log.debug("No RedisSerializer bean found, using GenericJackson2JsonRedisSerializer for {}", beanName);
-        return new GenericJackson2JsonRedisSerializer();
+        log.debug("No RedisSerializer bean found, using RedisSerializer.json() for {}", beanName);
+        return RedisSerializer.json();
     }
 }
