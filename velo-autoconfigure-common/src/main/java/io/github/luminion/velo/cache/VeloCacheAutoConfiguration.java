@@ -106,8 +106,7 @@ public class VeloCacheAutoConfiguration {
         public CacheManager cacheManager(RedisConnectionFactory redisConnectionFactory,
                                          RedisCacheConfiguration redisCacheConfiguration,
                                          RedisCacheTimeMapProvider redisCacheTimeMapProvider,
-                                         VeloProperties properties,
-                                         ObjectProvider<RedisSerializer<Object>> serializerProvider) {
+                                         VeloProperties properties) {
             // 每 key 独立抖动：包装 cache writer，在每次写入时对该条目的 TTL 叠加随机偏移，
             // 使同一缓存名称下不同 key 也获得不同过期时间，缓解同类型缓存批量同时过期。
             RedisCacheWriter cacheWriter = JitterRedisCacheWriter.wrap(

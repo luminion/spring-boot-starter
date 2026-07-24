@@ -16,10 +16,12 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.core.Ordered;
 
+import java.lang.reflect.Method;
 import java.util.Collections;
 
 /**
@@ -55,9 +57,15 @@ public class SlowLogAspect implements Ordered {
     public Object logTime(ProceedingJoinPoint joinPoint) throws Throwable {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
 
-        SlowLog slowLog = AnnotatedElementUtils.findMergedAnnotation(signature.getMethod(), SlowLog.class);
+        // 通过目标对象解析最具体方法，保证注解加在实现类方法上时也能正确读取
+        Object target = joinPoint.getTarget();
+        Class<?> targetType = target != null ? AopUtils.getTargetClass(target) : signature.getDeclaringType();
+        Method targetMethod = targetType != null
+                ? AopUtils.getMostSpecificMethod(signature.getMethod(), targetType)
+                : signature.getMethod();
+        SlowLog slowLog = AnnotatedElementUtils.findMergedAnnotation(targetMethod, SlowLog.class);
         if (slowLog == null) {
-            slowLog = AnnotatedElementUtils.findMergedAnnotation(signature.getDeclaringType(), SlowLog.class);
+            slowLog = AnnotatedElementUtils.findMergedAnnotation(targetType, SlowLog.class);
         }
         if (slowLog == null) {
             return joinPoint.proceed();
