@@ -78,12 +78,12 @@ public class FeignLogAspect implements Ordered {
         String mdcKey = properties.getLog().getTrace().getMdcKey();
         boolean createdTraceId = ensureTraceId(mdcKey);
 
-        // 进入日志：记录调用目标与入参
-        InvocationLogSupport.safeWrite(invocationLogWriter,
-                buildEntryRecord(feignType.getName(), target, argsText));
-
-        long start = System.nanoTime();
         try {
+            // 进入日志：记录调用目标与入参
+            InvocationLogSupport.safeWrite(invocationLogWriter,
+                    buildEntryRecord(feignType.getName(), target, argsText));
+
+            long start = System.nanoTime();
             Object result;
             try {
                 result = joinPoint.proceed();

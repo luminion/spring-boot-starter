@@ -278,7 +278,14 @@ class VeloFeignAutoConfigurationTests {
         when(signature.getMethod()).thenReturn(DemoFeignClient.class.getDeclaredMethod("findById", Long.class));
         when(signature.getParameterNames()).thenReturn(new String[] {"id"});
 
-        assertThatThrownBy(() -> aspect.logFeignInvocation(joinPoint)).isSameAs(writerError);
+        String mdcKey = properties.getLog().getTrace().getMdcKey();
+        TraceContext.remove(mdcKey);
+        try {
+            assertThatThrownBy(() -> aspect.logFeignInvocation(joinPoint)).isSameAs(writerError);
+            assertThat(TraceContext.get(mdcKey)).isNull();
+        } finally {
+            TraceContext.remove(mdcKey);
+        }
     }
 
     @Test
