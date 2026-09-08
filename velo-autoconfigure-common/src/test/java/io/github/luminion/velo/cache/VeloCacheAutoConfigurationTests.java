@@ -21,7 +21,7 @@ class VeloCacheAutoConfigurationTests {
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
             .withConfiguration(AutoConfigurations.of(
                     VeloCoreAutoConfiguration.class,
-                    VeloCacheAutoConfiguration.class
+                    VeloCacheConfiguration.class
             ))
             .withBean(RedisConnectionFactory.class, () -> mock(RedisConnectionFactory.class))
             .withBean("redisSerializer", RedisSerializer.class, GenericJackson2JsonRedisSerializer::new);

@@ -8,6 +8,7 @@ import io.github.luminion.velo.ratelimit.RateLimitHandler;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.SmartInitializingSingleton;
 
+import java.math.BigDecimal;
 import java.time.Duration;
 
 /**
@@ -124,6 +125,16 @@ public class VeloBannerPrinter implements SmartInitializingSingleton {
             return "none";
         }
         long seconds = duration.getSeconds();
+        int nanos = duration.getNano();
+        if (nanos != 0) {
+            if (seconds == 0 && nanos % 1_000_000 == 0) {
+                return (nanos / 1_000_000) + "ms";
+            }
+            return BigDecimal.valueOf(seconds)
+                    .add(BigDecimal.valueOf(nanos, 9))
+                    .stripTrailingZeros()
+                    .toPlainString() + "s";
+        }
         if (seconds % 3600 == 0) {
             return (seconds / 3600) + "h";
         }

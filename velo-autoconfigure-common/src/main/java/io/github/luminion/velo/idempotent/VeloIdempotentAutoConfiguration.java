@@ -18,10 +18,9 @@ import org.springframework.context.annotation.Bean;
  */
 @AutoConfiguration(after = {
         io.github.luminion.velo.idempotent.config.VeloIdempotentRedissonAutoConfiguration.class,
-        io.github.luminion.velo.idempotent.config.VeloIdempotentRedisAutoConfiguration.class,
         io.github.luminion.velo.idempotent.config.VeloIdempotentCaffeineAutoConfiguration.class,
         io.github.luminion.velo.idempotent.config.VeloIdempotentJdkAutoConfiguration.class
-})
+}, afterName = "io.github.luminion.velo.idempotent.config.VeloIdempotentRedisAutoConfiguration")
 @ConditionalOnClass(Advice.class)
 @ConditionalOnProperty(prefix = "velo.idempotent", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloIdempotentAutoConfiguration {

@@ -19,7 +19,7 @@ import static org.mockito.Mockito.mock;
 class VeloRedisAutoConfigurationTests {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-            .withConfiguration(AutoConfigurations.of(VeloRedisAutoConfiguration.class))
+            .withConfiguration(AutoConfigurations.of(VeloRedisConfiguration.class))
             .withBean(RedisConnectionFactory.class, () -> mock(RedisConnectionFactory.class));
 
     @Test
@@ -74,7 +74,7 @@ class VeloRedisAutoConfigurationTests {
     @Test
     void shouldSkipRedisTemplatesWhenRedisConnectionFactoryMissing() {
         new ApplicationContextRunner()
-                .withConfiguration(AutoConfigurations.of(VeloRedisAutoConfiguration.class))
+                .withConfiguration(AutoConfigurations.of(VeloRedisConfiguration.class))
                 .run(context -> {
                     assertThat(context).hasNotFailed();
                     assertThat(context).doesNotHaveBean("redisTemplate");
@@ -87,7 +87,7 @@ class VeloRedisAutoConfigurationTests {
     void shouldSkipRedisTemplatesWhenRedisConnectionFactoriesAreAmbiguous() {
         new ApplicationContextRunner()
                 .withConfiguration(AutoConfigurations.of(
-                        VeloRedisAutoConfiguration.class,
+                        VeloRedisConfiguration.class,
                         RedisAutoConfiguration.class
                 ))
                 .withBean("primaryRedisConnectionFactory", RedisConnectionFactory.class,
@@ -106,7 +106,7 @@ class VeloRedisAutoConfigurationTests {
     void shouldUseRedisSerializerRegisteredByLaterAutoConfiguration() {
         ApplicationContextRunner runner = new ApplicationContextRunner()
                 .withConfiguration(AutoConfigurations.of(
-                        VeloRedisAutoConfiguration.class,
+                        VeloRedisConfiguration.class,
                         LateRedisSerializerAutoConfiguration.class
                 ))
                 .withBean(RedisConnectionFactory.class, () -> mock(RedisConnectionFactory.class));
@@ -129,7 +129,7 @@ class VeloRedisAutoConfigurationTests {
         // 提供 redisSerializer bean 模拟 velo.jackson 生效的真实场景，验证 velo 用它而非退回 JDK。
         new ApplicationContextRunner()
                 .withConfiguration(AutoConfigurations.of(
-                        VeloRedisAutoConfiguration.class,
+                        VeloRedisConfiguration.class,
                         RedisAutoConfiguration.class
                 ))
                 .withBean("redisSerializer", RedisSerializer.class, GenericJackson2JsonRedisSerializer::new)
@@ -148,7 +148,7 @@ class VeloRedisAutoConfigurationTests {
                 });
     }
 
-    @AutoConfiguration(after = VeloRedisAutoConfiguration.class)
+    @AutoConfiguration(after = VeloRedisConfiguration.class)
     static class LateRedisSerializerAutoConfiguration {
 
         @Bean("redisSerializer")

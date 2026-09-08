@@ -50,20 +50,20 @@ class VeloWebMvcConfigurerTests {
     }
 
     @Test
-    void shouldApplyDatePatternToJavaUtilDateFormatter() {
+    void shouldApplyDateTimePatternToJavaUtilDateFormatter() {
         VeloProperties properties = new VeloProperties();
         properties.getSpringConverter().setDateTimeEnabled(true);
-        properties.getDateTimeFormat().setDate("yyyy|MM|dd");
+        properties.getDateTimeFormat().setDateTime("yyyy|MM|dd HH^mm^ss");
         properties.getDateTimeFormat().setTimeZone("UTC");
 
         DefaultFormattingConversionService conversionService = new DefaultFormattingConversionService();
         new VeloWebMvcConfigurer(emptyConverterProvider(), properties).addFormatters(conversionService);
 
-        Date converted = conversionService.convert("2024|03|31", Date.class);
-        SimpleDateFormat formatter = new SimpleDateFormat("yyyy|MM|dd");
+        Date converted = conversionService.convert("2024|03|31 08^09^10", Date.class);
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy|MM|dd HH^mm^ss");
         formatter.setTimeZone(TimeZone.getTimeZone("UTC"));
 
         assertThat(converted).isNotNull();
-        assertThat(formatter.format(converted)).isEqualTo("2024|03|31");
+        assertThat(formatter.format(converted)).isEqualTo("2024|03|31 08^09^10");
     }
 }

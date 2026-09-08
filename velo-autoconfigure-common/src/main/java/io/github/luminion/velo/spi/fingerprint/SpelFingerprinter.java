@@ -11,17 +11,24 @@ import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 
 import java.lang.reflect.Method;
+import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
 /**
  * 基于 SpEL 的键解析器。
  */
 public class SpelFingerprinter implements Fingerprinter {
+    private static final int EXPRESSION_CACHE_MAX_SIZE = 256;
     private static final ExpressionParser PARSER = new SpelExpressionParser();
     private static final ParameterNameDiscoverer PND = new DefaultParameterNameDiscoverer();
-    private static final Map<String, Expression> EXPRESSION_CACHE = new ConcurrentHashMap<>(64);
+    private static final Map<String, Expression> EXPRESSION_CACHE = new LinkedHashMap<String, Expression>(
+            EXPRESSION_CACHE_MAX_SIZE, 0.75f, true) {
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<String, Expression> eldest) {
+            return size() > EXPRESSION_CACHE_MAX_SIZE;
+        }
+    };
 
     public SpelFingerprinter() {
     }
@@ -34,9 +41,19 @@ public class SpelFingerprinter implements Fingerprinter {
     @Override
     public String resolveMethodFingerprint(Object target, Method method, Object[] args, String expression) {
         if (StringUtils.hasText(expression)) {
-            Expression parsedExp = EXPRESSION_CACHE.computeIfAbsent(expression, PARSER::parseExpression);
+            Expression parsedExp;
+            synchronized (EXPRESSION_CACHE) {
+                parsedExp = EXPRESSION_CACHE.get(expression);
+                if (parsedExp == null) {
+                    parsedExp = PARSER.parseExpression(expression);
+                    EXPRESSION_CACHE.put(expression, parsedExp);
+                }
+            }
             MethodBasedEvaluationContext context = new MethodBasedEvaluationContext(target, method, args, PND);
             Object value = parsedExp.getValue(context);
+            if (value == null) {
+                throw new IllegalArgumentException("SpEL key expression '" + expression + "' resolved to null.");
+            }
             String resolved = ObjectUtils.nullSafeToString(value);
             if (!StringUtils.hasText(resolved)) {
                 throw new IllegalArgumentException("SpEL key expression '" + expression + "' resolved to a blank value.");

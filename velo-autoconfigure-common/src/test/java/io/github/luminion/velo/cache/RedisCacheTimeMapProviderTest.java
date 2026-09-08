@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 
 import java.time.Duration;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -12,10 +13,10 @@ class RedisCacheTimeMapProviderTest {
 
     @Test
     void shouldOverrideTtlForNamedCaches() {
-        RedisCacheTimeMapProvider provider = new RedisCacheTimeMapProvider(Map.of(
-                "shortLived", Duration.ofSeconds(5),
-                "longLived", Duration.ofMinutes(1)
-        ));
+        Map<String, Duration> ttlMap = new LinkedHashMap<>();
+        ttlMap.put("shortLived", Duration.ofSeconds(5));
+        ttlMap.put("longLived", Duration.ofMinutes(1));
+        RedisCacheTimeMapProvider provider = new RedisCacheTimeMapProvider(ttlMap);
         RedisCacheConfiguration baseConfiguration = RedisCacheConfiguration.defaultCacheConfig()
                 .entryTtl(Duration.ofSeconds(30));
 

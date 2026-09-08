@@ -55,4 +55,10 @@ public class VeloCoreAutoConfiguration {
             ObjectProvider<LockHandler> lockHandler) {
         return new VeloBannerPrinter(properties, idempotentHandler, rateLimitHandler, lockHandler);
     }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public VeloPropertiesWarningLogger veloPropertiesWarningLogger(VeloProperties properties) {
+        return new VeloPropertiesWarningLogger(properties);
+    }
 }

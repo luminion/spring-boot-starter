@@ -15,7 +15,8 @@ import org.springframework.context.annotation.Bean;
  * @author luminion
  * @since 1.0.0
  */
-@AutoConfiguration(after = VeloRateLimitRedisAutoConfiguration.class)
+@AutoConfiguration(after = {VeloRateLimitRedissonAutoConfiguration.class, VeloRateLimitRedisConfiguration.class},
+        afterName = "io.github.luminion.velo.ratelimit.config.VeloRateLimitRedisAutoConfiguration")
 @ConditionalOnConcurrencyBackend(prefix = "velo.rate-limit", value = ConcurrencyBackend.CAFFEINE,
         autoClassNames = {"org.aspectj.weaver.Advice", "com.github.benmanes.caffeine.cache.Cache"})
 @ConditionalOnMissingBean(RateLimitHandler.class)

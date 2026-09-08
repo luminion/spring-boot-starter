@@ -2,6 +2,7 @@ package io.github.luminion.velo.autoconfigure;
 
 import org.junit.jupiter.api.Test;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -16,7 +17,13 @@ class Boot2AutoConfigurationImportsTest {
         try (InputStream inputStream = Thread.currentThread().getContextClassLoader()
                 .getResourceAsStream("META-INF/spring.factories")) {
             assertNotNull(inputStream);
-            String factories = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            byte[] buffer = new byte[1024];
+            int read;
+            while ((read = inputStream.read(buffer)) != -1) {
+                output.write(buffer, 0, read);
+            }
+            String factories = new String(output.toByteArray(), StandardCharsets.UTF_8);
 
             assertTrue(factories.contains("io.github.luminion.velo.idempotent.VeloIdempotentAutoConfiguration"));
             assertTrue(factories.contains("io.github.luminion.velo.lock.VeloLockAutoConfiguration"));

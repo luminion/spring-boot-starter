@@ -15,8 +15,12 @@ import org.junit.jupiter.api.Test;
 import org.redisson.api.RedissonClient;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.test.util.ReflectionTestUtils;
 
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -27,7 +31,7 @@ class VeloRateLimitAutoConfigurationTests {
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
             .withConfiguration(AutoConfigurations.of(
                     VeloRateLimitRedissonAutoConfiguration.class,
-                    VeloRateLimitRedisAutoConfiguration.class,
+                    VeloRateLimitRedisConfiguration.class,
                     VeloRateLimitCaffeineAutoConfiguration.class,
                     VeloRateLimitJdkAutoConfiguration.class
             ));
@@ -60,6 +64,51 @@ class VeloRateLimitAutoConfigurationTests {
     }
 
     @Test
+    void shouldUseCustomNamedStringRedisTemplateByType() {
+        contextRunner
+                .withPropertyValues("velo.rate-limit.backend=redis")
+                .withBean("businessRedisTemplate", StringRedisTemplate.class, TestStringRedisTemplate::new)
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    assertThat(context.getBean(RateLimitHandler.class))
+                            .isInstanceOf(RedisRateLimitHandler.class);
+                });
+    }
+
+    @Test
+    void shouldUseCustomNamedStringRedisTemplateInAutoBackend() {
+        contextRunner
+                .withBean("businessRedisTemplate", StringRedisTemplate.class, TestStringRedisTemplate::new)
+                .run(context -> assertThat(context.getBean(RateLimitHandler.class))
+                        .isInstanceOf(RedisRateLimitHandler.class));
+    }
+
+    @Test
+    void shouldPreferPrimaryStringRedisTemplateWhenMultipleCandidatesExist() {
+        contextRunner
+                .withPropertyValues("velo.rate-limit.backend=redis")
+                .withUserConfiguration(MultipleStringRedisTemplateConfiguration.class)
+                .run(context -> {
+                    RedisRateLimitHandler handler = (RedisRateLimitHandler) context.getBean(RateLimitHandler.class);
+                    assertThat(ReflectionTestUtils.getField(handler, "redisTemplate"))
+                            .isSameAs(context.getBean("primaryStringRedisTemplate"));
+                });
+    }
+
+    @Test
+    void shouldUseDefaultStringRedisTemplateWhenMultipleCandidatesHaveNoPrimary() {
+        contextRunner
+                .withPropertyValues("velo.rate-limit.backend=redis")
+                .withBean("stringRedisTemplate", StringRedisTemplate.class, TestStringRedisTemplate::new)
+                .withBean("secondaryStringRedisTemplate", StringRedisTemplate.class, TestStringRedisTemplate::new)
+                .run(context -> {
+                    RedisRateLimitHandler handler = (RedisRateLimitHandler) context.getBean(RateLimitHandler.class);
+                    assertThat(ReflectionTestUtils.getField(handler, "redisTemplate"))
+                            .isSameAs(context.getBean("stringRedisTemplate"));
+                });
+    }
+
+    @Test
     void shouldUseExplicitBackendWhenConfigured() {
         contextRunner
                 .withPropertyValues("velo.rate-limit.backend=jdk")
@@ -88,7 +137,7 @@ class VeloRateLimitAutoConfigurationTests {
         new ApplicationContextRunner()
                 .withConfiguration(AutoConfigurations.of(
                         VeloRateLimitRedissonAutoConfiguration.class,
-                        VeloRateLimitRedisAutoConfiguration.class,
+                        VeloRateLimitRedisConfiguration.class,
                         VeloRateLimitCaffeineAutoConfiguration.class,
                         VeloRateLimitJdkAutoConfiguration.class,
                         VeloRateLimitAutoConfiguration.class
@@ -103,6 +152,21 @@ class VeloRateLimitAutoConfigurationTests {
         @Override
         public boolean tryAcquire(String key, double rate, long window) {
             return true;
+        }
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    static class MultipleStringRedisTemplateConfiguration {
+
+        @Bean
+        @Primary
+        StringRedisTemplate primaryStringRedisTemplate() {
+            return new TestStringRedisTemplate();
+        }
+
+        @Bean
+        StringRedisTemplate secondaryStringRedisTemplate() {
+            return new TestStringRedisTemplate();
         }
     }
 }

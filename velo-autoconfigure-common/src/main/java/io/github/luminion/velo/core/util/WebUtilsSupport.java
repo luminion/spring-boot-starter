@@ -1,5 +1,6 @@
 package io.github.luminion.velo.core.util;
 
+import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
@@ -93,7 +94,13 @@ public final class WebUtilsSupport {
         if (suffix != null && !suffix.isEmpty() && !fileName.endsWith(suffix)) {
             fileName += suffix;
         }
-        String encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8).replaceAll("\\+", "%20");
+        String encodedFileName;
+        try {
+            encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8.name());
+        } catch (UnsupportedEncodingException ex) {
+            throw new IllegalStateException("UTF-8 编码不受支持", ex);
+        }
+        encodedFileName = encodedFileName.replaceAll("\\+", "%20");
         return String.format("attachment; filename=\"%s\"; filename*=utf-8''%s",
                 encodedFileName, encodedFileName);
     }

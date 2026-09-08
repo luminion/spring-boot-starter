@@ -104,7 +104,15 @@ public abstract class FesodExcelHelper {
         return Collections.unmodifiableList(converters);
     }
 
-
+    /**
+     * 注册到 Fesod 的全局默认转换器表。
+     *
+     * <p>Fesod 2.0.1 对外公开的 {@code registerConverter} 只作用于单个
+     * Reader/Writer Builder，没有自动配置可调用的全局注册入口。为了让
+     * {@code velo.date-time-format.*} 自动作用于 Date、LocalDate、LocalTime 和
+     * LocalDateTime，必须桥接到 DefaultConverterLoader。当前版本的写入和全量注册
+     * 方法仍为内部方法，因此这里保留反射；升级 Fesod 时需要同步检查方法签名。</p>
+     */
     @SneakyThrows
     public static void registerConverters(List<Converter<?>> converters) {
         if (converters == null || converters.isEmpty()) {
@@ -339,8 +347,8 @@ public abstract class FesodExcelHelper {
 
         @Override
         public Date convertToJavaData(ReadCellData cellData, ExcelContentProperty contentProperty, GlobalConfiguration globalConfiguration) {
-            String cellValue = trimToNull(cellData.getStringValue());
-            if (cellValue == null) {
+            String cellValue = cellData.getStringValue();
+            if (cellValue == null || cellValue.isEmpty()) {
                 return null;
             }
             return Date.from(LocalDateTime.parse(cellValue, formatter).atZone(zoneId).toInstant());
@@ -375,8 +383,8 @@ public abstract class FesodExcelHelper {
 
         @Override
         public LocalDateTime convertToJavaData(ReadCellData cellData, ExcelContentProperty contentProperty, GlobalConfiguration globalConfiguration) {
-            String cellValue = trimToNull(cellData.getStringValue());
-            if (cellValue == null) {
+            String cellValue = cellData.getStringValue();
+            if (cellValue == null || cellValue.isEmpty()) {
                 return null;
             }
             return LocalDateTime.parse(cellValue, formatter);
@@ -412,8 +420,8 @@ public abstract class FesodExcelHelper {
 
         @Override
         public LocalDate convertToJavaData(ReadCellData cellData, ExcelContentProperty contentProperty, GlobalConfiguration globalConfiguration) {
-            String cellValue = trimToNull(cellData.getStringValue());
-            if (cellValue == null) {
+            String cellValue = cellData.getStringValue();
+            if (cellValue == null || cellValue.isEmpty()) {
                 return null;
             }
             return LocalDate.parse(cellValue, formatter);
@@ -448,8 +456,8 @@ public abstract class FesodExcelHelper {
 
         @Override
         public LocalTime convertToJavaData(ReadCellData cellData, ExcelContentProperty contentProperty, GlobalConfiguration globalConfiguration) {
-            String cellValue = trimToNull(cellData.getStringValue());
-            if (cellValue == null) {
+            String cellValue = cellData.getStringValue();
+            if (cellValue == null || cellValue.isEmpty()) {
                 return null;
             }
             return LocalTime.parse(cellValue, formatter);

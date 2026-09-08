@@ -15,6 +15,12 @@ import org.springframework.util.ClassUtils;
 public class VeloExcelConverterRegistrar
         implements ImportBeanDefinitionRegistrar, EnvironmentAware, BeanClassLoaderAware {
 
+    /*
+     * 三个 Excel 库公开的 registerConverter 只能绑定当前 Reader/Writer Builder，
+     * 无法通过自动配置覆盖业务代码创建的所有 Builder。Starter 需要让用户配置的
+     * Date、LocalDate、LocalTime、LocalDateTime 格式自动生效，因此仍采用各库的
+     * DefaultConverterLoader 做全局注册；具体反射桥接和版本边界见各 Helper。
+     */
     private static final String EASY_EXCEL_LOADER = "com.alibaba.excel.converters.DefaultConverterLoader";
     private static final String FAST_EXCEL_LOADER = "cn.idev.excel.converters.DefaultConverterLoader";
     private static final String FESOD_EXCEL_LOADER = "org.apache.fesod.sheet.converters.DefaultConverterLoader";

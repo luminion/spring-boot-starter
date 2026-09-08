@@ -14,7 +14,11 @@ import org.junit.jupiter.api.Test;
 import org.redisson.api.RedissonClient;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.test.util.ReflectionTestUtils;
 
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -25,7 +29,7 @@ class VeloIdempotentAutoConfigurationTests {
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
             .withConfiguration(AutoConfigurations.of(
                     VeloIdempotentRedissonAutoConfiguration.class,
-                    VeloIdempotentRedisAutoConfiguration.class,
+                    VeloIdempotentRedisConfiguration.class,
                     VeloIdempotentCaffeineAutoConfiguration.class,
                     VeloIdempotentJdkAutoConfiguration.class
             ));
@@ -58,6 +62,38 @@ class VeloIdempotentAutoConfigurationTests {
     }
 
     @Test
+    void shouldUseCustomNamedRedisTemplateByType() {
+        contextRunner
+                .withPropertyValues("velo.idempotent.backend=redis")
+                .withBean("businessRedisTemplate", RedisTemplate.class, TestRedisTemplate::new)
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    assertThat(context.getBean(IdempotentHandler.class))
+                            .isInstanceOf(RedisIdempotentHandler.class);
+                });
+    }
+
+    @Test
+    void shouldUseCustomNamedRedisTemplateInAutoBackend() {
+        contextRunner
+                .withBean("businessRedisTemplate", RedisTemplate.class, TestRedisTemplate::new)
+                .run(context -> assertThat(context.getBean(IdempotentHandler.class))
+                        .isInstanceOf(RedisIdempotentHandler.class));
+    }
+
+    @Test
+    void shouldPreferPrimaryRedisTemplateWhenMultipleCandidatesExist() {
+        contextRunner
+                .withPropertyValues("velo.idempotent.backend=redis")
+                .withUserConfiguration(MultipleRedisTemplateConfiguration.class)
+                .run(context -> {
+                    RedisIdempotentHandler handler = (RedisIdempotentHandler) context.getBean(IdempotentHandler.class);
+                    assertThat(ReflectionTestUtils.getField(handler, "redisTemplate"))
+                            .isSameAs(context.getBean("primaryRedisTemplate"));
+                });
+    }
+
+    @Test
     void shouldUseExplicitBackendWhenConfigured() {
         contextRunner
                 .withPropertyValues("velo.idempotent.backend=jdk")
@@ -86,7 +122,7 @@ class VeloIdempotentAutoConfigurationTests {
         new ApplicationContextRunner()
                 .withConfiguration(AutoConfigurations.of(
                         VeloIdempotentRedissonAutoConfiguration.class,
-                        VeloIdempotentRedisAutoConfiguration.class,
+                        VeloIdempotentRedisConfiguration.class,
                         VeloIdempotentCaffeineAutoConfiguration.class,
                         VeloIdempotentJdkAutoConfiguration.class,
                         VeloIdempotentAutoConfiguration.class
@@ -101,6 +137,21 @@ class VeloIdempotentAutoConfigurationTests {
         @Override
         public boolean tryRecord(String key, String token, long timeout) {
             return true;
+        }
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    static class MultipleRedisTemplateConfiguration {
+
+        @Bean
+        @Primary
+        RedisTemplate<Object, Object> primaryRedisTemplate() {
+            return new TestRedisTemplate();
+        }
+
+        @Bean
+        RedisTemplate<Object, Object> secondaryRedisTemplate() {
+            return new TestRedisTemplate();
         }
     }
 }

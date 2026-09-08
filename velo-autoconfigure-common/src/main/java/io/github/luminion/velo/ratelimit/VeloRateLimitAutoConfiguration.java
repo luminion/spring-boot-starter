@@ -18,10 +18,9 @@ import org.springframework.context.annotation.Bean;
  */
 @AutoConfiguration(after = {
         io.github.luminion.velo.ratelimit.config.VeloRateLimitRedissonAutoConfiguration.class,
-        io.github.luminion.velo.ratelimit.config.VeloRateLimitRedisAutoConfiguration.class,
         io.github.luminion.velo.ratelimit.config.VeloRateLimitCaffeineAutoConfiguration.class,
         io.github.luminion.velo.ratelimit.config.VeloRateLimitJdkAutoConfiguration.class
-})
+}, afterName = "io.github.luminion.velo.ratelimit.config.VeloRateLimitRedisAutoConfiguration")
 @ConditionalOnClass(Advice.class)
 @ConditionalOnProperty(prefix = "velo.rate-limit", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloRateLimitAutoConfiguration {

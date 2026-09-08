@@ -18,10 +18,9 @@ import org.springframework.context.annotation.Bean;
  */
 @AutoConfiguration(after = {
         io.github.luminion.velo.lock.config.VeloLockRedissonAutoConfiguration.class,
-        io.github.luminion.velo.lock.config.VeloLockRedisAutoConfiguration.class,
         io.github.luminion.velo.lock.config.VeloLockCaffeineAutoConfiguration.class,
         io.github.luminion.velo.lock.config.VeloLockJdkAutoConfiguration.class
-})
+}, afterName = "io.github.luminion.velo.lock.config.VeloLockRedisAutoConfiguration")
 @ConditionalOnClass(Advice.class)
 @ConditionalOnProperty(prefix = "velo.lock", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloLockAutoConfiguration {

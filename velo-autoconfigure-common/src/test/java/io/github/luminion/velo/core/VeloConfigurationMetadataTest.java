@@ -2,6 +2,7 @@ package io.github.luminion.velo;
 
 import org.junit.jupiter.api.Test;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -18,7 +19,13 @@ class VeloConfigurationMetadataTest {
                 .getContextClassLoader()
                 .getResourceAsStream("META-INF/spring-configuration-metadata.json")) {
             assertNotNull(inputStream);
-            String metadata = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            byte[] buffer = new byte[1024];
+            int read;
+            while ((read = inputStream.read(buffer)) != -1) {
+                output.write(buffer, 0, read);
+            }
+            String metadata = new String(output.toByteArray(), StandardCharsets.UTF_8);
 
             assertTrue(metadata.contains("\"groups\""));
             assertTrue(metadata.contains("velo.mode"));

@@ -12,6 +12,13 @@
     <artifactId>velo-autoconfigure-jackson3</artifactId>
     <name>velo-autoconfigure-jackson3</name>
 
+    <properties>
+        <java.version>17</java.version>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <maven.compiler.release>17</maven.compiler.release>
+    </properties>
+
     <dependencyManagement>
         <dependencies>
             <dependency>

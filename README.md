@@ -7,6 +7,8 @@
 Velo Spring Boot Starter 是一组低侵入的 Spring Boot 自动配置扩展。
 项目以 `velo.*` 作为统一配置入口，围绕并发控制、缓存、Jackson、Redis、MyBatis-Plus、Excel、日志、XSS 和 Web MVC 常用增强提供开箱能力。
 
+> 修改记录：2026-09-02 17:46，明确各 Spring Boot Starter 的支持范围、JDK 要求及不保证的版本，避免将版本兼容范围理解过宽。
+
 
 ## 功能特性
 
@@ -114,6 +116,18 @@ velo:
     <version>${velo.version}</version>
 </dependency>
 ```
+
+### 版本与兼容性
+
+| Starter | 当前依赖线 | 支持的 Spring Boot 范围 | 编译 / 运行 JDK | 说明 |
+| --- | --- | --- | --- | --- |
+| `velo-spring-boot2-starter` | 2.7.18 | Boot 2.7.x | Java 8 及以上 | Boot 2.6.x 及以下版本不在当前支持范围内 |
+| `velo-spring-boot3-starter` | 3.5.9 | Boot 3.2.x 及以上的 3.x 版本 | Java 17 及以上 | Boot 3.0.x、3.1.x 不在当前支持范围内 |
+| `velo-spring-boot4-starter` | 4.0.5 | Boot 4.0.x | Java 17 及以上 | 使用 Boot 4 适配模块时不能使用 Java 8 |
+
+以上范围是当前项目的构建和 API 适配边界；未列出的 Spring Boot 小版本不承诺兼容。Boot 2、Boot 3、Boot 4 Starter 分别依赖对应版本的适配模块，引入 Boot 2 Starter 不会因为根 POM 的 `<modules>` 配置而自动引入 Boot 3 或 Boot 4 模块。
+
+Spring Boot 的 `spring.threads.virtual.enabled` 虚拟线程自动配置从 Boot 3.2.0 开始提供，并且运行时还需要 Java 21 及以上；本 Starter 不会因引入自身而自动开启该配置。详见 [Spring Boot 3.2 系统要求](https://docs.spring.io/spring-boot/docs/3.2.10/reference/htmlsingle/) 和 [Spring Boot 虚拟线程配置说明](https://docs.spring.io/spring-boot/reference/features/spring-application.html)。
 
 
 ### 编译参数建议
@@ -927,7 +941,23 @@ logging:
 
 ### Q5：异常信息能否做国际化？
 
-可以。注解的 `message` 写成 `{i18n.key}` 形式时会从 Spring `MessageSource` 解析；普通文本则原样输出。未配置国际化的项目行为不变。详见「日志 / 异常提示」相关说明与 `velo/messages*.properties` 示例文件。
+可以。国际化是可选能力，不会改变注解默认的中文提示。注解的 `message` 写成 `{i18n.key}` 形式时，Velo 会通过 Spring 应用上下文的主 `MessageSource` 解析；普通文本则原样输出。
+
+Starter 内置了 `velo/messages.properties` 和 `velo/messages_en.properties`。如需使用内置资源，需要显式配置消息资源路径：
+
+```yaml
+spring:
+  messages:
+    basename: velo/messages
+```
+
+然后在注解中引用消息 key：
+
+```java
+@Idempotent(message = "{velo.idempotent.rejected}")
+```
+
+如果应用自定义了消息源，应将其作为名为 `messageSource` 的主消息源；存在多个不同名称的 `MessageSource` 时，Starter 不会自动选择其中一个。未配置消息资源或找不到 key 时，会回退为 key 文本，不会抛出异常。未使用 `{key}` 形式的项目不受影响。
 
 ### Q6：缓存大量 key 同时过期（缓存雪崩）？
 

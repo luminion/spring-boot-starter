@@ -3,14 +3,13 @@ package io.github.luminion.velo.redis;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnSingleCandidate;
-import org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -18,26 +17,17 @@ import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 /**
- * Redis自动配置类
+ * Redis Bean 配置实现，由各 Spring Boot 版本适配模块的自动配置入口导入。
  *
  * @author luminion
- * @see org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+ * @since 1.3.1
  */
-@AutoConfiguration(before = RedisAutoConfiguration.class)
+@Configuration(proxyBeanMethods = false)
 @ConditionalOnClass(RedisOperations.class)
 @ConditionalOnProperty(prefix = "velo.redis", name = "enabled", havingValue = "true", matchIfMissing = true)
-public class VeloRedisAutoConfiguration {
+public class VeloRedisConfiguration {
 
-    private static final Logger log = LoggerFactory.getLogger(VeloRedisAutoConfiguration.class);
-
-    //
-    //@Bean
-    //@ConditionalOnMissingBean
-    //@ConditionalOnSingleCandidate(RedisConnectionFactory.class)
-    //public StringRedisTemplate stringRedisTemplate(RedisConnectionFactory redisConnectionFactory) {
-    //    // 该配置由官方starter提供
-    //    return new StringRedisTemplate(redisConnectionFactory);
-    //}
+    private static final Logger log = LoggerFactory.getLogger(VeloRedisConfiguration.class);
 
     @Bean
     @ConditionalOnMissingBean(name = "stringObjectRedisTemplate")

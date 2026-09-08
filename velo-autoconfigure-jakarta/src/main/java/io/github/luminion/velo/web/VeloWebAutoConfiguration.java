@@ -4,7 +4,7 @@ import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.log.InvocationLogWriter;
 import io.github.luminion.velo.log.support.Slf4JInvocationLogWriter;
 import io.github.luminion.velo.spi.RuntimeJsonSerializer;
-import io.github.luminion.velo.spi.provider.HttpMessageConverterRuntimeJsonSerializer;
+import io.github.luminion.velo.spi.provider.DeferredHttpMessageConverterRuntimeJsonSerializer;
 import io.github.luminion.velo.xss.converter.XssStringConverter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,6 +16,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter;
+
+import java.util.Collections;
 
 /**
  * Web MVC 自动配置。
@@ -38,13 +40,14 @@ public class VeloWebAutoConfiguration {
     @ConditionalOnMissingBean
     @ConditionalOnClass(RequestMappingHandlerAdapter.class)
     public RuntimeJsonSerializer runtimeJsonSerializer(ObjectProvider<RequestMappingHandlerAdapter> handlerAdapterProvider) {
-        RequestMappingHandlerAdapter handlerAdapter = handlerAdapterProvider.getIfAvailable();
-        if (handlerAdapter == null) {
-            log.debug("No RequestMappingHandlerAdapter bean found, using empty HTTP message converter list for RuntimeJsonSerializer");
-            return new HttpMessageConverterRuntimeJsonSerializer(java.util.Collections.emptyList());
-        }
-        return new HttpMessageConverterRuntimeJsonSerializer(
-                handlerAdapter.getMessageConverters());
+        return new DeferredHttpMessageConverterRuntimeJsonSerializer(() -> {
+            RequestMappingHandlerAdapter handlerAdapter = handlerAdapterProvider.getIfAvailable();
+            if (handlerAdapter == null) {
+                log.debug("No RequestMappingHandlerAdapter bean found, using empty HTTP message converter list for RuntimeJsonSerializer");
+                return Collections.emptyList();
+            }
+            return handlerAdapter.getMessageConverters();
+        });
     }
 
     @Bean

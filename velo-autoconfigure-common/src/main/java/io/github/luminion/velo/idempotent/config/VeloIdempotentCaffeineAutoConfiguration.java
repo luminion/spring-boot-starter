@@ -15,7 +15,8 @@ import org.springframework.context.annotation.Bean;
  * @author luminion
  * @since 1.0.0
  */
-@AutoConfiguration(after = VeloIdempotentRedisAutoConfiguration.class)
+@AutoConfiguration(after = {VeloIdempotentRedissonAutoConfiguration.class, VeloIdempotentRedisConfiguration.class},
+        afterName = "io.github.luminion.velo.idempotent.config.VeloIdempotentRedisAutoConfiguration")
 @ConditionalOnConcurrencyBackend(prefix = "velo.idempotent", value = ConcurrencyBackend.CAFFEINE,
         autoClassNames = {"org.aspectj.weaver.Advice", "com.github.benmanes.caffeine.cache.Cache"})
 @ConditionalOnMissingBean(IdempotentHandler.class)

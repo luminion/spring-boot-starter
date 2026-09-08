@@ -148,7 +148,7 @@ public class VeloJacksonAutoConfiguration {
     }
 
     @Configuration(proxyBeanMethods = false)
-    @ConditionalOnClass({RedisTemplate.class, Jackson2ObjectMapperBuilder.class})
+    @ConditionalOnClass(RedisTemplate.class)
     static class JacksonRedisConfiguration {
 
         @Bean

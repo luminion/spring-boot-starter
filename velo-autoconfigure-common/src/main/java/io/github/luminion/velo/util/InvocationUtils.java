@@ -15,6 +15,7 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -24,6 +25,12 @@ import java.util.Map;
 public abstract class InvocationUtils {
 
     private static final String OMITTED_VALUE = "[omitted]";
+
+    /**
+     * 日志安全性检查允许遍历的最大嵌套层数，避免异常深度的输入消耗过多栈空间。
+     */
+    private static final int MAX_LOGGABLE_VALUE_DEPTH = 32;
+
     private static final ParameterNameDiscoverer PARAMETER_NAME_DISCOVERER = new DefaultParameterNameDiscoverer();
 
     private static final String[] UNLOGGABLE_TYPE_PREFIXES = {
@@ -118,8 +125,16 @@ public abstract class InvocationUtils {
     }
 
     public static boolean isLoggableValue(Object value) {
+        return isLoggableValue(value, new IdentityHashMap<>(), 0);
+    }
+
+    private static boolean isLoggableValue(Object value, IdentityHashMap<Object, Boolean> visiting, int depth) {
         if (value == null) {
             return true;
+        }
+
+        if (depth > MAX_LOGGABLE_VALUE_DEPTH) {
+            return false;
         }
 
         Class<?> valueType = value.getClass();
@@ -129,15 +144,47 @@ public abstract class InvocationUtils {
             return true;
         }
         if (valueType.isArray()) {
-            return isLoggableArray(value);
+            if (visiting.put(value, Boolean.TRUE) != null) {
+                return false;
+            }
+            try {
+                return isLoggableArray(value, visiting, depth + 1);
+            } finally {
+                visiting.remove(value);
+            }
         }
         if (value instanceof Collection<?>) {
-            Collection<?> collection = (Collection<?>) value;
-            return collection.stream().allMatch(InvocationUtils::isLoggableValue);
+            if (visiting.put(value, Boolean.TRUE) != null) {
+                return false;
+            }
+            try {
+                Collection<?> collection = (Collection<?>) value;
+                for (Object item : collection) {
+                    if (!isLoggableValue(item, visiting, depth + 1)) {
+                        return false;
+                    }
+                }
+                return true;
+            } finally {
+                visiting.remove(value);
+            }
         }
         if (value instanceof Map<?, ?>) {
-            Map<?, ?> map = (Map<?, ?>) value;
-            return map.entrySet().stream().allMatch(entry -> isLoggableValue(entry.getKey()) && isLoggableValue(entry.getValue()));
+            if (visiting.put(value, Boolean.TRUE) != null) {
+                return false;
+            }
+            try {
+                Map<?, ?> map = (Map<?, ?>) value;
+                for (Map.Entry<?, ?> entry : map.entrySet()) {
+                    if (!isLoggableValue(entry.getKey(), visiting, depth + 1)
+                            || !isLoggableValue(entry.getValue(), visiting, depth + 1)) {
+                        return false;
+                    }
+                }
+                return true;
+            } finally {
+                visiting.remove(value);
+            }
         }
         if (value instanceof InputStream || value instanceof OutputStream || value instanceof Reader || value instanceof Writer
                 || value instanceof File || value instanceof Throwable) {
@@ -147,10 +194,10 @@ public abstract class InvocationUtils {
         return !hasTypeNamePrefix(valueType);
     }
 
-    private static boolean isLoggableArray(Object value) {
+    private static boolean isLoggableArray(Object value, IdentityHashMap<Object, Boolean> visiting, int depth) {
         int length = Array.getLength(value);
         for (int i = 0; i < length; i++) {
-            if (!isLoggableValue(Array.get(value, i))) {
+            if (!isLoggableValue(Array.get(value, i), visiting, depth)) {
                 return false;
             }
         }

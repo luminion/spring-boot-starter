@@ -4,16 +4,10 @@ import io.github.luminion.velo.VeloProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.autoconfigure.cache.CacheAutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.boot.autoconfigure.data.couchbase.CouchbaseDataAutoConfiguration;
-import org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration;
-import org.springframework.boot.autoconfigure.hazelcast.HazelcastAutoConfiguration;
-import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -27,27 +21,18 @@ import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.util.StringUtils;
 
 /**
- * spring缓存自动配置
+ * 缓存配置实现，由各 Spring Boot 版本适配模块的自动配置入口导入。
  *
  * @author luminion
- * @see org.springframework.boot.autoconfigure.cache.CacheAutoConfiguration
- * @since 1.0.0
+ * @since 1.3.1
  */
-@AutoConfiguration(
-        after = {
-                CouchbaseDataAutoConfiguration.class,
-                HazelcastAutoConfiguration.class,
-                HibernateJpaAutoConfiguration.class,
-                RedisAutoConfiguration.class
-        },
-        before = CacheAutoConfiguration.class
-)
+@Configuration(proxyBeanMethods = false)
 @ConditionalOnClass(CacheManager.class)
 @ConditionalOnMissingBean(value = CacheManager.class, name = "cacheResolver")
 @ConditionalOnProperty(prefix = "velo.cache", name = "enabled", havingValue = "true", matchIfMissing = true)
-public class VeloCacheAutoConfiguration {
+public class VeloCacheConfiguration {
 
-    private static final Logger log = LoggerFactory.getLogger(VeloCacheAutoConfiguration.class);
+    private static final Logger log = LoggerFactory.getLogger(VeloCacheConfiguration.class);
 
     private static String buildCacheKeyPrefix(VeloProperties.CacheProperties cacheProperties, String cacheName) {
         String separator = StringUtils.hasText(cacheProperties.getSeparator())
@@ -104,9 +89,9 @@ public class VeloCacheAutoConfiguration {
         @ConditionalOnMissingBean(CacheManager.class)
         @ConditionalOnBean({RedisConnectionFactory.class, RedisCacheConfiguration.class, RedisCacheTimeMapProvider.class})
         public CacheManager cacheManager(RedisConnectionFactory redisConnectionFactory,
-                                         RedisCacheConfiguration redisCacheConfiguration,
-                                         RedisCacheTimeMapProvider redisCacheTimeMapProvider,
-                                         VeloProperties properties) {
+                RedisCacheConfiguration redisCacheConfiguration,
+                RedisCacheTimeMapProvider redisCacheTimeMapProvider,
+                VeloProperties properties) {
             // 每 key 独立抖动：包装 cache writer，在每次写入时对该条目的 TTL 叠加随机偏移，
             // 使同一缓存名称下不同 key 也获得不同过期时间，缓解同类型缓存批量同时过期。
             RedisCacheWriter cacheWriter = JitterRedisCacheWriter.wrap(

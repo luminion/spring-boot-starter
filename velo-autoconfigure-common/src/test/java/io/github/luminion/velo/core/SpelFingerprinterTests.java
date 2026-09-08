@@ -3,7 +3,9 @@ package io.github.luminion.velo;
 import io.github.luminion.velo.spi.fingerprint.SpelFingerprinter;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -66,6 +68,42 @@ class SpelFingerprinterTests {
                 "'   '"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("resolved to a blank value");
+    }
+
+    @Test
+    void shouldRejectNullSpelKeyResult() throws NoSuchMethodException {
+        Method method = SampleService.class.getDeclaredMethod("execute", String.class, int.class);
+
+        assertThatThrownBy(() -> fingerprinter.resolveMethodFingerprint(
+                new SampleService(),
+                method,
+                new Object[]{null, 7},
+                "#p0"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("resolved to null");
+    }
+
+    @Test
+    void shouldEvictOldSpelExpressionsWhenCacheReachesLimit() throws Exception {
+        Method method = SampleService.class.getDeclaredMethod("execute", String.class, int.class);
+        Field cacheField = SpelFingerprinter.class.getDeclaredField("EXPRESSION_CACHE");
+        cacheField.setAccessible(true);
+        Map<?, ?> expressionCache = (Map<?, ?>) cacheField.get(null);
+        synchronized (expressionCache) {
+            expressionCache.clear();
+        }
+
+        for (int i = 0; i < 300; i++) {
+            fingerprinter.resolveMethodFingerprint(
+                    new SampleService(),
+                    method,
+                    new Object[]{"user-" + i, 7},
+                    "#p0 + ':' + " + i);
+        }
+
+        synchronized (expressionCache) {
+            assertThat(expressionCache).hasSize(256);
+        }
     }
 
     static class SampleService {

@@ -13,7 +13,11 @@ import org.junit.jupiter.api.Test;
 import org.redisson.api.RedissonClient;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.test.util.ReflectionTestUtils;
 
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -24,7 +28,7 @@ class VeloLockAutoConfigurationTests {
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
             .withConfiguration(AutoConfigurations.of(
                     VeloLockRedissonAutoConfiguration.class,
-                    VeloLockRedisAutoConfiguration.class,
+                    VeloLockRedisConfiguration.class,
                     VeloLockCaffeineAutoConfiguration.class,
                     VeloLockJdkAutoConfiguration.class
             ));
@@ -53,6 +57,51 @@ class VeloLockAutoConfigurationTests {
                 .withBean("stringRedisTemplate", StringRedisTemplate.class, TestStringRedisTemplate::new)
                 .run(context -> assertThat(context.getBean(LockHandler.class))
                         .isInstanceOf(RedisLockHandler.class));
+    }
+
+    @Test
+    void shouldUseCustomNamedStringRedisTemplateByType() {
+        contextRunner
+                .withPropertyValues("velo.lock.backend=redis")
+                .withBean("businessRedisTemplate", StringRedisTemplate.class, TestStringRedisTemplate::new)
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    assertThat(context.getBean(LockHandler.class))
+                            .isInstanceOf(RedisLockHandler.class);
+                });
+    }
+
+    @Test
+    void shouldUseCustomNamedStringRedisTemplateInAutoBackend() {
+        contextRunner
+                .withBean("businessRedisTemplate", StringRedisTemplate.class, TestStringRedisTemplate::new)
+                .run(context -> assertThat(context.getBean(LockHandler.class))
+                        .isInstanceOf(RedisLockHandler.class));
+    }
+
+    @Test
+    void shouldPreferPrimaryStringRedisTemplateWhenMultipleCandidatesExist() {
+        contextRunner
+                .withPropertyValues("velo.lock.backend=redis")
+                .withUserConfiguration(MultipleStringRedisTemplateConfiguration.class)
+                .run(context -> {
+                    RedisLockHandler handler = (RedisLockHandler) context.getBean(LockHandler.class);
+                    assertThat(ReflectionTestUtils.getField(handler, "redisTemplate"))
+                            .isSameAs(context.getBean("primaryStringRedisTemplate"));
+                });
+    }
+
+    @Test
+    void shouldUseDefaultStringRedisTemplateWhenMultipleCandidatesHaveNoPrimary() {
+        contextRunner
+                .withPropertyValues("velo.lock.backend=redis")
+                .withBean("stringRedisTemplate", StringRedisTemplate.class, TestStringRedisTemplate::new)
+                .withBean("secondaryStringRedisTemplate", StringRedisTemplate.class, TestStringRedisTemplate::new)
+                .run(context -> {
+                    RedisLockHandler handler = (RedisLockHandler) context.getBean(LockHandler.class);
+                    assertThat(ReflectionTestUtils.getField(handler, "redisTemplate"))
+                            .isSameAs(context.getBean("stringRedisTemplate"));
+                });
     }
 
     @Test
@@ -92,7 +141,7 @@ class VeloLockAutoConfigurationTests {
         new ApplicationContextRunner()
                 .withConfiguration(AutoConfigurations.of(
                         VeloLockRedissonAutoConfiguration.class,
-                        VeloLockRedisAutoConfiguration.class,
+                        VeloLockRedisConfiguration.class,
                         VeloLockCaffeineAutoConfiguration.class,
                         VeloLockJdkAutoConfiguration.class,
                         VeloLockAutoConfiguration.class
@@ -111,6 +160,21 @@ class VeloLockAutoConfigurationTests {
 
         @Override
         public void unlock(String key) {
+        }
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    static class MultipleStringRedisTemplateConfiguration {
+
+        @Bean
+        @Primary
+        StringRedisTemplate primaryStringRedisTemplate() {
+            return new TestStringRedisTemplate();
+        }
+
+        @Bean
+        StringRedisTemplate secondaryStringRedisTemplate() {
+            return new TestStringRedisTemplate();
         }
     }
 }
