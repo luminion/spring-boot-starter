@@ -1,5 +1,7 @@
 # 更新记录
 
+> 修改记录：2026-09-09 15:20，补充当前 1.3.1 版本中日期转换、Jackson 日期时间开关、XSS JSON 边界及 Redis 序列化器选择调整的变更说明，便于追踪本轮代码与文档修改。
+
 ## 1.3.1
 
 
@@ -11,9 +13,16 @@
 - 日志注解继承修复：`@InvokeLog` 与 `@SlowLog` 在 jakarta/javax 模块增加 `@Inherited`，类级注解可被子类继承，避免子类方法漏记日志。
 - 慢日志子类方法修复：`SlowLogAspect` 新增 `AopUtils.getMostSpecificMethod` 解析，`@SlowLog` 标注在实现类方法上时可正确触发，与 `InvokeLogAspect` 行为对齐。
 - `VeloCacheAutoConfiguration.cacheManager` 删除未使用的 `serializerProvider` 参数，避免引入对 `RedisSerializer` Bean 的无效依赖。
+- Jackson 日期时间开关修复：`velo.jackson.date-time-enabled=false` 时不再创建日期格式对象，非法日期格式配置不会阻止 Jackson 2/3 构建 `ObjectMapper` 或 `JsonMapper`。
 
 ### 调整
 - 日志相关类迁移至 `velo-autoconfigure-common`：`InvokeLog`、`SlowLog` 注解，`InvokeLogAspect`、`SlowLogAspect` 切面，以及 `VeloLogAutoConfiguration` 均不依赖 servlet API，统一收归 common 模块，消除 jakarta/javax 双份冗余。
+- `java.util.Date` 默认输入同时兼容 `yyyy-MM-dd HH:mm:ss` 和 `yyyy-MM-dd`，日期-only 按默认时区解析为当天零点；Spring `@DateTimeFormat` 与 Jackson `@JsonFormat` 的显式格式继续优先于 Starter 默认格式。
+- Redis 缓存和 RedisTemplate 的默认序列化器改为 `RedisSerializer.json()`；用户显式提供任意名称的 `RedisSerializer<Object>` Bean 仍优先，Boot 4 同时存在 Jackson 2/3 时默认遵循 Spring Data Redis 4 的 Jackson 3 实现。
+
+### 文档
+- 补充 XSS 与 Jackson JSON 请求体的边界说明：同时启用 XSS 和 Jackson 字符串转换时，JSON 请求体中的普通字符串会被清洗，字段上的 `@XssIgnore` 可显式放行。
+- 补充 Boot 4 Jackson 2/3 与 Redis 序列化器的选择规则：需要 Jackson 2 时显式提供 `RedisSerializer<Object>` Bean。
 
 ## 1.3.0
 

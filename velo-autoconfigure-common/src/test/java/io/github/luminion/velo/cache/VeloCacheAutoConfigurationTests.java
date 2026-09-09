@@ -11,7 +11,10 @@ import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializer;
 
+import java.nio.ByteBuffer;
 import java.time.Duration;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -25,6 +28,28 @@ class VeloCacheAutoConfigurationTests {
             ))
             .withBean(RedisConnectionFactory.class, () -> mock(RedisConnectionFactory.class))
             .withBean("redisSerializer", RedisSerializer.class, GenericJackson2JsonRedisSerializer::new);
+
+    private final ApplicationContextRunner fallbackContextRunner = new ApplicationContextRunner()
+            .withConfiguration(AutoConfigurations.of(
+                    VeloCoreAutoConfiguration.class,
+                    VeloCacheConfiguration.class
+            ))
+            .withBean(RedisConnectionFactory.class, () -> mock(RedisConnectionFactory.class));
+
+    @Test
+    void shouldUseSpringDataJsonSerializerWhenRedisSerializerMissing() {
+        fallbackContextRunner
+                .run(context -> {
+                    RedisCacheConfiguration configuration = context.getBean(RedisCacheConfiguration.class);
+                    Map<String, Object> payload = new LinkedHashMap<>();
+                    payload.put("name", "ok");
+
+                    ByteBuffer serialized = configuration.getValueSerializationPair().write(payload);
+                    Object deserialized = configuration.getValueSerializationPair().read(serialized);
+
+                    assertThat(deserialized).isEqualTo(payload);
+                });
+    }
 
     @Test
     void shouldCreateRedisCacheConfigurationUsingConfiguredPrefixAndTtl() {

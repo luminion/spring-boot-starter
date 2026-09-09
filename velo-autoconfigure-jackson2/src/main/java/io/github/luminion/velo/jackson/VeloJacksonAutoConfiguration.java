@@ -146,7 +146,7 @@ public class VeloJacksonAutoConfiguration {
     static class JacksonRedisConfiguration {
 
         @Bean
-        @ConditionalOnMissingBean(name = "redisSerializer")
+        @ConditionalOnMissingBean(RedisSerializer.class)
         public RedisSerializer<Object> redisSerializer() {
             // Redis 序列化需要一份稳定的 ObjectMapper，避免被 Web 层 builder 上的自定义器意外改写。
             ObjectMapper objectMapper = new ObjectMapper();

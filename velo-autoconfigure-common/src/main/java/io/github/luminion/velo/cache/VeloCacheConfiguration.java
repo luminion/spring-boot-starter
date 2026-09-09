@@ -15,7 +15,6 @@ import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.cache.RedisCacheWriter;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.util.StringUtils;
@@ -63,8 +62,8 @@ public class VeloCacheConfiguration {
         public RedisCacheConfiguration redisCacheConfiguration(ObjectProvider<RedisSerializer<Object>> serializerProvider,
                 VeloProperties properties) {
             RedisSerializer<Object> redisSerializer = serializerProvider.getIfAvailable(() -> {
-                log.debug("No RedisSerializer bean found, using GenericJackson2JsonRedisSerializer for Redis cache values");
-                return new GenericJackson2JsonRedisSerializer();
+                log.debug("No RedisSerializer bean found, using RedisSerializer.json() for Redis cache values");
+                return RedisSerializer.json();
             });
             VeloProperties.CacheProperties cacheProperties = properties.getCache();
 

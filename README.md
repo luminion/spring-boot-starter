@@ -10,6 +10,8 @@ Velo Spring Boot Starter 是一组低侵入的 Spring Boot 自动配置扩展。
 > 修改记录：2026-09-02 17:46，明确各 Spring Boot Starter 的支持范围、JDK 要求及不保证的版本，避免将版本兼容范围理解过宽。
 >
 > 修改记录：2026-09-09 14:01，补充 XSS 对 Jackson JSON 请求体字符串的实际处理边界，避免文档与实现不一致。
+>
+> 修改记录：2026-09-09 15:15，补充 Redis 缓存与 RedisTemplate 的 Jackson 2/3 序列化器选择规则，避免 Boot 4 下将 Jackson 版本误认为由类路径自动唯一决定。
 
 
 ## 功能特性
@@ -206,6 +208,8 @@ public UserDTO getById(Long id) {
 - `ttl.<cacheName>` 可按缓存名单独覆盖 TTL
 - key 前缀格式为 `prefix + separator + cacheName + separator`
 - 业务侧仍然需要自己开启 `@EnableCaching`
+- 缓存值序列化器优先复用容器中的 `RedisSerializer<Object>`；没有显式 Bean 时使用 `RedisSerializer.json()`，跟随当前 Spring Data Redis 版本的原生 JSON 实现
+- Boot 4 同时存在 Jackson 2/3 时，未显式提供序列化器会按 Spring Data Redis 4 的默认规则使用 Jackson 3；如需使用 Jackson 2，请显式注册 Jackson 2 的 `RedisSerializer<Object>` Bean
 
 缓存雪崩防护（TTL 抖动）：
 
@@ -729,6 +733,8 @@ velo:
   - `redisTemplate`
   - `stringObjectRedisTemplate`
 - 序列化器优先复用容器中的 `RedisSerializer<Object>`，通常会跟随 Velo 的 Jackson 配置保持一致
+- 若容器没有 `RedisSerializer<Object>`，starter 使用 `RedisSerializer.json()` 作为回退；Boot 2/3 跟随对应 Spring Data Redis 的 Jackson 2 实现，Boot 4 默认使用 Jackson 3
+- Boot 4 项目若选择 Jackson 2，请自行提供 Jackson 2 的 `RedisSerializer<Object>` Bean，Velo 的缓存和 RedisTemplate 会共同复用该 Bean；Jackson 2/3 同时存在时不会仅依据类路径猜测用户意图
 
 ---
 

@@ -33,6 +33,29 @@ class VeloJacksonAutoConfigurationTests {
             .withConfiguration(AutoConfigurations.of(VeloJacksonAutoConfiguration.class));
 
     @Test
+    void shouldBackOffRedisSerializerWhenUserProvidesDifferentBeanName() {
+        RedisSerializer<Object> userSerializer = new RedisSerializer<Object>() {
+            @Override
+            public byte[] serialize(Object value) {
+                return new byte[]{1};
+            }
+
+            @Override
+            public Object deserialize(byte[] bytes) {
+                return "custom";
+            }
+        };
+
+        contextRunner
+                .withBean(VeloProperties.class, VeloProperties::new)
+                .withBean("userRedisSerializer", RedisSerializer.class, () -> userSerializer)
+                .run(context -> {
+                    assertThat(context).hasSingleBean(RedisSerializer.class);
+                    assertThat(context.getBean(RedisSerializer.class)).isSameAs(userSerializer);
+                });
+    }
+
+    @Test
     void shouldSerializeLongAsStringAndSerializeBigDecimalAsStringByDefault() throws Exception {
         contextRunner
                 .withBean(VeloProperties.class, VeloProperties::new)

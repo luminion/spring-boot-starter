@@ -129,7 +129,7 @@ public class VeloJacksonAutoConfiguration {
     static class JacksonRedisConfiguration {
 
         @Bean
-        @ConditionalOnMissingBean(name = "redisSerializer")
+        @ConditionalOnMissingBean(RedisSerializer.class)
         public RedisSerializer<Object> redisSerializer() {
             return RedisSerializer.json();
         }
