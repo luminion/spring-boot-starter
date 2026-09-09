@@ -7,6 +7,7 @@ import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Import;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -49,6 +50,8 @@ class Boot4MockMvcIntegrationTest {
 
             mockMvc.perform(get("/integration/date-time")
                             .param("date", "2024-01-02 03:04:05")
+                            .param("dateOnly", "2024-01-02")
+                            .param("formattedDate", "2024/01/02")
                             .param("localDate", "2024-01-02")
                             .param("localTime", "03:04:05")
                             .param("localDateTime", "2024-01-02 03:04:05")
@@ -72,6 +75,8 @@ class Boot4MockMvcIntegrationTest {
 
         @GetMapping("/integration/date-time")
         String dateTime(@RequestParam("date") Date date,
+                        @RequestParam("dateOnly") Date dateOnly,
+                        @RequestParam("formattedDate") @DateTimeFormat(pattern = "yyyy/MM/dd") Date formattedDate,
                         @RequestParam("localDate") LocalDate localDate,
                         @RequestParam("localTime") LocalTime localTime,
                         @RequestParam("localDateTime") LocalDateTime localDateTime) {

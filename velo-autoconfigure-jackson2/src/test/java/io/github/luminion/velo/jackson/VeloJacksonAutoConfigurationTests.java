@@ -1,5 +1,6 @@
 package io.github.luminion.velo.jackson;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;
@@ -18,7 +19,11 @@ import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.util.Date;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -270,6 +275,59 @@ class VeloJacksonAutoConfigurationTests {
     }
 
     @Test
+    void shouldIgnoreInvalidDateTimePatternsWhenJacksonDateTimeCustomizationDisabled() throws Exception {
+        VeloProperties properties = new VeloProperties();
+        properties.getJackson().setDateTimeEnabled(false);
+        properties.getDateTimeFormat().setDateTime("invalid[");
+        properties.getDateTimeFormat().setDate("invalid[");
+        properties.getDateTimeFormat().setTime("invalid[");
+
+        contextRunner
+                .withBean(VeloProperties.class, () -> properties)
+                .run(context -> {
+                    ObjectMapper objectMapper = objectMapper(context);
+                    String json = objectMapper.writeValueAsString(new SamplePayload(
+                            1L,
+                            2L,
+                            new BigDecimal("123.45"),
+                            0.5D,
+                            0.25F,
+                            LocalDateTime.of(2026, 3, 30, 12, 34, 56)));
+
+                    assertThat(json).contains("\"createdAt\":[2026,3,30,12,34,56]");
+                });
+    }
+
+    @Test
+    void shouldUseFlexibleDefaultDateFormatAndHonorJsonFormat() throws Exception {
+        contextRunner
+                .withBean(VeloProperties.class, VeloProperties::new)
+                .run(context -> {
+                    ObjectMapper objectMapper = objectMapper(context);
+                    DatePayload payload = objectMapper.readValue(
+                            "{\"dateOnly\":\"2024-01-02\",\"dateTime\":\"2024-01-02 03:04:05\","
+                                    + "\"annotatedDate\":\"2024/03/31\","
+                                    + "\"annotatedDateTime\":\"2024/03/31 08:09\"}",
+                            DatePayload.class);
+
+                    ZoneId defaultZone = ZoneId.of("GMT+8");
+                    assertThat(payload.getDateOnly()).isEqualTo(Date.from(
+                            LocalDate.of(2024, 1, 2).atStartOfDay(defaultZone).toInstant()));
+                    assertThat(payload.getDateTime()).isEqualTo(Date.from(
+                            LocalDateTime.of(2024, 1, 2, 3, 4, 5).atZone(defaultZone).toInstant()));
+                    assertThat(payload.getAnnotatedDate()).isEqualTo(Date.from(
+                            LocalDate.of(2024, 3, 31).atStartOfDay(ZoneOffset.UTC).toInstant()));
+                    assertThat(payload.getAnnotatedDateTime()).isEqualTo(LocalDateTime.of(2024, 3, 31, 8, 9));
+
+                    String json = objectMapper.writeValueAsString(payload);
+                    assertThat(json).contains("\"dateOnly\":\"2024-01-02 00:00:00\"");
+                    assertThat(json).contains("\"dateTime\":\"2024-01-02 03:04:05\"");
+                    assertThat(json).contains("\"annotatedDate\":\"2024/03/31\"");
+                    assertThat(json).contains("\"annotatedDateTime\":\"2024/03/31 08:09\"");
+                });
+    }
+
+    @Test
     void shouldSerializeJsonEnumDerivedNameWithDefaultFields() throws Exception {
         contextRunner
                 .withBean(VeloProperties.class, VeloProperties::new)
@@ -444,6 +502,50 @@ class VeloJacksonAutoConfigurationTests {
 
         public LocalDateTime getCreatedAt() {
             return createdAt;
+        }
+    }
+
+    static class DatePayload {
+        private Date dateOnly;
+        private Date dateTime;
+        @JsonFormat(pattern = "yyyy/MM/dd", timezone = "UTC")
+        private Date annotatedDate;
+        @JsonFormat(pattern = "yyyy/MM/dd HH:mm")
+        private LocalDateTime annotatedDateTime;
+
+        public DatePayload() {
+        }
+
+        public Date getDateOnly() {
+            return dateOnly;
+        }
+
+        public void setDateOnly(Date dateOnly) {
+            this.dateOnly = dateOnly;
+        }
+
+        public Date getDateTime() {
+            return dateTime;
+        }
+
+        public void setDateTime(Date dateTime) {
+            this.dateTime = dateTime;
+        }
+
+        public Date getAnnotatedDate() {
+            return annotatedDate;
+        }
+
+        public void setAnnotatedDate(Date annotatedDate) {
+            this.annotatedDate = annotatedDate;
+        }
+
+        public LocalDateTime getAnnotatedDateTime() {
+            return annotatedDateTime;
+        }
+
+        public void setAnnotatedDateTime(LocalDateTime annotatedDateTime) {
+            this.annotatedDateTime = annotatedDateTime;
         }
     }
 

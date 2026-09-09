@@ -55,6 +55,7 @@ public class VeloWebMvcConfigurer implements WebMvcConfigurer {
 
             DateFormatterRegistrar dateRegistrar = new DateFormatterRegistrar();
             DateFormatter dateFormatter = new DateFormatter(dateTimePattern);
+            dateFormatter.setFallbackPatterns(datePattern);
             dateFormatter.setTimeZone(TimeZone.getTimeZone(timeZone));
             dateRegistrar.setFormatter(dateFormatter);
             dateRegistrar.registerFormatters(registry);

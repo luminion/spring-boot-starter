@@ -8,6 +8,8 @@ Velo Spring Boot Starter 是一组低侵入的 Spring Boot 自动配置扩展。
 项目以 `velo.*` 作为统一配置入口，围绕并发控制、缓存、Jackson、Redis、MyBatis-Plus、Excel、日志、XSS 和 Web MVC 常用增强提供开箱能力。
 
 > 修改记录：2026-09-02 17:46，明确各 Spring Boot Starter 的支持范围、JDK 要求及不保证的版本，避免将版本兼容范围理解过宽。
+>
+> 修改记录：2026-09-09 14:01，补充 XSS 对 Jackson JSON 请求体字符串的实际处理边界，避免文档与实现不一致。
 
 
 ## 功能特性
@@ -595,7 +597,8 @@ public class UserQuery {
 - `strategy` 可选 `NONE`、`ESCAPE`、`SIMPLE_TEXT`、`BASIC`、`BASIC_WITH_IMAGES`、`RELAXED`
 - `ESCAPE` 不依赖 `jsoup`；其他 HTML 清洗策略必须引入 `jsoup`
 - `ESCAPE` 且无 `jsoup` 时会走 Spring 转义；其他策略缺少 `jsoup` 时只打印 WARN，不注册 `XssCleaner`，也不会自动降级
-- 清洗发生在 Web MVC 的字符串参数绑定阶段，包括 query/form/path 和普通对象参数中通过 MVC binder 绑定的 `String` 字段；不会接管 Jackson JSON 请求体反序列化，也不会全局处理所有字符串字段
+- 清洗发生在 Web MVC 的字符串参数绑定阶段，包括 query/form/path 和普通对象参数中通过 MVC binder 绑定的 `String` 字段
+- 同时启用 XSS 与 `velo.jackson.string-converter-enabled` 时，Jackson JSON 请求体中的普通 `String` 字段也会进行清洗；字段上的 `@XssIgnore` 可以跳过清洗，`@JsonDecode` 会在解码后继续执行清洗
 
 ### 8. Jackson
 
@@ -645,7 +648,7 @@ public class OrderVO {
 - `serialize-big-decimal-as-string=true` 默认开启
 - `enum-desc-enabled=true` 时，`@JsonEnum` 可为数值字段派生出描述字段，例如 `statusName`
 - `string-converter-enabled=true` 时，`@JsonEncode` / `@JsonDecode` 会按函数类做字符串转换
-- 日期时间格式依然复用 `velo.date-time-format.*`
+- 日期时间格式依然复用 `velo.date-time-format.*`；未标注的 `Date` 默认兼容日期-only 和完整日期时间，字段上的 `@JsonFormat` 优先
 
 ### 9. MyBatis-Plus 自动配置
 
@@ -751,9 +754,13 @@ public Object list(LocalDate date, LocalDateTime createTime, Date paidAt) {
 - `LocalDate` -> `yyyy-MM-dd`
 - `LocalTime` -> `HH:mm:ss`
 - `LocalDateTime` -> `yyyy-MM-dd HH:mm:ss`
-- `Date` -> `yyyy-MM-dd`
+- `Date` 默认输入兼容 `yyyy-MM-dd HH:mm:ss` 和 `yyyy-MM-dd`，输出使用 `yyyy-MM-dd HH:mm:ss`
 
 这些格式由 `velo.date-time-format.*` 统一控制。
+
+未显式指定格式时，`Date` 会先按 `velo.date-time-format.date-time` 解析，失败后再按
+`velo.date-time-format.date` 解析；日期-only 输入会按配置时区转换为当天 `00:00:00`。
+字段或参数上的 Spring `@DateTimeFormat`、Jackson `@JsonFormat` 等显式格式优先于 Starter 默认格式。
 
 ### 2. 全局 Spring Converter
 

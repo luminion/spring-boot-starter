@@ -26,6 +26,7 @@ public class VeloDateTimeFormatAutoConfiguration {
         @ConditionalOnMissingBean
         public StringToJavaUtilDateConverter stringToDateConverter(VeloProperties properties) {
             return new StringToJavaUtilDateConverter(properties.getDateTimeFormat().getDateTime(),
+                    properties.getDateTimeFormat().getDate(),
                     properties.getDateTimeFormat().getTimeZone());
         }
 

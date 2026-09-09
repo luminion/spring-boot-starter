@@ -15,6 +15,7 @@ import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalTimeSerializer;
 import io.github.luminion.velo.VeloProperties;
+import io.github.luminion.velo.converter.datetime.FlexibleDateFormat;
 import io.github.luminion.velo.spi.JsonProcessorProvider;
 import io.github.luminion.velo.jackson.deserializer.JacksonStringDeserializer;
 import io.github.luminion.velo.jackson.serializer.ConfigurableBigDecimalSerializer;
@@ -40,7 +41,6 @@ import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -66,13 +66,6 @@ public class VeloJacksonAutoConfiguration {
         public Jackson2ObjectMapperBuilderCustomizer jackson2ObjectMapperBuilderCustomizer(VeloProperties properties,
                                                                                            BeanFactory beanFactory) {
             return builder -> {
-                String dateTimeFormat = properties.getDateTimeFormat().getDateTime();
-                String dateFormat = properties.getDateTimeFormat().getDate();
-                String timeFormat = properties.getDateTimeFormat().getTime();
-                String timeZoneId = properties.getDateTimeFormat().getTimeZone();
-                TimeZone timeZone = TimeZone.getTimeZone(timeZoneId);
-                SimpleDateFormat simpleDateFormat = new SimpleDateFormat(dateTimeFormat);
-                simpleDateFormat.setTimeZone(timeZone);
                 VeloProperties.JacksonProperties jacksonProperties = properties.getJackson();
 
                 // 先收口基础时间与容错策略，再让业务自定义器继续叠加更细粒度的能力。
@@ -81,9 +74,29 @@ public class VeloJacksonAutoConfiguration {
                         .failOnUnknownProperties(false);
 
                 if (jacksonProperties.isDateTimeEnabled()) {
+                    String dateTimeFormat = properties.getDateTimeFormat().getDateTime();
+                    String dateFormat = properties.getDateTimeFormat().getDate();
+                    String timeFormat = properties.getDateTimeFormat().getTime();
+                    String timeZoneId = properties.getDateTimeFormat().getTimeZone();
+                    TimeZone timeZone = TimeZone.getTimeZone(timeZoneId);
+                    FlexibleDateFormat defaultDateFormat = new FlexibleDateFormat(dateTimeFormat, dateFormat, timeZone);
+                    DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern(dateTimeFormat);
+                    DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern(dateFormat);
+                    DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern(timeFormat);
+
                     builder.featuresToDisable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-                    builder.dateFormat(simpleDateFormat)
+                    builder.dateFormat(defaultDateFormat)
                             .timeZone(timeZone);
+
+                    builder.deserializerByType(LocalDateTime.class,
+                                    new LocalDateTimeDeserializer(dateTimeFormatter))
+                            .deserializerByType(LocalDate.class,
+                                    new LocalDateDeserializer(dateFormatter))
+                            .deserializerByType(LocalTime.class,
+                                    new LocalTimeDeserializer(timeFormatter));
+                    builder.serializers(new LocalDateTimeSerializer(dateTimeFormatter))
+                            .serializers(new LocalDateSerializer(dateFormatter))
+                            .serializers(new LocalTimeSerializer(timeFormatter));
                 }
 
                 if (jacksonProperties.isSerializeLongAsString()) {
@@ -102,25 +115,6 @@ public class VeloJacksonAutoConfiguration {
                             .serializerByType(Double.TYPE, ToStringSerializer.instance)
                             .serializerByType(Float.class, ToStringSerializer.instance)
                             .serializerByType(Float.TYPE, ToStringSerializer.instance);
-                }
-
-                DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern(dateTimeFormat);
-                DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern(dateFormat);
-                DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern(timeFormat);
-
-                if (jacksonProperties.isDateTimeEnabled()) {
-                    builder.deserializerByType(LocalDateTime.class,
-                                    new LocalDateTimeDeserializer(dateTimeFormatter))
-                            .deserializerByType(LocalDate.class,
-                                    new LocalDateDeserializer(dateFormatter))
-                            .deserializerByType(LocalTime.class,
-                                    new LocalTimeDeserializer(timeFormatter));
-                }
-
-                if (jacksonProperties.isDateTimeEnabled()) {
-                    builder.serializers(new LocalDateTimeSerializer(dateTimeFormatter))
-                            .serializers(new LocalDateSerializer(dateFormatter))
-                            .serializers(new LocalTimeSerializer(timeFormatter));
                 }
 
                 if (jacksonProperties.isStringConverterEnabled()) {
