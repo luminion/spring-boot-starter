@@ -30,6 +30,8 @@ Velo Spring Boot Starter 是一组低侵入的 Spring Boot 自动配置扩展。
 > 修改记录：2026-09-10 14:51，移除通用 Web 异常处理基类上的自动组件注册语义，并明确具体实现类需显式添加 `@RestControllerAdvice`；原因是宽范围组件扫描可能尝试实例化缺少响应函数依赖的泛型基类。
 >
 > 修改记录：2026-09-10 15:02，将 `velo.mode` 枚举配置简化为默认值为 `true` 的 `velo.opinionated` 布尔开关；原因是用单一正向开关表达开箱即用/无侵入两种行为，降低配置复杂度。
+>
+> 修改记录：2026-09-10 15:15，明确三个 Excel Helper 的 `createExtraConverters(...)` 返回可变列表，可在注册前追加自定义 converter；原因是公开工厂方法返回不可变列表容易造成扩展调用方无法组合自定义转换器的歧义。
 
 
 ## 功能特性
@@ -309,6 +311,7 @@ EasyExcelHelper.registerConverters(converters);
 - `velo.excel.converters.enabled` 默认开启；设为 `false` 时仅关闭 starter 的 converter 自动注册，不影响 helper 手工调用
 - 两级开关均开启时，starter 会根据 classpath 自动尝试向 EasyExcel、FastExcel、Fesod 注册扩展 converters
 - 时间、日期、时区格式统一复用 `velo.date-time-format.*`
+- `createExtraConverters(...)` 返回独立的可变列表；需要追加自定义 converter 时，可在调用 `registerConverters(...)` 前直接使用 `converters.add(...)`
 - 如果你只想手工控制注册时机，也可以直接使用 `EasyExcelHelper`、`FastExcelHelper`、`FesodExcelHelper`
 
 ### 3. 幂等

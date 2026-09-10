@@ -6,6 +6,7 @@ import org.springframework.boot.test.context.FilteredClassLoader;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 import java.time.format.DateTimeParseException;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -49,6 +50,24 @@ class VeloExcelAutoConfigurationTests {
                 .isEqualTo(cn.idev.excel.enums.CellDataTypeEnum.STRING);
         assertThat(new FesodExcelHelper.BooleanConverter().supportExcelTypeKey())
                 .isEqualTo(org.apache.fesod.sheet.enums.CellDataTypeEnum.STRING);
+    }
+
+    @Test
+    void extraConverterListsShouldAllowCustomConverters() {
+        List<com.alibaba.excel.converters.Converter<?>> easyConverters = EasyExcelHelper.createExtraConverters();
+        int easySize = easyConverters.size();
+        easyConverters.add(easyConverters.get(0));
+        assertThat(easyConverters).hasSize(easySize + 1);
+
+        List<cn.idev.excel.converters.Converter<?>> fastConverters = FastExcelHelper.createExtraConverters();
+        int fastSize = fastConverters.size();
+        fastConverters.add(fastConverters.get(0));
+        assertThat(fastConverters).hasSize(fastSize + 1);
+
+        List<org.apache.fesod.sheet.converters.Converter<?>> fesodConverters = FesodExcelHelper.createExtraConverters();
+        int fesodSize = fesodConverters.size();
+        fesodConverters.add(fesodConverters.get(0));
+        assertThat(fesodConverters).hasSize(fesodSize + 1);
     }
 
     @Test

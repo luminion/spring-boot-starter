@@ -21,7 +21,6 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
@@ -62,6 +61,9 @@ public abstract class FastExcelHelper {
                 new VeloProperties.ExcelProperties.ConverterProperties());
     }
 
+    /**
+     * 返回可继续追加自定义转换器的独立可变列表。
+     */
     public static List<Converter<?>> createExtraConverters(String dateFormat,
                                                            String timeFormat,
                                                            String dateTimeFormat,
@@ -101,7 +103,7 @@ public abstract class FastExcelHelper {
         if (properties.isLocalTimeEnabled()) {
             converters.add(new LocalTimeConverter(timeFormat));
         }
-        return Collections.unmodifiableList(converters);
+        return converters;
     }
 
     /**

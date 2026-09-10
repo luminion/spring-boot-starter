@@ -1,5 +1,7 @@
 # 更新记录
 
+> 修改记录：2026-09-10 15:15，明确三个 Excel Helper 的 `createExtraConverters(...)` 返回可变转换器列表，并补充追加自定义 converter 的测试和文档；原因是公开工厂方法返回不可变列表容易让扩展调用方误以为无法组合自定义转换器。
+
 > 修改记录：2026-09-10 15:04，将模式配置从 `velo.mode` 字符串枚举简化为 `velo.opinionated` 布尔开关，并补充开箱即用/无侵入模式边界待办；原因是降低配置复杂度，同时明确无侵入模式的功能可用范围。
 
 > 修改记录：2026-09-10 11:10，补充当前 1.3.1 版本中日期转换、Jackson 日期时间开关、XSS JSON 边界、Redis 序列化器选择、集成测试端口隔离及 CORS 配置调整的变更说明，重点标注 CORS 不兼容变更及迁移要求。
@@ -40,6 +42,7 @@
 - 枚举派生字段修复：全局 `velo.jackson.enum-mappings` 为空时继续关闭隐式映射，但完整指定 `codeField` 和 `nameField` 的 `@JsonEnum` 仍可独立生成描述字段。
 
 ### 调整
+- Excel Helper 的 `createExtraConverters(...)` 统一返回独立可变列表，调用方可在注册前追加自定义 converter。
 - 日志相关类迁移至 `velo-autoconfigure-common`：`InvokeLog`、`SlowLog` 注解，`InvokeLogAspect`、`SlowLogAspect` 切面，以及 `VeloLogAutoConfiguration` 均不依赖 servlet API，统一收归 common 模块，消除 jakarta/javax 双份冗余。
 - `java.util.Date` 默认输入同时兼容 `yyyy-MM-dd HH:mm:ss` 和 `yyyy-MM-dd`，日期-only 按默认时区解析为当天零点；Spring `@DateTimeFormat` 与 Jackson `@JsonFormat` 的显式格式继续优先于 Starter 默认格式。
 - Redis 缓存和 RedisTemplate 的默认序列化器改为 `RedisSerializer.json()`；用户显式提供任意名称的 `RedisSerializer<Object>` Bean 仍优先，Boot 4 同时存在 Jackson 2/3 时默认遵循 Spring Data Redis 4 的 Jackson 3 实现。
