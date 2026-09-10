@@ -34,10 +34,38 @@ class VeloBannerPrinterTest {
         assertThat(printBanner(Duration.ofMillis(-1))).contains("ttl=none");
     }
 
+    @Test
+    void shouldSkipBannerWhenBannerConfigurationIsMissing() throws Exception {
+        VeloProperties properties = new VeloProperties();
+        properties.setBanner(null);
+
+        assertThat(printBanner(properties)).isEmpty();
+    }
+
+    @Test
+    void shouldRenderMissingNestedConfigurationWithoutThrowing() throws Exception {
+        VeloProperties properties = new VeloProperties();
+        properties.getBanner().setEnabled(true);
+        properties.setIdempotent(null);
+        properties.getLog().setTrace(null);
+        properties.getWeb().setXss(null);
+
+        String banner = printBanner(properties);
+
+        assertThat(banner)
+                .contains("idempotent   unavailable (config missing)")
+                .contains("trace=unavailable (config missing)")
+                .contains("xss=unavailable (config missing)");
+    }
+
     private String printBanner(Duration ttl) throws Exception {
         VeloProperties properties = new VeloProperties();
         properties.getBanner().setEnabled(true);
         properties.getCache().setDefaultTtl(ttl);
+        return printBanner(properties);
+    }
+
+    private String printBanner(VeloProperties properties) throws Exception {
         VeloBannerPrinter printer = new VeloBannerPrinter(properties,
                 emptyProvider(), emptyProvider(), emptyProvider());
 

@@ -63,4 +63,18 @@ class VeloDateTimeFormatAutoConfigurationTests {
                     assertThat(context).doesNotHaveBean(StringToLocalDateTimeConverter.class);
                 });
     }
+
+    @Test
+    void shouldFailApplicationStartupForInvalidDateTimePattern() {
+        contextRunner
+                .withPropertyValues("velo.date-time-format.date=invalid[")
+                .run(context -> assertThat(context).hasFailed());
+    }
+
+    @Test
+    void shouldFailApplicationStartupForInvalidTimeZone() {
+        contextRunner
+                .withPropertyValues("velo.date-time-format.time-zone=invalid-zone")
+                .run(context -> assertThat(context).hasFailed());
+    }
 }

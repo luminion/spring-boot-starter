@@ -79,8 +79,10 @@ class VeloPropertiesWarningLoggerTests {
                 .anySatisfy(warning -> assertThat(warning).contains("velo.jackson.enum-mappings"))
                 .anySatisfy(warning -> assertThat(warning).contains("velo.web.cors.allowed-origin-patterns"))
                 .anySatisfy(warning -> assertThat(warning).contains("velo.web.cors.max-age"))
-                .anySatisfy(warning -> assertThat(warning).contains("velo.date-time-format.date"))
-                .anySatisfy(warning -> assertThat(warning).contains("velo.date-time-format.time-zone"));
+                .anySatisfy(warning -> assertThat(warning)
+                        .contains("velo.date-time-format.date", "启动时失败"))
+                .anySatisfy(warning -> assertThat(warning)
+                        .contains("velo.date-time-format.time-zone", "启动时失败"));
     }
 
     @Test

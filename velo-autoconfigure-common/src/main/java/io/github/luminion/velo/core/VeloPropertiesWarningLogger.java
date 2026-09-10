@@ -17,7 +17,7 @@ import java.util.Map;
 /**
  * 在应用启动时检查常见配置问题并输出告警。
  *
- * <p>这里只做提示，不修改配置值、不改变现有回退逻辑，也不阻止应用启动。</p>
+ * <p>这里只做提示，不修改配置值；部分非法配置会在后续自动配置阶段导致启动失败。</p>
  *
  * @author luminion
  * @since 1.3.1
@@ -173,7 +173,7 @@ public class VeloPropertiesWarningLogger implements InitializingBean {
         if (dateTimeFeatureEnabled) {
             VeloProperties.DateTimeFormatProperties dateTimeFormat = properties.getDateTimeFormat();
             if (dateTimeFormat == null) {
-                warnings.add("velo.date-time-format 为空，日期时间转换可能在运行时失败。当前仅告警。");
+                warnings.add("velo.date-time-format 为空，日期时间转换将在启动时失败。");
             } else {
                 warnDateTimePattern(warnings, "velo.date-time-format.date", dateTimeFormat.getDate());
                 warnDateTimePattern(warnings, "velo.date-time-format.time", dateTimeFormat.getTime());
@@ -219,25 +219,25 @@ public class VeloPropertiesWarningLogger implements InitializingBean {
 
     private static void warnDateTimePattern(List<String> warnings, String property, String pattern) {
         if (!StringUtils.hasText(pattern)) {
-            warnings.add(property + " 为空或仅包含空白，日期时间转换可能失败。当前仅告警。");
+            warnings.add(property + " 为空或仅包含空白，日期时间转换将在启动时失败。");
             return;
         }
         try {
             DateTimeFormatter.ofPattern(pattern);
         } catch (IllegalArgumentException ex) {
-            warnings.add(property + " 不是有效的 DateTimeFormatter 模式，日期时间转换可能失败。当前仅告警。");
+            warnings.add(property + " 不是有效的 DateTimeFormatter 模式，日期时间转换将在启动时失败。");
         }
     }
 
     private static void warnTimeZone(List<String> warnings, String timeZone) {
         if (!StringUtils.hasText(timeZone)) {
-            warnings.add("velo.date-time-format.time-zone 为空，日期时间转换可能失败。当前仅告警。");
+            warnings.add("velo.date-time-format.time-zone 为空，日期时间转换将在启动时失败。");
             return;
         }
         try {
             ZoneId.of(timeZone);
         } catch (DateTimeException ex) {
-            warnings.add("velo.date-time-format.time-zone 当前值不是有效的 ZoneId，部分日期转换可能失败或回退为 GMT。当前仅告警。");
+            warnings.add("velo.date-time-format.time-zone 当前值不是有效的 ZoneId，日期时间转换将在启动时失败。");
         }
     }
 }

@@ -23,6 +23,8 @@ import java.time.Duration;
  */
 public class VeloBannerPrinter implements SmartInitializingSingleton {
 
+    private static final String MISSING_CONFIGURATION = "unavailable (config missing)";
+
     private final VeloProperties properties;
     private final ObjectProvider<IdempotentHandler> idempotentHandler;
     private final ObjectProvider<RateLimitHandler> rateLimitHandler;
@@ -40,7 +42,8 @@ public class VeloBannerPrinter implements SmartInitializingSingleton {
 
     @Override
     public void afterSingletonsInstantiated() {
-        if (!properties.getBanner().isEnabled()) {
+        VeloProperties.BannerProperties banner = properties == null ? null : properties.getBanner();
+        if (banner == null || !banner.isEnabled()) {
             return;
         }
         System.out.print(buildBanner());
@@ -55,23 +58,34 @@ public class VeloBannerPrinter implements SmartInitializingSingleton {
         sb.append(" \\ \\ / / _ \\ |/ _ \\   mode=").append(properties.getMode()).append('\n');
         sb.append("  \\ V /  __/ | (_) |  \n");
         sb.append("   \\_/ \\___|_|\\___/   \n");
-        line(sb, "idempotent", concurrency(properties.getIdempotent().isEnabled(),
-                properties.getIdempotent().getBackend(), idempotentHandler));
-        line(sb, "rate-limit", concurrency(properties.getRateLimit().isEnabled(),
-                properties.getRateLimit().getBackend(), rateLimitHandler));
-        line(sb, "lock", concurrency(properties.getLock().isEnabled(),
-                properties.getLock().getBackend(), lockHandler));
-        line(sb, "cache", properties.getCache().isEnabled()
-                ? "on (ttl=" + humanDuration(properties.getCache().getDefaultTtl()) + ")" : "off");
-        line(sb, "jackson", onOff(properties.getJackson().isEnabled()));
-        line(sb, "redis", onOff(properties.getRedis().isEnabled()));
-        line(sb, "mybatis-plus", onOff(properties.getMybatisPlus().isEnabled()));
-        line(sb, "excel", onOff(properties.getExcel().isEnabled()));
-        line(sb, "log", properties.getLog().isEnabled()
-                ? "on (trace=" + onOff(properties.getLog().getTrace().isEnabled()) + ")" : "off");
-        line(sb, "web", properties.getWeb().isEnabled()
-                ? "on (xss=" + onOff(properties.getWeb().getXss().isEnabled()) + ")" : "off");
-        line(sb, "feign", onOff(properties.getFeign().isEnabled()));
+        VeloProperties.IdempotentProperties idempotent = properties.getIdempotent();
+        line(sb, "idempotent", idempotent == null ? MISSING_CONFIGURATION : concurrency(idempotent.isEnabled(),
+                idempotent.getBackend(), idempotentHandler));
+        VeloProperties.RateLimitProperties rateLimit = properties.getRateLimit();
+        line(sb, "rate-limit", rateLimit == null ? MISSING_CONFIGURATION : concurrency(rateLimit.isEnabled(),
+                rateLimit.getBackend(), rateLimitHandler));
+        VeloProperties.LockProperties lock = properties.getLock();
+        line(sb, "lock", lock == null ? MISSING_CONFIGURATION : concurrency(lock.isEnabled(),
+                lock.getBackend(), lockHandler));
+        VeloProperties.CacheProperties cache = properties.getCache();
+        line(sb, "cache", cache == null ? MISSING_CONFIGURATION : cache.isEnabled()
+                ? "on (ttl=" + humanDuration(cache.getDefaultTtl()) + ")" : "off");
+        VeloProperties.JacksonProperties jackson = properties.getJackson();
+        line(sb, "jackson", jackson == null ? MISSING_CONFIGURATION : onOff(jackson.isEnabled()));
+        VeloProperties.RedisProperties redis = properties.getRedis();
+        line(sb, "redis", redis == null ? MISSING_CONFIGURATION : onOff(redis.isEnabled()));
+        VeloProperties.MybatisPlusProperties mybatisPlus = properties.getMybatisPlus();
+        line(sb, "mybatis-plus", mybatisPlus == null ? MISSING_CONFIGURATION : onOff(mybatisPlus.isEnabled()));
+        VeloProperties.ExcelProperties excel = properties.getExcel();
+        line(sb, "excel", excel == null ? MISSING_CONFIGURATION : onOff(excel.isEnabled()));
+        VeloProperties.LogProperties logProperties = properties.getLog();
+        line(sb, "log", logProperties == null ? MISSING_CONFIGURATION : logProperties.isEnabled()
+                ? "on (trace=" + traceStatus(logProperties.getTrace()) + ")" : "off");
+        VeloProperties.WebProperties web = properties.getWeb();
+        line(sb, "web", web == null ? MISSING_CONFIGURATION : web.isEnabled()
+                ? "on (xss=" + xssStatus(web.getXss()) + ")" : "off");
+        VeloProperties.FeignProperties feign = properties.getFeign();
+        line(sb, "feign", feign == null ? MISSING_CONFIGURATION : onOff(feign.isEnabled()));
         sb.append('\n');
         return sb.toString();
     }
@@ -146,6 +160,14 @@ public class VeloBannerPrinter implements SmartInitializingSingleton {
 
     private String onOff(boolean enabled) {
         return enabled ? "on" : "off";
+    }
+
+    private String traceStatus(VeloProperties.TraceProperties trace) {
+        return trace == null ? MISSING_CONFIGURATION : onOff(trace.isEnabled());
+    }
+
+    private String xssStatus(VeloProperties.XssProperties xss) {
+        return xss == null ? MISSING_CONFIGURATION : onOff(xss.isEnabled());
     }
 
     private void line(StringBuilder sb, String name, String value) {

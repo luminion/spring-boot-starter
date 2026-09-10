@@ -21,6 +21,8 @@ Velo Spring Boot Starter 是一组低侵入的 Spring Boot 自动配置扩展。
 
 > 修改记录：2026-09-10 13:26，补充默认调用日志异常摘要的转义规则，明确特殊字符不会破坏单行日志结构；原因是异常消息可能包含用户输入，需要避免日志注入和结构化解析歧义。
 
+> 修改记录：2026-09-10 13:34，明确非法日期格式或时区会在转换器启动时失败，并补充启动横幅对空配置的保护行为；原因是避免“仅告警”与实际启动结果不一致，也避免诊断横幅因空配置阻止应用启动。
+
 
 ## 功能特性
 
@@ -33,6 +35,7 @@ Velo Spring Boot Starter 是一组低侵入的 Spring Boot 自动配置扩展。
 - 提供 RedisTemplate 序列化风格统一能力
 - 提供 Excel 扩展 converter 自动注册和 helper 工具类
 - 提供注解日志、Controller 请求日志、XSS 清洗和 Web MVC 日期绑定增强
+- 提供可选启动横幅，展示各能力开关及实际后端状态
 
 ---
 
@@ -779,6 +782,9 @@ public Object list(LocalDate date, LocalDateTime createTime, Date paidAt) {
 未显式指定格式时，`Date` 会先按 `velo.date-time-format.date-time` 解析，失败后再按
 `velo.date-time-format.date` 解析；日期-only 输入会按配置时区转换为当天 `00:00:00`。
 字段或参数上的 Spring `@DateTimeFormat`、Jackson `@JsonFormat` 等显式格式优先于 Starter 默认格式。
+配置了非法日期模式、空日期模式或非法时区时，启动告警会提前提示，但对应转换器仍会在启动阶段失败；Starter 不会静默替换用户配置。
+
+如果开启 `velo.banner.enabled=true`，横幅仅用于诊断，不应成为启动失败原因。配置对象被显式置空时，横幅会跳过自身输出或将对应能力显示为 `unavailable (config missing)`。
 
 ### 2. 全局 Spring Converter
 
