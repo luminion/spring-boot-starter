@@ -28,7 +28,8 @@ class VeloConfigurationMetadataTest {
             String metadata = new String(output.toByteArray(), StandardCharsets.UTF_8);
 
             assertTrue(metadata.contains("\"groups\""));
-            assertTrue(metadata.contains("velo.mode"));
+            assertTrue(metadata.contains("velo.opinionated"));
+            assertFalse(metadata.contains("velo.mode"));
             assertFalse(metadata.contains("velo.core.enabled"));
             assertFalse(metadata.contains("velo.core.fingerprinter-enabled"));
             assertFalse(metadata.contains("velo.core.naming-suffix-strategy-enabled"));

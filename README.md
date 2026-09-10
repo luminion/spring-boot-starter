@@ -28,6 +28,8 @@ Velo Spring Boot Starter 是一组低侵入的 Spring Boot 自动配置扩展。
 > 修改记录：2026-09-10 14:46，统一 Excel 两级开关的默认值和关闭语义；原因是“需显式开启”与配置默认值为 `true` 相互矛盾，容易误导使用方。
 >
 > 修改记录：2026-09-10 14:51，移除通用 Web 异常处理基类上的自动组件注册语义，并明确具体实现类需显式添加 `@RestControllerAdvice`；原因是宽范围组件扫描可能尝试实例化缺少响应函数依赖的泛型基类。
+>
+> 修改记录：2026-09-10 15:02，将 `velo.mode` 枚举配置简化为默认值为 `true` 的 `velo.opinionated` 布尔开关；原因是用单一正向开关表达开箱即用/无侵入两种行为，降低配置复杂度。
 
 
 ## 功能特性
@@ -47,22 +49,23 @@ Velo Spring Boot Starter 是一组低侵入的 Spring Boot 自动配置扩展。
 
 ## 总览
 
-Velo 默认使用 `velo.mode=OPINIONATED`，目标是引入 starter 后直接获得常用增强能力。
+Velo 默认使用 `velo.opinionated=true`，目标是引入 starter 后直接获得常用增强能力。
 
-如果你希望 starter 只保留显式注解类能力，尽量不自动改变全局行为，可以切到保守模式：
+如果你希望 starter 尽量不自动改变全局行为，可以设置为无侵入模式：
 
 ```yaml
 velo:
-  mode: CONSERVATIVE
+  opinionated: false
 ```
 
-模式说明：
+开关说明：
 
-- `OPINIONATED`：默认模式，开启偏开箱即用的全局增强
-- `CONSERVATIVE`：关闭容易自动影响应用行为的默认项，但 `@Idempotent`、`@RateLimit`、`@Lock`、`@InvokeLog`、`@SlowLog` 等显式注解仍可用
-- `CONSERVATIVE` 只提供低优先级默认值，业务项目显式配置的属性优先级更高
-- 保守模式下重新打开某类能力时，需要显式设置对应的 `enabled` 项，例如 `velo.jackson.enabled=true`
-- 启用 `CONSERVATIVE` 后，starter 会在启动日志中输出一条 INFO，列出被默认关闭的能力，便于排查"为什么某全局增强没生效"
+- `velo.opinionated=true`：默认开箱即用，启用偏全局增强的默认行为
+- `velo.opinionated=false`：无侵入模式，关闭容易自动影响应用行为的默认项，但 `@Idempotent`、`@RateLimit`、`@Lock`、`@InvokeLog`、`@SlowLog` 等显式注解仍可用
+- `velo.opinionated=false` 只提供低优先级默认值，业务项目显式配置的属性优先级更高
+- 无侵入模式下重新打开某类能力时，需要显式设置对应的 `enabled` 项，例如 `velo.jackson.enabled=true`
+- 设置为 `false` 后，starter 会在启动日志中输出一条 INFO，列出被默认关闭的能力，便于排查“为什么某全局增强没生效”
+- 旧配置 `velo.mode=OPINIONATED/CONSERVATIVE` 已移除，不再生效；请迁移为 `velo.opinionated=true/false`
 
 配置优先级（从高到低）：
 
@@ -71,15 +74,15 @@ velo:
 | 1 最高 | 命令行参数 | `--velo.log.trace.enabled=true` |
 | 2 | application.yml / properties | `velo.log.trace.enabled: true` |
 | 3 | 环境变量 | `VELO_LOG_TRACE_ENABLED=true` |
-| 4 最低 | `velo.mode` 默认值 | `OPINIONATED` / `CONSERVATIVE` 注入的默认值 |
+| 4 最低 | `velo.opinionated` 默认值 | `true` / `false` 注入的默认值 |
 
-也就是说 `velo.mode` 注入的只是**最低优先级默认值**，业务项目任何显式配置都会覆盖它。
+也就是说 `velo.opinionated=false` 注入的只是**最低优先级默认值**，业务项目任何显式配置都会覆盖它。
 
-例如保守模式下重新打开 traceId：
+例如无侵入模式下重新打开 traceId：
 
 ```yaml
 velo:
-  mode: CONSERVATIVE
+  opinionated: false
   log:
     trace:
       enabled: true
@@ -87,7 +90,7 @@ velo:
 
 默认会自动影响全局行为的能力：
 
-| 能力 | `OPINIONATED` 默认 | `CONSERVATIVE` 默认 | 说明 |
+| 能力 | `velo.opinionated=true` | `velo.opinionated=false` | 说明 |
 | --- | --- | --- | --- |
 | traceId / MDC / 日志 pattern / 响应头 | 开启 | 关闭 | 影响用户自己的日志输出 |
 | Controller 调用日志 | 开启 | 关闭 | Web 环境下自动记录请求调用 |
@@ -908,7 +911,7 @@ velo:
 
 ```yaml
 velo:
-  mode: CONSERVATIVE
+  opinionated: false
 ```
 
 如果你只想保留部分能力，也可以按配置域逐项关闭：
@@ -956,7 +959,7 @@ velo:
 按以下顺序排查：
 
 - 方法是否被 Spring 代理：`private`、`final`、`static` 方法以及类内部自调用（`this.method()`）都无法被 AOP 拦截，需通过注入的代理对象调用
-- 对应能力是否开启：确认未被 `velo.idempotent.enabled=false` 等关闭，也未处于 `velo.mode=CONSERVATIVE`（注意：这三类注解在 CONSERVATIVE 下仍可用，但需对应后端依赖存在）
+- 对应能力是否开启：确认未被 `velo.idempotent.enabled=false` 等关闭；若使用 `velo.opinionated=false` 无侵入模式，需按需显式开启对应能力（注意：这三类注解仍可用，但需对应后端依赖存在）
 - 后端依赖是否就绪：`backend=AUTO` 会按 `REDISSON -> REDIS -> CAFFEINE -> JDK` 选择；若期望用 Redis 却走了本地实现，检查 classpath 与连接配置
 - 开启调试日志观察：
 

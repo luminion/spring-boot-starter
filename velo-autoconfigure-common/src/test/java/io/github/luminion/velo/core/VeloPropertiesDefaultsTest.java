@@ -17,7 +17,7 @@ class VeloPropertiesDefaultsTest {
     void shouldUseProductionSafeDefaultsForLogging() {
         VeloProperties properties = new VeloProperties();
 
-        assertThat(properties.getMode()).isEqualTo(VeloMode.OPINIONATED);
+        assertThat(properties.isOpinionated()).isTrue();
         assertThat(properties.getLog().getLevel()).isEqualTo(LogLevel.INFO);
         assertThat(properties.getLog().getSlow().getLevel()).isEqualTo(LogLevel.WARN);
         assertThat(properties.getSpringConverter().isDateTimeEnabled()).isTrue();
@@ -76,6 +76,20 @@ class VeloPropertiesDefaultsTest {
         assertThat(properties.getWeb().getCors().isEnabled()).isFalse();
         assertThat(properties.getWeb().getCors().isAllowCredentials()).isFalse();
         assertThat(properties.getFeign().isEnabled()).isTrue();
+    }
+
+    @Test
+    void shouldBindNonInvasiveFlag() {
+        contextRunner
+                .withPropertyValues("velo.opinionated=false")
+                .run(context -> assertThat(context.getBean(VeloProperties.class).isOpinionated()).isFalse());
+    }
+
+    @Test
+    void shouldIgnoreRemovedLegacyModeProperty() {
+        contextRunner
+                .withPropertyValues("velo.mode=CONSERVATIVE")
+                .run(context -> assertThat(context.getBean(VeloProperties.class).isOpinionated()).isTrue());
     }
 
     @Test

@@ -9,15 +9,14 @@ import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MapPropertySource;
 
 import java.util.LinkedHashMap;
-import java.util.Locale;
 import java.util.Map;
 
 /**
- * Applies mode-specific starter defaults without overriding user configuration.
+ * 应用无侵入模式的默认值，且不覆盖用户显式配置。
  */
 public class VeloModeEnvironmentPostProcessor implements EnvironmentPostProcessor, Ordered {
 
-    private static final String PROPERTY_SOURCE_NAME = "veloModeDefaults";
+    private static final String PROPERTY_SOURCE_NAME = "veloOpinionatedDefaults";
 
     private final Log log;
 
@@ -31,8 +30,8 @@ public class VeloModeEnvironmentPostProcessor implements EnvironmentPostProcesso
 
     @Override
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
-        String mode = environment.getProperty("velo.mode", "OPINIONATED");
-        if (!"CONSERVATIVE".equals(mode.toUpperCase(Locale.ENGLISH))) {
+        boolean opinionated = environment.getProperty("velo.opinionated", Boolean.class, true);
+        if (opinionated) {
             return;
         }
         Map<String, Object> defaults = new LinkedHashMap<>();
@@ -47,10 +46,9 @@ public class VeloModeEnvironmentPostProcessor implements EnvironmentPostProcesso
         defaults.put("velo.excel.converters.enabled", "false");
         environment.getPropertySources().addLast(new MapPropertySource(PROPERTY_SOURCE_NAME, defaults));
 
-        log.info("[Velo Starter] CONSERVATIVE mode active. The following global enhancements are disabled by default "
-                + "(override individually with their 'enabled' property): "
-                + "trace/MDC logging, controller & feign invocation logging, Jackson customization, "
-                + "date-time Spring converters, MyBatis-Plus interceptors, cache, Redis templates, Excel converters.");
+        log.info("[Velo Starter] 无侵入模式已启用，以下全局增强默认关闭（可通过对应 enabled 配置单独覆盖）："
+                + "trace/MDC 日志、Controller 与 Feign 调用日志、Jackson 扩展、Spring 日期转换器、"
+                + "MyBatis-Plus 拦截器、缓存、RedisTemplate、Excel converter。");
     }
 
     @Override

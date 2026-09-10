@@ -13,7 +13,7 @@ class VeloModeEnvironmentPostProcessorTest {
     private static final DeferredLogFactory LOG_FACTORY = supplier -> new NoOpLog();
 
     @Test
-    void shouldNotApplyConservativeDefaultsByDefault() {
+    void shouldNotApplyNonInvasiveDefaultsByDefault() {
         MockEnvironment environment = new MockEnvironment();
 
         new VeloModeEnvironmentPostProcessor(LOG_FACTORY).postProcessEnvironment(environment, new SpringApplication());
@@ -23,9 +23,9 @@ class VeloModeEnvironmentPostProcessorTest {
     }
 
     @Test
-    void shouldApplyConservativeDefaultsWhenConfigured() {
+    void shouldApplyNonInvasiveDefaultsWhenDisabled() {
         MockEnvironment environment = new MockEnvironment()
-                .withProperty("velo.mode", "conservative");
+                .withProperty("velo.opinionated", "false");
 
         new VeloModeEnvironmentPostProcessor(LOG_FACTORY).postProcessEnvironment(environment, new SpringApplication());
 
@@ -41,9 +41,9 @@ class VeloModeEnvironmentPostProcessorTest {
     }
 
     @Test
-    void shouldLetExplicitPropertiesOverrideConservativeDefaults() {
+    void shouldLetExplicitPropertiesOverrideNonInvasiveDefaults() {
         MockEnvironment environment = new MockEnvironment()
-                .withProperty("velo.mode", "conservative")
+                .withProperty("velo.opinionated", "false")
                 .withProperty("velo.log.trace.enabled", "true")
                 .withProperty("velo.jackson.enabled", "true");
 

@@ -53,6 +53,7 @@ class VeloBannerPrinterTest {
         String banner = printBanner(properties);
 
         assertThat(banner)
+                .contains("opinionated=true")
                 .contains("idempotent   unavailable (config missing)")
                 .contains("trace=unavailable (config missing)")
                 .contains("xss=unavailable (config missing)");

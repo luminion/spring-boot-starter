@@ -21,9 +21,9 @@ import java.util.Map;
 public class VeloProperties {
 
     /**
-     * Starter default behavior profile.
+     * 是否启用开箱即用的默认增强；设置为 {@code false} 时使用无侵入模式。
      */
-    private VeloMode mode = VeloMode.OPINIONATED;
+    private boolean opinionated = true;
 
     /**
      * Startup banner settings.

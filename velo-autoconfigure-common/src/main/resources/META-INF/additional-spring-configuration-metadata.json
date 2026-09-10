@@ -1,18 +1,13 @@
 {
-  "hints": [
+  "properties": [
     {
-      "name": "velo.mode",
-      "values": [
-        {
-          "value": "OPINIONATED",
-          "description": "默认模式：开启偏开箱即用的全局增强（traceId、调用日志、Jackson 增强、日期转换、MyBatis-Plus 拦截器、缓存、Redis 模板、Excel 转换器等）。"
-        },
-        {
-          "value": "CONSERVATIVE",
-          "description": "保守模式：关闭容易自动影响应用行为的默认项，仅保留 @Idempotent / @RateLimit / @Lock / @InvokeLog / @SlowLog 等显式注解能力。"
-        }
-      ]
-    },
+      "name": "velo.opinionated",
+      "type": "java.lang.Boolean",
+      "description": "是否启用开箱即用的全局增强默认值；默认 true，设置为 false 时使用无侵入模式。",
+      "defaultValue": true
+    }
+  ],
+  "hints": [
     {
       "name": "velo.idempotent.backend",
       "values": [

@@ -1,5 +1,7 @@
 # 更新记录
 
+> 修改记录：2026-09-10 15:04，将模式配置从 `velo.mode` 字符串枚举简化为 `velo.opinionated` 布尔开关，并补充开箱即用/无侵入模式边界待办；原因是降低配置复杂度，同时明确无侵入模式的功能可用范围。
+
 > 修改记录：2026-09-10 11:10，补充当前 1.3.1 版本中日期转换、Jackson 日期时间开关、XSS JSON 边界、Redis 序列化器选择、集成测试端口隔离及 CORS 配置调整的变更说明，重点标注 CORS 不兼容变更及迁移要求。
 
 > 修改记录：2026-09-10 12:29，补充 Boot 4 Jackson 2/3 共存时 Redis 序列化器的默认选择、显式覆盖方式及动态类型安全边界；原因是确认 `GenericJackson2JsonRedisSerializer` 在 Spring Data Redis 4.x 仍可兼容但已标记待移除，不应作为 Boot 4 默认实现。
@@ -18,6 +20,7 @@
 
 
 ### 不兼容变更
+- 移除模式配置 `velo.mode=OPINIONATED/CONSERVATIVE`，改用布尔配置 `velo.opinionated`（默认 `true`）；设置为 `false` 进入无侵入模式，升级时需迁移配置，旧配置不再生效。
 - 移除旧 CORS 配置项 `velo.web.allow-cors`，仅保留 `velo.web.cors.enabled`；升级时需迁移配置，旧配置不再生效。
 - `velo.web.cors.allow-credentials` 默认值由 `true` 调整为 `false`；Cookie/Session 跨域场景需显式设置为 `true`，并配置明确来源。
 - 通用 Web 异常处理基类不再自动注册为 `@RestControllerAdvice` 组件；升级后需在具体异常处理实现类上显式添加该注解，并提供构造函数依赖。
@@ -60,8 +63,8 @@
 - 异常消息国际化：注解 `message` 写成 `{i18n.key}` 形式时从 `MessageSource` 解析，普通文本原样输出，未配置国际化的项目行为不变；附带 `velo/messages*.properties` 中英示例
 - 新增 `velo.banner.enabled`（默认 `false`），开启后启动时在控制台打印各能力开关概览横幅（直接输出到 `System.out`，不进入日志框架）；幂等/限流/锁展示实际生效的 handler 实现类，便于确认 `AUTO` 模式下的真实后端
 - 幂等、限流、锁启用时打印 INFO 日志，显示实际选用的后端实现
-- `velo.mode=CONSERVATIVE` 启动时输出 INFO 日志，列出被默认关闭的全局增强能力
-- 配置元数据 hints：`velo.mode`、各 `backend`、`web.xss.strategy` 等枚举项在 IDE 中显示候选值下拉与中文说明
+- `velo.opinionated=false` 启动时输出 INFO 日志，列出被默认关闭的全局增强能力；显式设置各能力 `enabled` 配置仍可覆盖低优先级默认值
+- 配置元数据：`velo.opinionated`、各 `backend`、`web.xss.strategy` 等配置在 IDE 中显示类型和中文说明
 - CORS 新增 `velo.web.cors.allowed-origin-patterns`（默认 `*`），支持灵活的跨域源匹配
 - 新增 `velo.aspect-order.*` 配置项，可自定义幂等、限流、锁、InvokeLog、SlowLog、ControllerLog、FeignLog 各切面的执行顺序
 - 新增 `velo.cache.null-caching-enabled`（默认 `true`），设为 `false` 时关闭 null 值缓存
@@ -102,7 +105,7 @@
 
 ### 文档
 - 调用日志文档更新为 ENTRY/EXIT 双记录格式，并补充独立慢日志级别与默认输出顺序
-- 新增配置优先级表格（命令行参数 > 配置文件 > 环境变量 > `velo.mode` 默认值）
+- 新增配置优先级表格（命令行参数 > 配置文件 > 环境变量 > `velo.opinionated` 默认值）
 - 新增限流 `key` 分桶语义对比表，以及小数 `permits` 换算公式和示例
 - 补充幂等、限流、锁的 `key` 语义说明，以及 `@LogPayloadIgnore` 用法
 - 新增故障排查 FAQ

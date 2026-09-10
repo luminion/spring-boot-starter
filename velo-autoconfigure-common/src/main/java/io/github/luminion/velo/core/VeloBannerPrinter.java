@@ -55,7 +55,7 @@ public class VeloBannerPrinter implements SmartInitializingSingleton {
         sb.append('\n');
         sb.append("__     __   _       \n");
         sb.append("\\ \\   / /__| | ___    Velo Spring Boot Starter\n");
-        sb.append(" \\ \\ / / _ \\ |/ _ \\   mode=").append(properties.getMode()).append('\n');
+        sb.append(" \\ \\ / / _ \\ |/ _ \\   opinionated=").append(properties.isOpinionated()).append('\n');
         sb.append("  \\ V /  __/ | (_) |  \n");
         sb.append("   \\_/ \\___|_|\\___/   \n");
         VeloProperties.IdempotentProperties idempotent = properties.getIdempotent();
