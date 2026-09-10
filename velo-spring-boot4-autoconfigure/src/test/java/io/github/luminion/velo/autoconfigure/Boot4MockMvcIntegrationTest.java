@@ -40,6 +40,7 @@ class Boot4MockMvcIntegrationTest {
 
         ConfigurableApplicationContext context = application.run(
                 "--spring.main.banner-mode=off",
+                "--server.port=18084",
                 "--velo.banner.enabled=false",
                 "--velo.web.cors.enabled=true",
                 "--velo.web.cors.allowed-origin-patterns=https://client.example",

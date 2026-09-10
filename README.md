@@ -13,6 +13,10 @@ Velo Spring Boot Starter 是一组低侵入的 Spring Boot 自动配置扩展。
 >
 > 修改记录：2026-09-09 15:15，补充 Redis 缓存与 RedisTemplate 的 Jackson 2/3 序列化器选择规则，避免 Boot 4 下将 Jackson 版本误认为由类路径自动唯一决定。
 
+> 修改记录：2026-09-10 09:58，移除已废弃的旧 CORS 配置入口，统一使用 `velo.web.cors.enabled`，并明确该调整不再兼容旧配置。
+
+> 修改记录：2026-09-10 10:10，将 CORS 凭证默认值调整为关闭；JWT 放在 Authorization 请求头时无需开启凭证，Cookie/Session 跨域时需显式开启并配置明确来源。
+
 
 ## 功能特性
 
@@ -859,13 +863,13 @@ velo:
 
 说明：
 
-- 默认 `false`
+- `velo.web.cors.enabled` 默认 `false`
 - 开启后注册 `/**` 全局跨域规则
 - 默认允许 `GET`、`POST`、`PUT`、`DELETE`、`OPTIONS`
 - `allowedOriginPatterns("*")`，可通过 `velo.web.cors.allowed-origin-patterns` 覆盖
-- `allowCredentials(true)`
+- `velo.web.cors.allow-credentials` 默认 `false`；需要 Cookie/Session 跨域时显式设为 `true`，并配置明确的允许来源
 - `maxAge(3600)`
-- 旧配置 `velo.web.allow-cors` 已废弃，但仍向后兼容：与 `velo.web.cors.enabled` 任一为 `true` 即开启。新项目请使用 `velo.web.cors.enabled`
+- 旧配置 `velo.web.allow-cors` 已移除，不再兼容；请统一使用 `velo.web.cors.enabled`
 
 ---
 

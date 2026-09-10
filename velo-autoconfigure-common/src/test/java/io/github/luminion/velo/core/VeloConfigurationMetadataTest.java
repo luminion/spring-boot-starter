@@ -125,6 +125,8 @@ class VeloConfigurationMetadataTest {
             assertFalse(metadata.contains("velo.mybatis-plus.block-attack-inner-interceptor-enabled"));
             assertFalse(metadata.contains("velo.date-time-format.enabled"));
             assertTrue(metadata.contains("velo.web.enabled"));
+            assertTrue(metadata.contains("velo.web.cors.enabled"));
+            assertFalse(metadata.contains("velo.web.allow-cors"));
             assertFalse(metadata.contains("velo.web.mvc-configurer-enabled"));
             assertFalse(metadata.contains("velo.web.date-time-formatter-registration-enabled"));
             assertFalse(metadata.contains("velo.web.xss.cleaner-enabled"));

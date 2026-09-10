@@ -9,11 +9,14 @@ import org.springframework.core.convert.ConversionFailedException;
 import org.springframework.core.convert.TypeDescriptor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.format.support.DefaultFormattingConversionService;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
 
 import java.lang.reflect.Field;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.util.Date;
+import java.util.Map;
 import java.util.TimeZone;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -23,6 +26,32 @@ class VeloWebMvcConfigurerTests {
 
     private static ObjectProvider<XssStringConverter> emptyConverterProvider() {
         return new StaticListableBeanFactory().getBeanProvider(XssStringConverter.class);
+    }
+
+    @Test
+    void shouldNotRegisterCorsMappingsByDefault() {
+        VeloProperties properties = new VeloProperties();
+        ExposingCorsRegistry registry = new ExposingCorsRegistry();
+
+        new VeloWebMvcConfigurer(emptyConverterProvider(), properties).addCorsMappings(registry);
+
+        assertThat(registry.getConfigurations()).isEmpty();
+    }
+
+    @Test
+    void shouldRegisterCorsMappingsWhenNewSwitchIsEnabled() {
+        VeloProperties properties = new VeloProperties();
+        properties.getWeb().getCors().setEnabled(true);
+        properties.getWeb().getCors().setAllowedOriginPatterns(new String[]{"https://client.example"});
+        properties.getWeb().getCors().setAllowCredentials(true);
+        ExposingCorsRegistry registry = new ExposingCorsRegistry();
+
+        new VeloWebMvcConfigurer(emptyConverterProvider(), properties).addCorsMappings(registry);
+
+        CorsConfiguration configuration = registry.getConfigurations().get("/**");
+        assertThat(configuration).isNotNull();
+        assertThat(configuration.getAllowedOriginPatterns()).containsExactly("https://client.example");
+        assertThat(configuration.getAllowCredentials()).isTrue();
     }
 
     @Test
@@ -97,5 +126,12 @@ class VeloWebMvcConfigurerTests {
     static class AnnotatedDateTarget {
         @DateTimeFormat(pattern = "yyyy/MM/dd")
         private Date date;
+    }
+
+    private static final class ExposingCorsRegistry extends CorsRegistry {
+
+        Map<String, CorsConfiguration> getConfigurations() {
+            return getCorsConfigurations();
+        }
     }
 }

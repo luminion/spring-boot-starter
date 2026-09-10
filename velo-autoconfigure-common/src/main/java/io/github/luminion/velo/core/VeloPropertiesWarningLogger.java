@@ -141,7 +141,7 @@ public class VeloPropertiesWarningLogger implements InitializingBean {
             VeloProperties.CorsProperties cors = web.getCors();
             if (cors == null) {
                 warnings.add("velo.web.cors 为空，CORS 配置可能在运行时失败。当前仅告警。");
-            } else if (web.isAllowCors() || cors.isEnabled()) {
+            } else if (cors.isEnabled()) {
                 warnNonEmptyArray(warnings, "velo.web.cors.allowed-origin-patterns",
                         cors.getAllowedOriginPatterns(), "CORS 未配置允许的 Origin");
                 warnNonEmptyArray(warnings, "velo.web.cors.allowed-methods",

@@ -66,7 +66,7 @@ public class VeloWebMvcConfigurer implements WebMvcConfigurer {
     public void addCorsMappings(CorsRegistry registry) {
         VeloProperties.WebProperties web = properties.getWeb();
         VeloProperties.CorsProperties cors = web.getCors();
-        if (web.isAllowCors() || cors.isEnabled()) {
+        if (cors.isEnabled()) {
             warnIfCredentialedWildcard(cors);
             registry.addMapping("/**")
                     .allowedOriginPatterns(cors.getAllowedOriginPatterns())
@@ -77,7 +77,7 @@ public class VeloWebMvcConfigurer implements WebMvcConfigurer {
     }
 
     // 允许携带凭证 + 未限定具体 origin(通配或为空)时，任意站点都能带 Cookie 跨域调用，属高危配置。
-    // 保留默认值不做破坏性变更，仅在启动时告警，提示显式配置非通配的 allowed-origin-patterns。
+    // 仅在用户显式开启凭证且仍使用通配来源时告警，提示配置明确的 allowed-origin-patterns。
     private void warnIfCredentialedWildcard(VeloProperties.CorsProperties cors) {
         if (!cors.isAllowCredentials()) {
             return;

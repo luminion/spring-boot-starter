@@ -494,13 +494,6 @@ public class VeloProperties {
         private boolean enabled = true;
 
         /**
-         * Enables permissive CORS handling in the MVC configurer.
-         * @deprecated use {@code velo.web.cors.enabled} instead.
-         */
-        @Deprecated
-        private boolean allowCors;
-
-        /**
          * CORS settings.
          */
         private CorsProperties cors = new CorsProperties();
@@ -531,9 +524,10 @@ public class VeloProperties {
         private String[] allowedMethods = {"GET", "POST", "PUT", "DELETE", "OPTIONS"};
 
         /**
-         * Whether to allow credentials (cookies, authorization headers).
+         * Whether browsers may include credentials such as cookies or HTTP authentication in cross-origin requests.
+         * Defaults to {@code false}; enable it only when cross-origin credentials are required.
          */
-        private boolean allowCredentials = true;
+        private boolean allowCredentials;
 
         /**
          * Max age of preflight cache in seconds.

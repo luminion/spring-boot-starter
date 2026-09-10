@@ -73,7 +73,20 @@ class VeloPropertiesDefaultsTest {
         assertThat(properties.getAspectOrder().getControllerLog())
                 .isLessThan(properties.getAspectOrder().getFeignLog());
         assertThat(properties.getWeb().isEnabled()).isTrue();
+        assertThat(properties.getWeb().getCors().isEnabled()).isFalse();
+        assertThat(properties.getWeb().getCors().isAllowCredentials()).isFalse();
         assertThat(properties.getFeign().isEnabled()).isTrue();
+    }
+
+    @Test
+    void shouldIgnoreRemovedLegacyCorsProperty() {
+        contextRunner
+                .withPropertyValues("velo.web.allow-cors=true")
+                .run(context -> {
+                    VeloProperties properties = context.getBean(VeloProperties.class);
+
+                    assertThat(properties.getWeb().getCors().isEnabled()).isFalse();
+                });
     }
 
     @Test

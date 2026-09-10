@@ -1,9 +1,13 @@
 # 更新记录
 
-> 修改记录：2026-09-09 15:20，补充当前 1.3.1 版本中日期转换、Jackson 日期时间开关、XSS JSON 边界及 Redis 序列化器选择调整的变更说明，便于追踪本轮代码与文档修改。
+> 修改记录：2026-09-10 11:10，补充当前 1.3.1 版本中日期转换、Jackson 日期时间开关、XSS JSON 边界、Redis 序列化器选择、集成测试端口隔离及 CORS 配置调整的变更说明，重点标注 CORS 不兼容变更及迁移要求。
 
 ## 1.3.1
 
+
+### 不兼容变更
+- 移除旧 CORS 配置项 `velo.web.allow-cors`，仅保留 `velo.web.cors.enabled`；升级时需迁移配置，旧配置不再生效。
+- `velo.web.cors.allow-credentials` 默认值由 `true` 调整为 `false`；Cookie/Session 跨域场景需显式设置为 `true`，并配置明确来源。
 
 ### 新增
 - `@InvokeLog` 新增 `argsOnFinish` 开关，可在正常返回或异常结束时记录当前参数状态；无返回值的方法记录为 `result=void`，返回 `null` 时记录为 `result=null`；payload 被忽略、配置关闭或序列化失败时分别记录 `ignored`、`disabled`、`serialization-failed`
@@ -14,6 +18,7 @@
 - 慢日志子类方法修复：`SlowLogAspect` 新增 `AopUtils.getMostSpecificMethod` 解析，`@SlowLog` 标注在实现类方法上时可正确触发，与 `InvokeLogAspect` 行为对齐。
 - `VeloCacheAutoConfiguration.cacheManager` 删除未使用的 `serializerProvider` 参数，避免引入对 `RedisSerializer` Bean 的无效依赖。
 - Jackson 日期时间开关修复：`velo.jackson.date-time-enabled=false` 时不再创建日期格式对象，非法日期格式配置不会阻止 Jackson 2/3 构建 `ObjectMapper` 或 `JsonMapper`。
+- Boot 2/3/4 MVC 集成测试端口修复：分别固定为 `18082`、`18083`、`18084`，避免 Maven 并行执行时多个模块争用默认 `8080`。
 
 ### 调整
 - 日志相关类迁移至 `velo-autoconfigure-common`：`InvokeLog`、`SlowLog` 注解，`InvokeLogAspect`、`SlowLogAspect` 切面，以及 `VeloLogAutoConfiguration` 均不依赖 servlet API，统一收归 common 模块，消除 jakarta/javax 双份冗余。
