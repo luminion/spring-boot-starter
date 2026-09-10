@@ -15,7 +15,6 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
@@ -26,11 +25,13 @@ import java.util.stream.Collectors;
 /**
  * Web 异常处理器基类。
  *
+ * <p>该类仅提供异常处理逻辑，不会自动注册为 Spring 组件。应用应在具体实现类上显式添加
+ * {@code @RestControllerAdvice}，并通过构造函数提供响应转换函数。</p>
+ *
  * @author luminion
  * @since 1.0.0
  */
 @Slf4j
-@RestControllerAdvice
 @RequiredArgsConstructor
 public class VeloWebExceptionHandler<R> implements Ordered {
 

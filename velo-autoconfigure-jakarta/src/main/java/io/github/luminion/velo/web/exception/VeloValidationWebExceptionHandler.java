@@ -6,7 +6,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.MessageSourceResolvable;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 
 import java.util.function.Function;
@@ -16,11 +15,13 @@ import java.util.stream.Stream;
 /**
  * 支持 Bean Validation 的 Web 异常处理器。
  *
+ * <p>该类仅提供校验异常处理逻辑，不会自动注册为 Spring 组件。应用应在具体实现类上显式添加
+ * {@code @RestControllerAdvice}。</p>
+ *
  * @author luminion
  * @since 1.0.0
  */
 @Slf4j
-@RestControllerAdvice
 public class VeloValidationWebExceptionHandler<R> extends VeloWebExceptionHandler<R> {
 
     public VeloValidationWebExceptionHandler(Function<String, R> failed, Function<Throwable, R> error) {

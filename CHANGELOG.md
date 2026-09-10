@@ -11,6 +11,8 @@
 > 修改记录：2026-09-10 13:42，记录全局枚举映射为空时保留显式 `@JsonEnum` 映射及测试结果；原因是关闭全局默认映射不应覆盖用户对单个字段的明确配置。
 >
 > 修改记录：2026-09-10 14:46，记录 Excel 两级开关文档语义统一；原因是“需显式开启”与配置默认值为 `true` 相互矛盾，容易误导使用方。
+>
+> 修改记录：2026-09-10 14:51，记录异常处理基类不再参与组件扫描及双命名空间回归测试；原因是宽范围扫描可能实例化缺少响应函数依赖的泛型基类。
 
 ## 1.3.1
 
@@ -18,6 +20,7 @@
 ### 不兼容变更
 - 移除旧 CORS 配置项 `velo.web.allow-cors`，仅保留 `velo.web.cors.enabled`；升级时需迁移配置，旧配置不再生效。
 - `velo.web.cors.allow-credentials` 默认值由 `true` 调整为 `false`；Cookie/Session 跨域场景需显式设置为 `true`，并配置明确来源。
+- 通用 Web 异常处理基类不再自动注册为 `@RestControllerAdvice` 组件；升级后需在具体异常处理实现类上显式添加该注解，并提供构造函数依赖。
 
 ### 新增
 - `@InvokeLog` 新增 `argsOnFinish` 开关，可在正常返回或异常结束时记录当前参数状态；无返回值的方法记录为 `result=void`，返回 `null` 时记录为 `result=null`；payload 被忽略、配置关闭或序列化失败时分别记录 `ignored`、`disabled`、`serialization-failed`

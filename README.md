@@ -26,6 +26,8 @@ Velo Spring Boot Starter 是一组低侵入的 Spring Boot 自动配置扩展。
 > 修改记录：2026-09-10 13:42，明确全局枚举映射为空时仍支持完整显式 `@JsonEnum` 字段映射；原因是全局默认映射关闭不应覆盖用户对单个字段的明确配置。
 >
 > 修改记录：2026-09-10 14:46，统一 Excel 两级开关的默认值和关闭语义；原因是“需显式开启”与配置默认值为 `true` 相互矛盾，容易误导使用方。
+>
+> 修改记录：2026-09-10 14:51，移除通用 Web 异常处理基类上的自动组件注册语义，并明确具体实现类需显式添加 `@RestControllerAdvice`；原因是宽范围组件扫描可能尝试实例化缺少响应函数依赖的泛型基类。
 
 
 ## 功能特性
@@ -889,6 +891,14 @@ velo:
 - `velo.web.cors.allow-credentials` 默认 `false`；需要 Cookie/Session 跨域时显式设为 `true`，并配置明确的允许来源
 - `maxAge(3600)`
 - 旧配置 `velo.web.allow-cors` 已移除，不再兼容；请统一使用 `velo.web.cors.enabled`
+
+---
+
+## Web 异常处理扩展
+
+`VeloWebExceptionHandler` 和 `VeloValidationWebExceptionHandler` 是可复用的异常处理基类，不会自动注册为 Spring 组件。
+
+应用继承或实现具体异常处理类时，需要在具体类上显式添加 `@RestControllerAdvice`，并通过构造函数提供失败响应和系统异常响应的转换函数。这样可以避免用户扫描 `io.github.luminion` 等宽范围包时，Spring 误尝试实例化缺少构造函数依赖的泛型基类。
 
 ---
 
