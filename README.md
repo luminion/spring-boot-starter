@@ -19,6 +19,8 @@ Velo Spring Boot Starter 是一组低侵入的 Spring Boot 自动配置扩展。
 
 > 修改记录：2026-09-10 11:33，补充 Spring Boot 2/3/4 的 Redis JSON 序列化器兼容边界，明确 Boot 4 同时存在 Jackson 2/3 时默认使用 Jackson 3，Jackson 2 仅作为显式兼容与迁移路径。
 
+> 修改记录：2026-09-10 13:26，补充默认调用日志异常摘要的转义规则，明确特殊字符不会破坏单行日志结构；原因是异常消息可能包含用户输入，需要避免日志注入和结构化解析歧义。
+
 
 ## 功能特性
 
@@ -535,6 +537,7 @@ public void enrichOrder(OrderDTO order) {
 - 如果没有自定义 `logging.pattern.level`，会自动把 `%X{traceId}` 加到用户自己的日志中
 - Controller、Feign 与 `@InvokeLog` 的进入日志格式为 `[target] ==> args=...`
 - Controller、Feign 与 `@InvokeLog` 的退出日志格式为 `[target] <== cost=Xms result=...`；无返回值时记录 `result=void`，返回 `null` 时记录 `result=null`，调用失败时输出异常摘要并使用 ERROR 级别
+- 默认 SLF4J 调用日志 writer 会转义异常摘要中的双引号、反斜杠、换行和控制字符，避免破坏单行日志结构；开启异常堆栈时，完整堆栈仍按多行输出
 - `@InvokeLog(argsOnFinish = true)` 会在正常返回和异常结束的退出日志中增加 `args=...`，记录方法结束时的参数状态
 - payload 无法打印时会明确标记原因：`ignored`（注解忽略）、`disabled`（配置关闭）或 `serialization-failed`（序列化失败）
 - `@SlowLog` 的阈值单位固定为毫秒，只在调用耗时超过阈值后输出一条独立慢日志，格式包含 `cost=Xms threshold=Yms`

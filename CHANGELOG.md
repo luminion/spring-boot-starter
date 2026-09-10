@@ -4,6 +4,8 @@
 
 > 修改记录：2026-09-10 12:29，补充 Boot 4 Jackson 2/3 共存时 Redis 序列化器的默认选择、显式覆盖方式及动态类型安全边界；原因是确认 `GenericJackson2JsonRedisSerializer` 在 Spring Data Redis 4.x 仍可兼容但已标记待移除，不应作为 Boot 4 默认实现。
 
+> 修改记录：2026-09-10 13:26，记录默认调用日志异常摘要转义修复及测试结果；原因是异常消息可能包含用户输入，未转义会破坏单行日志结构并造成日志注入风险。
+
 ## 1.3.1
 
 
@@ -21,6 +23,7 @@
 - `VeloCacheAutoConfiguration.cacheManager` 删除未使用的 `serializerProvider` 参数，避免引入对 `RedisSerializer` Bean 的无效依赖。
 - Jackson 日期时间开关修复：`velo.jackson.date-time-enabled=false` 时不再创建日期格式对象，非法日期格式配置不会阻止 Jackson 2/3 构建 `ObjectMapper` 或 `JsonMapper`。
 - Boot 2/3/4 MVC 集成测试端口修复：分别固定为 `18082`、`18083`、`18084`，避免 Maven 并行执行时多个模块争用默认 `8080`。
+- 默认 SLF4J 调用日志 writer 对异常摘要中的双引号、反斜杠、换行和控制字符进行转义，避免破坏单行日志结构或造成日志注入；完整异常堆栈仍按原有多行语义输出。
 
 ### 调整
 - 日志相关类迁移至 `velo-autoconfigure-common`：`InvokeLog`、`SlowLog` 注解，`InvokeLogAspect`、`SlowLogAspect` 切面，以及 `VeloLogAutoConfiguration` 均不依赖 servlet API，统一收归 common 模块，消除 jakarta/javax 双份冗余。

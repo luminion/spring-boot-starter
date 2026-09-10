@@ -148,6 +148,45 @@ class Slf4JInvocationLogWriterTest {
     }
 
     @Test
+    void shouldEscapeSpecialCharactersInExitErrorSummary(CapturedOutput output) {
+        Slf4JInvocationLogWriter writer = new Slf4JInvocationLogWriter(new VeloProperties());
+        InvocationLogRecord record = new InvocationLogRecord();
+        record.setLoggerName("com.example.DemoClient");
+        record.setSource(InvocationLogSource.FEIGN);
+        record.setTarget("GET /users/fail");
+        record.setPhase(InvocationPhase.EXIT);
+        record.setCostMs(8);
+        record.setSuccess(false);
+        record.setError(new IllegalStateException("bad\"\\\r\nnext\t" + (char) 1));
+
+        writer.write(record);
+
+        assertThat(output.getOut())
+                .contains("error=\"IllegalStateException: bad\\\"\\\\\\r\\nnext\\t\\u0001\"")
+                .doesNotContain("error=\"IllegalStateException: bad\"\r\nnext");
+    }
+
+    @Test
+    void shouldEscapeSpecialCharactersInSlowErrorSummary(CapturedOutput output) {
+        Slf4JInvocationLogWriter writer = new Slf4JInvocationLogWriter(new VeloProperties());
+        InvocationLogRecord record = new InvocationLogRecord();
+        record.setLoggerName("com.example.OrderService");
+        record.setSource(InvocationLogSource.INVOKE);
+        record.setTarget("placeOrder()");
+        record.setCostMs(800);
+        record.setSlow(true);
+        record.setSlowThreshold(300);
+        record.setSuccess(false);
+        record.setError(new IllegalStateException("bad\"\\\r\nnext\t" + (char) 1));
+
+        writer.write(record);
+
+        assertThat(output.getOut())
+                .contains("error=\"IllegalStateException: bad\\\"\\\\\\r\\nnext\\t\\u0001\"")
+                .doesNotContain("error=\"IllegalStateException: bad\"\r\nnext");
+    }
+
+    @Test
     void shouldWriteSlowLogAtWarnLevelByDefault(CapturedOutput output) {
         Slf4JInvocationLogWriter writer = new Slf4JInvocationLogWriter(new VeloProperties());
         InvocationLogRecord record = new InvocationLogRecord();

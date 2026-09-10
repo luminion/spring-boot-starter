@@ -147,7 +147,56 @@ public class Slf4JInvocationLogWriter implements InvocationLogWriter {
         if (builder.length() > 0) {
             builder.append(' ');
         }
-        builder.append(key).append("=\"").append(value).append('"');
+        builder.append(key).append("=\"").append(escapeQuoted(value)).append('"');
+    }
+
+    /**
+     * 转义带引号日志字段中的特殊字符，避免异常消息破坏日志结构或注入换行。
+     */
+    private String escapeQuoted(String value) {
+        if (value == null || value.isEmpty()) {
+            return value;
+        }
+
+        StringBuilder escaped = new StringBuilder(value.length() + 16);
+        for (int i = 0; i < value.length(); i++) {
+            char ch = value.charAt(i);
+            switch (ch) {
+                case '"':
+                    escaped.append("\\\"");
+                    break;
+                case '\\':
+                    escaped.append("\\\\");
+                    break;
+                case '\b':
+                    escaped.append("\\b");
+                    break;
+                case '\f':
+                    escaped.append("\\f");
+                    break;
+                case '\n':
+                    escaped.append("\\n");
+                    break;
+                case '\r':
+                    escaped.append("\\r");
+                    break;
+                case '\t':
+                    escaped.append("\\t");
+                    break;
+                default:
+                    if (ch < 0x20 || ch == '\u2028' || ch == '\u2029') {
+                        escaped.append("\\u");
+                        String hex = Integer.toHexString(ch);
+                        for (int j = hex.length(); j < 4; j++) {
+                            escaped.append('0');
+                        }
+                        escaped.append(hex);
+                    } else {
+                        escaped.append(ch);
+                    }
+            }
+        }
+        return escaped.toString();
     }
 
     private Logger resolveLogger(String loggerName) {
