@@ -17,6 +17,8 @@ Velo Spring Boot Starter 是一组低侵入的 Spring Boot 自动配置扩展。
 
 > 修改记录：2026-09-10 10:10，将 CORS 凭证默认值调整为关闭；JWT 放在 Authorization 请求头时无需开启凭证，Cookie/Session 跨域时需显式开启并配置明确来源。
 
+> 修改记录：2026-09-10 11:33，补充 Spring Boot 2/3/4 的 Redis JSON 序列化器兼容边界，明确 Boot 4 同时存在 Jackson 2/3 时默认使用 Jackson 3，Jackson 2 仅作为显式兼容与迁移路径。
+
 
 ## 功能特性
 
@@ -213,7 +215,10 @@ public UserDTO getById(Long id) {
 - key 前缀格式为 `prefix + separator + cacheName + separator`
 - 业务侧仍然需要自己开启 `@EnableCaching`
 - 缓存值序列化器优先复用容器中的 `RedisSerializer<Object>`；没有显式 Bean 时使用 `RedisSerializer.json()`，跟随当前 Spring Data Redis 版本的原生 JSON 实现
-- Boot 4 同时存在 Jackson 2/3 时，未显式提供序列化器会按 Spring Data Redis 4 的默认规则使用 Jackson 3；如需使用 Jackson 2，请显式注册 Jackson 2 的 `RedisSerializer<Object>` Bean
+- Boot 2 / 3 默认使用 Jackson 2 的 `GenericJackson2JsonRedisSerializer`（对应 Spring Data Redis 2.x / 3.x），写入 JSON 类型元数据，因此 `Object` / POJO 可以反序列化回原类型，而不是默认退化为 `LinkedHashMap`
+- Boot 4 默认使用 `RedisSerializer.json()`，由 Spring Data Redis 4.x 选择 Jackson 3 的 `GenericJacksonJsonRedisSerializer`；即使 Jackson 2 / 3 同时存在，也不会按类路径猜测切换，默认仍使用 Jackson 3
+- Boot 4 如需让 Redis 使用 Jackson 2，应引入官方 `spring-boot-jackson2` 及 Jackson 2 依赖，并显式注册一个 `RedisSerializer<Object>` Bean，例如 `GenericJackson2JsonRedisSerializer`；Spring Data Redis 4.x 仍保留该类用于兼容或迁移旧数据，但已标记为后续移除，不作为 Boot 4 默认实现
+- Jackson 2 与 Jackson 3 的 Redis JSON 输出可能存在差异；从 Boot 2 / 3 切换到 Boot 4 时，应先规划旧数据读取、迁移或 key 空间隔离，不要默认认为历史值可以无缝混读
 
 缓存雪崩防护（TTL 抖动）：
 
@@ -737,8 +742,8 @@ velo:
   - `redisTemplate`
   - `stringObjectRedisTemplate`
 - 序列化器优先复用容器中的 `RedisSerializer<Object>`，通常会跟随 Velo 的 Jackson 配置保持一致
-- 若容器没有 `RedisSerializer<Object>`，starter 使用 `RedisSerializer.json()` 作为回退；Boot 2/3 跟随对应 Spring Data Redis 的 Jackson 2 实现，Boot 4 默认使用 Jackson 3
-- Boot 4 项目若选择 Jackson 2，请自行提供 Jackson 2 的 `RedisSerializer<Object>` Bean，Velo 的缓存和 RedisTemplate 会共同复用该 Bean；Jackson 2/3 同时存在时不会仅依据类路径猜测用户意图
+- 若容器没有 `RedisSerializer<Object>`，starter 使用 `RedisSerializer.json()` 作为回退；Boot 2/3 跟随对应 Spring Data Redis 的 Jackson 2 实现，Boot 4 使用 Jackson 3 实现
+- Boot 4 项目若选择 Jackson 2，请自行提供 Jackson 2 的 `RedisSerializer<Object>` Bean，Velo 的缓存和 RedisTemplate 会共同复用该 Bean；Jackson 2/3 同时存在时不会仅依据类路径猜测用户意图，详细兼容边界见上面的缓存说明
 
 ---
 

@@ -5,10 +5,12 @@ import io.github.luminion.velo.core.VeloCoreAutoConfiguration;
 import io.github.luminion.velo.jackson.VeloJacksonAutoConfiguration;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.jackson2.autoconfigure.Jackson2AutoConfiguration;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.cache.CacheManager;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.serializer.GenericJacksonJsonRedisSerializer;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializer;
 
@@ -35,6 +37,7 @@ class Boot4CacheSerializerSelectionTest {
 
     private final ApplicationContextRunner jacksonAwareContextRunner = new ApplicationContextRunner()
             .withConfiguration(AutoConfigurations.of(
+                    Jackson2AutoConfiguration.class,
                     VeloCoreAutoConfiguration.class,
                     VeloCacheAutoConfiguration.class,
                     VeloJacksonAutoConfiguration.class
@@ -57,6 +60,19 @@ class Boot4CacheSerializerSelectionTest {
     }
 
     @Test
+    void shouldPreferJackson3SerializerByDefaultWhenJackson2IsAlsoPresent() {
+        jacksonAwareContextRunner.run(context -> {
+            RedisSerializer<Object> serializer = context.getBean(RedisSerializer.class);
+
+            assertThat(serializer).isInstanceOf(GenericJacksonJsonRedisSerializer.class);
+            Object deserialized = serializer.deserialize(serializer.serialize(new RedisPayload("ok")));
+
+            assertThat(deserialized).isInstanceOf(RedisPayload.class);
+            assertThat(((RedisPayload) deserialized).getName()).isEqualTo("ok");
+        });
+    }
+
+    @Test
     void shouldUseExplicitJackson2SerializerWhenUserProvidesIt() {
         RedisSerializer<Object> serializer = new GenericJackson2JsonRedisSerializer();
 
@@ -68,6 +84,9 @@ class Boot4CacheSerializerSelectionTest {
                     byte[] actual = toByteArray(configuration.getValueSerializationPair().write(payload()));
 
                     assertThat(actual).isEqualTo(serializer.serialize(payload()));
+                    Object deserialized = serializer.deserialize(serializer.serialize(new RedisPayload("ok")));
+                    assertThat(deserialized).isInstanceOf(RedisPayload.class);
+                    assertThat(((RedisPayload) deserialized).getName()).isEqualTo("ok");
                 });
     }
 
@@ -96,5 +115,25 @@ class Boot4CacheSerializerSelectionTest {
         byte[] bytes = new byte[buffer.remaining()];
         buffer.get(bytes);
         return bytes;
+    }
+
+    static class RedisPayload {
+
+        private String name;
+
+        RedisPayload() {
+        }
+
+        RedisPayload(String name) {
+            this.name = name;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
     }
 }

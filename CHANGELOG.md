@@ -2,6 +2,8 @@
 
 > 修改记录：2026-09-10 11:10，补充当前 1.3.1 版本中日期转换、Jackson 日期时间开关、XSS JSON 边界、Redis 序列化器选择、集成测试端口隔离及 CORS 配置调整的变更说明，重点标注 CORS 不兼容变更及迁移要求。
 
+> 修改记录：2026-09-10 12:29，补充 Boot 4 Jackson 2/3 共存时 Redis 序列化器的默认选择、显式覆盖方式及动态类型安全边界；原因是确认 `GenericJackson2JsonRedisSerializer` 在 Spring Data Redis 4.x 仍可兼容但已标记待移除，不应作为 Boot 4 默认实现。
+
 ## 1.3.1
 
 
@@ -28,6 +30,7 @@
 ### 文档
 - 补充 XSS 与 Jackson JSON 请求体的边界说明：同时启用 XSS 和 Jackson 字符串转换时，JSON 请求体中的普通字符串会被清洗，字段上的 `@XssIgnore` 可显式放行。
 - 补充 Boot 4 Jackson 2/3 与 Redis 序列化器的选择规则：需要 Jackson 2 时显式提供 `RedisSerializer<Object>` Bean。
+- 补充 Redis JSON 序列化的跨版本兼容边界：Boot 2/3 默认使用 Jackson 2，Boot 4 默认使用 Jackson 3；两者同时存在时默认仍使用 Jackson 3，显式 `RedisSerializer<Object>` Bean 可覆盖。Jackson 2 序列化器仅作为兼容或迁移路径，动态类型方案要求 Redis 为应用独占的可信基础设施。
 
 ## 1.3.0
 
