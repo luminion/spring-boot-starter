@@ -24,6 +24,8 @@ Velo Spring Boot Starter 是一组低侵入的 Spring Boot 自动配置扩展。
 > 修改记录：2026-09-10 13:34，明确非法日期格式或时区会在转换器启动时失败，并补充启动横幅对空配置的保护行为；原因是避免“仅告警”与实际启动结果不一致，也避免诊断横幅因空配置阻止应用启动。
 
 > 修改记录：2026-09-10 13:42，明确全局枚举映射为空时仍支持完整显式 `@JsonEnum` 字段映射；原因是全局默认映射关闭不应覆盖用户对单个字段的明确配置。
+>
+> 修改记录：2026-09-10 14:46，统一 Excel 两级开关的默认值和关闭语义；原因是“需显式开启”与配置默认值为 `true` 相互矛盾，容易误导使用方。
 
 
 ## 功能特性
@@ -238,7 +240,7 @@ public UserDTO getById(Long id) {
 Velo 提供两层能力：
 
 - Excel helper 工具类，随依赖引入即可直接使用
-- 扩展 converter 自动注册，需显式开启 `velo.excel.converters.enabled`
+- 扩展 converter 自动注册默认开启，可通过 `velo.excel.converters.enabled=false` 显式关闭
 
 可选额外依赖，按实际使用的库引入：
 
@@ -298,9 +300,9 @@ EasyExcelHelper.registerConverters(converters);
 
 说明：
 
-- `velo.excel.enabled` 默认开启
-- `velo.excel.converters.enabled` 默认开启
-- 一旦开启，starter 会根据 classpath 自动尝试向 EasyExcel、FastExcel、Fesod 注册扩展 converters
+- `velo.excel.enabled` 默认开启；设为 `false` 时关闭 Excel 整体自动配置
+- `velo.excel.converters.enabled` 默认开启；设为 `false` 时仅关闭 starter 的 converter 自动注册，不影响 helper 手工调用
+- 两级开关均开启时，starter 会根据 classpath 自动尝试向 EasyExcel、FastExcel、Fesod 注册扩展 converters
 - 时间、日期、时区格式统一复用 `velo.date-time-format.*`
 - 如果你只想手工控制注册时机，也可以直接使用 `EasyExcelHelper`、`FastExcelHelper`、`FesodExcelHelper`
 
