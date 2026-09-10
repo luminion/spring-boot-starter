@@ -4,6 +4,7 @@ import io.github.luminion.velo.VeloProperties;
 import org.springframework.util.StringUtils;
 
 import java.lang.reflect.Field;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -24,7 +25,10 @@ public class JsonEnumMetadataResolver {
                                     String explicitNameField, Class<?> propertyType) {
         Map<String, String> enumMappings = jacksonProperties.getEnumMappings();
         if (enumMappings == null || enumMappings.isEmpty()) {
-            return null;
+            if (!StringUtils.hasText(explicitCodeField) || !StringUtils.hasText(explicitNameField)) {
+                return null;
+            }
+            enumMappings = Collections.singletonMap(explicitCodeField, explicitNameField);
         }
 
         for (Map.Entry<String, String> enumMapping : enumMappings.entrySet()) {

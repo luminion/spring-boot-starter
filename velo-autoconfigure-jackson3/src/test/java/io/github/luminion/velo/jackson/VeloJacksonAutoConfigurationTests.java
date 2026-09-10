@@ -24,6 +24,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.Collections;
 import java.util.Date;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -357,6 +358,21 @@ class VeloJacksonAutoConfigurationTests {
     void shouldUseExplicitJsonEnumFieldsAndSuffix() throws Exception {
         contextRunner
                 .withBean(VeloProperties.class, VeloProperties::new)
+                .run(context -> {
+                    JsonMapper mapper = jsonMapper(context);
+                    JsonNode tree = mapper.readTree(mapper.writeValueAsString(new ExplicitEnumPayload(1)));
+
+                    assertThat(tree.get("statusLabel").textValue()).isEqualTo("Enabled");
+                });
+    }
+
+    @Test
+    void shouldUseExplicitJsonEnumFieldsWhenGlobalMappingsAreEmpty() throws Exception {
+        VeloProperties properties = new VeloProperties();
+        properties.getJackson().setEnumMappings(Collections.emptyMap());
+
+        contextRunner
+                .withBean(VeloProperties.class, () -> properties)
                 .run(context -> {
                     JsonMapper mapper = jsonMapper(context);
                     JsonNode tree = mapper.readTree(mapper.writeValueAsString(new ExplicitEnumPayload(1)));

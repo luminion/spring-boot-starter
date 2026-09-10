@@ -23,6 +23,8 @@ Velo Spring Boot Starter 是一组低侵入的 Spring Boot 自动配置扩展。
 
 > 修改记录：2026-09-10 13:34，明确非法日期格式或时区会在转换器启动时失败，并补充启动横幅对空配置的保护行为；原因是避免“仅告警”与实际启动结果不一致，也避免诊断横幅因空配置阻止应用启动。
 
+> 修改记录：2026-09-10 13:42，明确全局枚举映射为空时仍支持完整显式 `@JsonEnum` 字段映射；原因是全局默认映射关闭不应覆盖用户对单个字段的明确配置。
+
 
 ## 功能特性
 
@@ -666,6 +668,7 @@ public class OrderVO {
 - 这些 `serialize-*` 开关**只影响序列化方向**；反序列化（前端传入）时数字和字符串都能正常绑定，无需前端特殊处理
 - `serialize-big-decimal-as-string=true` 默认开启
 - `enum-desc-enabled=true` 时，`@JsonEnum` 可为数值字段派生出描述字段，例如 `statusName`
+- `enum-mappings` 为空时只关闭按全局约定进行的隐式匹配；`@JsonEnum` 同时指定 `codeField` 和 `nameField` 时仍独立生效
 - `string-converter-enabled=true` 时，`@JsonEncode` / `@JsonDecode` 会按函数类做字符串转换
 - 日期时间格式依然复用 `velo.date-time-format.*`；未标注的 `Date` 默认兼容日期-only 和完整日期时间，字段上的 `@JsonFormat` 优先
 
