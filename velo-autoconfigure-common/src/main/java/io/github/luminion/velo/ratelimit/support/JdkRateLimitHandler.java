@@ -10,6 +10,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.LongSupplier;
 
 /**
  * 基于 JDK 的本地限流器。
@@ -19,11 +20,17 @@ public class JdkRateLimitHandler implements RateLimitHandler, DisposableBean {
     private static final long MIN_IDLE_EVICT_NANOS = TimeUnit.MINUTES.toNanos(5);
 
     public JdkRateLimitHandler() {
+        this(System::nanoTime);
+    }
+
+    JdkRateLimitHandler(LongSupplier nanoTimeSupplier) {
+        this.nanoTimeSupplier = nanoTimeSupplier;
         log.warn("[Velo Starter] JdkRateLimitHandler is used as a fallback implementation. " +
                 "This handler is not suitable for distributed environments and may cause rate limiting to be inaccurate. " +
                 "Consider using Redis, Redisson, or Caffeine for distributed rate limiting.");
     }
 
+    private final LongSupplier nanoTimeSupplier;
     private final ConcurrentHashMap<String, TokenBucket> bucketMap = new ConcurrentHashMap<>();
     private final AtomicBoolean isCleaning = new AtomicBoolean(false);
     private final ExecutorService cleanupExecutor = Executors.newSingleThreadExecutor(r -> {
@@ -35,7 +42,7 @@ public class JdkRateLimitHandler implements RateLimitHandler, DisposableBean {
     @Override
     public boolean tryAcquire(String key, double rate, long window) {
         RateLimitWindow resolvedWindow = RateLimitWindow.from(rate, window);
-        long now = System.nanoTime();
+        long now = nanoTimeSupplier.getAsLong();
         AtomicBoolean acquired = new AtomicBoolean(false);
         bucketMap.compute(key, (unused, existing) -> {
             TokenBucket bucket = existing != null ? existing : new TokenBucket();
@@ -46,7 +53,7 @@ public class JdkRateLimitHandler implements RateLimitHandler, DisposableBean {
             try {
                 cleanupExecutor.execute(() -> {
                     try {
-                        long current = System.nanoTime();
+                        long current = nanoTimeSupplier.getAsLong();
                         for (String bucketKey : bucketMap.keySet()) {
                             bucketMap.computeIfPresent(bucketKey,
                                     (unused, bucket) -> bucket.isExpired(current) ? null : bucket);
@@ -75,13 +82,15 @@ public class JdkRateLimitHandler implements RateLimitHandler, DisposableBean {
         private long intervalNanos;
         private long lastAccessNanos;
         private long idleEvictNanos;
+        private boolean initialized;
 
         private boolean tryAcquire(long resolvedCapacity, long resolvedIntervalNanos, long now) {
-            if (lastRefillNanos == 0L) {
+            if (!initialized) {
                 capacity = resolvedCapacity;
                 intervalNanos = resolvedIntervalNanos;
                 tokens = resolvedCapacity;
                 lastRefillNanos = now;
+                initialized = true;
             } else if (capacity != resolvedCapacity || intervalNanos != resolvedIntervalNanos) {
                 capacity = resolvedCapacity;
                 intervalNanos = resolvedIntervalNanos;
@@ -106,7 +115,7 @@ public class JdkRateLimitHandler implements RateLimitHandler, DisposableBean {
         }
 
         private boolean isExpired(long now) {
-            return lastAccessNanos != 0L && now - lastAccessNanos >= idleEvictNanos;
+            return initialized && now - lastAccessNanos >= idleEvictNanos;
         }
     }
 }

@@ -11,6 +11,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 class CaffeineRateLimitHandlerTests {
 
     @Test
+    void shouldNotReinitializeBucketWhenTickerStartsAtZero() {
+        MutableTicker ticker = new MutableTicker(0L);
+        CaffeineRateLimitHandler handler = new CaffeineRateLimitHandler(ticker);
+
+        assertThat(handler.tryAcquire("zero", 1D, 1_000L)).isTrue();
+        assertThat(handler.tryAcquire("zero", 1D, 1_000L)).isFalse();
+    }
+
+    @Test
     void shouldKeepBucketForEntireLongWindow() {
         MutableTicker ticker = new MutableTicker();
         CaffeineRateLimitHandler handler = new CaffeineRateLimitHandler(ticker);
@@ -25,7 +34,15 @@ class CaffeineRateLimitHandlerTests {
     }
 
     private static final class MutableTicker implements Ticker {
-        private final AtomicLong nanos = new AtomicLong(1L);
+        private final AtomicLong nanos;
+
+        private MutableTicker() {
+            this(1L);
+        }
+
+        private MutableTicker(long initialNanos) {
+            this.nanos = new AtomicLong(initialNanos);
+        }
 
         @Override
         public long read() {

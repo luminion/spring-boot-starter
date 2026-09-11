@@ -1,5 +1,9 @@
 # 更新记录
 
+> 修改记录：2026-09-11 09:43，补充 MyBatis-Plus 3.5.9+ 分页和防全表更新拦截器所需的 JSQLParser 扩展依赖说明及有/无依赖回归测试；原因是该扩展默认不再随 MyBatis-Plus 主 starter 携带，缺少时对应功能会按 classpath 条件跳过注册。
+
+> 修改记录：2026-09-10 15:58，记录本地限流器使用显式初始化状态修复及 Caffeine/JDK 零起始时钟回归测试；原因是时间戳 `0` 是合法的单调时钟值，不能同时作为未初始化或未访问哨兵。
+
 > 修改记录：2026-09-10 15:15，明确三个 Excel Helper 的 `createExtraConverters(...)` 返回可变转换器列表，并补充追加自定义 converter 的测试和文档；原因是公开工厂方法返回不可变列表容易让扩展调用方误以为无法组合自定义转换器。
 
 > 修改记录：2026-09-10 15:04，将模式配置从 `velo.mode` 字符串枚举简化为 `velo.opinionated` 布尔开关，并补充开箱即用/无侵入模式边界待办；原因是降低配置复杂度，同时明确无侵入模式的功能可用范围。
@@ -40,6 +44,7 @@
 - 默认 SLF4J 调用日志 writer 对异常摘要中的双引号、反斜杠、换行和控制字符进行转义，避免破坏单行日志结构或造成日志注入；完整异常堆栈仍按原有多行语义输出。
 - 配置告警与实际启动行为对齐：非法日期模式、空日期模式和非法时区的提示明确对应转换器会在启动阶段失败；启动横幅对自身及嵌套配置为空增加保护，不再因诊断输出触发空指针。
 - 枚举派生字段修复：全局 `velo.jackson.enum-mappings` 为空时继续关闭隐式映射，但完整指定 `codeField` 和 `nameField` 的 `@JsonEnum` 仍可独立生成描述字段。
+- 本地限流器初始化状态修复：Caffeine 与 JDK 实现不再使用时间戳 `0` 作为未初始化或未访问哨兵，避免合法的零起始单调时钟导致令牌桶重复初始化或 JDK 桶无法被空闲清理；补充两套回归测试。
 
 ### 调整
 - Excel Helper 的 `createExtraConverters(...)` 统一返回独立可变列表，调用方可在注册前追加自定义 converter。
@@ -51,6 +56,7 @@
 - 补充 XSS 与 Jackson JSON 请求体的边界说明：同时启用 XSS 和 Jackson 字符串转换时，JSON 请求体中的普通字符串会被清洗，字段上的 `@XssIgnore` 可显式放行。
 - 补充 Boot 4 Jackson 2/3 与 Redis 序列化器的选择规则：需要 Jackson 2 时显式提供 `RedisSerializer<Object>` Bean。
 - 补充 Redis JSON 序列化的跨版本兼容边界：Boot 2/3 默认使用 Jackson 2，Boot 4 默认使用 Jackson 3；两者同时存在时默认仍使用 Jackson 3，显式 `RedisSerializer<Object>` Bean 可覆盖。Jackson 2 序列化器仅作为兼容或迁移路径，动态类型方案要求 Redis 为应用独占的可信基础设施。
+- 补充 MyBatis-Plus 3.5.9+ 的 `mybatis-plus-jsqlparser-4.9` 前置依赖说明：缺少该模块时分页和防全表更新拦截器会按 classpath 条件跳过注册；补充有/无扩展模块的自动配置回归测试。
 
 ## 1.3.0
 

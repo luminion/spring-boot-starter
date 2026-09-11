@@ -601,7 +601,7 @@ public class VeloProperties {
         private boolean enabled = true;
 
         /**
-         * Enables the pagination inner interceptor bean.
+         * 启用分页内部拦截器 Bean；MyBatis-Plus 3.5.9 及以上还需要引入对应的 JSQLParser 扩展模块。
          */
         private boolean paginationEnabled = true;
 
@@ -611,7 +611,7 @@ public class VeloProperties {
         private boolean optimisticLockerEnabled = true;
 
         /**
-         * Enables the block attack inner interceptor bean.
+         * 启用防全表更新与删除内部拦截器 Bean；MyBatis-Plus 3.5.9 及以上还需要引入对应的 JSQLParser 扩展模块。
          */
         private boolean blockAttackEnabled = true;
     }

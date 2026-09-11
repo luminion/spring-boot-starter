@@ -67,13 +67,15 @@ public class CaffeineRateLimitHandler implements RateLimitHandler {
         private long capacity;
         private long intervalNanos;
         private long idleEvictNanos = MIN_IDLE_EVICT_NANOS;
+        private boolean initialized;
 
         private boolean tryAcquire(long resolvedCapacity, long resolvedIntervalNanos, long now) {
-            if (lastRefillNanos == 0L) {
+            if (!initialized) {
                 capacity = resolvedCapacity;
                 intervalNanos = resolvedIntervalNanos;
                 tokens = resolvedCapacity;
                 lastRefillNanos = now;
+                initialized = true;
             } else if (capacity != resolvedCapacity || intervalNanos != resolvedIntervalNanos) {
                 capacity = resolvedCapacity;
                 intervalNanos = resolvedIntervalNanos;

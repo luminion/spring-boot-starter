@@ -32,6 +32,8 @@ Velo Spring Boot Starter 是一组低侵入的 Spring Boot 自动配置扩展。
 > 修改记录：2026-09-10 15:02，将 `velo.mode` 枚举配置简化为默认值为 `true` 的 `velo.opinionated` 布尔开关；原因是用单一正向开关表达开箱即用/无侵入两种行为，降低配置复杂度。
 >
 > 修改记录：2026-09-10 15:15，明确三个 Excel Helper 的 `createExtraConverters(...)` 返回可变列表，可在注册前追加自定义 converter；原因是公开工厂方法返回不可变列表容易造成扩展调用方无法组合自定义转换器的歧义。
+>
+> 修改记录：2026-09-11 09:40，补充 MyBatis-Plus 3.5.9 及以上分页和防全表更新功能所需的 JSQLParser 扩展依赖；原因是该依赖默认不再随 MyBatis-Plus 主 starter 携带，缺少时对应拦截器会按 classpath 条件跳过注册。
 
 
 ## 功能特性
@@ -714,6 +716,18 @@ Spring Boot 4：
     <artifactId>mybatis-plus-spring-boot4-starter</artifactId>
 </dependency>
 ```
+
+MyBatis-Plus 3.5.9 及以上已将 SQL Parser 相关拦截器拆分为可选模块。如果需要分页或防全表更新/删除能力，还需引入与 MyBatis-Plus 版本一致的 JSQLParser 扩展；当前项目依赖管理使用 `3.5.14`，示例为：
+
+```xml
+<dependency>
+    <groupId>com.baomidou</groupId>
+    <artifactId>mybatis-plus-jsqlparser-4.9</artifactId>
+    <version>3.5.14</version>
+</dependency>
+```
+
+未引入该模块时，`pagination-enabled` 和 `block-attack-enabled` 虽然默认值为 `true`，但对应拦截器类不在 classpath 中，Velo 会安全跳过相应 Bean；乐观锁拦截器不依赖该模块。
 
 关键配置：
 
