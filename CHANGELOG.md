@@ -1,5 +1,7 @@
 # 更新记录
 
+> 修改记录：2026-09-11 18:09，修复 Jakarta/Javax WebUtils 在非 Servlet 请求上下文中直接强制转换导致的异常类型不一致，并补充双命名空间回归测试；原因是 JavaDoc 约定抛出 `IllegalStateException`，实际可能抛出 `ClassCastException`。
+
 > 修改记录：2026-09-11 14:35，明确 Velo 内置 MyBatis-Plus 拦截器的低优先级顺序及用户 `@Order` 覆盖能力，并补充顺序回归测试；原因是自动配置不应抢占用户自定义 SQL 拦截器的执行位置。
 
 > 修改记录：2026-09-11 09:43，补充 MyBatis-Plus 3.5.9+ 分页和防全表更新拦截器所需的 JSQLParser 扩展依赖说明及有/无依赖回归测试；原因是该扩展默认不再随 MyBatis-Plus 主 starter 携带，缺少时对应功能会按 classpath 条件跳过注册。
@@ -47,6 +49,7 @@
 - 配置告警与实际启动行为对齐：非法日期模式、空日期模式和非法时区的提示明确对应转换器会在启动阶段失败；启动横幅对自身及嵌套配置为空增加保护，不再因诊断输出触发空指针。
 - 枚举派生字段修复：全局 `velo.jackson.enum-mappings` 为空时继续关闭隐式映射，但完整指定 `codeField` 和 `nameField` 的 `@JsonEnum` 仍可独立生成描述字段。
 - 本地限流器初始化状态修复：Caffeine 与 JDK 实现不再使用时间戳 `0` 作为未初始化或未访问哨兵，避免合法的零起始单调时钟导致令牌桶重复初始化或 JDK 桶无法被空闲清理；补充两套回归测试。
+- WebUtils 请求属性类型校验修复：Jakarta/Javax 实现在无 Servlet 请求上下文或绑定非 Servlet `RequestAttributes` 时统一抛出 `IllegalStateException`，避免与 JavaDoc 契约不一致；补充双命名空间回归测试。
 
 ### 调整
 - Excel Helper 的 `createExtraConverters(...)` 统一返回独立可变列表，调用方可在注册前追加自定义 converter。

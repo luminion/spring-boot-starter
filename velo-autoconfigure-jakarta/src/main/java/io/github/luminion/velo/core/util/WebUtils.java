@@ -42,8 +42,8 @@ public abstract class WebUtils {
      */
     public static ServletRequestAttributes getServletRequestAttributes() {
         RequestAttributes attributes = RequestContextHolder.getRequestAttributes();
-        if (attributes == null) {
-            throw new IllegalStateException("无法获取请求属性。此方法必须在Spring Web请求上下文中调用。");
+        if (!(attributes instanceof ServletRequestAttributes)) {
+            throw new IllegalStateException("无法获取请求属性。此方法必须在 Servlet Web 请求上下文中调用。");
         }
         return (ServletRequestAttributes) attributes;
     }
