@@ -227,6 +227,9 @@ public abstract class WebUtils {
      * <p>
      * 此方法会尝试从常见的HTTP代理头中获取真实的客户端IP地址，如 'x-forwarded-for', 'Proxy-Client-IP', 'WL-Proxy-Client-IP', 'X-Real-IP'等。
      * 如果无法从代理头中获取，则返回直接连接的客户端IP地址。
+     * <p>
+     * 只有在 Nginx、网关等入口代理已清洗或覆盖外部请求携带的转发头时，该结果才可信；
+     * 未配置可信代理边界时，不应将此方法用于认证、授权、限流或黑名单判断。
      *
      * @return 客户端IP地址
      */

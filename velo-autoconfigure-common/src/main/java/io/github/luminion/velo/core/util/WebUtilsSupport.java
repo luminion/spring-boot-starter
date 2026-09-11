@@ -5,8 +5,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
 /**
- * Servlet-agnostic utility methods extracted from {@code WebUtils} to avoid
- * code duplication between the jakarta and javax variants.
+ * Servlet 无关的 Web 工具方法，供 jakarta 和 javax 两套 {@code WebUtils} 复用。
  *
  * @author luminion
  * @since 1.0.0
@@ -21,11 +20,14 @@ public final class WebUtilsSupport {
     }
 
     /**
-     * Resolves the real client IP from common proxy headers.
+     * 按常见代理头解析客户端 IP。
      *
-     * @param headerResolver function that returns the header value for a given header name
-     * @param remoteAddr     the direct connection remote address
-     * @return the resolved client IP address
+     * <p>只有在入口代理已经清洗或覆盖外部请求携带的转发头时，结果才可以视为可信客户端 IP。
+     * 调用方不应在未配置可信代理边界时将结果用于认证、授权、限流或黑名单判断。</p>
+     *
+     * @param headerResolver 根据请求头名称返回请求头值的函数
+     * @param remoteAddr     直连的远端地址
+     * @return 解析后的客户端 IP
      */
     public static String resolveClientIp(java.util.function.Function<String, String> headerResolver, String remoteAddr) {
         String ip = null;

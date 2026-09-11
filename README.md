@@ -36,6 +36,8 @@ Velo Spring Boot Starter 是一组低侵入的 Spring Boot 自动配置扩展。
 > 修改记录：2026-09-11 09:40，补充 MyBatis-Plus 3.5.9 及以上分页和防全表更新功能所需的 JSQLParser 扩展依赖；原因是该依赖默认不再随 MyBatis-Plus 主 starter 携带，缺少时对应拦截器会按 classpath 条件跳过注册。
 >
 > 修改记录：2026-09-11 14:13，明确 Velo 内置 MyBatis-Plus 拦截器的低优先级顺序，并说明用户可通过 `@Order` 覆盖；原因是自动配置不应抢占用户自定义 SQL 拦截器的执行位置。
+>
+> 修改记录：2026-09-11 16:24，补充 `getRequestIp()` 在 Nginx/网关代理链下的信任边界和使用限制；原因是当前实现可以正确读取线上转发头，但转发头必须由可信入口代理清洗或覆盖，不能直接作为安全判断依据。
 
 
 ## 功能特性
@@ -915,6 +917,14 @@ velo:
 - `velo.web.cors.allow-credentials` 默认 `false`；需要 Cookie/Session 跨域时显式设为 `true`，并配置明确的允许来源
 - `maxAge(3600)`
 - 旧配置 `velo.web.allow-cors` 已移除，不再兼容；请统一使用 `velo.web.cors.enabled`
+
+### 6. 客户端 IP 解析
+
+`WebUtils.getRequestIp()` 会按 `X-Forwarded-For`、`Proxy-Client-IP`、`WL-Proxy-Client-IP`、`X-Real-IP` 的顺序读取第一个有效的非空值；没有代理头时回退到请求的直连地址。
+
+该行为适用于“客户端 → Nginx → 网关 → 服务”的常见部署链路，但前提是公网入口的 Nginx 和网关已经清洗或覆盖客户端自行携带的 `Forwarded`、`X-Forwarded-*` 等转发头，只把受控代理生成的值传给下游。入口代理如果直接使用会保留外部值的追加配置，客户端伪造的第一个地址可能继续留在链路中。
+
+该方法当前主要用于 Controller 调用日志和排查，不应在未配置可信代理边界时用于认证、授权、限流、黑名单或其他安全判断。若业务需要安全可信的来源 IP，应由网关或 Web 容器先按可信代理配置解析，再使用其标准化后的远端地址。
 
 ---
 
