@@ -38,6 +38,8 @@ Velo Spring Boot Starter 是一组低侵入的 Spring Boot 自动配置扩展。
 > 修改记录：2026-09-11 14:13，明确 Velo 内置 MyBatis-Plus 拦截器的低优先级顺序，并说明用户可通过 `@Order` 覆盖；原因是自动配置不应抢占用户自定义 SQL 拦截器的执行位置。
 >
 > 修改记录：2026-09-11 16:24，补充 `getRequestIp()` 在 Nginx/网关代理链下的信任边界和使用限制；原因是当前实现可以正确读取线上转发头，但转发头必须由可信入口代理清洗或覆盖，不能直接作为安全判断依据。
+>
+> 修改记录：2026-09-11 17:33，补充 `velo.opinionated=false` 无侵入模式仍保留的能力及显式重新开启规则；原因是无侵入模式只注入全局增强的最低优先级关闭值，不等于停用全部 Velo Bean 或注解能力。
 
 
 ## 功能特性
@@ -109,6 +111,31 @@ velo:
 | RedisTemplate 自动补齐 | 开启 | 关闭 | 依赖 Redis classpath 与连接工厂 |
 | Redis Cache 自动补齐 | 开启 | 关闭 | 依赖 Spring Cache / Redis 条件 |
 | Excel converter 自动注册 | 开启 | 关闭 | helper 工具类不受影响 |
+
+无侵入模式仍保留或独立生效的能力：
+
+| 能力 | 无侵入模式行为 | 说明 |
+| --- | --- | --- |
+| Velo Core 基础 Bean | 保留 | 提供指纹解析、消息解析、配置告警和可选 Banner 等基础支持 |
+| `@Idempotent` / `@RateLimit` / `@Lock` | 保留 | 注解驱动能力不由 `velo.opinionated` 默认关闭，仍需对应后端依赖 |
+| `@InvokeLog` / `@SlowLog` | 保留 | 方法级显式日志仍可用；Controller/Feign 自动日志默认关闭 |
+| XSS / CORS | 默认关闭，显式配置可开启 | 两者本身默认关闭，不依赖无侵入模式额外处理 |
+| Excel Helper | 保留 | 手工调用 Helper 不受全局 converter 注册开关影响 |
+| Spring Boot 官方自动配置 | 不受影响 | 无侵入模式只注入 `velo.*` 的最低优先级默认值 |
+
+无侵入模式下，如果需要重新启用某项全局增强，显式配置对应开关即可覆盖默认关闭值，例如：
+
+```yaml
+velo:
+  opinionated: false
+  jackson:
+    enabled: true
+  cache:
+    enabled: true
+  excel:
+    converters:
+      enabled: true
+```
 
 
 ## Maven 依赖
