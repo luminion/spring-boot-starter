@@ -5,7 +5,7 @@
 [![GitHub stars](https://img.shields.io/github/stars/luminion/spring-boot-starter?style=social)](https://github.com/luminion/spring-boot-starter)
 
 Velo Spring Boot Starter 是一组低侵入的 Spring Boot 自动配置扩展。
-项目以 `velo.*` 作为统一配置入口，围绕并发控制、缓存、Jackson、Redis、MyBatis-Plus、Excel、日志、XSS 和 Web MVC 常用增强提供开箱能力。
+项目以 `velo.*` 作为统一配置入口，围绕并发控制、缓存、Jackson、Redis、MyBatis-Plus、Excel、日志、XSS 以及 Web MVC/WebFlux 常用增强提供开箱能力。
 
 > 修改记录：2026-09-02 17:46，明确各 Spring Boot Starter 的支持范围、JDK 要求及不保证的版本，避免将版本兼容范围理解过宽。
 >
@@ -41,6 +41,8 @@ Velo Spring Boot Starter 是一组低侵入的 Spring Boot 自动配置扩展。
 >
 > 修改记录：2026-09-11 17:33，补充 `velo.opinionated=false` 无侵入模式仍保留的能力及显式重新开启规则；原因是无侵入模式只注入全局增强的最低优先级关闭值，不等于停用全部 Velo Bean 或注解能力。
 
+> 修改记录：2026-09-11 22:26，新增 WebFlux 版本的 trace、Controller 日志、请求工具、日期/XSS/CORS 配置和异常处理扩展，并明确 Boot 2/3/4 均需由应用按需引入 `spring-boot-starter-webflux`；原因是 WebFlux 与 Servlet MVC 使用不同请求模型，不能直接复用 Servlet 组件。
+
 
 ## 功能特性
 
@@ -52,7 +54,7 @@ Velo Spring Boot Starter 是一组低侵入的 Spring Boot 自动配置扩展。
 - 提供 MyBatis-Plus 分页、乐观锁、防全表更新拦截器自动注册
 - 提供 RedisTemplate 序列化风格统一能力
 - 提供 Excel 扩展 converter 自动注册和 helper 工具类
-- 提供注解日志、Controller 请求日志、XSS 清洗和 Web MVC 日期绑定增强
+- 提供注解日志、Controller 请求日志、XSS 清洗和 Web MVC/WebFlux 日期绑定增强
 - 提供可选启动横幅，展示各能力开关及实际后端状态
 
 ---
@@ -106,7 +108,7 @@ velo:
 | Controller 调用日志 | 开启 | 关闭 | Web 环境下自动记录请求调用 |
 | Feign 调用日志 | 开启 | 关闭 | 存在 Feign 时自动记录远程调用 |
 | Jackson 增强 | 开启 | 关闭 | 影响 JSON 序列化、反序列化扩展 |
-| Spring Converter / Web MVC 日期绑定 | 开启 | 关闭 | 影响字符串到日期时间的全局转换 |
+| Spring Converter / Web MVC 与 WebFlux 日期绑定 | 开启 | 关闭 | 影响字符串到日期时间的全局转换 |
 | MyBatis-Plus 拦截器 | 开启 | 关闭 | 自动补充分页、乐观锁、防全表更新 |
 | RedisTemplate 自动补齐 | 开启 | 关闭 | 依赖 Redis classpath 与连接工厂 |
 | Redis Cache 自动补齐 | 开启 | 关闭 | 依赖 Spring Cache / Redis 条件 |
@@ -661,7 +663,7 @@ public class UserQuery {
 - `strategy` 可选 `NONE`、`ESCAPE`、`SIMPLE_TEXT`、`BASIC`、`BASIC_WITH_IMAGES`、`RELAXED`
 - `ESCAPE` 不依赖 `jsoup`；其他 HTML 清洗策略必须引入 `jsoup`
 - `ESCAPE` 且无 `jsoup` 时会走 Spring 转义；其他策略缺少 `jsoup` 时只打印 WARN，不注册 `XssCleaner`，也不会自动降级
-- 清洗发生在 Web MVC 的字符串参数绑定阶段，包括 query/form/path 和普通对象参数中通过 MVC binder 绑定的 `String` 字段
+- 清洗发生在 Web MVC/WebFlux 的字符串参数绑定阶段，包括 query/form/path 和普通对象参数中通过对应 binder 绑定的 `String` 字段
 - 同时启用 XSS 与 `velo.jackson.string-converter-enabled` 时，Jackson JSON 请求体中的普通 `String` 字段也会进行清洗；字段上的 `@XssIgnore` 可以跳过清洗，`@JsonDecode` 会在解码后继续执行清洗
 
 ### 8. Jackson
@@ -890,6 +892,18 @@ velo:
 - 当前默认 `max-payload-length=-1`，表示不限制长度；`0` 表示不序列化 payload 并记录为 `disabled`
 - 如果不需要这层日志，关闭 `velo.log.invocation.controller.enabled`
 
+WebFlux 项目使用同一套配置，应用只需按需引入对应的 `spring-boot-starter-webflux`。Spring Boot 2.7、3.x 和 4.x 均支持 WebFlux，Velo 会根据当前 Starter 版本自动适配；不引入 WebFlux 时，相关自动配置不会生效。
+
+WebFlux 版本的公开组件位于 `io.github.luminion.velo.webflux`：
+
+- `TraceIdWebFluxFilter`：生成/接收 `X-Trace-Id`，写入响应头、Reactor Context 和当前线程 MDC；跨线程场景以 Reactor Context 为准
+- `WebFluxControllerLogAspect`：Mono 在完成、异常或取消时记录退出日志；Flux 不缓存完整流，只记录完成时的元素数量或异常/取消状态
+- `WebFluxUtils`：所有方法显式接收 `ServerWebExchange`；Session、Principal、请求体和响应写入使用 `Mono`/`Flux`，不提供 Servlet 风格的阻塞输入输出流
+- `VeloWebFluxConfigurer`：复用 `velo.spring-converter`、`velo.web.xss` 和 `velo.web.cors` 配置，提供日期转换、XSS 字符串转换和 CORS
+- `VeloWebFluxExceptionHandler`、`VeloValidationWebFluxExceptionHandler`：与 Servlet 异常基类一样只提供可继承逻辑，不自动注册，具体实现类仍需显式添加 `@RestControllerAdvice`
+
+Controller 日志序列化复用 WebFlux 实际配置的 `HttpMessageWriter`，不直接绑定 Jackson 2 或 Jackson 3；因此 Boot 4 使用 Jackson 3、显式启用 Jackson 2 或用户自定义 WebFlux JSON 编解码器时都可以工作。
+
 ### 4. Feign 调用日志
 
 如果项目中存在 `@FeignClient`，Velo 会按统一调用日志格式记录 Feign 调用，并自动透传 `X-Trace-Id`。
@@ -957,7 +971,10 @@ velo:
 
 ## Web 异常处理扩展
 
-`VeloWebExceptionHandler` 和 `VeloValidationWebExceptionHandler` 是可复用的异常处理基类，不会自动注册为 Spring 组件。
+Servlet MVC 使用 `io.github.luminion.velo.web.exception` 下的 `VeloWebExceptionHandler` 和
+`VeloValidationWebExceptionHandler`；WebFlux 使用 `io.github.luminion.velo.webflux.exception` 下的
+`VeloWebFluxExceptionHandler` 和 `VeloValidationWebFluxExceptionHandler`。两套都是可复用的异常处理基类，
+不会自动注册为 Spring 组件。
 
 应用继承或实现具体异常处理类时，需要在具体类上显式添加 `@RestControllerAdvice`，并通过构造函数提供失败响应和系统异常响应的转换函数。这样可以避免用户扫描 `io.github.luminion` 等宽范围包时，Spring 误尝试实例化缺少构造函数依赖的泛型基类。
 

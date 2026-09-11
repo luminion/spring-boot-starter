@@ -371,7 +371,7 @@ public class VeloProperties {
         private LogLevel level = LogLevel.INFO;
 
         /**
-         * Trace id settings used by MDC, servlet responses and Feign propagation.
+         * Trace id settings used by MDC, HTTP responses and Feign propagation.
          */
         private TraceProperties trace = new TraceProperties();
 
@@ -416,7 +416,7 @@ public class VeloProperties {
         private String mdcKey = "traceId";
 
         /**
-         * Writes the trace id back to servlet responses.
+         * Writes the trace id back to HTTP responses.
          */
         private boolean responseHeaderEnabled = true;
 
@@ -489,7 +489,7 @@ public class VeloProperties {
     public static class WebProperties {
 
         /**
-         * Enables web MVC auto-configuration.
+         * Enables Web MVC/WebFlux auto-configuration.
          */
         private boolean enabled = true;
 
@@ -508,7 +508,7 @@ public class VeloProperties {
     public static class CorsProperties {
 
         /**
-         * Enables CORS handling in the MVC configurer.
+         * Enables CORS handling in the Web MVC/WebFlux configurer.
          */
         private boolean enabled;
 

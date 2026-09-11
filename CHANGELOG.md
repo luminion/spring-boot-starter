@@ -1,5 +1,7 @@
 # 更新记录
 
+> 修改记录：2026-09-11 22:36，新增 WebFlux 响应式 Web 增强及 Boot 2/3/4 回归测试，补充 Servlet/WebFlux 命名和请求模型边界；原因是 WebFlux 与 Servlet 使用不同请求模型，原有 Servlet 组件不能直接提供响应式容器能力。
+
 > 修改记录：2026-09-11 18:09，修复 Jakarta/Javax WebUtils 在非 Servlet 请求上下文中直接强制转换导致的异常类型不一致，并补充双命名空间回归测试；原因是 JavaDoc 约定抛出 `IllegalStateException`，实际可能抛出 `ClassCastException`。
 
 > 修改记录：2026-09-11 14:35，明确 Velo 内置 MyBatis-Plus 拦截器的低优先级顺序及用户 `@Order` 覆盖能力，并补充顺序回归测试；原因是自动配置不应抢占用户自定义 SQL 拦截器的执行位置。
@@ -37,6 +39,7 @@
 
 ### 新增
 - `@InvokeLog` 新增 `argsOnFinish` 开关，可在正常返回或异常结束时记录当前参数状态；无返回值的方法记录为 `result=void`，返回 `null` 时记录为 `result=null`；payload 被忽略、配置关闭或序列化失败时分别记录 `ignored`、`disabled`、`serialization-failed`
+- 新增 WebFlux 响应式增强：提供 `TraceIdWebFluxFilter`、`WebFluxUtils`、`WebFluxControllerLogAspect`、`VeloWebFluxConfigurer`、`VeloWebFluxExceptionHandler` 及 Javax/Jakarta 校验异常处理器，复用现有 `velo.*` 配置
 
 ### 修复
 - Redis 自动配置顺序修复：Velo Redis 模板优先于 Spring Boot 官方模板创建，缺省序列化使用带类型信息的 JSON 序列化，避免意外退回 JDK 序列化。
@@ -50,6 +53,7 @@
 - 枚举派生字段修复：全局 `velo.jackson.enum-mappings` 为空时继续关闭隐式映射，但完整指定 `codeField` 和 `nameField` 的 `@JsonEnum` 仍可独立生成描述字段。
 - 本地限流器初始化状态修复：Caffeine 与 JDK 实现不再使用时间戳 `0` 作为未初始化或未访问哨兵，避免合法的零起始单调时钟导致令牌桶重复初始化或 JDK 桶无法被空闲清理；补充两套回归测试。
 - WebUtils 请求属性类型校验修复：Jakarta/Javax 实现在无 Servlet 请求上下文或绑定非 Servlet `RequestAttributes` 时统一抛出 `IllegalStateException`，避免与 JavaDoc 契约不一致；补充双命名空间回归测试。
+- Servlet Web 自动配置增加 `DispatcherServlet` 类路径条件，纯 WebFlux 应用缺少 MVC 类时不会尝试加载 Servlet 配置。
 
 ### 调整
 - Excel Helper 的 `createExtraConverters(...)` 统一返回独立可变列表，调用方可在注册前追加自定义 converter。
@@ -57,12 +61,14 @@
 - `java.util.Date` 默认输入同时兼容 `yyyy-MM-dd HH:mm:ss` 和 `yyyy-MM-dd`，日期-only 按默认时区解析为当天零点；Spring `@DateTimeFormat` 与 Jackson `@JsonFormat` 的显式格式继续优先于 Starter 默认格式。
 - Redis 缓存和 RedisTemplate 的默认序列化器改为 `RedisSerializer.json()`；用户显式提供任意名称的 `RedisSerializer<Object>` Bean 仍优先，Boot 4 同时存在 Jackson 2/3 时默认遵循 Spring Data Redis 4 的 Jackson 3 实现。
 - MyBatis-Plus 内置 `InnerInterceptor` 默认顺序明确为 `OptimisticLocker → BlockAttack → Pagination`，整体使用低优先级值；用户可通过 `@Order` 将自定义拦截器放在 Velo 前后。
+- WebFlux Controller 日志使用 Reactor Context 获取请求和 trace 信息；Mono 在完成、异常或取消时记录退出日志，Flux 不全量缓冲响应，仅记录元素数量或终止状态；WebFlux JSON 日志序列化复用实际 `HttpMessageWriter`，兼容 Jackson 2/3。
 
 ### 文档
 - 补充 XSS 与 Jackson JSON 请求体的边界说明：同时启用 XSS 和 Jackson 字符串转换时，JSON 请求体中的普通字符串会被清洗，字段上的 `@XssIgnore` 可显式放行。
 - 补充 Boot 4 Jackson 2/3 与 Redis 序列化器的选择规则：需要 Jackson 2 时显式提供 `RedisSerializer<Object>` Bean。
 - 补充 Redis JSON 序列化的跨版本兼容边界：Boot 2/3 默认使用 Jackson 2，Boot 4 默认使用 Jackson 3；两者同时存在时默认仍使用 Jackson 3，显式 `RedisSerializer<Object>` Bean 可覆盖。Jackson 2 序列化器仅作为兼容或迁移路径，动态类型方案要求 Redis 为应用独占的可信基础设施。
 - 补充 MyBatis-Plus 3.5.9+ 的 `mybatis-plus-jsqlparser-4.9` 前置依赖说明：缺少该模块时分页和防全表更新拦截器会按 classpath 条件跳过注册；补充有/无扩展模块的自动配置回归测试。
+- 补充 Spring Boot 2.7、3.x、4.x 的 WebFlux 引入方式、组件命名、`ServerWebExchange` 显式传递、Mono/Flux 日志语义及 WebFlux 异常处理基类使用说明。
 
 ## 1.3.0
 

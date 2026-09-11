@@ -23,6 +23,7 @@ import java.util.Collections;
  * Web MVC 自动配置。
  */
 @AutoConfiguration
+@ConditionalOnClass(name = "org.springframework.web.servlet.DispatcherServlet")
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 @ConditionalOnProperty(prefix = "velo.web", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloWebAutoConfiguration {
