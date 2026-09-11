@@ -1,5 +1,7 @@
 # 更新记录
 
+> 修改记录：2026-09-11 14:35，明确 Velo 内置 MyBatis-Plus 拦截器的低优先级顺序及用户 `@Order` 覆盖能力，并补充顺序回归测试；原因是自动配置不应抢占用户自定义 SQL 拦截器的执行位置。
+
 > 修改记录：2026-09-11 09:43，补充 MyBatis-Plus 3.5.9+ 分页和防全表更新拦截器所需的 JSQLParser 扩展依赖说明及有/无依赖回归测试；原因是该扩展默认不再随 MyBatis-Plus 主 starter 携带，缺少时对应功能会按 classpath 条件跳过注册。
 
 > 修改记录：2026-09-10 15:58，记录本地限流器使用显式初始化状态修复及 Caffeine/JDK 零起始时钟回归测试；原因是时间戳 `0` 是合法的单调时钟值，不能同时作为未初始化或未访问哨兵。
@@ -51,6 +53,7 @@
 - 日志相关类迁移至 `velo-autoconfigure-common`：`InvokeLog`、`SlowLog` 注解，`InvokeLogAspect`、`SlowLogAspect` 切面，以及 `VeloLogAutoConfiguration` 均不依赖 servlet API，统一收归 common 模块，消除 jakarta/javax 双份冗余。
 - `java.util.Date` 默认输入同时兼容 `yyyy-MM-dd HH:mm:ss` 和 `yyyy-MM-dd`，日期-only 按默认时区解析为当天零点；Spring `@DateTimeFormat` 与 Jackson `@JsonFormat` 的显式格式继续优先于 Starter 默认格式。
 - Redis 缓存和 RedisTemplate 的默认序列化器改为 `RedisSerializer.json()`；用户显式提供任意名称的 `RedisSerializer<Object>` Bean 仍优先，Boot 4 同时存在 Jackson 2/3 时默认遵循 Spring Data Redis 4 的 Jackson 3 实现。
+- MyBatis-Plus 内置 `InnerInterceptor` 默认顺序明确为 `OptimisticLocker → BlockAttack → Pagination`，整体使用低优先级值；用户可通过 `@Order` 将自定义拦截器放在 Velo 前后。
 
 ### 文档
 - 补充 XSS 与 Jackson JSON 请求体的边界说明：同时启用 XSS 和 Jackson 字符串转换时，JSON 请求体中的普通字符串会被清洗，字段上的 `@XssIgnore` 可显式放行。

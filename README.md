@@ -34,6 +34,8 @@ Velo Spring Boot Starter 是一组低侵入的 Spring Boot 自动配置扩展。
 > 修改记录：2026-09-10 15:15，明确三个 Excel Helper 的 `createExtraConverters(...)` 返回可变列表，可在注册前追加自定义 converter；原因是公开工厂方法返回不可变列表容易造成扩展调用方无法组合自定义转换器的歧义。
 >
 > 修改记录：2026-09-11 09:40，补充 MyBatis-Plus 3.5.9 及以上分页和防全表更新功能所需的 JSQLParser 扩展依赖；原因是该依赖默认不再随 MyBatis-Plus 主 starter 携带，缺少时对应拦截器会按 classpath 条件跳过注册。
+>
+> 修改记录：2026-09-11 14:13，明确 Velo 内置 MyBatis-Plus 拦截器的低优先级顺序，并说明用户可通过 `@Order` 覆盖；原因是自动配置不应抢占用户自定义 SQL 拦截器的执行位置。
 
 
 ## 功能特性
@@ -745,6 +747,8 @@ velo:
 - `velo.mybatis-plus.enabled` 默认开启
 - 若容器里已经存在同类 `InnerInterceptor` Bean，starter 不会覆盖
 - 默认会把当前容器中的 `InnerInterceptor` 汇总进 `MybatisPlusInterceptor`
+- Velo 内置拦截器默认按 `OptimisticLocker → BlockAttack → Pagination` 排列，使用低优先级值 `LOWEST_PRECEDENCE - 300/-200/-100`
+- 用户可以在自定义 `InnerInterceptor` Bean 方法上使用 `@Order` 控制执行位置；通常值越小越先执行，未声明 `@Order` 时不承诺与 Velo 的严格相对顺序
 
 ### 10. Redis 自动配置
 

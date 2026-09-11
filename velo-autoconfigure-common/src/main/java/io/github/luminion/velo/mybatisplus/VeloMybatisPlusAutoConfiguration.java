@@ -10,6 +10,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 
 import java.util.List;
 
@@ -36,6 +38,7 @@ public class VeloMybatisPlusAutoConfiguration {
     @ConditionalOnClass(name = "com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor")
     static class PaginationInnerInterceptorConfiguration {
         @Bean
+        @Order(Ordered.LOWEST_PRECEDENCE - 100)
         @ConditionalOnMissingBean(type = "com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor")
         @ConditionalOnProperty(prefix = "velo.mybatis-plus", name = "pagination-enabled", havingValue = "true", matchIfMissing = true)
         @SneakyThrows
@@ -50,6 +53,7 @@ public class VeloMybatisPlusAutoConfiguration {
     @ConditionalOnClass(name = "com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor")
     static class OptimisticLockerInnerInterceptorConfiguration {
         @Bean
+        @Order(Ordered.LOWEST_PRECEDENCE - 300)
         @ConditionalOnMissingBean(type = "com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor")
         @ConditionalOnProperty(prefix = "velo.mybatis-plus", name = "optimistic-locker-enabled", havingValue = "true", matchIfMissing = true)
         @SneakyThrows
@@ -64,6 +68,7 @@ public class VeloMybatisPlusAutoConfiguration {
     @ConditionalOnClass(name = "com.baomidou.mybatisplus.extension.plugins.inner.BlockAttackInnerInterceptor")
     static class BlockAttackInnerInterceptorConfiguration {
         @Bean
+        @Order(Ordered.LOWEST_PRECEDENCE - 200)
         @ConditionalOnMissingBean(type = "com.baomidou.mybatisplus.extension.plugins.inner.BlockAttackInnerInterceptor")
         @ConditionalOnProperty(prefix = "velo.mybatis-plus", name = "block-attack-enabled", havingValue = "true", matchIfMissing = true)
         @SneakyThrows
