@@ -1,6 +1,7 @@
 package io.github.luminion.velo.lock.support;
 
-import io.github.luminion.velo.lock.LockHandler;
+import io.github.luminion.velo.lock.LockToken;
+import io.github.luminion.velo.lock.ReactiveLockHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -13,6 +14,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -26,7 +29,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * 需显式调大 lease 或改用 Redisson 看门狗。
  */
 @Slf4j
-public class RedisLockHandler implements LockHandler {
+public class RedisLockHandler implements ReactiveLockHandler {
 
     private static final String RELEASE_LUA = "if redis.call('get', KEYS[1]) == ARGV[1] then " +
             "return redis.call('del', KEYS[1]) " +
@@ -67,59 +70,18 @@ public class RedisLockHandler implements LockHandler {
             return true;
         }
 
-        long waitNanos = TimeUnit.MILLISECONDS.toNanos(waitTime);
-        // 该后端基于 setIfAbsent 固定 TTL，无续约线程，不支持看门狗(-1)；
-        // 降级为固定租约避免负 TTL 直接报错，并提示改用 Redisson 以获得自动续约。
-        long leaseMillis;
-        if (leaseTime < 0L) {
-            leaseMillis = WATCHDOG_FALLBACK_LEASE_MILLIS;
-            if (watchdogFallbackWarned.compareAndSet(false, true)) {
-                log.warn("[Velo Starter] RedisLockHandler does not support watchdog auto-renewal (lease=-1). " +
-                        "Falling back to a fixed lease of {}ms. If your business method may run longer, " +
-                        "set an explicit lease or switch to RedissonLockHandler.", WATCHDOG_FALLBACK_LEASE_MILLIS);
-            }
-        } else {
-            leaseMillis = leaseTime;
-        }
-        long startNanos = System.nanoTime();
-
-        while (true) {
-            String lockValue = UUID.randomUUID().toString();
-            Boolean success = redisTemplate.opsForValue().setIfAbsent(key, lockValue, leaseMillis, TimeUnit.MILLISECONDS);
-            if (success == null) {
-                // setIfAbsent 返回 null 说明命令被 Redis 事务/pipeline 排队而非立即执行，加锁判定失效。
-                // 分布式锁不应包裹在 Redis 事务里，打 WARN 提示误用。
-                log.warn("[Velo Starter] Redis lock setIfAbsent returned null for key '{}'. " +
-                        "This usually means the operation is wrapped in a Redis transaction/pipeline, " +
-                        "which defers execution and breaks locking. Avoid acquiring locks inside a Redis transaction.", key);
-            }
-            if (Boolean.TRUE.equals(success)) {
-                // 首次获取成功，记录 owner token，解锁时用它和 Redis 当前值比对，避免误删已续租或被他人重建的锁。
-                if (values == null) {
-                    values = new HashMap<>();
-                    lockValues.set(values);
-                }
-                values.computeIfAbsent(key, k -> new ArrayDeque<>()).push(lockValue);
-                return true;
-            }
-
-            if (waitNanos <= 0L) {
-                break;
-            }
-
-            long remainingNanos = waitNanos - (System.nanoTime() - startNanos);
-            if (remainingNanos <= 0L) {
-                break;
-            }
-            try {
-                TimeUnit.NANOSECONDS.sleep(Math.min(remainingNanos, retryIntervalNanos));
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                return false;
-            }
+        String lockValue = acquireRedisLock(key, waitTime, leaseTime);
+        if (lockValue == null) {
+            return false;
         }
 
-        return false;
+        // 首次获取成功，记录 owner token，解锁时用它和 Redis 当前值比对，避免误删已续租或被他人重建的锁。
+        if (values == null) {
+            values = new HashMap<>();
+            lockValues.set(values);
+        }
+        values.computeIfAbsent(key, k -> new ArrayDeque<>()).push(lockValue);
+        return true;
     }
 
     @Override
@@ -146,7 +108,7 @@ public class RedisLockHandler implements LockHandler {
             // 仅最外层释放时才真正删除 Redis 锁；重入的内层释放只递减本地持有计数。
             // 删除动作必须和 token 校验放在同一个 Lua 脚本里，才能保证"检查后删除"是原子的。
             if (outermost) {
-                redisTemplate.execute(RELEASE_SCRIPT, Collections.singletonList(key), lockValue);
+                releaseRedisLock(key, lockValue);
             }
         } catch (Exception e) {
             log.warn("Redis unlock failed for key: {}", key, e);
@@ -154,6 +116,80 @@ public class RedisLockHandler implements LockHandler {
             if (values.isEmpty()) {
                 lockValues.remove();
             }
+        }
+    }
+
+    @Override
+    public CompletionStage<LockToken> lockToken(String key, long waitTime, long leaseTime) {
+        String lockValue = acquireRedisLock(key, waitTime, leaseTime);
+        return CompletableFuture.completedFuture(lockValue == null ? null : new LockToken(key, lockValue));
+    }
+
+    @Override
+    public CompletionStage<Void> unlockToken(LockToken token) {
+        if (token == null || !(token.getOwner() instanceof String)) {
+            return CompletableFuture.completedFuture(null);
+        }
+        releaseRedisLock(token.getKey(), (String) token.getOwner());
+        return CompletableFuture.completedFuture(null);
+    }
+
+    private String acquireRedisLock(String key, long waitTime, long leaseTime) {
+        long waitNanos = TimeUnit.MILLISECONDS.toNanos(waitTime);
+        long leaseMillis = resolveLeaseMillis(leaseTime);
+        long startNanos = System.nanoTime();
+
+        while (true) {
+            String lockValue = UUID.randomUUID().toString();
+            Boolean success = redisTemplate.opsForValue().setIfAbsent(key, lockValue, leaseMillis, TimeUnit.MILLISECONDS);
+            if (success == null) {
+                // setIfAbsent 返回 null 说明命令被 Redis 事务/pipeline 排队而非立即执行，加锁判定失效。
+                // 分布式锁不应包裹在 Redis 事务里，打 WARN 提示误用。
+                log.warn("[Velo Starter] Redis lock setIfAbsent returned null for key '{}'. " +
+                        "This usually means the operation is wrapped in a Redis transaction/pipeline, " +
+                        "which defers execution and breaks locking. Avoid acquiring locks inside a Redis transaction.", key);
+            }
+            if (Boolean.TRUE.equals(success)) {
+                return lockValue;
+            }
+
+            if (waitNanos <= 0L) {
+                return null;
+            }
+
+            long remainingNanos = waitNanos - (System.nanoTime() - startNanos);
+            if (remainingNanos <= 0L) {
+                return null;
+            }
+            try {
+                TimeUnit.NANOSECONDS.sleep(Math.min(remainingNanos, retryIntervalNanos));
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return null;
+            }
+        }
+    }
+
+    private long resolveLeaseMillis(long leaseTime) {
+        // 该后端基于 setIfAbsent 固定 TTL，无续约线程，不支持看门狗(-1)；
+        // 降级为固定租约避免负 TTL 直接报错，并提示改用 Redisson 以获得自动续约。
+        if (leaseTime < 0L) {
+            if (watchdogFallbackWarned.compareAndSet(false, true)) {
+                log.warn("[Velo Starter] RedisLockHandler does not support watchdog auto-renewal (lease=-1). " +
+                        "Falling back to a fixed lease of {}ms. If your business method may run longer, " +
+                        "set an explicit lease or switch to RedissonLockHandler.", WATCHDOG_FALLBACK_LEASE_MILLIS);
+            }
+            return WATCHDOG_FALLBACK_LEASE_MILLIS;
+        }
+        return leaseTime;
+    }
+
+    private void releaseRedisLock(String key, String lockValue) {
+        try {
+            // 仅当 token 匹配时删除，避免误删其他请求已经重新获取的锁。
+            redisTemplate.execute(RELEASE_SCRIPT, Collections.singletonList(key), lockValue);
+        } catch (Exception e) {
+            log.warn("Redis unlock failed for key: {}", key, e);
         }
     }
 

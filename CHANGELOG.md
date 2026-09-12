@@ -1,5 +1,7 @@
 # 更新记录
 
+> 修改记录：2026-09-12 20:03，补齐 `@Idempotent`、`@RateLimit`、`@Lock`、`@InvokeLog` 和 `@SlowLog` 在 WebFlux `Mono/Flux` 生命周期中的支持，并新增响应式锁所有权令牌契约；原因是同步切面只能覆盖 Publisher 组装阶段，无法安全承担订阅期间的加锁、幂等清理和耗时统计。
+
 > 修改记录：2026-09-11 22:36，新增 WebFlux 响应式 Web 增强及 Boot 2/3/4 回归测试，补充 Servlet/WebFlux 命名和请求模型边界；原因是 WebFlux 与 Servlet 使用不同请求模型，原有 Servlet 组件不能直接提供响应式容器能力。
 
 > 修改记录：2026-09-12 02:26，修复 Redis、MyBatis-Plus 可选依赖缺失时自动配置可能导致应用启动失败的问题，并补充 Boot 2/3/4 隔离回归测试。
@@ -38,10 +40,12 @@
 - 移除旧 CORS 配置项 `velo.web.allow-cors`，仅保留 `velo.web.cors.enabled`；升级时需迁移配置，旧配置不再生效。
 - `velo.web.cors.allow-credentials` 默认值由 `true` 调整为 `false`；Cookie/Session 跨域场景需显式设置为 `true`，并配置明确来源。
 - 通用 Web 异常处理基类不再自动注册为 `@RestControllerAdvice` 组件；升级后需在具体异常处理实现类上显式添加该注解，并提供构造函数依赖。
+- 用户自定义 `LockHandler` 如需用于 WebFlux `@Lock`，必须同时实现 `ReactiveLockHandler` 以提供跨 Reactor 线程的令牌式加锁与释放；仅实现同步 `lock/unlock` 的处理器在响应式订阅时会明确报错，需补充新接口实现。
 
 ### 新增
 - `@InvokeLog` 新增 `argsOnFinish` 开关，可在正常返回或异常结束时记录当前参数状态；无返回值的方法记录为 `result=void`，返回 `null` 时记录为 `result=null`；payload 被忽略、配置关闭或序列化失败时分别记录 `ignored`、`disabled`、`serialization-failed`
 - 新增 WebFlux 响应式增强：提供 `TraceIdWebFluxFilter`、`WebFluxUtils`、`WebFluxControllerLogAspect`、`VeloWebFluxConfigurer`、`VeloWebFluxExceptionHandler` 及 Javax/Jakarta 校验异常处理器，复用现有 `velo.*` 配置
+- 新增 WebFlux 响应式注解切面：`@Idempotent`、`@RateLimit`、`@Lock`、`@InvokeLog` 和 `@SlowLog` 在订阅、完成、异常及取消信号上执行对应逻辑；JDK、Redis、Redisson 内置锁处理器支持响应式令牌所有权
 
 ### 修复
 - Redis 自动配置顺序修复：Velo Redis 模板优先于 Spring Boot 官方模板创建，缺省序列化使用带类型信息的 JSON 序列化，避免意外退回 JDK 序列化。
@@ -57,6 +61,7 @@
 - WebUtils 请求属性类型校验修复：Jakarta/Javax 实现在无 Servlet 请求上下文或绑定非 Servlet `RequestAttributes` 时统一抛出 `IllegalStateException`，避免与 JavaDoc 契约不一致；补充双命名空间回归测试。
 - Servlet Web 自动配置增加 `DispatcherServlet` 类路径条件，纯 WebFlux 应用缺少 MVC 类时不会尝试加载 Servlet 配置。
 - 可选依赖自动配置隔离修复：Redis 缺少 Spring Data Redis 或 MyBatis-Plus 缺失时，Boot 2/3/4 自动配置安全跳过，不再因 Redis 连接配置导入或条件 Bean 类型推断导致应用启动失败；补充三版本缺失依赖回归测试。
+- 同步并发与方法日志切面遇到 `Mono`、`Flux` 或其他 Reactive Streams `Publisher` 返回类型时放行，由独立 WebFlux 响应式切面接管，避免在 Publisher 组装阶段提前释放锁、清理幂等记录或记录错误耗时。
 
 ### 调整
 - Excel Helper 的 `createExtraConverters(...)` 统一返回独立可变列表，调用方可在注册前追加自定义 converter。
@@ -65,6 +70,7 @@
 - Redis 缓存和 RedisTemplate 的默认序列化器改为 `RedisSerializer.json()`；用户显式提供任意名称的 `RedisSerializer<Object>` Bean 仍优先，Boot 4 同时存在 Jackson 2/3 时默认遵循 Spring Data Redis 4 的 Jackson 3 实现。
 - MyBatis-Plus 内置 `InnerInterceptor` 默认顺序明确为 `OptimisticLocker → BlockAttack → Pagination`，整体使用低优先级值；用户可通过 `@Order` 将自定义拦截器放在 Velo 前后。
 - WebFlux Controller 日志使用 Reactor Context 获取请求和 trace 信息；Mono 在完成、异常或取消时记录退出日志，Flux 不全量缓冲响应，仅记录元素数量或终止状态；WebFlux JSON 日志序列化复用实际 `HttpMessageWriter`，兼容 Jackson 2/3。
+- WebFlux 响应式注解切面与 Web 层配置分离，`velo.web.enabled=false` 不会关闭这些注解能力；响应式方法需声明为 `Mono`、`Flux` 或其他 `Publisher`，声明为 `Object` 但运行时返回 Publisher 时仍按同步方法处理。
 
 ### 文档
 - 补充 XSS 与 Jackson JSON 请求体的边界说明：同时启用 XSS 和 Jackson 字符串转换时，JSON 请求体中的普通字符串会被清洗，字段上的 `@XssIgnore` 可显式放行。

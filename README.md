@@ -45,6 +45,8 @@ Velo Spring Boot Starter 是一组低侵入的 Spring Boot 自动配置扩展。
 
 > 修改记录：2026-09-11 22:26，新增 WebFlux 版本的 trace、Controller 日志、请求工具、日期/XSS/CORS 配置和异常处理扩展，并明确 Boot 2/3/4 均需由应用按需引入 `spring-boot-starter-webflux`；原因是 WebFlux 与 Servlet MVC 使用不同请求模型，不能直接复用 Servlet 组件。
 
+> 修改记录：2026-09-12 19:40，补齐 `@Idempotent`、`@RateLimit`、`@Lock`、`@InvokeLog` 和 `@SlowLog` 在 WebFlux `Mono/Flux` 生命周期中的响应式支持，并说明自定义响应式锁处理器的扩展契约；原因是同步切面只能覆盖 Publisher 组装阶段，不能安全承担订阅期间的加锁、幂等清理和耗时统计。
+
 
 ## 功能特性
 
@@ -902,11 +904,21 @@ WebFlux 版本的公开组件位于 `io.github.luminion.velo.webflux`：
 
 - `TraceIdWebFluxFilter`：生成/接收 `X-Trace-Id`，写入响应头、Reactor Context 和当前线程 MDC；跨线程场景以 Reactor Context 为准
 - `WebFluxControllerLogAspect`：Mono 在完成、异常或取消时记录退出日志；Flux 不缓存完整流，只记录完成时的元素数量或异常/取消状态
+- `WebFluxIdempotentAspect`、`WebFluxRateLimitAspect`、`WebFluxLockAspect`：让 `@Idempotent`、`@RateLimit`、`@Lock` 在响应式订阅时生效；幂等成功后保留 TTL，异常/取消时清理本次记录，锁在完成/异常/取消时释放，限流检查不会在 Publisher 组装阶段提前执行
+- `WebFluxInvokeLogAspect`、`WebFluxSlowLogAspect`：让方法日志绑定真实的 Mono/Flux 订阅生命周期；Mono 按完成、异常或取消记录，Flux 不缓存完整数据，只记录元素数量，慢日志按真实完成耗时判断
 - `WebFluxUtils`：所有方法显式接收 `ServerWebExchange`；Session、Principal、请求体和响应写入使用 `Mono`/`Flux`，不提供 Servlet 风格的阻塞输入输出流
 - `VeloWebFluxConfigurer`：复用 `velo.spring-converter`、`velo.web.xss` 和 `velo.web.cors` 配置，提供日期转换、XSS 字符串转换和 CORS
 - `VeloWebFluxExceptionHandler`、`VeloValidationWebFluxExceptionHandler`：与 Servlet 异常基类一样只提供可继承逻辑，不自动注册，具体实现类仍需显式添加 `@RestControllerAdvice`
 
 Controller 日志序列化复用 WebFlux 实际配置的 `HttpMessageWriter`，不直接绑定 Jackson 2 或 Jackson 3；因此 Boot 4 使用 Jackson 3、显式启用 Jackson 2 或用户自定义 WebFlux JSON 编解码器时都可以工作。
+
+WebFlux 响应式注解切面说明：
+
+- 响应式方法需要将返回类型声明为 `Mono`、`Flux` 或其他 Reactive Streams `Publisher`；如果方法声明为 `Object` 但运行时返回 Publisher，Velo 无法在同步切面与响应式切面之间可靠分流，按同步方法处理
+- 响应式切面与同步切面共存，使用相同注解、配置项和 `velo.aspect-order.*` 顺序；同步切面会放行 Publisher，避免在组装阶段重复加锁、限流或写日志
+- JDK、Redis、Redisson 内置锁处理器均支持跨 Reactor 线程的令牌式加锁与释放。用户自定义 `LockHandler` 如需用于 WebFlux `@Lock`，必须同时实现 `ReactiveLockHandler`；只有同步 `lock/unlock` 实现时，响应式 `@Lock` 会在订阅时明确报错，不会尝试使用不安全的线程绑定释放方式
+- Redis/JDK 的响应式锁调用会放到 bounded-elastic 调度器，Redisson 使用显式 thread id 的异步 API；业务 Publisher 本身仍由应用的 Reactor 调度策略决定
+- 响应式注解切面自动配置与 Web 层配置分离，因此 `velo.web.enabled=false` 不会关闭这些注解能力；`velo.idempotent.enabled`、`velo.rate-limit.enabled`、`velo.lock.enabled`、`velo.log.invocation.method.enabled` 仍分别控制对应功能
 
 ### 4. Feign 调用日志
 

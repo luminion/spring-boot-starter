@@ -1,6 +1,7 @@
 package io.github.luminion.velo.log.aspect;
 
 import io.github.luminion.velo.VeloProperties;
+import io.github.luminion.velo.core.ReactiveTypeSupport;
 import io.github.luminion.velo.core.VeloAdvisorOrder;
 import io.github.luminion.velo.log.InvocationLogRecord;
 import io.github.luminion.velo.log.InvocationLogSource;
@@ -57,6 +58,9 @@ public class InvokeLogAspect implements Ordered {
             "|| @annotation(io.github.luminion.velo.log.annotation.InvokeLog)")
     public Object logInvocation(ProceedingJoinPoint joinPoint) throws Throwable {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
+        if (ReactiveTypeSupport.isReactiveType(signature.getReturnType())) {
+            return joinPoint.proceed();
+        }
         RuntimeJsonSerializer runtimeJsonSerializer = runtimeJsonSerializer();
         VeloProperties.InvocationProperties invocationProperties = properties.getLog().getInvocation();
         LogPayloadIgnore logPayloadIgnore = InvocationLogSupport.findLogPayloadIgnore(signature, joinPoint.getTarget());

@@ -2,6 +2,7 @@ package io.github.luminion.velo.lock.aspect;
 
 import io.github.luminion.velo.core.VeloAdvisorOrder;
 import io.github.luminion.velo.core.VeloMessageResolver;
+import io.github.luminion.velo.core.ReactiveTypeSupport;
 import io.github.luminion.velo.spi.Fingerprinter;
 import io.github.luminion.velo.util.ConcurrencyAnnotationUtils;
 import io.github.luminion.velo.lock.LockHandler;
@@ -55,6 +56,9 @@ public class LockAspect implements Ordered {
     @Around("@annotation(lock)")
     public Object doLock(ProceedingJoinPoint joinPoint, Lock lock) throws Throwable {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
+        if (ReactiveTypeSupport.isReactiveType(signature.getReturnType())) {
+            return joinPoint.proceed();
+        }
         Method method = ConcurrencyAnnotationUtils.resolveSpecificMethod(joinPoint.getTarget(), signature.getMethod());
         long wait = lock.waitTimeout();
         long lease = lock.lease();

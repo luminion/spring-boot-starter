@@ -2,6 +2,7 @@ package io.github.luminion.velo.idempotent.aspect;
 
 import io.github.luminion.velo.core.VeloAdvisorOrder;
 import io.github.luminion.velo.core.VeloMessageResolver;
+import io.github.luminion.velo.core.ReactiveTypeSupport;
 import io.github.luminion.velo.spi.Fingerprinter;
 import io.github.luminion.velo.util.ConcurrencyAnnotationUtils;
 import io.github.luminion.velo.idempotent.IdempotentHandler;
@@ -60,6 +61,9 @@ public class IdempotentAspect implements Ordered {
     @Around("@annotation(idempotent)")
     public Object doIdempotent(ProceedingJoinPoint joinPoint, Idempotent idempotent) throws Throwable {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
+        if (ReactiveTypeSupport.isReactiveType(signature.getReturnType())) {
+            return joinPoint.proceed();
+        }
         Method method = ConcurrencyAnnotationUtils.resolveSpecificMethod(joinPoint.getTarget(), signature.getMethod());
         long ttl = idempotent.ttl();
         if (ttl <= 0L) {

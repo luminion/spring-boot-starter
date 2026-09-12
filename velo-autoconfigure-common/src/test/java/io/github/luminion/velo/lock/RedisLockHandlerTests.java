@@ -142,4 +142,17 @@ class RedisLockHandlerTests {
         handler.unlock("order:1");
     }
 
+    @Test
+    void shouldSupportTokenBasedReactiveOwnership() {
+        when(valueOperations.setIfAbsent(anyString(), anyString(), anyLong(), any(TimeUnit.class))).thenReturn(true);
+
+        LockToken token = handler.lockToken("reactive:1", 0, 30000).toCompletableFuture().join();
+
+        assertThat(token).isNotNull();
+        handler.unlockToken(token).toCompletableFuture().join();
+
+        verify(redisTemplate).execute(any(RedisScript.class), eq(java.util.Collections.singletonList("reactive:1")),
+                eq(token.getOwner()));
+    }
+
 }

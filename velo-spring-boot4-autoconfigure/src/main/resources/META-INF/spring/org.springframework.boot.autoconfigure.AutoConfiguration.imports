@@ -22,6 +22,7 @@ io.github.luminion.velo.redis.VeloRedisAutoConfiguration
 io.github.luminion.velo.web.VeloWebAutoConfiguration
 io.github.luminion.velo.xss.VeloXssAutoConfiguration
 io.github.luminion.velo.webflux.VeloWebFluxAutoConfiguration
+io.github.luminion.velo.webflux.VeloWebFluxReactiveAspectAutoConfiguration
 io.github.luminion.velo.converter.VeloDateTimeFormatAutoConfiguration
 io.github.luminion.velo.excel.VeloExcelAutoConfiguration
 io.github.luminion.velo.jackson.VeloJacksonAutoConfiguration

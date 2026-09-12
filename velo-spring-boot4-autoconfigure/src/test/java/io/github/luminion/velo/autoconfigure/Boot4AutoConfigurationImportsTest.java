@@ -27,6 +27,7 @@ class Boot4AutoConfigurationImportsTest {
             assertTrue(imports.contains("io.github.luminion.velo.excel.VeloExcelAutoConfiguration"));
             assertTrue(imports.contains("io.github.luminion.velo.jackson.VeloJacksonAutoConfiguration"));
             assertTrue(imports.contains("io.github.luminion.velo.webflux.VeloWebFluxAutoConfiguration"));
+            assertTrue(imports.contains("io.github.luminion.velo.webflux.VeloWebFluxReactiveAspectAutoConfiguration"));
             assertTrue(!imports.contains("io.github.luminion.velo.web.VeloWebFluxAutoConfiguration"));
             assertTrue(!imports.contains("VeloIdempotentConfig"));
             assertTrue(!imports.contains("VeloLockConfig"));

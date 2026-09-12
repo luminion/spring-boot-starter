@@ -1,6 +1,7 @@
 package io.github.luminion.velo.log.aspect;
 
 import io.github.luminion.velo.VeloProperties;
+import io.github.luminion.velo.core.ReactiveTypeSupport;
 import io.github.luminion.velo.core.VeloAdvisorOrder;
 import io.github.luminion.velo.log.InvocationLogRecord;
 import io.github.luminion.velo.log.InvocationLogSource;
@@ -56,6 +57,9 @@ public class SlowLogAspect implements Ordered {
             "|| @annotation(io.github.luminion.velo.log.annotation.SlowLog)")
     public Object logTime(ProceedingJoinPoint joinPoint) throws Throwable {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
+        if (ReactiveTypeSupport.isReactiveType(signature.getReturnType())) {
+            return joinPoint.proceed();
+        }
 
         // 通过目标对象解析最具体方法，保证注解加在实现类方法上时也能正确读取
         Object target = joinPoint.getTarget();
