@@ -1,5 +1,7 @@
 # 更新记录
 
+> 修改记录：2026-09-12 21:47，校正 Excel converter 和 Redis 简单锁看门狗文档与当前实现一致；原因是旧说明仍引用已移除的 Excel 总开关，并将 Redis 简单锁误写为固定租约。
+
 > 修改记录：2026-09-12 20:03，补齐 `@Idempotent`、`@RateLimit`、`@Lock`、`@InvokeLog` 和 `@SlowLog` 在 WebFlux `Mono/Flux` 生命周期中的支持，并新增响应式锁所有权令牌契约；原因是同步切面只能覆盖 Publisher 组装阶段，无法安全承担订阅期间的加锁、幂等清理和耗时统计。
 
 > 修改记录：2026-09-11 22:36，新增 WebFlux 响应式 Web 增强及 Boot 2/3/4 回归测试，补充 Servlet/WebFlux 命名和请求模型边界；原因是 WebFlux 与 Servlet 使用不同请求模型，原有 Servlet 组件不能直接提供响应式容器能力。
@@ -107,7 +109,7 @@
 - 缓存雪崩防护增强：TTL 抖动改为写入时按 key 独立计算，可同时缓解「不同缓存类型同时过期」和「同一缓存类型大量 key 同时过期」两类问题
 - 限流令牌桶补充计算修复：高速率叠加长时间空闲时，令牌补充量因整型溢出变负导致限流永久卡死，现已修正（影响 JDK 与 Caffeine 两种本地限流器）
 - Excel 读取修复：`Float` 类型单元格因类型声明错误始终被读成 `null`，现可正常解析（影响 EasyExcel / FastExcel / Fesod 三种实现）
-- Excel 配置文档修复：统一说明 `velo.excel.enabled` 与 `velo.excel.converters.enabled` 均默认开启，明确前者关闭整个 Excel 自动配置、后者仅关闭 converter 自动注册
+- Excel 配置文档修复：统一说明 `velo.excel.converters.enabled` 默认开启且仅控制 converter 自动注册；Excel helper 手工调用不受该开关影响，Excel 自动配置没有重复的总开关
 - 幂等切面异常修复：业务失败回滚幂等记录时若清理动作自身抛异常（如 Redis 超时），不再覆盖原始业务异常，改为附加到 suppressed 保留现场
 - 本地锁实现合并：Caffeine 不提供互斥锁 API，锁的本地实现只能基于 `ConcurrentHashMap + ReentrantLock`，与 JDK 完全一致；移除单独的 `CaffeineLockHandler`，`CAFFEINE` 档位复用 `JdkLockHandler`（`backend=CAFFEINE` 仍可用），本地锁只保留一份实现，用引用计数管理锁对象生命周期
 - Redis 锁可重入修复：同线程重复获取同一把锁时按本地计数重入、不再自锁死，仅最外层释放才删除 Redis 锁；解锁仍用 Lua 脚本比对 owner token 保证原子
@@ -128,7 +130,7 @@
 - `@Lock` 空 key 行为：移除强制非空校验，安静降级为方法级锁（基于 `全限定类名#方法名(参数类型...)`）
 - `@Idempotent` 空 key 行为：降级为方法级幂等，并打印 WARN 日志提醒（通常不是期望行为）
 - `WebUtils` 提取 servlet 无关逻辑到 common 模块，减少 jakarta/javax 重复代码
-- `@Lock` 支持看门狗：`lease = -1` 请求自动续约，锁随业务执行自动延长、结束时释放，适合耗时不确定的长任务；仅 Redisson 后端真正支持，Redis 简单实现会降级为固定默认租约并打印告警，本地实现忽略该值靠方法结束释放
+- `@Lock` 支持看门狗：`lease = -1` 请求自动续约，锁随业务执行自动延长、结束时释放，适合耗时不确定的长任务；Redisson 使用原生看门狗，Redis 简单实现使用 30 秒初始 TTL 并每 10 秒按 token 原子续约，本地实现忽略该值靠方法结束释放
 - Web 异常提示健壮性：异常消息或 `Content-Type` 为 `null` 时返回兜底文案，不再出现 `null` 字样或潜在 NPE（影响 jakarta 与 javax 两个 Web 模块）
 - 分布式锁/幂等误用提示：检测到 `setIfAbsent` 被 Redis 事务或 pipeline 延迟执行（返回 `null`）时打印 WARN，提示不应将锁/幂等操作包裹在 Redis 事务内
 - Feign 调用日志：未配置 traceId 的 MDC key 时跳过 trace 处理，避免链路标识静默丢失

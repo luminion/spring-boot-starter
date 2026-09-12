@@ -1041,8 +1041,6 @@ velo:
     enabled: false
   lock:
     enabled: false
-  excel:
-    enabled: false
   spring-converter:
     date-time-enabled: false
 ```
