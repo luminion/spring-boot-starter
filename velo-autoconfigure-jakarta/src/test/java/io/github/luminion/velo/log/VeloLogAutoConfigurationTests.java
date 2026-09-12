@@ -41,22 +41,25 @@ class VeloLogAutoConfigurationTests {
     }
 
     @Test
-    void shouldSkipInvocationLoggingBeansWhenInvocationLoggingDisabled() {
+    void shouldKeepAnnotationLoggingIndependentFromEndpointLogging() {
         contextRunner
-                .withPropertyValues("velo.log.invocation.enabled=false")
+                .withPropertyValues(
+                        "velo.log.controller.enabled=false",
+                        "velo.log.feign.enabled=false"
+                )
                 .run(context -> {
-                    assertThat(context).doesNotHaveBean(InvocationLogWriter.class);
-                    assertThat(context).doesNotHaveBean(InvokeLogAspect.class);
-                    assertThat(context).doesNotHaveBean(SlowLogAspect.class);
+                    assertThat(context).hasSingleBean(InvocationLogWriter.class);
+                    assertThat(context).hasSingleBean(InvokeLogAspect.class);
+                    assertThat(context).hasSingleBean(SlowLogAspect.class);
                 });
     }
 
     @Test
-    void shouldSkipMethodAspectsWhenMethodInvocationLoggingDisabled() {
+    void shouldSkipAllLoggingBeansWhenLogDisabled() {
         contextRunner
-                .withPropertyValues("velo.log.invocation.method.enabled=false")
+                .withPropertyValues("velo.log.enabled=false")
                 .run(context -> {
-                    assertThat(context).hasSingleBean(InvocationLogWriter.class);
+                    assertThat(context).doesNotHaveBean(InvocationLogWriter.class);
                     assertThat(context).doesNotHaveBean(InvokeLogAspect.class);
                     assertThat(context).doesNotHaveBean(SlowLogAspect.class);
                 });

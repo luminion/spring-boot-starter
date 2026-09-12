@@ -29,7 +29,7 @@ public class VeloFeignAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = "velo.log", name = {"enabled", "invocation.enabled", "invocation.feign.enabled"},
+    @ConditionalOnProperty(prefix = "velo.log", name = {"enabled", "feign.enabled"},
             havingValue = "true",
             matchIfMissing = true)
     public FeignLogAspect feignLogAspect(VeloProperties properties,

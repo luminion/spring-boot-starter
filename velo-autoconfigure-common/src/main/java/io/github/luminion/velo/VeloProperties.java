@@ -76,6 +76,11 @@ public class VeloProperties {
     private JacksonProperties jackson = new JacksonProperties();
 
     /**
+     * XSS 清洗策略与适配目标设置。
+     */
+    private XssProperties xss = new XssProperties();
+
+    /**
      * Log auto-configuration settings.
      */
     private LogProperties log = new LogProperties();
@@ -225,11 +230,6 @@ public class VeloProperties {
     public static class ExcelProperties {
 
         /**
-         * Enables Excel auto-configuration.
-         */
-        private boolean enabled = true;
-
-        /**
          * Fine-grained converter switches shared by EasyExcel, FastExcel and Fesod.
          */
         private ConverterProperties converters = new ConverterProperties();
@@ -344,11 +344,6 @@ public class VeloProperties {
          */
         private Map<String, String> enumMappings = defaultEnumMappings();
 
-        /**
-         * Enables automatic registration of starter managed String converters.
-         */
-        private boolean stringConverterEnabled = true;
-
         private static Map<String, String> defaultEnumMappings() {
             Map<String, String> mappings = new LinkedHashMap<>();
             mappings.put("code", "name");
@@ -376,7 +371,17 @@ public class VeloProperties {
         private TraceProperties trace = new TraceProperties();
 
         /**
-         * Unified invocation logging settings.
+         * Controller 默认调用日志设置；该日志不需要业务方法添加注解。
+         */
+        private InvocationSourceProperties controller = new InvocationSourceProperties();
+
+        /**
+         * Feign 默认调用日志设置；该日志不需要业务方法添加注解。
+         */
+        private InvocationSourceProperties feign = new InvocationSourceProperties();
+
+        /**
+         * 调用日志 payload 设置，供默认 Controller/Feign 日志和注解日志共同使用。
          */
         private InvocationProperties invocation = new InvocationProperties();
 
@@ -435,11 +440,6 @@ public class VeloProperties {
     public static class InvocationProperties {
 
         /**
-         * Enables unified invocation logging.
-         */
-        private boolean enabled = true;
-
-        /**
          * Maximum length of logged argument and result payloads. Use -1 for unlimited output
          * and 0 to record the {@code disabled} payload status without serializing values.
          */
@@ -460,20 +460,6 @@ public class VeloProperties {
          */
         private boolean includeErrorStackTrace;
 
-        /**
-         * Controller invocation logging settings.
-         */
-        private InvocationSourceProperties controller = new InvocationSourceProperties();
-
-        /**
-         * Feign invocation logging settings.
-         */
-        private InvocationSourceProperties feign = new InvocationSourceProperties();
-
-        /**
-         * Method invocation logging settings.
-         */
-        private InvocationSourceProperties method = new InvocationSourceProperties();
     }
 
     @Data
@@ -498,10 +484,6 @@ public class VeloProperties {
          */
         private CorsProperties cors = new CorsProperties();
 
-        /**
-         * Web XSS settings.
-         */
-        private XssProperties xss = new XssProperties();
     }
 
     @Data
@@ -549,14 +531,21 @@ public class VeloProperties {
     public static class XssProperties {
 
         /**
-         * Enables web XSS protection.
+         * Default XSS cleaning strategy. {@code NONE} disables the built-in cleaner.
          */
-        private boolean enabled;
+        private XssStrategy strategy = XssStrategy.NONE;
 
         /**
-         * Default XSS cleaning strategy.
+         * Enables the Web MVC/WebFlux String converter target.
+         * A user-provided {@code XssCleaner} can still be used when the built-in strategy is {@code NONE}.
          */
-        private XssStrategy strategy = XssStrategy.RELAXED;
+        private boolean webEnabled = true;
+
+        /**
+         * Enables XSS cleaning for ordinary Jackson String properties.
+         * This is disabled by default because Jackson customization is global to the mapper.
+         */
+        private boolean jacksonEnabled;
     }
 
     @Data

@@ -22,7 +22,7 @@ import java.util.TimeZone;
  * WebFlux 增强配置。
  *
  * <p>提供与 MVC 版一致的日期转换、XSS 字符串转换和 CORS 配置。配置方式复用
- * {@code velo.web} 下的现有属性，不新增第二套响应式配置。</p>
+ * 现有的全局属性，不新增第二套响应式配置。</p>
  *
  * @author luminion
  * @since 1.3.1
@@ -44,8 +44,7 @@ public class VeloWebFluxConfigurer implements WebFluxConfigurer {
 
     @Override
     public void addFormatters(FormatterRegistry registry) {
-        VeloProperties.XssProperties xss = properties.getWeb().getXss();
-        if (xss.isEnabled()) {
+        if (properties.getXss().isWebEnabled()) {
             XssStringConverter converter = xssStringConverterProvider.getIfAvailable();
             if (converter != null) {
                 registry.addConverter(converter);

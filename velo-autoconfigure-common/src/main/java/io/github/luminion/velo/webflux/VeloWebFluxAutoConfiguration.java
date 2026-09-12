@@ -61,8 +61,8 @@ public class VeloWebFluxAutoConfiguration {
 
         @Bean
         @ConditionalOnMissingBean
-        @ConditionalOnProperty(prefix = "velo.log", name = {"enabled", "invocation.enabled",
-                "invocation.controller.enabled"}, havingValue = "true", matchIfMissing = true)
+        @ConditionalOnProperty(prefix = "velo.log", name = {"enabled", "controller.enabled"},
+                havingValue = "true", matchIfMissing = true)
         WebFluxControllerLogAspect webFluxControllerLogAspect(VeloProperties properties,
                 ObjectProvider<RuntimeJsonSerializer> runtimeJsonSerializerProvider,
                 ObjectProvider<InvocationLogWriter> invocationLogWriterProvider) {

@@ -85,8 +85,7 @@ public class VeloWebFluxReactiveAspectAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean(WebFluxInvokeLogAspect.class)
     @ConditionalOnBean(InvocationLogWriter.class)
-    @ConditionalOnProperty(prefix = "velo.log", name = {"enabled", "invocation.enabled", "invocation.method.enabled"},
-            havingValue = "true", matchIfMissing = true)
+    @ConditionalOnProperty(prefix = "velo.log", name = "enabled", havingValue = "true", matchIfMissing = true)
     public WebFluxInvokeLogAspect webFluxInvokeLogAspect(VeloProperties properties,
             ObjectProvider<io.github.luminion.velo.spi.RuntimeJsonSerializer> runtimeJsonSerializerProvider,
             InvocationLogWriter invocationLogWriter) {
@@ -99,8 +98,7 @@ public class VeloWebFluxReactiveAspectAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean(WebFluxSlowLogAspect.class)
     @ConditionalOnBean(InvocationLogWriter.class)
-    @ConditionalOnProperty(prefix = "velo.log", name = {"enabled", "invocation.enabled", "invocation.method.enabled"},
-            havingValue = "true", matchIfMissing = true)
+    @ConditionalOnProperty(prefix = "velo.log", name = "enabled", havingValue = "true", matchIfMissing = true)
     public WebFluxSlowLogAspect webFluxSlowLogAspect(VeloProperties properties,
             ObjectProvider<io.github.luminion.velo.spi.RuntimeJsonSerializer> runtimeJsonSerializerProvider,
             InvocationLogWriter invocationLogWriter) {

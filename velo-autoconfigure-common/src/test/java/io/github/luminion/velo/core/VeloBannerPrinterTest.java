@@ -48,7 +48,7 @@ class VeloBannerPrinterTest {
         properties.getBanner().setEnabled(true);
         properties.setIdempotent(null);
         properties.getLog().setTrace(null);
-        properties.getWeb().setXss(null);
+        properties.setXss(null);
 
         String banner = printBanner(properties);
 
@@ -56,7 +56,7 @@ class VeloBannerPrinterTest {
                 .contains("opinionated=true")
                 .contains("idempotent   unavailable (config missing)")
                 .contains("trace=unavailable (config missing)")
-                .contains("xss=unavailable (config missing)");
+                .contains("xss          unavailable (config missing)");
     }
 
     private String printBanner(Duration ttl) throws Exception {

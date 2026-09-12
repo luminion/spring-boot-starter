@@ -22,14 +22,12 @@ class VeloPropertiesDefaultsTest {
         assertThat(properties.getLog().getSlow().getLevel()).isEqualTo(LogLevel.WARN);
         assertThat(properties.getSpringConverter().isDateTimeEnabled()).isTrue();
         assertThat(properties.getExcel().getConverters().isEnabled()).isTrue();
-        assertThat(properties.getExcel().isEnabled()).isTrue();
         assertThat(properties.getJackson().isSerializeLongAsString()).isTrue();
         assertThat(properties.getJackson().isSerializeBigDecimalAsString()).isTrue();
         assertThat(properties.getJackson().isBigDecimalStripTrailingZeros()).isFalse();
         assertThat(properties.getJackson().isSerializeFloatingAsString()).isFalse();
         assertThat(properties.getJackson().isDateTimeEnabled()).isTrue();
         assertThat(properties.getJackson().isEnumDescEnabled()).isTrue();
-        assertThat(properties.getJackson().isStringConverterEnabled()).isTrue();
         assertThat(properties.getJackson().getEnumNameSuffix()).isEqualTo("name");
         assertThat(properties.getJackson().getEnumMappings())
                 .containsEntry("code", "name")
@@ -52,14 +50,12 @@ class VeloPropertiesDefaultsTest {
         assertThat(properties.getLog().getTrace().isResponseHeaderEnabled()).isTrue();
         assertThat(properties.getLog().getTrace().isFeignPropagationEnabled()).isTrue();
         assertThat(properties.getLog().getTrace().isLoggingPatternEnabled()).isTrue();
-        assertThat(properties.getLog().getInvocation().isEnabled()).isTrue();
+        assertThat(properties.getLog().getController().isEnabled()).isTrue();
+        assertThat(properties.getLog().getFeign().isEnabled()).isTrue();
         assertThat(properties.getLog().getInvocation().getMaxPayloadLength()).isEqualTo(-1);
         assertThat(properties.getLog().getInvocation().isIncludeArgs()).isTrue();
         assertThat(properties.getLog().getInvocation().isIncludeResult()).isTrue();
         assertThat(properties.getLog().getInvocation().isIncludeErrorStackTrace()).isFalse();
-        assertThat(properties.getLog().getInvocation().getController().isEnabled()).isTrue();
-        assertThat(properties.getLog().getInvocation().getFeign().isEnabled()).isTrue();
-        assertThat(properties.getLog().getInvocation().getMethod().isEnabled()).isTrue();
         assertThat(properties.getAspectOrder().getIdempotent())
                 .isLessThan(properties.getAspectOrder().getRateLimit());
         assertThat(properties.getAspectOrder().getRateLimit())
@@ -75,6 +71,9 @@ class VeloPropertiesDefaultsTest {
         assertThat(properties.getWeb().isEnabled()).isTrue();
         assertThat(properties.getWeb().getCors().isEnabled()).isFalse();
         assertThat(properties.getWeb().getCors().isAllowCredentials()).isFalse();
+        assertThat(properties.getXss().getStrategy()).isEqualTo(io.github.luminion.velo.xss.XssStrategy.NONE);
+        assertThat(properties.getXss().isWebEnabled()).isTrue();
+        assertThat(properties.getXss().isJacksonEnabled()).isFalse();
         assertThat(properties.getFeign().isEnabled()).isTrue();
     }
 

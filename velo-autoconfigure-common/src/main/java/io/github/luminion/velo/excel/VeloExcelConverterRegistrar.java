@@ -36,7 +36,8 @@ public class VeloExcelConverterRegistrar
                 .bind("velo", VeloProperties.class)
                 .orElseGet(VeloProperties::new);
         VeloProperties.ExcelProperties excelProperties = properties.getExcel();
-        if (!excelProperties.isEnabled() || !excelProperties.getConverters().isEnabled()) {
+        if (excelProperties == null || excelProperties.getConverters() == null
+                || !excelProperties.getConverters().isEnabled()) {
             return;
         }
 

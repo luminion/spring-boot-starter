@@ -35,7 +35,7 @@ class VeloPropertiesWarningLoggerTests {
         properties.getWeb().getCors().setMaxAge(-1);
         properties.getJackson().setEnabled(false);
         properties.getJackson().setEnumNameSuffix("");
-        properties.getExcel().setEnabled(false);
+        properties.getExcel().getConverters().setEnabled(false);
         properties.getSpringConverter().setDateTimeEnabled(false);
         properties.getDateTimeFormat().setDate("invalid[");
         properties.getDateTimeFormat().setTimeZone("invalid-zone");

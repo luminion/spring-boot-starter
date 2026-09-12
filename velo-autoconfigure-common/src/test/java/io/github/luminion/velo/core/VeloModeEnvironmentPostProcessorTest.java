@@ -34,8 +34,8 @@ class VeloModeEnvironmentPostProcessorTest {
         new VeloModeEnvironmentPostProcessor(LOG_FACTORY).postProcessEnvironment(environment, new SpringApplication());
 
         assertThat(environment.getProperty("velo.log.trace.enabled")).isEqualTo("false");
-        assertThat(environment.getProperty("velo.log.invocation.controller.enabled")).isEqualTo("false");
-        assertThat(environment.getProperty("velo.log.invocation.feign.enabled")).isEqualTo("false");
+        assertThat(environment.getProperty("velo.log.controller.enabled")).isEqualTo("false");
+        assertThat(environment.getProperty("velo.log.feign.enabled")).isEqualTo("false");
         assertThat(environment.getProperty("velo.jackson.enabled")).isEqualTo("false");
         assertThat(environment.getProperty("velo.spring-converter.date-time-enabled")).isEqualTo("false");
         assertThat(environment.getProperty("velo.mybatis-plus.enabled")).isEqualTo("false");
@@ -45,9 +45,8 @@ class VeloModeEnvironmentPostProcessorTest {
         assertThat(environment.getProperty("velo.idempotent.enabled")).isNull();
         assertThat(environment.getProperty("velo.rate-limit.enabled")).isNull();
         assertThat(environment.getProperty("velo.lock.enabled")).isNull();
-        assertThat(environment.getProperty("velo.log.invocation.method.enabled")).isNull();
         assertThat(environment.getProperty("velo.web.cors.enabled")).isNull();
-        assertThat(environment.getProperty("velo.web.xss.enabled")).isNull();
+        assertThat(environment.getProperty("velo.xss.strategy")).isNull();
     }
 
     @Test
@@ -55,8 +54,8 @@ class VeloModeEnvironmentPostProcessorTest {
         MockEnvironment environment = new MockEnvironment()
                 .withProperty("velo.opinionated", "false")
                 .withProperty("velo.log.trace.enabled", "true")
-                .withProperty("velo.log.invocation.controller.enabled", "true")
-                .withProperty("velo.log.invocation.feign.enabled", "true")
+                .withProperty("velo.log.controller.enabled", "true")
+                .withProperty("velo.log.feign.enabled", "true")
                 .withProperty("velo.jackson.enabled", "true")
                 .withProperty("velo.spring-converter.date-time-enabled", "true")
                 .withProperty("velo.mybatis-plus.enabled", "true")
@@ -67,8 +66,8 @@ class VeloModeEnvironmentPostProcessorTest {
         new VeloModeEnvironmentPostProcessor(LOG_FACTORY).postProcessEnvironment(environment, new SpringApplication());
 
         assertThat(environment.getProperty("velo.log.trace.enabled")).isEqualTo("true");
-        assertThat(environment.getProperty("velo.log.invocation.controller.enabled")).isEqualTo("true");
-        assertThat(environment.getProperty("velo.log.invocation.feign.enabled")).isEqualTo("true");
+        assertThat(environment.getProperty("velo.log.controller.enabled")).isEqualTo("true");
+        assertThat(environment.getProperty("velo.log.feign.enabled")).isEqualTo("true");
         assertThat(environment.getProperty("velo.jackson.enabled")).isEqualTo("true");
         assertThat(environment.getProperty("velo.spring-converter.date-time-enabled")).isEqualTo("true");
         assertThat(environment.getProperty("velo.mybatis-plus.enabled")).isEqualTo("true");

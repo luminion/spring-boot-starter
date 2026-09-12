@@ -65,14 +65,14 @@ class VeloFeignAutoConfigurationTests {
     @Test
     void shouldSkipFeignLogAspectWhenFeignInvocationLoggingDisabled() {
         contextRunner
-                .withPropertyValues("velo.log.invocation.feign.enabled=false")
+                .withPropertyValues("velo.log.feign.enabled=false")
                 .run(context -> assertThat(context).doesNotHaveBean(FeignLogAspect.class));
     }
 
     @Test
-    void shouldSkipFeignLogAspectWhenInvocationLoggingDisabled() {
+    void shouldSkipFeignLogAspectWhenAllLoggingDisabled() {
         contextRunner
-                .withPropertyValues("velo.log.invocation.enabled=false")
+                .withPropertyValues("velo.log.enabled=false")
                 .run(context -> assertThat(context).doesNotHaveBean(FeignLogAspect.class));
     }
 

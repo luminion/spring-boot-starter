@@ -111,7 +111,7 @@ public class VeloPropertiesWarningLogger implements InitializingBean {
             VeloProperties.InvocationProperties invocation = logProperties.getInvocation();
             if (invocation == null) {
                 warnings.add("velo.log.invocation 为空，调用日志相关功能可能在运行时失败。当前仅告警。");
-            } else if (invocation.isEnabled() && invocation.getMaxPayloadLength() < -1) {
+            } else if (invocation.getMaxPayloadLength() < -1) {
                 warnings.add("velo.log.invocation.max-payload-length 当前值为 "
                         + invocation.getMaxPayloadLength()
                         + "，仅 -1 或大于等于 0 有明确语义。当前仅告警。");
@@ -160,7 +160,7 @@ public class VeloPropertiesWarningLogger implements InitializingBean {
         VeloProperties.ExcelProperties excel = properties.getExcel();
         if (excel == null) {
             warnings.add("velo.excel 为空，Excel 自动配置可能在运行时失败。当前仅告警。");
-        } else if (excel.isEnabled() && excel.getConverters() == null) {
+        } else if (excel.getConverters() == null) {
             warnings.add("velo.excel.converters 为空，Excel 转换器注册可能在运行时失败。当前仅告警。");
         }
 
@@ -168,7 +168,7 @@ public class VeloPropertiesWarningLogger implements InitializingBean {
         dateTimeFeatureEnabled = dateTimeFeatureEnabled
                 || jackson != null && jackson.isEnabled() && jackson.isDateTimeEnabled();
         dateTimeFeatureEnabled = dateTimeFeatureEnabled
-                || excel != null && excel.isEnabled() && excel.getConverters() != null
+                || excel != null && excel.getConverters() != null
                 && excel.getConverters().isEnabled();
         if (dateTimeFeatureEnabled) {
             VeloProperties.DateTimeFormatProperties dateTimeFormat = properties.getDateTimeFormat();

@@ -33,8 +33,7 @@ public class VeloWebMvcConfigurer implements WebMvcConfigurer {
 
     @Override
     public void addFormatters(FormatterRegistry registry) {
-        VeloProperties.XssProperties xss = properties.getWeb().getXss();
-        if (xss.isEnabled()) {
+        if (properties.getXss().isWebEnabled()) {
             XssStringConverter xssStringConverter = xssStringConverterProvider.getIfAvailable();
             if (xssStringConverter != null) {
                 registry.addConverter(xssStringConverter);

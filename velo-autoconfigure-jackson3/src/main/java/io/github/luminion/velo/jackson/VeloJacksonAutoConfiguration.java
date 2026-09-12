@@ -106,16 +106,19 @@ public class VeloJacksonAutoConfiguration {
                     module.addSerializer(Float.class, ToStringSerializer.instance);
                     module.addSerializer(Float.TYPE, ToStringSerializer.instance);
                 }
-                if (jacksonProperties.isStringConverterEnabled()) {
-                    ObjectProvider<JsonProcessorProvider> jsonProcessorProviderObjectProvider = beanFactory
-                            .getBeanProvider(JsonProcessorProvider.class);
-                    jsonProcessorProviderObjectProvider.ifAvailable(bean -> {
+                ObjectProvider<JsonProcessorProvider> jsonProcessorProviderObjectProvider = beanFactory
+                        .getBeanProvider(JsonProcessorProvider.class);
+                jsonProcessorProviderObjectProvider.ifAvailable(bean -> {
+                    XssCleaner xssCleaner = null;
+                    if (properties.getXss().isJacksonEnabled()) {
                         ObjectProvider<XssCleaner> xssCleanerObjectProvider = beanFactory.getBeanProvider(XssCleaner.class);
-                        XssCleaner xssCleaner = xssCleanerObjectProvider.getIfAvailable();
-                        module.addDeserializer(String.class, new JacksonStringDeserializer(bean, xssCleaner));
-                        module.addSerializer(String.class, new JacksonStringSerializer(bean));
-                    });
-                }
+                        xssCleaner = xssCleanerObjectProvider.getIfAvailable();
+                    }
+                    // String 处理器始终注册，才能让带 @JsonEncode/@JsonDecode 的字段生效；
+                    // 无注解字段不执行转换，XSS 清洗则由独立的 jackson-enabled 控制。
+                    module.addDeserializer(String.class, new JacksonStringDeserializer(bean, xssCleaner));
+                    module.addSerializer(String.class, new JacksonStringSerializer(bean));
+                });
                 if (jacksonProperties.isEnumDescEnabled()) {
                     module.setSerializerModifier(new JsonEnumSerializerModifier(jacksonProperties));
                 }
@@ -126,6 +129,7 @@ public class VeloJacksonAutoConfiguration {
 
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnClass(RedisTemplate.class)
+    @ConditionalOnProperty(prefix = "velo.redis", name = "enabled", havingValue = "true", matchIfMissing = true)
     static class JacksonRedisConfiguration {
 
         @Bean

@@ -77,13 +77,16 @@ public class VeloBannerPrinter implements SmartInitializingSingleton {
         VeloProperties.MybatisPlusProperties mybatisPlus = properties.getMybatisPlus();
         line(sb, "mybatis-plus", mybatisPlus == null ? MISSING_CONFIGURATION : onOff(mybatisPlus.isEnabled()));
         VeloProperties.ExcelProperties excel = properties.getExcel();
-        line(sb, "excel", excel == null ? MISSING_CONFIGURATION : onOff(excel.isEnabled()));
+        line(sb, "excel", excel == null || excel.getConverters() == null ? MISSING_CONFIGURATION
+                : onOff(excel.getConverters().isEnabled()));
         VeloProperties.LogProperties logProperties = properties.getLog();
         line(sb, "log", logProperties == null ? MISSING_CONFIGURATION : logProperties.isEnabled()
-                ? "on (trace=" + traceStatus(logProperties.getTrace()) + ")" : "off");
+                ? "on (trace=" + traceStatus(logProperties.getTrace())
+                        + ", controller=" + sourceStatus(logProperties.getController())
+                        + ", feign=" + sourceStatus(logProperties.getFeign()) + ")" : "off");
         VeloProperties.WebProperties web = properties.getWeb();
-        line(sb, "web", web == null ? MISSING_CONFIGURATION : web.isEnabled()
-                ? "on (xss=" + xssStatus(web.getXss()) + ")" : "off");
+        line(sb, "web", web == null ? MISSING_CONFIGURATION : onOff(web.isEnabled()));
+        line(sb, "xss", xssStatus(properties.getXss()));
         VeloProperties.FeignProperties feign = properties.getFeign();
         line(sb, "feign", feign == null ? MISSING_CONFIGURATION : onOff(feign.isEnabled()));
         sb.append('\n');
@@ -167,7 +170,13 @@ public class VeloBannerPrinter implements SmartInitializingSingleton {
     }
 
     private String xssStatus(VeloProperties.XssProperties xss) {
-        return xss == null ? MISSING_CONFIGURATION : onOff(xss.isEnabled());
+        return xss == null || xss.getStrategy() == null ? MISSING_CONFIGURATION
+                : xss.getStrategy() + " (web=" + onOff(xss.isWebEnabled())
+                        + ", jackson=" + onOff(xss.isJacksonEnabled()) + ")";
+    }
+
+    private String sourceStatus(VeloProperties.InvocationSourceProperties source) {
+        return source == null ? MISSING_CONFIGURATION : onOff(source.isEnabled());
     }
 
     private void line(StringBuilder sb, String name, String value) {

@@ -74,12 +74,12 @@ class VeloWebFluxConfigurerTests {
     }
 
     @Test
-    void shouldRegisterXssConverterOnlyWhenXssIsEnabled() {
+    void shouldRegisterXssConverterWhenWebTargetIsEnabled() {
         XssStringConverter converter = new XssStringConverter(value -> value.replace("<", ""));
         StaticListableBeanFactory beanFactory = new StaticListableBeanFactory();
         beanFactory.addBean("xssStringConverter", converter);
         VeloProperties properties = new VeloProperties();
-        properties.getWeb().getXss().setEnabled(true);
+        properties.getXss().setWebEnabled(true);
         DefaultFormattingConversionService conversionService = new DefaultFormattingConversionService();
 
         new VeloWebFluxConfigurer(beanFactory.getBeanProvider(XssStringConverter.class), properties)

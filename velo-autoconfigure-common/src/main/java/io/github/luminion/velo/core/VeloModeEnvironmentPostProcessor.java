@@ -37,8 +37,8 @@ public class VeloModeEnvironmentPostProcessor implements EnvironmentPostProcesso
         }
         Map<String, Object> defaults = new LinkedHashMap<>();
         defaults.put("velo.log.trace.enabled", "false");
-        defaults.put("velo.log.invocation.controller.enabled", "false");
-        defaults.put("velo.log.invocation.feign.enabled", "false");
+        defaults.put("velo.log.controller.enabled", "false");
+        defaults.put("velo.log.feign.enabled", "false");
         defaults.put("velo.jackson.enabled", "false");
         defaults.put("velo.spring-converter.date-time-enabled", "false");
         defaults.put("velo.mybatis-plus.enabled", "false");
@@ -48,8 +48,8 @@ public class VeloModeEnvironmentPostProcessor implements EnvironmentPostProcesso
         environment.getPropertySources().addLast(new MapPropertySource(PROPERTY_SOURCE_NAME, defaults));
 
         log.info("[Velo Starter] 无侵入模式已启用，以下全局增强默认关闭（可通过对应 enabled 配置单独覆盖）："
-                + "trace/MDC 日志、Controller 与 Feign 调用日志、Jackson 扩展、Spring 日期转换器、"
-                + "MyBatis-Plus 拦截器、缓存、RedisTemplate、Excel converter。");
+                + "trace/MDC 日志、默认 Controller 与 Feign 调用日志、Jackson 扩展、Spring 日期转换器、"
+                + "MyBatis-Plus 拦截器、缓存、RedisTemplate、Excel converter；注解驱动能力仍按注解与后端条件生效。");
     }
 
     @Override

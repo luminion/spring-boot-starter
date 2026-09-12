@@ -34,6 +34,14 @@ class VeloJacksonAutoConfigurationTests {
             .withConfiguration(AutoConfigurations.of(VeloJacksonAutoConfiguration.class));
 
     @Test
+    void shouldNotCreateDefaultRedisSerializerWhenRedisFeatureIsDisabled() {
+        contextRunner
+                .withBean(VeloProperties.class, VeloProperties::new)
+                .withPropertyValues("velo.redis.enabled=false")
+                .run(context -> assertThat(context).doesNotHaveBean(RedisSerializer.class));
+    }
+
+    @Test
     void shouldBackOffRedisSerializerWhenUserProvidesDifferentBeanName() {
         RedisSerializer<Object> userSerializer = new RedisSerializer<Object>() {
             @Override
@@ -461,9 +469,11 @@ class VeloJacksonAutoConfigurationTests {
     }
 
     @Test
-    void shouldApplyStringEncodeDecodeAndXssCleaner() {
+    void shouldApplyStringAnnotationsAndConfiguredJacksonXss() {
+        VeloProperties properties = new VeloProperties();
+        properties.getXss().setJacksonEnabled(true);
         contextRunner
-                .withBean(VeloProperties.class, VeloProperties::new)
+                .withBean(VeloProperties.class, () -> properties)
                 .withBean(JsonProcessorProvider.class, () -> clazz -> {
                     try {
                         return clazz.getDeclaredConstructor().newInstance();
@@ -481,6 +491,34 @@ class VeloJacksonAutoConfigurationTests {
 
                     assertThat(payload.getDecoded()).isEqualTo("abc");
                     assertThat(payload.getCleaned()).isEqualTo("safe");
+                    assertThat(payload.getIgnored()).isEqualTo("<b>raw</b>");
+                    assertThat(tree.get("encoded").textValue()).isEqualTo("ABC");
+                });
+    }
+
+    @Test
+    void shouldKeepUnannotatedStringsUnchangedWhenJacksonXssTargetIsDisabled() {
+        VeloProperties properties = new VeloProperties();
+        properties.getXss().setJacksonEnabled(false);
+        contextRunner
+                .withBean(VeloProperties.class, () -> properties)
+                .withBean(JsonProcessorProvider.class, () -> clazz -> {
+                    try {
+                        return clazz.getDeclaredConstructor().newInstance();
+                    } catch (Exception e) {
+                        throw new IllegalStateException(e);
+                    }
+                })
+                .withBean(XssCleaner.class, () -> html -> html.replace("<b>", "").replace("</b>", ""))
+                .run(context -> {
+                    ObjectMapper objectMapper = objectMapper(context);
+                    StringTransformPayload payload = objectMapper.readValue(
+                            "{\"encoded\":\"abc\",\"decoded\":\"ABC\",\"cleaned\":\"<b>safe</b>\",\"ignored\":\"<b>raw</b>\"}",
+                            StringTransformPayload.class);
+                    JsonNode tree = objectMapper.readTree(objectMapper.writeValueAsString(payload));
+
+                    assertThat(payload.getDecoded()).isEqualTo("abc");
+                    assertThat(payload.getCleaned()).isEqualTo("<b>safe</b>");
                     assertThat(payload.getIgnored()).isEqualTo("<b>raw</b>");
                     assertThat(tree.get("encoded").textValue()).isEqualTo("ABC");
                 });

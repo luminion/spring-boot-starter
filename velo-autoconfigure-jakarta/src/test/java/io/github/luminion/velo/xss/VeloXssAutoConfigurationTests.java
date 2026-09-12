@@ -20,10 +20,18 @@ class VeloXssAutoConfigurationTests {
             ));
 
     @Test
-    void shouldCreateCleanerAndStringConverterWhenEnabled() {
+    void shouldNotCreateBuiltInXssBeansForDefaultNoneStrategy() {
+        contextRunner.run(context -> {
+            assertThat(context).doesNotHaveBean(XssCleaner.class);
+            assertThat(context).doesNotHaveBean(XssStringConverter.class);
+        });
+    }
+
+    @Test
+    void shouldCreateCleanerAndStringConverterForSelectedStrategy() {
         contextRunner
                 .withPropertyValues(
-                        "velo.web.xss.enabled=true"
+                        "velo.xss.strategy=RELAXED"
                 )
                 .run(context -> {
                     assertThat(context.getBean(XssCleaner.class)).isInstanceOf(JsoupXssCleaner.class);
@@ -32,14 +40,27 @@ class VeloXssAutoConfigurationTests {
     }
 
     @Test
-    void shouldNotCreateXssBeansWhenWebAutoConfigurationIsDisabled() {
+    void shouldKeepXssIndependentFromWebAutoConfiguration() {
         contextRunner
                 .withPropertyValues(
                         "velo.web.enabled=false",
-                        "velo.web.xss.enabled=true"
+                        "velo.xss.strategy=RELAXED"
                 )
                 .run(context -> {
-                    assertThat(context).doesNotHaveBean(XssCleaner.class);
+                    assertThat(context).hasSingleBean(XssCleaner.class);
+                    assertThat(context).hasSingleBean(XssStringConverter.class);
+                });
+    }
+
+    @Test
+    void shouldSkipWebConverterWhenWebTargetIsDisabled() {
+        contextRunner
+                .withPropertyValues(
+                        "velo.xss.strategy=RELAXED",
+                        "velo.xss.web-enabled=false"
+                )
+                .run(context -> {
+                    assertThat(context).hasSingleBean(XssCleaner.class);
                     assertThat(context).doesNotHaveBean(XssStringConverter.class);
                 });
     }
@@ -49,8 +70,7 @@ class VeloXssAutoConfigurationTests {
         contextRunner
                 .withClassLoader(new FilteredClassLoader("org.jsoup"))
                 .withPropertyValues(
-                        "velo.web.xss.enabled=true",
-                        "velo.web.xss.strategy=ESCAPE"
+                        "velo.xss.strategy=ESCAPE"
                 )
                 .run(context -> {
                     assertThat(context.getBean(XssCleaner.class)).isInstanceOf(SpringHtmlEscapeXssCleaner.class);
@@ -63,7 +83,7 @@ class VeloXssAutoConfigurationTests {
     void shouldNotSilentlyRegisterFallbackForJsoupStrategy() {
         contextRunner
                 .withClassLoader(new FilteredClassLoader("org.jsoup"))
-                .withPropertyValues("velo.web.xss.enabled=true")
+                .withPropertyValues("velo.xss.strategy=RELAXED")
                 .run(context -> {
                     assertThat(context).doesNotHaveBean(XssCleaner.class);
                     assertThat(context).doesNotHaveBean(XssStringConverter.class);

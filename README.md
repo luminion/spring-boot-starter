@@ -317,7 +317,6 @@ Velo 提供两层能力：
 ```yaml
 velo:
   excel:
-    enabled: true
     converters:
       enabled: true
       boolean-enabled: true
@@ -347,9 +346,8 @@ EasyExcelHelper.registerConverters(converters);
 
 说明：
 
-- `velo.excel.enabled` 默认开启；设为 `false` 时关闭 Excel 整体自动配置
-- `velo.excel.converters.enabled` 默认开启；设为 `false` 时仅关闭 starter 的 converter 自动注册，不影响 helper 手工调用
-- 两级开关均开启时，starter 会根据 classpath 自动尝试向 EasyExcel、FastExcel、Fesod 注册扩展 converters
+- `velo.excel.converters.enabled` 默认开启；设为 `false` 时关闭 starter 的 converter 自动注册，不影响 helper 手工调用
+- Excel 自动配置本身没有重复的总开关；starter 会根据 classpath 自动尝试向 EasyExcel、FastExcel、Fesod 注册扩展 converters
 - 时间、日期、时区格式统一复用 `velo.date-time-format.*`
 - `createExtraConverters(...)` 返回独立的可变列表；需要追加自定义 converter 时，可在调用 `registerConverters(...)` 前直接使用 `converters.add(...)`
 - 如果你只想手工控制注册时机，也可以直接使用 `EasyExcelHelper`、`FastExcelHelper`、`FesodExcelHelper`
@@ -536,6 +534,8 @@ Velo 提供一套统一调用日志能力。Controller、Feign 与 `@InvokeLog` 
 
 日志序列化器或 `InvocationLogWriter` 发生运行时异常时会记录内部 WARN 并丢弃本次日志，不会阻止业务执行或覆盖原始业务异常。
 
+Controller、Feign 是默认调用日志来源，不需要业务方法添加注解；`@InvokeLog` 和 `@SlowLog` 是显式注解来源，没有命中注解的方法不会产生这两类日志。
+
 基础 starter 默认可用，无需额外依赖。
 
 关键配置：
@@ -545,6 +545,10 @@ velo:
   log:
     enabled: true
     level: INFO
+    controller:
+      enabled: true
+    feign:
+      enabled: true
     slow:
       level: WARN
     trace:
@@ -555,17 +559,10 @@ velo:
       feign-propagation-enabled: true
       logging-pattern-enabled: true
     invocation:
-      enabled: true
       max-payload-length: -1
       include-args: true
       include-result: true
       include-error-stack-trace: false
-      controller:
-        enabled: true
-      feign:
-        enabled: true
-      method:
-        enabled: true
 ```
 
 使用示例：
@@ -599,6 +596,8 @@ public void enrichOrder(OrderDTO order) {
 - 慢日志级别由 `velo.log.slow.level` 控制，默认 WARN；调用异常且超过阈值时提升为 ERROR，设置为 `OFF` 时完全关闭独立慢日志
 - 同时命中其他调用日志切面时，慢日志默认在 ENTRY、EXIT 日志之后最后输出
 - 如果需要写入 MQ、数据库或审计系统，提供自定义 `InvocationLogWriter` Bean 即可
+- `velo.log.controller.enabled` 和 `velo.log.feign.enabled` 分别控制默认 Controller/Feign 日志；关闭其中一项不会影响另一项，也不会影响注解日志
+- `@InvokeLog` / `@SlowLog` 没有独立的 method 总开关：是否输出由方法或类上是否存在对应注解决定；`velo.log.enabled=false` 仍是所有 Velo 日志的总闸
 - `velo.log.level=OFF` 会关闭 Controller、Feign、`@InvokeLog` 的成功和异常输出；`velo.log.slow.level=OFF` 会关闭 `@SlowLog` 的独立慢日志；自定义 `InvocationLogWriter` 不受这些日志级别约束
 
 敏感参数不打印（`@LogPayloadIgnore`）：
@@ -625,7 +624,7 @@ public Token issueToken(Credential credential) { }
 
 ### 7. XSS
 
-XSS 清洗能力挂在 `velo.web.xss.*` 下，默认关闭。
+XSS 配置位于顶层 `velo.xss.*`，与 `velo.web.enabled` 解耦。默认策略为 `NONE`，不会创建 Velo 内置清洗器；选择具体策略后，Web 参数清洗和 Jackson 普通字符串清洗仍由两个目标开关分别控制。
 
 额外依赖：
 
@@ -644,10 +643,10 @@ XSS 清洗能力挂在 `velo.web.xss.*` 下，默认关闭。
 
 ```yaml
 velo:
-  web:
-    xss:
-      enabled: true
-      strategy: RELAXED
+  xss:
+    strategy: RELAXED
+    web-enabled: true
+    jackson-enabled: false
 ```
 
 使用示例：
@@ -664,14 +663,15 @@ public class UserQuery {
 
 说明：
 
-- `velo.web.xss.enabled` 默认 `false`
-- `velo.web.enabled` 是 Web MVC/WebFlux 总开关；设置为 `false` 时 XSS 不创建、不注册，即使 `velo.web.xss.enabled=true`
-- `velo.web.xss.enabled` 是 XSS 子开关，只有 `velo.web.enabled=true` 时才会生效
+- `velo.xss.strategy=NONE` 默认不创建 Velo 内置 `XssCleaner`；选择其他策略才会按依赖情况创建内置清洗器
+- `velo.xss.web-enabled` 默认 `true`，控制 Web MVC/WebFlux 字符串参数转换目标；设为 `false` 后即使已选择策略也不注册该目标转换器
+- `velo.xss.jackson-enabled` 默认 `false`，控制 Jackson 普通 `String` 属性的全局清洗；这是独立开关，不影响 `@JsonEncode` / `@JsonDecode` 注解处理
 - `strategy` 可选 `NONE`、`ESCAPE`、`SIMPLE_TEXT`、`BASIC`、`BASIC_WITH_IMAGES`、`RELAXED`
 - `ESCAPE` 不依赖 `jsoup`；其他 HTML 清洗策略必须引入 `jsoup`
 - `ESCAPE` 且无 `jsoup` 时会走 Spring 转义；其他策略缺少 `jsoup` 时只打印 WARN，不注册 `XssCleaner`，也不会自动降级
 - 清洗发生在 Web MVC/WebFlux 的字符串参数绑定阶段，包括 query/form/path 和普通对象参数中通过对应 binder 绑定的 `String` 字段
-- 同时启用 XSS 与 `velo.jackson.string-converter-enabled` 时，Jackson JSON 请求体中的普通 `String` 字段也会进行清洗；字段上的 `@XssIgnore` 可以跳过清洗，`@JsonDecode` 会在解码后继续执行清洗
+- 同时启用 XSS 与 `velo.xss.jackson-enabled` 时，Jackson JSON 请求体中的普通 `String` 字段也会进行清洗；字段上的 `@XssIgnore` 可以跳过清洗，`@JsonDecode` 会在解码后继续执行清洗
+- 用户可以直接提供自己的 `XssCleaner` Bean；`strategy=NONE` 只表示不创建 Velo 内置清洗器，不会阻止用户清洗器在目标开关开启时生效
 
 ### 8. Jackson
 
@@ -691,7 +691,6 @@ velo:
     serialize-floating-as-string: false
     enum-desc-enabled: true
     enum-name-suffix: name
-    string-converter-enabled: true
     enum-mappings:
       code: name
       key: value
@@ -721,7 +720,8 @@ public class OrderVO {
 - `serialize-big-decimal-as-string=true` 默认开启
 - `enum-desc-enabled=true` 时，`@JsonEnum` 可为数值字段派生出描述字段，例如 `statusName`
 - `enum-mappings` 为空时只关闭按全局约定进行的隐式匹配；`@JsonEnum` 同时指定 `codeField` 和 `nameField` 时仍独立生效
-- `string-converter-enabled=true` 时，`@JsonEncode` / `@JsonDecode` 会按函数类做字符串转换
+- `@JsonEncode` / `@JsonDecode` 是注解驱动能力：只要 Jackson 扩展与 `JsonProcessorProvider` 生效，带注解字段就会转换；未使用注解的字段不会执行转换，因此不再提供额外的 `string-converter-enabled` 总开关
+- Jackson 的普通字符串 XSS 清洗由独立的 `velo.xss.jackson-enabled` 控制，默认关闭，避免把全局 Mapper 的所有字符串都意外改写
 - 日期时间格式依然复用 `velo.date-time-format.*`；未标注的 `Date` 默认兼容日期-only 和完整日期时间，字段上的 `@JsonFormat` 优先
 
 ### 9. MyBatis-Plus 自动配置
@@ -883,11 +883,10 @@ velo:
 ```yaml
 velo:
   log:
-    invocation:
+    controller:
       enabled: true
+    invocation:
       max-payload-length: -1
-      controller:
-        enabled: true
     trace:
       enabled: true
 ```
@@ -899,7 +898,7 @@ velo:
 - 会过滤掉原始 query string，避免把敏感查询串直接打到日志中
 - `max-payload-length` 为正数时，过长 payload 会按配置长度截断
 - 当前默认 `max-payload-length=-1`，表示不限制长度；`0` 表示不序列化 payload 并记录为 `disabled`
-- 如果不需要这层日志，关闭 `velo.log.invocation.controller.enabled`
+- 如果不需要这层默认日志，关闭 `velo.log.controller.enabled`；该配置不会关闭 `@InvokeLog` / `@SlowLog`
 
 WebFlux 项目使用同一套配置，应用只需按需引入对应的 `spring-boot-starter-webflux`。Spring Boot 2.7、3.x 和 4.x 均支持 WebFlux，Velo 会根据当前 Starter 版本自动适配；不引入 WebFlux 时，相关自动配置不会生效。
 
@@ -910,7 +909,7 @@ WebFlux 版本的公开组件位于 `io.github.luminion.velo.webflux`：
 - `WebFluxIdempotentAspect`、`WebFluxRateLimitAspect`、`WebFluxLockAspect`：让 `@Idempotent`、`@RateLimit`、`@Lock` 在响应式订阅时生效；幂等成功后保留 TTL，异常/取消时清理本次记录，锁在完成/异常/取消时释放，限流检查不会在 Publisher 组装阶段提前执行
 - `WebFluxInvokeLogAspect`、`WebFluxSlowLogAspect`：让方法日志绑定真实的 Mono/Flux 订阅生命周期；Mono 按完成、异常或取消记录，Flux 不缓存完整数据，只记录元素数量，慢日志按真实完成耗时判断
 - `WebFluxUtils`：所有方法显式接收 `ServerWebExchange`；Session、Principal、请求体和响应写入使用 `Mono`/`Flux`，不提供 Servlet 风格的阻塞输入输出流
-- `VeloWebFluxConfigurer`：复用 `velo.spring-converter`、`velo.web.xss` 和 `velo.web.cors` 配置，提供日期转换、XSS 字符串转换和 CORS
+- `VeloWebFluxConfigurer`：复用 `velo.spring-converter`、`velo.xss` 和 `velo.web.cors` 配置，提供日期转换、XSS 字符串转换和 CORS
 - `VeloWebFluxExceptionHandler`、`VeloValidationWebFluxExceptionHandler`：与 Servlet 异常基类一样只提供可继承逻辑，不自动注册，具体实现类仍需显式添加 `@RestControllerAdvice`
 
 Controller 日志序列化复用 WebFlux 实际配置的 `HttpMessageWriter`，不直接绑定 Jackson 2 或 Jackson 3；因此 Boot 4 使用 Jackson 3、显式启用 Jackson 2 或用户自定义 WebFlux JSON 编解码器时都可以工作。
@@ -921,7 +920,7 @@ WebFlux 响应式注解切面说明：
 - 响应式切面与同步切面共存，使用相同注解、配置项和 `velo.aspect-order.*` 顺序；同步切面会放行 Publisher，避免在组装阶段重复加锁、限流或写日志
 - JDK、Redis、Redisson 内置锁处理器均支持跨 Reactor 线程的令牌式加锁与释放。用户自定义 `LockHandler` 如需用于 WebFlux `@Lock`，必须同时实现 `ReactiveLockHandler`；只有同步 `lock/unlock` 实现时，响应式 `@Lock` 会在订阅时明确报错，不会尝试使用不安全的线程绑定释放方式
 - Redis/JDK 的响应式锁调用会放到 bounded-elastic 调度器，Redisson 使用显式 thread id 的异步 API；业务 Publisher 本身仍由应用的 Reactor 调度策略决定
-- 响应式注解切面自动配置与 Web 层配置分离，因此 `velo.web.enabled=false` 不会关闭这些注解能力；`velo.idempotent.enabled`、`velo.rate-limit.enabled`、`velo.lock.enabled`、`velo.log.invocation.method.enabled` 仍分别控制对应功能
+- 响应式注解切面自动配置与 Web 层配置分离，因此 `velo.web.enabled=false` 不会关闭这些注解能力；`velo.idempotent.enabled`、`velo.rate-limit.enabled`、`velo.lock.enabled` 分别控制对应并发能力，`@InvokeLog` / `@SlowLog` 是否输出由注解决定，并受 `velo.log.enabled` 总闸控制
 
 ### 4. Feign 调用日志
 
@@ -934,11 +933,10 @@ velo:
   feign:
     enabled: true
   log:
-    invocation:
+    feign:
       enabled: true
+    invocation:
       max-payload-length: -1
-      feign:
-        enabled: true
     trace:
       enabled: true
       feign-propagation-enabled: true
@@ -952,7 +950,7 @@ velo:
 - 暂不记录 header，只保留调试常用关键信息
 - `max-payload-length` 为正数时，过长 payload 会按配置长度截断
 - 当前默认 `max-payload-length=-1`，表示不限制长度；`0` 表示不序列化 payload 并记录为 `disabled`
-- 如果不需要这层日志，关闭 `velo.log.invocation.feign.enabled`
+- 如果不需要这层默认日志，关闭 `velo.log.feign.enabled`；该配置不会关闭 `@InvokeLog` / `@SlowLog`
 
 ### 5. CORS
 
@@ -1016,11 +1014,14 @@ velo:
     enabled: false
   web:
     enabled: false
-    xss:
-      enabled: false
+  xss:
+    web-enabled: false
+    jackson-enabled: false
   log:
     enabled: false
-    invocation:
+    controller:
+      enabled: false
+    feign:
       enabled: false
     trace:
       enabled: false

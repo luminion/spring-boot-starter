@@ -36,16 +36,12 @@ public class VeloLogAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = "velo.log.invocation", name = "enabled", havingValue = "true",
-            matchIfMissing = true)
     public InvocationLogWriter invocationLogWriter(VeloProperties properties) {
         return new Slf4JInvocationLogWriter(properties);
     }
 
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = "velo.log.invocation", name = {"enabled", "method.enabled"},
-            havingValue = "true", matchIfMissing = true)
     public InvokeLogAspect invokeLogAspect(VeloProperties properties,
             ObjectProvider<RuntimeJsonSerializer> runtimeJsonSerializerProvider,
             InvocationLogWriter invocationLogWriter) {
@@ -56,8 +52,6 @@ public class VeloLogAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = "velo.log.invocation", name = {"enabled", "method.enabled"},
-            havingValue = "true", matchIfMissing = true)
     public SlowLogAspect slowLogAspect(VeloProperties properties,
             ObjectProvider<RuntimeJsonSerializer> runtimeJsonSerializerProvider,
             InvocationLogWriter invocationLogWriter) {

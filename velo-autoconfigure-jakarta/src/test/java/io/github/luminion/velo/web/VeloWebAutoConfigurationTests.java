@@ -74,14 +74,14 @@ class VeloWebAutoConfigurationTests {
     @Test
     void shouldSkipControllerLogAspectWhenControllerInvocationLoggingDisabled() {
         webContextRunner
-                .withPropertyValues("velo.log.invocation.controller.enabled=false")
+                .withPropertyValues("velo.log.controller.enabled=false")
                 .run(context -> assertThat(context).doesNotHaveBean(ControllerLogAspect.class));
     }
 
     @Test
-    void shouldSkipControllerLogAspectWhenInvocationLoggingDisabled() {
+    void shouldSkipControllerLogAspectWhenAllLoggingDisabled() {
         webContextRunner
-                .withPropertyValues("velo.log.invocation.enabled=false")
+                .withPropertyValues("velo.log.enabled=false")
                 .run(context -> assertThat(context).doesNotHaveBean(ControllerLogAspect.class));
     }
 

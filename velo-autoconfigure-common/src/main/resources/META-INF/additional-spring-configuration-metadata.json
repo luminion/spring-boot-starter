@@ -39,14 +39,14 @@
       ]
     },
     {
-      "name": "velo.web.xss.strategy",
+      "name": "velo.xss.strategy",
       "values": [
-        {"value": "NONE", "description": "不清洗。"},
+        {"value": "NONE", "description": "不创建 Velo 内置清洗器；如提供自定义 XssCleaner，仍可按目标开关使用。"},
         {"value": "ESCAPE", "description": "HTML 转义，不依赖 jsoup。"},
         {"value": "SIMPLE_TEXT", "description": "仅保留纯文本，移除所有标签。"},
         {"value": "BASIC", "description": "jsoup basic 白名单，允许基础格式化标签。"},
         {"value": "BASIC_WITH_IMAGES", "description": "jsoup basic 白名单并额外允许图片。"},
-        {"value": "RELAXED", "description": "jsoup relaxed 白名单，允许较丰富的 HTML（默认）。"}
+        {"value": "RELAXED", "description": "jsoup relaxed 白名单，允许较丰富的 HTML。"}
       ]
     }
   ]
