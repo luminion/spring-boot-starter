@@ -1,6 +1,5 @@
 package io.github.luminion.velo.mybatisplus;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.InnerInterceptor;
 import lombok.SneakyThrows;
@@ -22,12 +21,15 @@ import java.util.List;
 // * @see com.baomidou.mybatisplus.autoconfigure.MybatisPlusAutoConfiguration
  */
 @AutoConfiguration
-@ConditionalOnClass({BaseMapper.class, MybatisPlusInterceptor.class})
+@ConditionalOnClass(name = {
+        "com.baomidou.mybatisplus.core.mapper.BaseMapper",
+        "com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor"
+})
 @ConditionalOnProperty(prefix = "velo.mybatis-plus", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloMybatisPlusAutoConfiguration {
 
     @Bean
-    @ConditionalOnMissingBean
+    @ConditionalOnMissingBean(type = "com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor")
     public MybatisPlusInterceptor mybatisPlusInterceptor(List<InnerInterceptor> interceptors) {
         MybatisPlusInterceptor mybatisPlusInterceptor = new MybatisPlusInterceptor();
         mybatisPlusInterceptor.setInterceptors(interceptors);

@@ -11,7 +11,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnSingleCandi
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
@@ -23,7 +22,10 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
  * @since 1.3.1
  */
 @Configuration(proxyBeanMethods = false)
-@ConditionalOnClass(RedisOperations.class)
+@ConditionalOnClass(name = {
+        "org.springframework.data.redis.core.RedisOperations",
+        "org.springframework.data.redis.connection.RedisConnectionFactory"
+})
 @ConditionalOnProperty(prefix = "velo.redis", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloRedisConfiguration {
 

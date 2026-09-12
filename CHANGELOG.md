@@ -2,6 +2,8 @@
 
 > 修改记录：2026-09-11 22:36，新增 WebFlux 响应式 Web 增强及 Boot 2/3/4 回归测试，补充 Servlet/WebFlux 命名和请求模型边界；原因是 WebFlux 与 Servlet 使用不同请求模型，原有 Servlet 组件不能直接提供响应式容器能力。
 
+> 修改记录：2026-09-12 02:26，修复 Redis、MyBatis-Plus 可选依赖缺失时自动配置可能导致应用启动失败的问题，并补充 Boot 2/3/4 隔离回归测试。
+
 > 修改记录：2026-09-11 18:09，修复 Jakarta/Javax WebUtils 在非 Servlet 请求上下文中直接强制转换导致的异常类型不一致，并补充双命名空间回归测试；原因是 JavaDoc 约定抛出 `IllegalStateException`，实际可能抛出 `ClassCastException`。
 
 > 修改记录：2026-09-11 14:35，明确 Velo 内置 MyBatis-Plus 拦截器的低优先级顺序及用户 `@Order` 覆盖能力，并补充顺序回归测试；原因是自动配置不应抢占用户自定义 SQL 拦截器的执行位置。
@@ -54,6 +56,7 @@
 - 本地限流器初始化状态修复：Caffeine 与 JDK 实现不再使用时间戳 `0` 作为未初始化或未访问哨兵，避免合法的零起始单调时钟导致令牌桶重复初始化或 JDK 桶无法被空闲清理；补充两套回归测试。
 - WebUtils 请求属性类型校验修复：Jakarta/Javax 实现在无 Servlet 请求上下文或绑定非 Servlet `RequestAttributes` 时统一抛出 `IllegalStateException`，避免与 JavaDoc 契约不一致；补充双命名空间回归测试。
 - Servlet Web 自动配置增加 `DispatcherServlet` 类路径条件，纯 WebFlux 应用缺少 MVC 类时不会尝试加载 Servlet 配置。
+- 可选依赖自动配置隔离修复：Redis 缺少 Spring Data Redis 或 MyBatis-Plus 缺失时，Boot 2/3/4 自动配置安全跳过，不再因 Redis 连接配置导入或条件 Bean 类型推断导致应用启动失败；补充三版本缺失依赖回归测试。
 
 ### 调整
 - Excel Helper 的 `createExtraConverters(...)` 统一返回独立可变列表，调用方可在注册前追加自定义 converter。

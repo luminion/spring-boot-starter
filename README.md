@@ -38,6 +38,8 @@ Velo Spring Boot Starter 是一组低侵入的 Spring Boot 自动配置扩展。
 > 修改记录：2026-09-11 14:13，明确 Velo 内置 MyBatis-Plus 拦截器的低优先级顺序，并说明用户可通过 `@Order` 覆盖；原因是自动配置不应抢占用户自定义 SQL 拦截器的执行位置。
 >
 > 修改记录：2026-09-11 16:24，补充 `getRequestIp()` 在 Nginx/网关代理链下的信任边界和使用限制；原因是当前实现可以正确读取线上转发头，但转发头必须由可信入口代理清洗或覆盖，不能直接作为安全判断依据。
+
+> 修改记录：2026-09-12 02:26，明确 Redis 和 MyBatis-Plus 为可选依赖，缺少对应类库时自动配置会安全跳过，不会因为 Velo 的自动配置导入导致应用启动失败。
 >
 > 修改记录：2026-09-11 17:33，补充 `velo.opinionated=false` 无侵入模式仍保留的能力及显式重新开启规则；原因是无侵入模式只注入全局增强的最低优先级关闭值，不等于停用全部 Velo Bean 或注解能力。
 
@@ -776,6 +778,7 @@ velo:
 说明：
 
 - `velo.mybatis-plus.enabled` 默认开启
+- 未引入 MyBatis-Plus 时，相关自动配置会安全跳过，不会因为可选依赖缺失导致应用启动失败
 - 若容器里已经存在同类 `InnerInterceptor` Bean，starter 不会覆盖
 - 默认会把当前容器中的 `InnerInterceptor` 汇总进 `MybatisPlusInterceptor`
 - Velo 内置拦截器默认按 `OptimisticLocker → BlockAttack → Pagination` 排列，使用低优先级值 `LOWEST_PRECEDENCE - 300/-200/-100`
@@ -805,6 +808,7 @@ velo:
 说明：
 
 - `velo.redis.enabled` 默认开启
+- 未引入 Spring Data Redis 时，Redis 自动配置会安全跳过，不会触发 Redis 连接配置或导致应用启动失败
 - Redis 连接地址、密码、数据库等仍然走标准 `spring.data.redis.*`
 - starter 会尝试创建：
   - `redisTemplate`
