@@ -29,7 +29,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 @ConditionalOnProperty(prefix = "velo.lock", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloLockRedisConfiguration {
 
-    @Bean
+    @Bean(destroyMethod = "close")
     @ConditionalOnConcurrencyBackend(prefix = "velo.lock", value = ConcurrencyBackend.REDIS,
             autoBeanTypeNames = "org.springframework.data.redis.core.StringRedisTemplate")
     @ConditionalOnVeloRedisTemplate(type = "org.springframework.data.redis.core.StringRedisTemplate",

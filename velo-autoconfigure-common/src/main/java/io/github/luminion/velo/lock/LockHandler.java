@@ -16,7 +16,7 @@ public interface LockHandler {
      *     <li><b>Redisson</b>：{@code >0} 为固定租约到期释放；{@code -1} 启用看门狗，
      *     在业务执行期间自动续约，直到 {@link #unlock(String)} 释放。</li>
      *     <li><b>Redis</b>（基于 setIfAbsent 的简单实现）：{@code >0} 为固定 TTL 到期释放；
-     *     不支持看门狗，收到 {@code -1} 时降级为固定默认租约并打印告警。</li>
+     *     {@code -1} 使用 30 秒 TTL 和 10 秒一次的 token 校验续约，进程崩溃后仍会自然过期。</li>
      *     <li><b>本地 JDK / Caffeine</b>：仅保证单 JVM 互斥，忽略 {@code leaseTime}，
      *     锁不自动过期，靠配对的 {@link #unlock(String)} 释放（由引用计数清理，无内存泄漏）。</li>
      * </ul>

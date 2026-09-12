@@ -511,6 +511,8 @@ public void pay(Long orderId) {
 - `waitTimeout` 单位固定为毫秒，默认 `0`，表示拿不到锁立即失败
 - `retry-interval` 默认 `10ms`，仅用于简单 Redis 后端等待锁时的轮询；值越小获取越及时，但 Redis 请求频率越高
 - `lease` 单位固定为毫秒，默认 `30000`（30 秒）
+- `lease > 0` 在 Redis 简单实现和 Redisson 中都是固定 TTL；`lease = -1` 才请求看门狗续约。Redis 简单实现使用 30 秒初始 TTL、每 10 秒按 token 原子续约，Redisson 使用自身的原生看门狗
+- 看门狗只能覆盖进程仍可执行续期任务的长调用；进程崩溃或 Redis 长时间不可用时，锁仍会在 TTL 到期后释放。耗时不确定的任务建议显式使用 `lease = -1`，有更高分布式锁要求时优先使用 Redisson
 - `REDIS` / `REDISSON` 更适合分布式场景，`CAFFEINE` / `JDK` 只保证单 JVM 内互斥
 - 本地锁只有一份实现：Caffeine 是纯缓存库、不提供互斥锁 API，因此 `CAFFEINE` 档位与 `JDK` 完全一致（复用同一实现），`backend=CAFFEINE` 仍可用，只是不再单独维护
 - `REDIS` 后端支持同线程可重入（同一线程重复加同一把锁不会自锁死），最外层释放时才真正删除 Redis 锁
