@@ -2,8 +2,9 @@ package io.github.luminion.velo.core;
 
 import org.apache.commons.logging.Log;
 import org.springframework.boot.SpringApplication;
-import org.springframework.boot.logging.DeferredLogFactory;
+import org.springframework.boot.context.config.ConfigDataEnvironmentPostProcessor;
 import org.springframework.boot.env.EnvironmentPostProcessor;
+import org.springframework.boot.logging.DeferredLogFactory;
 import org.springframework.core.Ordered;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MapPropertySource;
@@ -53,6 +54,7 @@ public class VeloModeEnvironmentPostProcessor implements EnvironmentPostProcesso
 
     @Override
     public int getOrder() {
-        return Ordered.HIGHEST_PRECEDENCE + 10;
+        // 必须在 ConfigData 加载 application 配置后执行，才能识别用户显式设置的 velo.opinionated。
+        return ConfigDataEnvironmentPostProcessor.ORDER + 1;
     }
 }

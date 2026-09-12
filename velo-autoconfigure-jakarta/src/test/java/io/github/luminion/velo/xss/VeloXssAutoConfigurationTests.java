@@ -32,6 +32,19 @@ class VeloXssAutoConfigurationTests {
     }
 
     @Test
+    void shouldNotCreateXssBeansWhenWebAutoConfigurationIsDisabled() {
+        contextRunner
+                .withPropertyValues(
+                        "velo.web.enabled=false",
+                        "velo.web.xss.enabled=true"
+                )
+                .run(context -> {
+                    assertThat(context).doesNotHaveBean(XssCleaner.class);
+                    assertThat(context).doesNotHaveBean(XssStringConverter.class);
+                });
+    }
+
+    @Test
     void shouldUseSpringEscapeCleanerWithoutJsoup() {
         contextRunner
                 .withClassLoader(new FilteredClassLoader("org.jsoup"))

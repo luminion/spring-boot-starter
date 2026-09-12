@@ -3,8 +3,12 @@ package io.github.luminion.velo.core;
 import org.apache.commons.logging.impl.NoOpLog;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.SpringApplication;
+import org.springframework.boot.context.config.ConfigDataEnvironmentPostProcessor;
 import org.springframework.boot.logging.DeferredLogFactory;
+import org.springframework.core.env.MapPropertySource;
 import org.springframework.mock.env.MockEnvironment;
+
+import java.util.Collections;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -71,5 +75,25 @@ class VeloModeEnvironmentPostProcessorTest {
         assertThat(environment.getProperty("velo.cache.enabled")).isEqualTo("true");
         assertThat(environment.getProperty("velo.redis.enabled")).isEqualTo("true");
         assertThat(environment.getProperty("velo.excel.converters.enabled")).isEqualTo("true");
+    }
+
+    @Test
+    void shouldRunAfterSpringBootConfigDataEnvironmentPostProcessor() {
+        assertThat(new VeloModeEnvironmentPostProcessor(LOG_FACTORY).getOrder())
+                .isEqualTo(ConfigDataEnvironmentPostProcessor.ORDER + 1);
+    }
+
+    @Test
+    void shouldReadConfigDataPropertiesBeforeAddingLowestPriorityDefaults() {
+        MockEnvironment environment = new MockEnvironment();
+        environment.getPropertySources().addFirst(new MapPropertySource(
+                "applicationConfig",
+                Collections.<String, Object>singletonMap("velo.opinionated", "false")));
+
+        new VeloModeEnvironmentPostProcessor(LOG_FACTORY).postProcessEnvironment(environment, new SpringApplication());
+
+        assertThat(environment.getProperty("velo.opinionated")).isEqualTo("false");
+        assertThat(environment.getProperty("velo.jackson.enabled")).isEqualTo("false");
+        assertThat(environment.getPropertySources().get("veloOpinionatedDefaults")).isNotNull();
     }
 }

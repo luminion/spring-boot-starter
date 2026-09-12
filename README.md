@@ -88,11 +88,12 @@ velo:
 | 优先级 | 来源 | 示例 |
 | --- | --- | --- |
 | 1 最高 | 命令行参数 | `--velo.log.trace.enabled=true` |
-| 2 | application.yml / properties | `velo.log.trace.enabled: true` |
+| 2 | Java 系统属性 | `-Dvelo.log.trace.enabled=true` |
 | 3 | 环境变量 | `VELO_LOG_TRACE_ENABLED=true` |
-| 4 最低 | `velo.opinionated` 默认值 | `true` / `false` 注入的默认值 |
+| 4 | application.yml / properties | `velo.log.trace.enabled: true` |
+| 5 最低 | `velo.opinionated` 默认值 | `true` / `false` 注入的默认值 |
 
-也就是说 `velo.opinionated=false` 注入的只是**最低优先级默认值**，业务项目任何显式配置都会覆盖它。
+Spring Boot 还支持 `SPRING_APPLICATION_JSON`、测试属性等特殊配置源；上表列出本 starter 最常用的来源。也就是说 `velo.opinionated=false` 注入的只是**最低优先级默认值**，业务项目任何显式配置都会覆盖它。
 
 例如无侵入模式下重新打开 traceId：
 
@@ -664,6 +665,8 @@ public class UserQuery {
 说明：
 
 - `velo.web.xss.enabled` 默认 `false`
+- `velo.web.enabled` 是 Web MVC/WebFlux 总开关；设置为 `false` 时 XSS 不创建、不注册，即使 `velo.web.xss.enabled=true`
+- `velo.web.xss.enabled` 是 XSS 子开关，只有 `velo.web.enabled=true` 时才会生效
 - `strategy` 可选 `NONE`、`ESCAPE`、`SIMPLE_TEXT`、`BASIC`、`BASIC_WITH_IMAGES`、`RELAXED`
 - `ESCAPE` 不依赖 `jsoup`；其他 HTML 清洗策略必须引入 `jsoup`
 - `ESCAPE` 且无 `jsoup` 时会走 Spring 转义；其他策略缺少 `jsoup` 时只打印 WARN，不注册 `XssCleaner`，也不会自动降级

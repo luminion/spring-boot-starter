@@ -18,16 +18,19 @@ import org.slf4j.LoggerFactory;
 
 /**
  * XSS 自动配置。
+ *
+ * <p>{@code velo.web.enabled} 是 Web 层总开关，XSS 子开关只有在 Web 层开启时才生效。</p>
  */
 @AutoConfiguration
 @ConditionalOnWebApplication
-@ConditionalOnProperty(prefix = "velo.web.xss", name = "enabled", havingValue = "true")
+@ConditionalOnProperty(prefix = "velo.web", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloXssAutoConfiguration {
 
     private static final Logger log = LoggerFactory.getLogger(VeloXssAutoConfiguration.class);
 
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnClass(name = "org.jsoup.Jsoup")
+    @ConditionalOnProperty(prefix = "velo.web.xss", name = "enabled", havingValue = "true")
     static class JsoupXssConfiguration {
 
         @Bean
@@ -39,6 +42,7 @@ public class VeloXssAutoConfiguration {
 
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnMissingClass("org.jsoup.Jsoup")
+    @ConditionalOnProperty(prefix = "velo.web.xss", name = "enabled", havingValue = "true")
     static class SpringXssConfiguration {
 
         SpringXssConfiguration(VeloProperties properties) {
@@ -60,6 +64,7 @@ public class VeloXssAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnBean(XssCleaner.class)
+    @ConditionalOnProperty(prefix = "velo.web.xss", name = "enabled", havingValue = "true")
     public XssStringConverter xssStringConverter(XssCleaner xssCleaner) {
         return new XssStringConverter(xssCleaner);
     }
