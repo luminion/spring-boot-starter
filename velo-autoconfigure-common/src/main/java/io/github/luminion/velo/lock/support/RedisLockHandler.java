@@ -27,8 +27,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * 基于 Redis 的分布式锁实现。
  *
- * <p>支持同线程可重入：按线程以栈结构记录持有情况，同一线程对同一 key 再次加锁时只在本地增加持有计数、
- * 不再访问 Redis，避免自己等待自己导致的死锁；只有最外层 unlock 才真正删除 Redis 锁。
+ * <p>支持同线程可重入：按线程以栈结构记录持有情况，同一线程对同一 key 再次加锁时回源校验
+ * Redis 持有权并按"只延长不缩短"原则续期，避免锁在业务执行期间过期被抢占后仍被静默重入破坏互斥；
+ * 只有最外层 unlock 才真正删除 Redis 锁。
  *
  * <p>正数 lease 保持 Redis 固定 TTL 语义；lease=-1 使用本实现的看门狗，在业务执行期间定期续约。
  * 看门狗只保证进程仍能执行续期任务时的长任务持有，进程崩溃后 Redis TTL 仍会自然过期。
@@ -42,10 +43,20 @@ public class RedisLockHandler implements ReactiveLockHandler, AutoCloseable {
     private static final String RENEW_LUA = "if redis.call('get', KEYS[1]) == ARGV[1] then " +
             "return redis.call('pexpire', KEYS[1], ARGV[2]) " +
             "else return 0 end";
+    // 重入校验与续期：token 匹配时仅当剩余 TTL 小于本次所需租期才延长，绝不缩短外层锁的剩余寿命
+    private static final String REENTRANT_LUA = "if redis.call('get', KEYS[1]) == ARGV[1] then " +
+            "local ttl = redis.call('pttl', KEYS[1]) " +
+            "local lease = tonumber(ARGV[2]) " +
+            "if ttl < lease then " +
+            "redis.call('pexpire', KEYS[1], lease) " +
+            "end " +
+            "return 1 " +
+            "else return 0 end";
 
     // 脚本无状态，提取为静态常量复用，避免每次 unlock 重复构建
     private static final RedisScript<Long> RELEASE_SCRIPT = new DefaultRedisScript<>(RELEASE_LUA, Long.class);
     private static final RedisScript<Long> RENEW_SCRIPT = new DefaultRedisScript<>(RENEW_LUA, Long.class);
+    private static final RedisScript<Long> REENTRANT_SCRIPT = new DefaultRedisScript<>(REENTRANT_LUA, Long.class);
 
     // 看门狗使用 30 秒 TTL，每 10 秒续期一次；进程崩溃后最多等待一个 TTL 即可释放。
     private static final long WATCHDOG_LEASE_MILLIS = TimeUnit.SECONDS.toMillis(30);
@@ -86,10 +97,10 @@ public class RedisLockHandler implements ReactiveLockHandler, AutoCloseable {
     public boolean lock(String key, long waitTime, long leaseTime) {
         Map<String, Deque<String>> values = lockValues.get();
         Deque<String> stack = values == null ? null : values.get(key);
-        // 同线程已持有该 key：本地重入，仅增加持有计数(压入同一 owner token)，不再访问 Redis
+        // 同线程已持有该 key：本地重入路径。必须回源校验 Redis 持有权——锁可能在业务执行期间
+        // 过期并被其他持有者抢占，仅凭本地栈判定会静默破坏互斥。
         if (stack != null && !stack.isEmpty()) {
-            stack.push(stack.peek());
-            return true;
+            return reentrantLock(key, stack, leaseTime);
         }
 
         String lockValue = acquireRedisLock(key, waitTime, leaseTime);
@@ -111,6 +122,35 @@ public class RedisLockHandler implements ReactiveLockHandler, AutoCloseable {
         }
         values.computeIfAbsent(key, k -> new ArrayDeque<>()).push(lockValue);
         return true;
+    }
+
+    private boolean reentrantLock(String key, Deque<String> stack, long leaseTime) {
+        String ownerToken = stack.peek();
+        try {
+            // 校验与续期在同一 Lua 脚本中原子执行：token 匹配则保证本次重入至少获得 resolveLeaseMillis 的持有窗口，
+            // 且不缩短外层锁的剩余寿命；token 不匹配说明锁已丢失并被他人持有，按加锁失败处理。
+            Long result = redisTemplate.execute(REENTRANT_SCRIPT, Collections.singletonList(key), ownerToken,
+                    Long.toString(resolveLeaseMillis(leaseTime)));
+            if (result == null) {
+                // 与 setIfAbsent 相同：null 说明命令被 Redis 事务/pipeline 排队而非立即执行，判定不可信。
+                log.warn("[Velo Starter] Redis lock reentrant renewal returned null for key '{}'. " +
+                        "This usually means the operation is wrapped in a Redis transaction/pipeline, " +
+                        "which defers execution and breaks locking. Avoid acquiring locks inside a Redis transaction.",
+                        key);
+                return false;
+            }
+            if (Long.valueOf(1L).equals(result)) {
+                stack.push(ownerToken);
+                return true;
+            }
+            log.warn("Redis lock for key '{}' has been lost before reentrant acquisition; " +
+                    "the lock is currently held elsewhere.", key);
+            return false;
+        } catch (Exception e) {
+            // Redis 不可用时无法校验持有权，保守拒绝重入，避免在互斥失效的状态下继续执行业务。
+            log.warn("Redis lock reentrant check failed for key: {}", key, e);
+            return false;
+        }
     }
 
     @Override

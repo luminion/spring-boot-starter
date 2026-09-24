@@ -1,8 +1,7 @@
 package io.github.luminion.velo.cache;
 
 import io.github.luminion.velo.VeloProperties;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import io.github.luminion.velo.core.util.ObjectProviderSupport;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -30,8 +29,6 @@ import org.springframework.util.StringUtils;
 @ConditionalOnMissingBean(value = CacheManager.class, name = "cacheResolver")
 @ConditionalOnProperty(prefix = "velo.cache", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloCacheConfiguration {
-
-    private static final Logger log = LoggerFactory.getLogger(VeloCacheConfiguration.class);
 
     private static String buildCacheKeyPrefix(VeloProperties.CacheProperties cacheProperties, String cacheName) {
         String separator = StringUtils.hasText(cacheProperties.getSeparator())
@@ -61,10 +58,8 @@ public class VeloCacheConfiguration {
         @ConditionalOnMissingBean(RedisCacheConfiguration.class)
         public RedisCacheConfiguration redisCacheConfiguration(ObjectProvider<RedisSerializer<Object>> serializerProvider,
                 VeloProperties properties) {
-            RedisSerializer<Object> redisSerializer = serializerProvider.getIfAvailable(() -> {
-                log.debug("No RedisSerializer bean found, using RedisSerializer.json() for Redis cache values");
-                return RedisSerializer.json();
-            });
+            RedisSerializer<Object> redisSerializer = ObjectProviderSupport.resolveUnique(serializerProvider,
+                    "RedisSerializer for Redis cache values", RedisSerializer::json);
             VeloProperties.CacheProperties cacheProperties = properties.getCache();
 
             RedisCacheConfiguration redisCacheConfiguration = RedisCacheConfiguration.defaultCacheConfig();

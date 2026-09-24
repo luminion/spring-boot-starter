@@ -1,13 +1,12 @@
 package io.github.luminion.velo.feign;
 
 import io.github.luminion.velo.VeloProperties;
+import io.github.luminion.velo.core.util.ObjectProviderSupport;
 import io.github.luminion.velo.log.InvocationLogWriter;
 import io.github.luminion.velo.log.support.Slf4JInvocationLogWriter;
 import io.github.luminion.velo.spi.RuntimeJsonSerializer;
 import io.github.luminion.velo.spi.provider.HttpMessageConverterRuntimeJsonSerializer;
 import org.aspectj.weaver.Advice;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -25,8 +24,6 @@ import java.util.Collections;
 @ConditionalOnProperty(prefix = "velo.feign", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloFeignAutoConfiguration {
 
-    private static final Logger log = LoggerFactory.getLogger(VeloFeignAutoConfiguration.class);
-
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = "velo.log", name = {"enabled", "feign.enabled"},
@@ -35,16 +32,11 @@ public class VeloFeignAutoConfiguration {
     public FeignLogAspect feignLogAspect(VeloProperties properties,
             ObjectProvider<InvocationLogWriter> invocationLogWriterProvider,
             ObjectProvider<RuntimeJsonSerializer> runtimeJsonSerializerProvider) {
-        InvocationLogWriter invocationLogWriter = invocationLogWriterProvider.getIfAvailable(
-                () -> {
-                    log.debug("No InvocationLogWriter bean found, using Slf4JInvocationLogWriter for FeignLogAspect");
-                    return new Slf4JInvocationLogWriter(properties);
-                });
-        RuntimeJsonSerializer runtimeJsonSerializer = runtimeJsonSerializerProvider.getIfAvailable(
-                () -> {
-                    log.debug("No RuntimeJsonSerializer bean found, using empty HTTP message converter list for FeignLogAspect");
-                    return new HttpMessageConverterRuntimeJsonSerializer(Collections.emptyList());
-                });
+        InvocationLogWriter invocationLogWriter = ObjectProviderSupport.resolveUnique(invocationLogWriterProvider,
+                "InvocationLogWriter for FeignLogAspect", () -> new Slf4JInvocationLogWriter(properties));
+        RuntimeJsonSerializer runtimeJsonSerializer = ObjectProviderSupport.resolveUnique(runtimeJsonSerializerProvider,
+                "RuntimeJsonSerializer for FeignLogAspect",
+                () -> new HttpMessageConverterRuntimeJsonSerializer(Collections.emptyList()));
         FeignLogAspect aspect = new FeignLogAspect(properties, runtimeJsonSerializer, invocationLogWriter);
         aspect.setOrder(properties.getAspectOrder().getFeignLog());
         return aspect;

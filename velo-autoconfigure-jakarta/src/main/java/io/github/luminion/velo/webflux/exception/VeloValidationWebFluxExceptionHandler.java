@@ -10,7 +10,6 @@ import org.springframework.web.method.annotation.HandlerMethodValidationExceptio
 
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * 支持 Bean Validation 的 WebFlux 异常处理器。
@@ -51,15 +50,8 @@ public class VeloValidationWebFluxExceptionHandler<R> extends VeloWebFluxExcepti
      */
     @ExceptionHandler(HandlerMethodValidationException.class)
     public R handleHandlerMethodValidationException(HandlerMethodValidationException e) {
-        String parameterMessages = e.getParameterValidationResults().stream()
-                .flatMap(result -> result.getResolvableErrors().stream())
+        String message = e.getAllErrors().stream()
                 .map(MessageSourceResolvable::getDefaultMessage)
-                .collect(Collectors.joining("; "));
-        String crossParameterMessages = e.getCrossParameterValidationResults().stream()
-                .map(MessageSourceResolvable::getDefaultMessage)
-                .collect(Collectors.joining("; "));
-        String message = Stream.of(parameterMessages, crossParameterMessages)
-                .filter(value -> value != null && !value.isEmpty())
                 .collect(Collectors.joining("; "));
         log.debug("[参数校验异常][WebFlux][HandlerMethodValidation] 校验失败: {}", message);
         return failed.apply(message);

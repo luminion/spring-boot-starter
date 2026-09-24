@@ -18,12 +18,17 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.lang.reflect.Method;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * WebFlux 响应式锁切面。
  *
  * <p>锁在订阅时获取，在响应式链完成、异常或取消时释放。释放使用后端返回的所有权令牌，
- * 不依赖完成信号所在的 Reactor 线程。</p>
+ * 不依赖完成信号所在的 Reactor 线程。订阅在 token 产出前被取消时，由获取链的补偿逻辑
+ * 释放已写入 Redis 的令牌，避免看门狗无限续期导致锁泄漏。</p>
  *
  * @author luminion
  * @since 1.3.1
@@ -108,15 +113,54 @@ public class WebFluxLockAspect implements Ordered {
     }
 
     private Mono<LockToken> acquire(String key, long wait, long lease, String message) {
+        // 响应式链可能在 token 已写入 Redis（看门狗已启动）之后、交付给 usingWhen 之前被取消
+        // （客户端断开是 WebFlux 常态）。token 产出必须与补偿登记绑定在同一个回调里完成，
+        // 否则取消窗口内的锁将被看门狗无限续期，直到进程重启。
+        AtomicReference<LockToken> undelivered = new AtomicReference<>();
+        AtomicBoolean cancelled = new AtomicBoolean();
         return WebFluxReactiveSupport.fromStage(() -> {
             if (!(lockHandler instanceof ReactiveLockHandler)) {
                 throw new IllegalStateException("WebFlux @Lock requires a LockHandler that implements ReactiveLockHandler. " +
                         "Use a Velo built-in lock handler or implement token-based reactive ownership.");
             }
-            return ((ReactiveLockHandler) lockHandler).lockToken(key, wait, lease);
-        }).flatMap(token -> token == null
-                ? Mono.error(new LockException(resolveMessage(message), key, wait, lease))
-                : Mono.just(token));
+            CompletionStage<LockToken> stage = ((ReactiveLockHandler) lockHandler).lockToken(key, wait, lease);
+            // 通过独立的 guarded future 向 Reactor 交付：即使 Reactor 在取消时连带取消了 guarded，
+            // 源 stage 的回调仍会在 token 产出时执行补偿，令牌不会丢失在窗口内。
+            CompletableFuture<LockToken> guarded = new CompletableFuture<>();
+            stage.whenComplete((token, error) -> {
+                if (error != null) {
+                    guarded.completeExceptionally(error);
+                    return;
+                }
+                if (token != null) {
+                    undelivered.set(token);
+                    if (cancelled.get()) {
+                        // 取消信号先于 token 产出到达：立即补偿释放
+                        releaseUndelivered(undelivered);
+                    }
+                }
+                guarded.complete(token);
+            });
+            return guarded;
+        })
+        .doOnCancel(() -> {
+            cancelled.set(true);
+            releaseUndelivered(undelivered);
+        })
+        // lockToken 返回 null 表示获取失败。Mono.fromCompletionStage 对 null 完成值发空信号，
+        // 必须用 switchIfEmpty 转换为异常，否则锁超时会静默返回空响应。
+        .switchIfEmpty(Mono.defer(
+                () -> Mono.error(new LockException(resolveMessage(message), key, wait, lease))));
+    }
+
+    private void releaseUndelivered(AtomicReference<LockToken> undelivered) {
+        LockToken orphan = undelivered.getAndSet(null);
+        if (orphan != null) {
+            // 与 usingWhen 的释放路径并发调用也无害：释放按 token 校验，重复调用是空操作。
+            release(orphan).subscribe(null, error -> log.warn(
+                    "[Velo Starter] Reactive lock compensation release failed for key '{}': {}",
+                    orphan.getKey(), error.toString()));
+        }
     }
 
     private Mono<Void> release(LockToken token) {

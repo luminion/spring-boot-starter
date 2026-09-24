@@ -84,14 +84,12 @@ class SpelFingerprinterTests {
     }
 
     @Test
-    void shouldEvictOldSpelExpressionsWhenCacheReachesLimit() throws Exception {
+    void shouldKeepExpressionCacheBoundedWhenExpressionsExceedLimit() throws Exception {
         Method method = SampleService.class.getDeclaredMethod("execute", String.class, int.class);
         Field cacheField = SpelFingerprinter.class.getDeclaredField("EXPRESSION_CACHE");
         cacheField.setAccessible(true);
         Map<?, ?> expressionCache = (Map<?, ?>) cacheField.get(null);
-        synchronized (expressionCache) {
-            expressionCache.clear();
-        }
+        expressionCache.clear();
 
         for (int i = 0; i < 300; i++) {
             fingerprinter.resolveMethodFingerprint(
@@ -101,9 +99,17 @@ class SpelFingerprinterTests {
                     "#p0 + ':' + " + i);
         }
 
-        synchronized (expressionCache) {
-            assertThat(expressionCache).hasSize(256);
-        }
+        // 缓存始终有界；超出上限时整体清空自愈，避免动态表达式洪峰导致陈旧条目永久驻留
+        assertThat(expressionCache.size()).isLessThanOrEqualTo(256);
+        assertThat(expressionCache.containsKey("#p0 + ':' + 0")).isFalse();
+
+        // 清空后再次解析早期表达式仍能得到正确结果（重新解析并回填缓存）
+        String resolved = fingerprinter.resolveMethodFingerprint(
+                new SampleService(),
+                method,
+                new Object[]{"user-0", 7},
+                "#p0 + ':' + 0");
+        assertThat(resolved).isEqualTo("user-0:0");
     }
 
     static class SampleService {

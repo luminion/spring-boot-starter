@@ -7,52 +7,14 @@
 Velo Spring Boot Starter 是一组低侵入的 Spring Boot 自动配置扩展。
 项目以 `velo.*` 作为统一配置入口，围绕并发控制、缓存、Jackson、Redis、MyBatis-Plus、Excel、日志、XSS 以及 Web MVC/WebFlux 常用增强提供开箱能力。
 
-> 修改记录：2026-09-02 17:46，明确各 Spring Boot Starter 的支持范围、JDK 要求及不保证的版本，避免将版本兼容范围理解过宽。
->
-> 修改记录：2026-09-09 14:01，补充 XSS 对 Jackson JSON 请求体字符串的实际处理边界，避免文档与实现不一致。
->
-> 修改记录：2026-09-09 15:15，补充 Redis 缓存与 RedisTemplate 的 Jackson 2/3 序列化器选择规则，避免 Boot 4 下将 Jackson 版本误认为由类路径自动唯一决定。
 
-> 修改记录：2026-09-10 09:58，移除已废弃的旧 CORS 配置入口，统一使用 `velo.web.cors.enabled`，并明确该调整不再兼容旧配置。
-
-> 修改记录：2026-09-10 10:10，将 CORS 凭证默认值调整为关闭；JWT 放在 Authorization 请求头时无需开启凭证，Cookie/Session 跨域时需显式开启并配置明确来源。
-
-> 修改记录：2026-09-10 11:33，补充 Spring Boot 2/3/4 的 Redis JSON 序列化器兼容边界，明确 Boot 4 同时存在 Jackson 2/3 时默认使用 Jackson 3，Jackson 2 仅作为显式兼容与迁移路径。
-
-> 修改记录：2026-09-10 13:26，补充默认调用日志异常摘要的转义规则，明确特殊字符不会破坏单行日志结构；原因是异常消息可能包含用户输入，需要避免日志注入和结构化解析歧义。
-
-> 修改记录：2026-09-10 13:34，明确非法日期格式或时区会在转换器启动时失败，并补充启动横幅对空配置的保护行为；原因是避免“仅告警”与实际启动结果不一致，也避免诊断横幅因空配置阻止应用启动。
-
-> 修改记录：2026-09-10 13:42，明确全局枚举映射为空时仍支持完整显式 `@JsonEnum` 字段映射；原因是全局默认映射关闭不应覆盖用户对单个字段的明确配置。
->
-> 修改记录：2026-09-10 14:46，统一 Excel 两级开关的默认值和关闭语义；原因是“需显式开启”与配置默认值为 `true` 相互矛盾，容易误导使用方。
->
-> 修改记录：2026-09-10 14:51，移除通用 Web 异常处理基类上的自动组件注册语义，并明确具体实现类需显式添加 `@RestControllerAdvice`；原因是宽范围组件扫描可能尝试实例化缺少响应函数依赖的泛型基类。
->
-> 修改记录：2026-09-10 15:02，将 `velo.mode` 枚举配置简化为默认值为 `true` 的 `velo.opinionated` 布尔开关；原因是用单一正向开关表达开箱即用/无侵入两种行为，降低配置复杂度。
->
-> 修改记录：2026-09-10 15:15，明确三个 Excel Helper 的 `createExtraConverters(...)` 返回可变列表，可在注册前追加自定义 converter；原因是公开工厂方法返回不可变列表容易造成扩展调用方无法组合自定义转换器的歧义。
->
-> 修改记录：2026-09-11 09:40，补充 MyBatis-Plus 3.5.9 及以上分页和防全表更新功能所需的 JSQLParser 扩展依赖；原因是该依赖默认不再随 MyBatis-Plus 主 starter 携带，缺少时对应拦截器会按 classpath 条件跳过注册。
->
-> 修改记录：2026-09-11 14:13，明确 Velo 内置 MyBatis-Plus 拦截器的低优先级顺序，并说明用户可通过 `@Order` 覆盖；原因是自动配置不应抢占用户自定义 SQL 拦截器的执行位置。
->
-> 修改记录：2026-09-11 16:24，补充 `getRequestIp()` 在 Nginx/网关代理链下的信任边界和使用限制；原因是当前实现可以正确读取线上转发头，但转发头必须由可信入口代理清洗或覆盖，不能直接作为安全判断依据。
-
-> 修改记录：2026-09-12 02:26，明确 Redis 和 MyBatis-Plus 为可选依赖，缺少对应类库时自动配置会安全跳过，不会因为 Velo 的自动配置导入导致应用启动失败。
->
-> 修改记录：2026-09-11 17:33，补充 `velo.opinionated=false` 无侵入模式仍保留的能力及显式重新开启规则；原因是无侵入模式只注入全局增强的最低优先级关闭值，不等于停用全部 Velo Bean 或注解能力。
-
-> 修改记录：2026-09-11 22:26，新增 WebFlux 版本的 trace、Controller 日志、请求工具、日期/XSS/CORS 配置和异常处理扩展，并明确 Boot 2/3/4 均需由应用按需引入 `spring-boot-starter-webflux`；原因是 WebFlux 与 Servlet MVC 使用不同请求模型，不能直接复用 Servlet 组件。
-
-> 修改记录：2026-09-12 19:40，补齐 `@Idempotent`、`@RateLimit`、`@Lock`、`@InvokeLog` 和 `@SlowLog` 在 WebFlux `Mono/Flux` 生命周期中的响应式支持，并说明自定义响应式锁处理器的扩展契约；原因是同步切面只能覆盖 Publisher 组装阶段，不能安全承担订阅期间的加锁、幂等清理和耗时统计。
-
+首次接入可先查看 [版本与兼容性](#版本与兼容性) 和 [Maven 依赖](#maven-依赖)。
 
 ## 功能特性
 
 - 统一的 `velo.*` 配置模型，集中管理各类自动配置开关
 - 提供 `@Idempotent`、`@RateLimit`、`@Lock` 三类并发控制能力
-- 支持 Redis / Redisson / Caffeine / JDK 多后端并自动降级
+- 支持 Redis / Redisson / Caffeine / JDK 多后端，并在启动时按依赖和 Bean 条件自动选择
 - 提供 Spring Cache + Redis Cache 的统一 TTL 和 key 前缀配置
 - 提供 Jackson 日期时间、超大整数、枚举派生字段、字符串转换增强
 - 提供 MyBatis-Plus 分页、乐观锁、防全表更新拦截器自动注册
@@ -210,6 +172,13 @@ Spring Boot 的 `spring.threads.virtual.enabled` 虚拟线程自动配置从 Boo
 </plugin>
 ```
 
+### 验证与发布
+
+- 在 Java 17 下运行 `mvn -T 4 verify` 可执行完整构建；CI 还分别验证 Boot 2.7 / Java 8、Boot 3.2 与当前 3.x / Java 17、Boot 4.0 / Java 17。
+- 真实 Redis 集成测试在设置 `VELO_TEST_REDIS_URL=redis://localhost:6379` 后执行；CI 会启动独立 Redis 服务。未设置时该组测试跳过，不影响本地单元测试。
+- Maven Central 发布由 GitHub Actions 的 **Verify and publish** 工作流手动触发，仅允许 `master` 分支且 `publish=true`。兼容性矩阵全部通过后才执行发布。发布环境需配置 `CENTRAL_USERNAME`、`CENTRAL_PASSWORD`、`MAVEN_GPG_KEY`、`MAVEN_GPG_PASSPHRASE` 四项密钥。
+- 本地 `mvn deploy` 默认不会自动公开发布包；确认已完成验证并需要公开发布时显式使用 `mvn -Ppublish deploy`。
+
 ---
 
 ## 各功能细览
@@ -270,11 +239,12 @@ public UserDTO getById(Long id) {
 - `ttl.<cacheName>` 可按缓存名单独覆盖 TTL
 - key 前缀格式为 `prefix + separator + cacheName + separator`
 - 业务侧仍然需要自己开启 `@EnableCaching`
-- 缓存值序列化器优先复用容器中的 `RedisSerializer<Object>`；没有显式 Bean 时使用 `RedisSerializer.json()`，跟随当前 Spring Data Redis 版本的原生 JSON 实现
+- 缓存值序列化器优先复用容器中的 `RedisSerializer<Object>`；没有显式 Bean 时使用 `RedisSerializer.json()`，跟随当前 Spring Data Redis 版本的原生 JSON 实现。容器中存在多个候选且未标 `@Primary` 时，同样回退 `RedisSerializer.json()` 并打 WARN（不会导致启动失败）
 - Boot 2 / 3 默认使用 Jackson 2 的 `GenericJackson2JsonRedisSerializer`（对应 Spring Data Redis 2.x / 3.x），写入 JSON 类型元数据，因此 `Object` / POJO 可以反序列化回原类型，而不是默认退化为 `LinkedHashMap`
 - Boot 4 默认使用 `RedisSerializer.json()`，由 Spring Data Redis 4.x 选择 Jackson 3 的 `GenericJacksonJsonRedisSerializer`；即使 Jackson 2 / 3 同时存在，也不会按类路径猜测切换，默认仍使用 Jackson 3
 - Boot 4 如需让 Redis 使用 Jackson 2，应引入官方 `spring-boot-jackson2` 及 Jackson 2 依赖，并显式注册一个 `RedisSerializer<Object>` Bean，例如 `GenericJackson2JsonRedisSerializer`；Spring Data Redis 4.x 仍保留该类用于兼容或迁移旧数据，但已标记为后续移除，不作为 Boot 4 默认实现
 - Jackson 2 与 Jackson 3 的 Redis JSON 输出可能存在差异；从 Boot 2 / 3 切换到 Boot 4 时，应先规划旧数据读取、迁移或 key 空间隔离，不要默认认为历史值可以无缝混读
+- **安全提示（多态反序列化）**：上述 JSON 序列化器为支持 `Object` / POJO 回读会写入并按类型元数据（`@class`）反序列化，且使用宽松的类型校验（与 Spring Data Redis 原生行为一致）。若 Redis 未鉴权或被写入恶意 `@class` 载荷，存在反序列化攻击面。建议 Redis 启用鉴权与网络隔离；如需收敛，可自行注册基于 `BasicPolymorphicTypeValidator` 白名单的 `RedisSerializer<Object>` Bean，Velo 会复用该 Bean
 
 缓存雪崩防护（TTL 抖动）：
 
@@ -821,7 +791,7 @@ velo:
   - `redisTemplate`
   - `stringObjectRedisTemplate`
 - 序列化器优先复用容器中的 `RedisSerializer<Object>`，通常会跟随 Velo 的 Jackson 配置保持一致
-- 若容器没有 `RedisSerializer<Object>`，starter 使用 `RedisSerializer.json()` 作为回退；Boot 2/3 跟随对应 Spring Data Redis 的 Jackson 2 实现，Boot 4 使用 Jackson 3 实现
+- 若容器没有 `RedisSerializer<Object>`，starter 使用 `RedisSerializer.json()` 作为回退；Boot 2/3 跟随对应 Spring Data Redis 的 Jackson 2 实现，Boot 4 使用 Jackson 3 实现。多个候选且未标 `@Primary` 时同样回退默认并打 WARN
 - Boot 4 项目若选择 Jackson 2，请自行提供 Jackson 2 的 `RedisSerializer<Object>` Bean，Velo 的缓存和 RedisTemplate 会共同复用该 Bean；Jackson 2/3 同时存在时不会仅依据类路径猜测用户意图，详细兼容边界见上面的缓存说明
 
 ---
@@ -922,6 +892,7 @@ WebFlux 响应式注解切面说明：
 - 响应式切面与同步切面共存，使用相同注解、配置项和 `velo.aspect-order.*` 顺序；同步切面会放行 Publisher，避免在组装阶段重复加锁、限流或写日志
 - JDK、Redis、Redisson 内置锁处理器均支持跨 Reactor 线程的令牌式加锁与释放。用户自定义 `LockHandler` 如需用于 WebFlux `@Lock`，必须同时实现 `ReactiveLockHandler`；只有同步 `lock/unlock` 实现时，响应式 `@Lock` 会在订阅时明确报错，不会尝试使用不安全的线程绑定释放方式
 - Redis/JDK 的响应式锁调用会放到 bounded-elastic 调度器，Redisson 使用显式 thread id 的异步 API；业务 Publisher 本身仍由应用的 Reactor 调度策略决定
+- **bounded-elastic 容量提示**：Reactor 默认的 `boundedElastic` 调度器线程数为 `10 × CPU 核数`，且与本项目所有响应式切面（幂等、限流、锁）及用户代码中的阻塞调用共享。Redis/JDK 锁在等待竞争时会占用一个工作线程直至 `wait-timeout` 超时，若高并发下大量请求同时等待同一批锁，可能耗尽该调度器并拖慢其他切面任务。建议：评估锁竞争强度，必要时调低 `wait-timeout`、优先使用 Redisson 档（异步等待，不占工作线程），或通过 `spring.reactor.context-propagation`/自定义调度器自行隔离
 - 响应式注解切面自动配置与 Web 层配置分离，因此 `velo.web.enabled=false` 不会关闭这些注解能力；`velo.idempotent.enabled`、`velo.rate-limit.enabled`、`velo.lock.enabled` 分别控制对应并发能力，`@InvokeLog` / `@SlowLog` 是否输出由注解决定，并受 `velo.log.enabled` 总闸控制
 
 ### 4. Feign 调用日志
@@ -1055,7 +1026,7 @@ velo:
 
 - 方法是否被 Spring 代理：`private`、`final`、`static` 方法以及类内部自调用（`this.method()`）都无法被 AOP 拦截，需通过注入的代理对象调用
 - 对应能力是否开启：确认未被 `velo.idempotent.enabled=false` 等关闭；若使用 `velo.opinionated=false` 无侵入模式，需按需显式开启对应能力（注意：这三类注解仍可用，但需对应后端依赖存在）
-- 后端依赖是否就绪：`backend=AUTO` 会按 `REDISSON -> REDIS -> CAFFEINE -> JDK` 选择；若期望用 Redis 却走了本地实现，检查 classpath 与连接配置
+- 后端依赖是否就绪：`backend=AUTO` 会在启动时按 `REDISSON -> REDIS -> CAFFEINE -> JDK` 选择；若期望用 Redis 却走了本地实现，检查 classpath 与 Redis Bean 配置
 - 开启调试日志观察：
 
 ```yaml
@@ -1068,10 +1039,11 @@ logging:
 
 ### Q2：Redis 连接失败时会怎样？
 
-- `backend=AUTO`：Redis 不可用时会按顺序降级到 Caffeine 或 JDK 本地实现（仅单 JVM 有效，分布式场景下幂等/限流/锁会失去跨节点一致性）
-- `backend=REDIS` / `REDISSON`：缺少对应依赖或连接 Bean 时应用启动失败（快速失败）
+- `backend=AUTO` 只在启动配置阶段按类路径和 Bean 条件选择后端。Redis/Redisson 的相应条件都不满足时才会选用 Caffeine/JDK 本地后端；不会测试 Redis 连接，也不会在运行期间自动切换后端。
+- 已选中 Redis/Redisson 后，连接失败可能阻止启动或使相应调用失败、抛异常，不会转为本地幂等、限流或锁。Redis Bean 已存在但服务不可达时，`AUTO` 也可能选中该后端。
+- `backend=REDIS` / `REDISSON` 缺少对应依赖或 Bean 时按显式配置的条件快速失败。
 
-生产环境建议显式指定分布式后端，并配合健康检查确保 Redis 可用。
+生产环境建议显式指定分布式后端，并配合健康检查确保 Redis 可用；业务侧应决定连接故障时如何处理请求。
 
 ### Q3：如何调试 SpEL `key` 表达式？
 

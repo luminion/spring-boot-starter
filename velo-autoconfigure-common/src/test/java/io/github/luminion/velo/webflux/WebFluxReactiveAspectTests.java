@@ -7,6 +7,7 @@ import io.github.luminion.velo.idempotent.exception.IdempotentException;
 import io.github.luminion.velo.lock.LockToken;
 import io.github.luminion.velo.lock.ReactiveLockHandler;
 import io.github.luminion.velo.lock.annotation.Lock;
+import io.github.luminion.velo.lock.exception.LockException;
 import io.github.luminion.velo.log.InvocationLogRecord;
 import io.github.luminion.velo.log.InvocationLogWriter;
 import io.github.luminion.velo.log.InvocationPhase;
@@ -107,14 +108,45 @@ class WebFluxReactiveAspectTests {
         assertThatThrownBy(() -> proxy.failure().block())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessage("business failure");
-        awaitUntil(() -> handler.releaseCount.get() == 1);
+        awaitUntil(() -> handler.releaseCount.get() >= 1);
 
         handler.reset();
         Disposable subscription = proxy.never().subscribe();
         assertThat(handler.acquired.await(2, TimeUnit.SECONDS)).isTrue();
         subscription.dispose();
 
+        // 取消时 usingWhen 的取消释放与获取链的补偿释放都会触发（释放按 token 校验，可安全重入），
+        // 两次释放的时序无法保证观察到中间值，因此断言 >= 1。
+        awaitUntil(() -> handler.releaseCount.get() >= 1);
+        assertThat(handler.releaseCount.get()).isGreaterThanOrEqualTo(1);
+    }
+
+    @Test
+    void shouldReleaseReactiveLockWhenCancelledBeforeTokenDelivered() throws Exception {
+        GatedReactiveLockHandler handler = new GatedReactiveLockHandler();
+        LockService proxy = proxy(new LockService(),
+                new WebFluxLockAspect("lock:", new SpelFingerprinter(), handler, null));
+
+        Disposable subscription = proxy.never().subscribe();
+        awaitUntil(() -> handler.acquireCount.get() == 1);
+        // 在 token 产出前取消订阅，随后 token 才写入后端：补偿逻辑必须释放该 token
+        subscription.dispose();
+
+        LockToken token = new LockToken("lock:never", "owner-1");
+        handler.gate.complete(token);
+
         awaitUntil(() -> handler.releaseCount.get() == 1);
+        assertThat(handler.lastReleased).isSameAs(token);
+    }
+
+    @Test
+    void shouldFailFastWhenReactiveLockAcquisitionFails() {
+        NullTokenReactiveLockHandler handler = new NullTokenReactiveLockHandler();
+        LockService proxy = proxy(new LockService(),
+                new WebFluxLockAspect("lock:", new SpelFingerprinter(), handler, null));
+
+        assertThatThrownBy(() -> proxy.success("order-1").block())
+                .isInstanceOf(LockException.class);
     }
 
     @Test
@@ -332,6 +364,62 @@ class WebFluxReactiveAspectTests {
             acquireCount.set(0);
             releaseCount.set(0);
             acquired = new CountDownLatch(1);
+        }
+    }
+
+    static final class GatedReactiveLockHandler implements ReactiveLockHandler {
+
+        final CompletableFuture<LockToken> gate = new CompletableFuture<>();
+        final AtomicInteger acquireCount = new AtomicInteger();
+        final AtomicInteger releaseCount = new AtomicInteger();
+        volatile LockToken lastReleased;
+
+        @Override
+        public boolean lock(String key, long waitTime, long leaseTime) {
+            return true;
+        }
+
+        @Override
+        public void unlock(String key) {
+        }
+
+        @Override
+        public CompletableFuture<LockToken> lockToken(String key, long waitTime, long leaseTime) {
+            acquireCount.incrementAndGet();
+            return gate;
+        }
+
+        @Override
+        public CompletableFuture<Void> unlockToken(LockToken token) {
+            releaseCount.incrementAndGet();
+            lastReleased = token;
+            return CompletableFuture.completedFuture(null);
+        }
+    }
+
+    static final class NullTokenReactiveLockHandler implements ReactiveLockHandler {
+
+        final AtomicInteger acquireCount = new AtomicInteger();
+
+        @Override
+        public boolean lock(String key, long waitTime, long leaseTime) {
+            return true;
+        }
+
+        @Override
+        public void unlock(String key) {
+        }
+
+        @Override
+        public CompletableFuture<LockToken> lockToken(String key, long waitTime, long leaseTime) {
+            acquireCount.incrementAndGet();
+            // fromCompletionStage 对 null 完成值发空信号：切面必须转换为 LockException 而非静默空响应
+            return CompletableFuture.completedFuture(null);
+        }
+
+        @Override
+        public CompletableFuture<Void> unlockToken(LockToken token) {
+            return CompletableFuture.completedFuture(null);
         }
     }
 

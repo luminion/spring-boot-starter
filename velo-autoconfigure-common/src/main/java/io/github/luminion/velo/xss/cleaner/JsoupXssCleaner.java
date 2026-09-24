@@ -16,6 +16,10 @@ import org.springframework.web.util.HtmlUtils;
  */
 public class JsoupXssCleaner implements XssCleaner {
 
+    // Jsoup 协议白名单按解析后的绝对 URL 校验：无 baseUri 时相对链接会被整体删除。
+    // 哨兵 baseUri 让相对链接以 http 语义通过校验，配合 preserveRelativeLinks 输出仍保留原始相对形式。
+    private static final String RELATIVE_LINK_BASE_URI = "http://localhost";
+
     private final XssStrategy strategy;
     private final Safelist safelist;
     private final Document.OutputSettings outputSettings;
@@ -38,6 +42,8 @@ public class JsoupXssCleaner implements XssCleaner {
             }else {
                 this.safelist = Safelist.relaxed();
             }
+            // 保留相对链接的 href/src；javascript: 等伪协议仍被协议白名单拦截
+            this.safelist.preserveRelativeLinks(true);
             this.outputSettings = new Document.OutputSettings()
                     .prettyPrint(false)
                     .escapeMode(Entities.EscapeMode.xhtml);
@@ -56,11 +62,12 @@ public class JsoupXssCleaner implements XssCleaner {
             return HtmlUtils.htmlEscape(html);
         }
 
-        // 3. Jsoup 清理策略：只有包含 HTML 标签的标志性字符（< 或 &）时，才触发重量级 Jsoup 引擎
-        if (!html.contains("<") && !html.contains("&")) {
+        // 3. Jsoup 清理策略：只有包含 HTML 标签标志性字符（<）时，才触发重量级 Jsoup 引擎。
+        //    不以 & 作为触发条件：AT&T 这类含实体字符的普通文本会被 Jsoup 实体化为 &amp; 永久改写业务数据。
+        if (!html.contains("<")) {
             return html;
         }
 
-        return Jsoup.clean(html, "", safelist, outputSettings);
+        return Jsoup.clean(html, RELATIVE_LINK_BASE_URI, safelist, outputSettings);
     }
 }

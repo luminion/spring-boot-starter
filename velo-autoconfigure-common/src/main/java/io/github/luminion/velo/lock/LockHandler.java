@@ -21,6 +21,9 @@ public interface LockHandler {
      *     锁不自动过期，靠配对的 {@link #unlock(String)} 释放（由引用计数清理，无内存泄漏）。</li>
      * </ul>
      *
+     * <p>可重入语义：同一线程对同一 key 的重入会回源校验持有权（Redis 实现通过 Lua 原子完成
+     * 校验与续期，且只延长不缩短剩余租期）；校验发现锁已丢失时重入失败返回 {@code false}。</p>
+     *
      * @param key       锁的唯一标识
      * @param waitTime  等待时间，单位为毫秒
      * @param leaseTime 持有时间，单位为毫秒；{@code -1} 表示请求看门狗式自动续约，具体行为见上方各后端说明

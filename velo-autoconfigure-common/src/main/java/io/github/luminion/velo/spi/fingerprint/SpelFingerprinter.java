@@ -11,8 +11,7 @@ import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 
 import java.lang.reflect.Method;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
 /**
@@ -22,13 +21,8 @@ public class SpelFingerprinter implements Fingerprinter {
     private static final int EXPRESSION_CACHE_MAX_SIZE = 256;
     private static final ExpressionParser PARSER = new SpelExpressionParser();
     private static final ParameterNameDiscoverer PND = new DefaultParameterNameDiscoverer();
-    private static final Map<String, Expression> EXPRESSION_CACHE = new LinkedHashMap<String, Expression>(
-            EXPRESSION_CACHE_MAX_SIZE, 0.75f, true) {
-        @Override
-        protected boolean removeEldestEntry(Map.Entry<String, Expression> eldest) {
-            return size() > EXPRESSION_CACHE_MAX_SIZE;
-        }
-    };
+    // 表达式不可变、解析结果线程安全；锁-free 读取，超限时整体清空自愈（防动态表达式洪峰撑爆缓存）
+    private static final ConcurrentHashMap<String, Expression> EXPRESSION_CACHE = new ConcurrentHashMap<>();
 
     public SpelFingerprinter() {
     }
@@ -41,13 +35,14 @@ public class SpelFingerprinter implements Fingerprinter {
     @Override
     public String resolveMethodFingerprint(Object target, Method method, Object[] args, String expression) {
         if (StringUtils.hasText(expression)) {
-            Expression parsedExp;
-            synchronized (EXPRESSION_CACHE) {
-                parsedExp = EXPRESSION_CACHE.get(expression);
-                if (parsedExp == null) {
-                    parsedExp = PARSER.parseExpression(expression);
-                    EXPRESSION_CACHE.put(expression, parsedExp);
+            Expression parsedExp = EXPRESSION_CACHE.get(expression);
+            if (parsedExp == null) {
+                // 解析在锁外进行：并发重复解析同一表达式是幂等的，最后一次 put 生效即可
+                parsedExp = PARSER.parseExpression(expression);
+                if (EXPRESSION_CACHE.size() >= EXPRESSION_CACHE_MAX_SIZE) {
+                    EXPRESSION_CACHE.clear();
                 }
+                EXPRESSION_CACHE.put(expression, parsedExp);
             }
             MethodBasedEvaluationContext context = new MethodBasedEvaluationContext(target, method, args, PND);
             Object value = parsedExp.getValue(context);

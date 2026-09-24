@@ -3,6 +3,7 @@ package io.github.luminion.velo.log.aspect;
 import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.core.ReactiveTypeSupport;
 import io.github.luminion.velo.core.VeloAdvisorOrder;
+import io.github.luminion.velo.core.util.ObjectProviderSupport;
 import io.github.luminion.velo.log.InvocationLogRecord;
 import io.github.luminion.velo.log.InvocationLogSource;
 import io.github.luminion.velo.log.InvocationLogSupport;
@@ -137,7 +138,8 @@ public class SlowLogAspect implements Ordered {
     }
 
     private RuntimeJsonSerializer runtimeJsonSerializer() {
-        return runtimeJsonSerializerProvider.getIfAvailable(
+        return ObjectProviderSupport.resolveUnique(runtimeJsonSerializerProvider,
+                "RuntimeJsonSerializer for slow log",
                 () -> new HttpMessageConverterRuntimeJsonSerializer(Collections.emptyList()));
     }
 }
