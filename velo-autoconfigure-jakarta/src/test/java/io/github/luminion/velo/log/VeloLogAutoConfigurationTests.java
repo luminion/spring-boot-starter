@@ -9,6 +9,8 @@ import io.github.luminion.velo.log.support.Slf4JInvocationLogWriter;
 import io.github.luminion.velo.log.trace.TraceContext;
 import io.github.luminion.velo.log.trace.TraceContextResolver;
 import io.github.luminion.velo.log.trace.TraceData;
+import io.github.luminion.velo.log.trace.TraceScopeManager;
+import io.github.luminion.velo.log.trace.VeloTraceAutoConfiguration;
 import io.github.luminion.velo.log.trace.W3cTraceContextResolver;
 import java.util.Collections;
 import org.junit.jupiter.api.Test;
@@ -23,7 +25,10 @@ class VeloLogAutoConfigurationTests {
       new ApplicationContextRunner()
           .withConfiguration(
               AutoConfigurations.of(
-                  VeloCoreAutoConfiguration.class, VeloLogAutoConfiguration.class));
+                  VeloCoreAutoConfiguration.class,
+                  VeloTraceAutoConfiguration.class,
+                  VeloLogAutoConfiguration.class,
+                  VeloSourceLogAutoConfiguration.class));
 
   @Test
   void shouldCreateUnifiedInvocationLoggingBeansByDefault() {
@@ -39,7 +44,7 @@ class VeloLogAutoConfigurationTests {
   }
 
   @Test
-  void customResolverReplacesDefaultAndIsUsedByEngineAndAsyncDecorator() {
+  void customResolverReplacesDefaultAndIsUsedByScopeAndAsyncDecorator() {
     TraceData data =
         new TraceData("custom-bean", Collections.singletonMap("X-Custom", "custom-bean"));
     TraceContextResolver resolver = () -> data;
@@ -49,8 +54,7 @@ class VeloLogAutoConfigurationTests {
             context -> {
               assertThat(context).hasSingleBean(TraceContextResolver.class);
               assertThat(context.getBean(TraceContextResolver.class)).isSameAs(resolver);
-              try (TraceContext.Scope scope =
-                  context.getBean(InvocationLogEngine.class).openRootTrace()) {
+              try (TraceContext.Scope scope = context.getBean(TraceScopeManager.class).root()) {
                 assertThat(TraceContext.current()).isSameAs(data);
               }
               context
@@ -93,7 +97,8 @@ class VeloLogAutoConfigurationTests {
         .run(
             context -> {
               assertThat(context).doesNotHaveBean(InvocationLogWriter.class);
-              assertThat(context).doesNotHaveBean(InvokeLogAspect.class);
+              assertThat(context).hasSingleBean(InvokeLogAspect.class);
+              assertThat(context).hasSingleBean(TraceScopeManager.class);
             });
   }
 

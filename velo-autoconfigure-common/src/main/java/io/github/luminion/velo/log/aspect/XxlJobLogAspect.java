@@ -3,6 +3,8 @@ package io.github.luminion.velo.log.aspect;
 import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.log.InvocationLogEngine;
 import io.github.luminion.velo.log.InvocationLogSource;
+import io.github.luminion.velo.log.trace.TraceScopeManager;
+import io.github.luminion.velo.log.trace.W3cTraceContextResolver;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -13,7 +15,11 @@ import org.aspectj.lang.annotation.Aspect;
 @Aspect
 public class XxlJobLogAspect extends SourceLogAspectSupport {
     public XxlJobLogAspect(VeloProperties properties, InvocationLogEngine engine) {
-        super(properties, engine, InvocationLogSource.XXL_JOB);
+        this(engine, new TraceScopeManager(properties.getLog().getTrace(), new W3cTraceContextResolver()));
+    }
+
+    public XxlJobLogAspect(InvocationLogEngine engine, TraceScopeManager trace) {
+        super(engine, trace, InvocationLogSource.XXL_JOB);
     }
 
     @Around("@annotation(com.xxl.job.core.handler.annotation.XxlJob)")

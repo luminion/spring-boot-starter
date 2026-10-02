@@ -13,6 +13,7 @@ import io.github.luminion.velo.log.InvocationLogRecord;
 import io.github.luminion.velo.log.LogValueFormatter;
 import io.github.luminion.velo.log.VeloLogAutoConfiguration;
 import io.github.luminion.velo.log.trace.HeaderTraceContextResolver;
+import io.github.luminion.velo.log.trace.VeloTraceAutoConfiguration;
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.ServletException;
 import java.util.ArrayList;
@@ -37,8 +38,10 @@ class VeloWebAutoConfigurationTests {
           .withConfiguration(
               AutoConfigurations.of(
                   VeloCoreAutoConfiguration.class,
+                  VeloTraceAutoConfiguration.class,
                   VeloLogAutoConfiguration.class,
-                  VeloWebAutoConfiguration.class));
+                  VeloWebAutoConfiguration.class,
+                  VeloWebTraceAutoConfiguration.class));
 
   @AfterEach
   void clear() {
@@ -82,7 +85,7 @@ class VeloWebAutoConfigurationTests {
             c ->
                 assertThat(c)
                     .doesNotHaveBean(ControllerLogAspect.class)
-                    .doesNotHaveBean(TraceIdFilter.class));
+                    .hasSingleBean(TraceIdFilter.class));
   }
 
   @Test
@@ -94,6 +97,17 @@ class VeloWebAutoConfigurationTests {
               assertThat(c).doesNotHaveBean(TraceIdFilter.class);
               assertThat(c).hasSingleBean(ControllerLogAspect.class);
             });
+  }
+
+  @Test
+  void webEnhancementSwitchDoesNotDisableIndependentTraceFilter() {
+    runner
+        .withPropertyValues("velo.web.enabled=false")
+        .run(
+            context ->
+                assertThat(context)
+                    .hasSingleBean(TraceIdFilter.class)
+                    .doesNotHaveBean(ControllerLogAspect.class));
   }
 
   @Test
@@ -207,7 +221,7 @@ class VeloWebAutoConfigurationTests {
     assertThat(records).hasSize(1);
     assertThat(records.get(0).getFeature()).isEqualTo(InvocationLogFeature.ENTRY_ARGS);
     assertThat(records.get(0).getTarget()).contains("GET /users/{id}").doesNotContain("secret");
-    assertThat(records.get(0).getPayload()).contains("id=1");
+    assertThat(records.get(0).getContent()).contains("id=1");
   }
 
   static class Endpoint {

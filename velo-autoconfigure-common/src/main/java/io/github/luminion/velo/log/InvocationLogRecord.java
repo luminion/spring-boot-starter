@@ -4,20 +4,14 @@ import lombok.Getter;
 import lombok.Setter;
 import org.springframework.boot.logging.LogLevel;
 
-/** 单功能调用日志记录；关联字段供自定义输出器使用，不重复打印到正文。 */
+/** 单功能日志的输出数据；内容已完成对象转换，链路标识由 MDC 提供。 */
 @Getter
 @Setter
 public class InvocationLogRecord {
-  private String traceId;
-  private String invocationId;
   private InvocationLogSource source;
   private InvocationLogFeature feature;
   private String target;
   private String loggerName;
   private LogLevel level;
-  private String payload;
-  private long costMs;
-  private long thresholdMs;
-  private String errorType;
-  private String errorMessage;
+  private String content;
 }

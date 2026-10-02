@@ -1,46 +1,45 @@
 package io.github.luminion.velo.log;
 
 import io.github.luminion.velo.VeloProperties;
+import io.github.luminion.velo.log.aspect.InvokeLogAspect;
 import io.github.luminion.velo.log.aspect.ScheduledLogAspect;
 import io.github.luminion.velo.log.aspect.XxlJobLogAspect;
+import io.github.luminion.velo.log.condition.ConditionalOnInvocationAdapter;
+import io.github.luminion.velo.log.trace.TraceScopeManager;
+import io.github.luminion.velo.log.trace.VeloTraceAutoConfiguration;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 
 /**
- * 定时任务来源的调用日志自动配置。
+ * 普通方法和任务入口适配；日志和 trace 独立启停。
  */
-@AutoConfiguration(after = VeloLogAutoConfiguration.class)
+@AutoConfiguration(after = {VeloLogAutoConfiguration.class, VeloTraceAutoConfiguration.class})
 @ConditionalOnClass(name = "org.aspectj.weaver.Advice")
-@ConditionalOnProperty(
-        prefix = "velo.log",
-        name = "enabled",
-        havingValue = "true",
-        matchIfMissing = true)
 public class VeloSourceLogAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(
-            prefix = "velo.log.sources.scheduled",
-            name = "enabled",
-            havingValue = "true",
-            matchIfMissing = true)
-    public ScheduledLogAspect scheduledLogAspect(
-            VeloProperties properties, InvocationLogEngine engine) {
-        return new ScheduledLogAspect(properties, engine);
+    @ConditionalOnInvocationAdapter(source = "invoke")
+    public InvokeLogAspect invokeLogAspect(VeloProperties properties, ObjectProvider<InvocationLogEngine> engine, ObjectProvider<TraceScopeManager> trace) {
+        InvokeLogAspect aspect = new InvokeLogAspect(engine.getIfAvailable(), trace.getIfAvailable());
+        aspect.setOrder(properties.getAspectOrder().getInvokeLog());
+        return aspect;
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnInvocationAdapter(source = "scheduled")
+    public ScheduledLogAspect scheduledLogAspect(ObjectProvider<InvocationLogEngine> engine, ObjectProvider<TraceScopeManager> trace) {
+        return new ScheduledLogAspect(engine.getIfAvailable(), trace.getIfAvailable());
     }
 
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnClass(name = "com.xxl.job.core.handler.annotation.XxlJob")
-    @ConditionalOnProperty(
-            prefix = "velo.log.sources.xxl-job",
-            name = "enabled",
-            havingValue = "true",
-            matchIfMissing = true)
-    public XxlJobLogAspect xxlJobLogAspect(VeloProperties properties, InvocationLogEngine engine) {
-        return new XxlJobLogAspect(properties, engine);
+    @ConditionalOnInvocationAdapter(source = "xxl-job")
+    public XxlJobLogAspect xxlJobLogAspect(ObjectProvider<InvocationLogEngine> engine, ObjectProvider<TraceScopeManager> trace) {
+        return new XxlJobLogAspect(engine.getIfAvailable(), trace.getIfAvailable());
     }
 }

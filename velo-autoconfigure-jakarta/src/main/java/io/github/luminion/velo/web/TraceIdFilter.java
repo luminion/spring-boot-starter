@@ -1,6 +1,7 @@
 package io.github.luminion.velo.web;
 
 import io.github.luminion.velo.VeloProperties;
+import io.github.luminion.velo.VeloProperties.TraceProperties;
 import io.github.luminion.velo.log.trace.TraceContext;
 import io.github.luminion.velo.log.trace.TraceContextResolver;
 import io.github.luminion.velo.log.trace.TraceData;
@@ -18,7 +19,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 /** 每次 HTTP 请求建立 traceId；异步或异常再派发复用请求属性中的同一标识。 */
 public class TraceIdFilter extends OncePerRequestFilter {
   private static final String ATTRIBUTE = TraceIdFilter.class.getName() + ".traceId";
-  private final VeloProperties properties;
+  private final TraceProperties properties;
   private final TraceContextResolver resolver;
 
   public TraceIdFilter(VeloProperties properties) {
@@ -26,6 +27,10 @@ public class TraceIdFilter extends OncePerRequestFilter {
   }
 
   public TraceIdFilter(VeloProperties properties, TraceContextResolver resolver) {
+    this(properties.getLog().getTrace(), resolver);
+  }
+
+  public TraceIdFilter(TraceProperties properties, TraceContextResolver resolver) {
     this.properties = properties;
     this.resolver = resolver;
   }
@@ -44,7 +49,7 @@ public class TraceIdFilter extends OncePerRequestFilter {
   protected void doFilterInternal(
       HttpServletRequest request, HttpServletResponse response, FilterChain chain)
       throws ServletException, IOException {
-    VeloProperties.TraceProperties trace = properties.getLog().getTrace();
+    TraceProperties trace = properties;
     if (!trace.isEnabled()) {
       chain.doFilter(request, response);
       return;

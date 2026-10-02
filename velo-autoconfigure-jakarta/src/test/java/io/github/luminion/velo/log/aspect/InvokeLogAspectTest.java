@@ -27,9 +27,10 @@ class InvokeLogAspectTest {
           if (!(value instanceof Map)) {
             return String.valueOf(value);
           }
-          MutableArgument argument =
-              (MutableArgument) ((Map<?, ?>) value).values().iterator().next();
-          return argument.value;
+          Object argument = ((Map<?, ?>) value).values().iterator().next();
+          return argument instanceof MutableArgument
+              ? ((MutableArgument) argument).value
+              : String.valueOf(value);
         };
     CapturingInvocationLogWriter writer = new CapturingInvocationLogWriter();
     InvokeLogAspect aspect =
@@ -48,9 +49,9 @@ class InvokeLogAspectTest {
             InvocationLogFeature.ENTRY_ARGS,
             InvocationLogFeature.EXIT_ARGS,
             InvocationLogFeature.EXIT_RESULT);
-    assertThat(writer.records.get(0).getPayload()).isEqualTo("before");
-    assertThat(writer.records.get(1).getPayload()).isEqualTo("complete");
-    assertThat(writer.records.get(2).getPayload()).isEqualTo("void");
+    assertThat(writer.records.get(0).getContent()).isEqualTo("before");
+    assertThat(writer.records.get(1).getContent()).isEqualTo("complete");
+    assertThat(writer.records.get(2).getContent()).isEqualTo("void");
 
     MutableArgument failedArgument = new MutableArgument("before");
     assertThatThrownBy(() -> proxy.fail(failedArgument))
@@ -59,9 +60,8 @@ class InvokeLogAspectTest {
 
     assertThat(writer.records).hasSize(6);
     assertThat(writer.records.get(4).getFeature()).isEqualTo(InvocationLogFeature.EXIT_ARGS);
-    assertThat(writer.records.get(4).getPayload()).isEqualTo("failed");
-    assertThat(writer.records.get(5).getErrorType())
-        .isEqualTo(IllegalStateException.class.getName());
+    assertThat(writer.records.get(4).getContent()).isEqualTo("failed");
+    assertThat(writer.records.get(5).getContent()).contains(IllegalStateException.class.getName());
 
     MutableArgument ignoredArgument = new MutableArgument("secret");
     assertThat(proxy.ignore(ignoredArgument)).isSameAs(ignoredArgument);

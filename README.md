@@ -49,10 +49,10 @@ velo:
 
 | 优先级 | 来源 | 示例 |
 | --- | --- | --- |
-| 1 最高 | 命令行参数 | `--velo.log.trace.enabled=true` |
-| 2 | Java 系统属性 | `-Dvelo.log.trace.enabled=true` |
-| 3 | 环境变量 | `VELO_LOG_TRACE_ENABLED=true` |
-| 4 | application.yml / properties | `velo.log.trace.enabled: true` |
+| 1 最高 | 命令行参数 | `--velo.trace.enabled=true` |
+| 2 | Java 系统属性 | `-Dvelo.trace.enabled=true` |
+| 3 | 环境变量 | `VELO_TRACE_ENABLED=true` |
+| 4 | application.yml / properties | `velo.trace.enabled: true` |
 | 5 最低 | `velo.opinionated` 默认值 | `true` / `false` 注入的默认值 |
 
 Spring Boot 还支持 `SPRING_APPLICATION_JSON`、测试属性等特殊配置源；上表列出本 starter 最常用的来源。也就是说 `velo.opinionated=false` 注入的只是**最低优先级默认值**，业务项目任何显式配置都会覆盖它。
@@ -62,9 +62,8 @@ Spring Boot 还支持 `SPRING_APPLICATION_JSON`、测试属性等特殊配置源
 ```yaml
 velo:
   opinionated: false
-  log:
-    trace:
-      enabled: true
+  trace:
+    enabled: true
 ```
 
 默认会自动影响全局行为的能力：
@@ -503,24 +502,24 @@ public void pay(Long orderId) {
 
 ### 7. 日志
 
-Controller、Feign、`@InvokeLog` 和任务入口共用一个 `InvocationLogEngine`。切面只提供调用目标、方法、参数和协议头；引擎解析功能策略并完成调用生命周期，`LogValueFormatter` 转换对象，`InvocationLogWriter` 输出记录。每个功能单独一行，`==>` 表示调用前，`<==` 表示调用完成。
+Controller、Feign、`@InvokeLog` 和任务入口共用一个同步 `InvocationLogEngine`。入口适配负责提供调用信息并管理独立的 trace 作用域；引擎解析日志策略、计时和记录方法返回/抛出异常，`LogValueFormatter` 转换内容，`InvocationLogWriter` 只拼接固定格式并输出。每个功能单独一行，功能决定 `==>` 或 `<==` 方向。
 
 ```text
-[controller][127.0.0.1 GET /users/{id}] ==> entryArgs = {"id":1}
-[controller][127.0.0.1 GET /users/{id}] ==> requestHeaders = {"X-Demo":["visible"]}
-[controller][127.0.0.1 GET /users/{id}] <== exitArgs = {"id":1}
-[controller][127.0.0.1 GET /users/{id}] <== exitResult = {"name":"Tom"}
-[controller][127.0.0.1 GET /users/{id}] <== responseHeaders = {"X-Result":["ok"]}
-[controller][127.0.0.1 GET /users/{id}] <== slow = {"costMs":1200,"thresholdMs":1000}
-[invoke][find()] <== error = {"type":"java.lang.IllegalArgumentException","message":"参数无效"}
-[feign][remote() GET /log/remote] <== exitResult = {"message":"hello"}
-[scheduled][run()] <== slow = {"costMs":5,"thresholdMs":0}
-[xxl-job][run()] <== slow = {"costMs":5,"thresholdMs":0}
+[controller] [127.0.0.1 GET /users/{id}] ==> entryArgs={"id":1}
+[controller] [127.0.0.1 GET /users/{id}] ==> requestHeaders={"X-Demo":["visible"]}
+[controller] [127.0.0.1 GET /users/{id}] <== exitArgs={"id":1}
+[controller] [127.0.0.1 GET /users/{id}] <== exitResult={"name":"Tom"}
+[controller] [127.0.0.1 GET /users/{id}] <== responseHeaders={"X-Result":["ok"]}
+[controller] [127.0.0.1 GET /users/{id}] <== slow={"costMs":1200,"thresholdMs":1000}
+[invoke] [find()] <== error={"type":"java.lang.IllegalArgumentException","message":"参数无效"}
+[feign] [remote() GET /log/remote] <== exitResult={"message":"hello"}
+[scheduled] [run()] <== slow={"costMs":5,"thresholdMs":0}
+[xxl-job] [run()] <== slow={"costMs":5,"thresholdMs":0}
 ```
 
-固定结构为 `[入口类型][调用目标] 箭头 功能名 = 内容`。入口类型为 `controller/invoke/feign/scheduled/xxl-job`；功能名为 `entryArgs/exitArgs/exitResult/requestHeaders/responseHeaders/slow/error`，慢调用和异常分别使用独立对象，异常摘要不附带堆栈。类名由日志框架输出，Invoke、Scheduled 和 XXL-Job 的调用目标只显示方法名。
+固定结构为 `[入口类型] [调用目标] 箭头 功能名=内容`，各块之间保留一个空格，等号两侧不留空格。入口类型为 `controller/invoke/feign/scheduled/xxl-job`；功能名为 `entryArgs/exitArgs/exitResult/requestHeaders/responseHeaders/slow/error`，慢调用和异常分别使用独立对象，异常摘要不附带堆栈。类名由日志框架输出，Invoke、Scheduled 和 XXL-Job 的调用目标只显示方法名。
 
-正文不重复打印 `traceId`、`source`、`event`、`invocationId`。默认日志格式通过 MDC 在级别位置显示 traceId。自定义 `InvocationLogWriter` 仍可读取记录中的来源、traceId 和 invocationId。
+正文不重复打印 `traceId`、`source`、`event`、`invocationId`。默认日志格式通过 MDC 在级别位置显示 traceId。`InvocationLogRecord` 只包含 `source/target/feature/loggerName/level/content` 六个字段，`content` 为已经转换的字符串；不再生成 invocationId，也不复制 traceId。自定义输出器在 `write` 时可读取 MDC；延迟或异步输出时应自行捕获上下文快照。
 
 | 功能注解 | Controller 默认 | Feign 默认 | Invoke 默认 | 默认级别 |
 | --- | --- | --- | --- | --- |
@@ -553,7 +552,7 @@ public class UserService {
 }
 ```
 
-每个功能都有独立 `enabled` 和 `level`，支持 Spring Boot `LogLevel`，`OFF` 关闭该功能。没有普通耗时 `CostLog`；将 SlowLog 阈值设为 `0`、级别设为 `INFO` 即可记录所有耗时。阈值单位毫秒，应大于等于 0。耗时从入口载荷输出后计到业务方法或 Future 完成，结束日志本身不计入耗时。
+每个功能都有独立 `enabled` 和 `level`，支持 Spring Boot `LogLevel`，`OFF` 关闭该功能。没有普通耗时 `CostLog`；将 SlowLog 阈值设为 `0`、级别设为 `INFO` 即可记录所有耗时。阈值单位毫秒，应大于等于 0。耗时从入口日志输出后计到当前方法返回或抛出异常，结束日志本身不计入耗时。返回 `CompletionStage/Future` 也立即记录退出，不等待、不监听完成，不改变原返回对象或取消行为。ExitResult 表示返回对象而非异步最终结果；此类方法可关闭 ExitResult，或在自定义 formatter 中输出类型摘要。ErrorLog 只记录当前方法抛出的异常，不记录返回 Future 的后续失败。
 
 ```yaml
 velo:
@@ -588,11 +587,11 @@ velo:
         slow-log:
           threshold-ms: 0
           level: INFO
-    trace:
-      enabled: true
-      mdc-key: traceId
-      feign-propagation-enabled: true
-      logging-pattern-enabled: true
+  trace:
+    enabled: true
+    mdc-key: traceId
+    feign-propagation-enabled: true
+    logging-pattern-enabled: true
 ```
 
 `ErrorLog` 只在异常结束时输出异常类型和提示信息，默认 WARN，不打印堆栈，不区分业务异常。异常继续原样抛出，由应用异常处理器决定响应、堆栈、ERROR 和告警；框架不注册业务异常分类规则。换行和控制字符会转义，便于 ELK/SLS 按单行采集。同一次失败在不同调用层可能各输出一条摘要。
@@ -608,7 +607,13 @@ public LogValueFormatter logValueFormatter() {
 
 默认使用应用已有的 Jackson 2/3 Mapper，复用字段忽略、日期格式、命名规则和自定义模块，非 Web 应用也可用；没有 Mapper 时使用 `String.valueOf`。可使用 `@JsonIgnore` 或 MixIn 隐藏 DTO 字段。Jackson 转换失败输出 `serialization-failed`，不会回退到可能暴露敏感字段的 toString。HttpEntity/ResponseEntity 返回值只转换 body，原响应对象保持不变。流、Servlet 等技术对象省略内容；循环容器和异常深度不会无限遍历。
 
-`max-payload-length=-1` 默认不限长，正数截断最终载荷字符串，`0` 关闭参数、结果及协议头载荷日志的输出和序列化，慢调用/异常摘要仍可输出。限长不限制对象遍历或序列化的工作量。框架不按字段名称自动脱敏；协议头的空 allowlist 表示全部头，启用采集时应设置需要的白名单。Feign 在底层客户端构建请求后捕获最终一次尝试的真实请求/响应头，因此请求头日志可能出现在完成阶段；逻辑请求目标使用方法名、HTTP 方法和映射路径，入口和完成阶段保持一致。Controller 响应头取方法或 Future 完成时已设置的头，不代表 Servlet 最终提交后的完整响应。
+参数、结果、慢日志及异常摘要都使用同一个 formatter；慢日志中的 Long 数值也沿用应用的序列化规则，例如将耗时和阈值输出为字符串。
+
+`max-payload-length=-1` 默认不限长，正数截断最终载荷字符串，`0` 关闭参数、结果及协议头载荷日志的输出和序列化，慢调用/异常摘要仍可输出。限长不限制对象遍历或序列化的工作量。框架不按字段名称自动脱敏；协议头的空 allowlist 表示全部头，启用采集时应设置需要的白名单。Feign 在底层客户端构建请求后捕获最终一次尝试的真实请求/响应头，因此请求头日志可能出现在完成阶段；逻辑请求目标使用方法名、HTTP 方法和映射路径，入口和完成阶段保持一致。Controller 响应头取当前方法返回或抛出异常时已设置的头，不代表 Servlet 最终提交后的完整响应。
+
+trace 模块通过独立 `VeloTraceAutoConfiguration`、HTTP Filter、Feign 传播配置及入口作用域管理启用。`velo.log.enabled=false` 不影响 trace；`velo.trace.enabled=false` 不影响日志功能。HTTP Filter 保留异步/错误派发复用，TaskDecorator 保留常见执行器传播，两者与 Future 的日志完成监听无关。原公共 Resolver/TraceContext 类型和包名保持不变。
+
+推荐使用 `velo.trace.enabled/mdc-key/feign-propagation-enabled/logging-pattern-enabled`。旧 `velo.log.trace.*` 中这四项仍作为逐项回退值；同一项同时配置时新名称优先。
 
 traceId 获取和生成只有一个无参扩展方法，默认注入 `W3cTraceContextResolver`。它从当前 Spring 请求上下文读取 `traceparent` 和 `tracestate`：合法时沿用 traceId 并保留完整协议字段；缺失、重复或非法时生成新的非零 32 位小写十六进制 traceId 和合法的 `traceparent`，无效的 `tracestate` 只会被丢弃。已有 `X-Trace-Id` 请求头不会参与默认解析。规则参考 [W3C Trace Context](https://www.w3.org/TR/trace-context/)。
 
@@ -642,9 +647,8 @@ traceId 生命周期：
 
 - HTTP：每次新请求解析一次，不沿用工作线程残留值。请求属性保存完整快照，异步/错误派发复用；结束后恢复先前 MDC 和框架上下文。
 - Invoke：已有框架上下文直接复用，没有时调用解析器；只有 MDC 标识时由解析器判断是否能沿用。最外层结束后恢复，嵌套调用复用同一快照。自定义多步流程可在外层加 `@InvokeLog`，或用 `try (TraceContext.Scope scope = TraceContext.open("traceId", true, resolver)) { ... }` 包住流程，其中 resolver 为注入的 Bean。两参 `open` 固定使用内置 W3C 实现。
-- Feign：发送快照中的传播头，下游 HTTP 入口使用相同协议即可沿用，实现 A→B 一致。默认透传 `traceparent/tracestate`，保留上游 parent-id 和采样标志，不生成每次调用的 span。没有上层上下文时由引擎建立作用域；仅使用裸拦截器时生成出站头，不给调用线程永久写 MDC。
+- Feign：发送快照中的传播头，下游 HTTP 入口使用相同协议即可沿用，实现 A→B 一致。默认透传 `traceparent/tracestate`，保留上游 parent-id 和采样标志，不生成每次调用的 span。没有上层上下文时由 Feign 入口适配建立作用域；仅使用裸拦截器时生成出站头，不给调用线程永久写 MDC。
 - 常见 Spring 执行器：提供 `MdcTaskDecorator` Bean，Boot 支持 TaskDecorator 的自动配置执行器会采用它。提交时复制 MDC 和完整链路快照，任务内复用或调用解析器生成，执行后恢复工作线程。不会复制 Servlet 请求、响应或应用自己的 ThreadLocal。用户已有 TaskDecorator 时保留用户 Bean；自定义线程池需要自行安装该装饰器。
-- `CompletionStage`：日志仅观察原 Future，返回同一对象，保留取消语义。输出完成日志时临时安装完整快照并恢复回调线程上下文；不传播到用户自定义公共池、线程或任意异步回调。取消是否中断实际工作由原 Future 决定。
 - Scheduled/XXL-Job：每次执行调用同一个解析器，不沿用 HTTP 请求或调用方 MDC，结束后恢复。内置实现为每次任务生成新值；自定义 ThreadLocal 的独立性由自定义实现保证。
 
 MDC 只存 traceId，不存 spanId；协议中的 parent-id 只作为传播字段保存。这里是 W3C 上下文透传和日志关联，不采集 span，不改变上游采样决定，完整分布式追踪可另行接入。若同时使用其他追踪组件，应选择一个组件负责出站追踪头，避免多个拦截器相互覆盖。前端发送 `traceparent` 时需自行生成合法字段，并在跨域场景允许该请求头及需要读取的响应头。
@@ -933,8 +937,8 @@ velo:
         enabled: true
     defaults:
       max-payload-length: -1
-    trace:
-      enabled: true
+  trace:
+    enabled: true
 ```
 
 说明：
@@ -962,15 +966,15 @@ velo:
         enabled: true
     defaults:
       max-payload-length: -1
-    trace:
-      enabled: true
-      feign-propagation-enabled: true
+  trace:
+    enabled: true
+    feign-propagation-enabled: true
 ```
 
 说明：
 
 - 默认开启
-- 前缀为 `[feign][方法名() HTTP方法 接口路径]`，例如 `[feign][remote() GET /log/remote]`；类名由日志框架输出，不重复打印 client 名或 contextId
+- 前缀为 `[feign] [方法名() HTTP方法 接口路径]`，例如 `[feign] [remote() GET /log/remote]`；类名由日志框架输出，不重复打印 client 名或 contextId
 - 接口路径取 Spring MVC 映射模板，例如 `/users/{id}`，不展开路径变量或拼接查询参数；无法解析映射时省略缺失部分，保留方法名
 - 默认打印入参，结果默认关闭，慢调用和异常各输出独立日志
 - 日志格式和 Controller、`@InvokeLog` 保持一致，便于联调排查
@@ -1050,8 +1054,8 @@ velo:
         enabled: false
       feign:
         enabled: false
-    trace:
-      enabled: false
+  trace:
+    enabled: false
   jackson:
     enabled: false
   redis:

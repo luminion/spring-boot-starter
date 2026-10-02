@@ -16,11 +16,14 @@ io.github.luminion.velo.ratelimit.config.VeloRateLimitRedisAutoConfiguration,\
 io.github.luminion.velo.ratelimit.config.VeloRateLimitCaffeineAutoConfiguration,\
 io.github.luminion.velo.ratelimit.config.VeloRateLimitJdkAutoConfiguration,\
 io.github.luminion.velo.ratelimit.VeloRateLimitAutoConfiguration,\
+io.github.luminion.velo.log.trace.VeloTraceAutoConfiguration,\
 io.github.luminion.velo.log.VeloLogAutoConfiguration,\
 io.github.luminion.velo.log.VeloSourceLogAutoConfiguration,\
+io.github.luminion.velo.feign.VeloFeignTraceAutoConfiguration,\
 io.github.luminion.velo.feign.VeloFeignAutoConfiguration,\
 io.github.luminion.velo.mybatisplus.VeloMybatisPlusAutoConfiguration,\
 io.github.luminion.velo.redis.VeloRedisAutoConfiguration,\
+io.github.luminion.velo.web.VeloWebTraceAutoConfiguration,\
 io.github.luminion.velo.web.VeloWebAutoConfiguration,\
 io.github.luminion.velo.xss.VeloXssAutoConfiguration,\
 io.github.luminion.velo.converter.VeloDateTimeFormatAutoConfiguration,\

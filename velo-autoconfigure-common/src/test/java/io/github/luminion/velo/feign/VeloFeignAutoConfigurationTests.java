@@ -14,6 +14,9 @@ import io.github.luminion.velo.log.InvocationLogRecord;
 import io.github.luminion.velo.log.VeloLogAutoConfiguration;
 import io.github.luminion.velo.log.trace.TraceContext;
 import io.github.luminion.velo.log.trace.TraceData;
+import io.github.luminion.velo.log.trace.TraceScopeManager;
+import io.github.luminion.velo.log.trace.VeloTraceAutoConfiguration;
+import io.github.luminion.velo.log.trace.W3cTraceContextResolver;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -37,8 +40,10 @@ class VeloFeignAutoConfigurationTests {
           .withConfiguration(
               AutoConfigurations.of(
                   VeloCoreAutoConfiguration.class,
+                  VeloTraceAutoConfiguration.class,
                   VeloLogAutoConfiguration.class,
-                  VeloFeignAutoConfiguration.class));
+                  VeloFeignAutoConfiguration.class,
+                  VeloFeignTraceAutoConfiguration.class));
 
   @AfterEach
   void cleanup() {
@@ -64,7 +69,7 @@ class VeloFeignAutoConfigurationTests {
         .run(
             c -> {
               assertThat(c)
-                  .doesNotHaveBean(FeignLogAspect.class)
+                  .hasSingleBean(FeignLogAspect.class)
                   .doesNotHaveBean(FeignInvocationCapability.class);
               assertThat(c).hasSingleBean(FeignTraceRequestInterceptor.class);
             });
@@ -77,8 +82,9 @@ class VeloFeignAutoConfigurationTests {
         .run(
             c -> {
               assertThat(c)
-                  .doesNotHaveBean(FeignLogAspect.class)
-                  .doesNotHaveBean(FeignTraceRequestInterceptor.class);
+                  .hasSingleBean(FeignLogAspect.class)
+                  .hasSingleBean(FeignTraceRequestInterceptor.class)
+                  .doesNotHaveBean(InvocationLogEngine.class);
             });
   }
 
@@ -93,8 +99,17 @@ class VeloFeignAutoConfigurationTests {
   void invocationCreatesTraceAndPropagatesWithoutDuplicateHeaders() throws Throwable {
     VeloProperties p = new VeloProperties();
     List<InvocationLogRecord> records = new ArrayList<>();
+    List<String> traces = new ArrayList<>();
     FeignLogAspect aspect =
-        new FeignLogAspect(new InvocationLogEngine(p, String::valueOf, records::add));
+        new FeignLogAspect(
+            new InvocationLogEngine(
+                p,
+                String::valueOf,
+                record -> {
+                  records.add(record);
+                  traces.add(MDC.get("traceId"));
+                }),
+            new TraceScopeManager(p.getLog().getTrace(), new W3cTraceContextResolver()));
     ProceedingJoinPoint point = point();
     RequestTemplate template = new RequestTemplate();
     template.header("traceparent", "stale");
@@ -110,11 +125,11 @@ class VeloFeignAutoConfigurationTests {
     InvocationLogRecord entry = records.get(0);
     assertThat(entry.getFeature()).isEqualTo(InvocationLogFeature.ENTRY_ARGS);
     assertThat(entry.getTarget()).isEqualTo("find() GET /users/{id}");
-    assertThat(entry.getPayload()).contains("id=1");
-    assertThat(entry.getTraceId()).matches("[0-9a-f]{32}");
+    assertThat(entry.getContent()).contains("id=1");
+    assertThat(traces.get(0)).matches("[0-9a-f]{32}");
     assertThat(template.headers().get("traceparent"))
         .hasSize(1)
-        .allMatch(value -> value.startsWith("00-" + entry.getTraceId() + "-"));
+        .allMatch(value -> value.startsWith("00-" + traces.get(0) + "-"));
     assertThat(template.headers()).doesNotContainKey("tracestate");
     assertThat(MDC.get("traceId")).isNull();
     assertThat(FeignInvocationContext.current()).isNull();
@@ -137,7 +152,9 @@ class VeloFeignAutoConfigurationTests {
         .setAllowlist(java.util.Collections.singletonList("x-response"));
     List<InvocationLogRecord> records = new ArrayList<>();
     FeignLogAspect aspect =
-        new FeignLogAspect(new InvocationLogEngine(p, String::valueOf, records::add));
+        new FeignLogAspect(
+            new InvocationLogEngine(p, String::valueOf, records::add),
+            new TraceScopeManager(p.getLog().getTrace(), new W3cTraceContextResolver()));
     FeignInvocationContext outer = FeignInvocationContext.open();
     try {
       ProceedingJoinPoint point = point();
@@ -163,8 +180,8 @@ class VeloFeignAutoConfigurationTests {
               InvocationLogFeature.ERROR_LOG,
               InvocationLogFeature.REQUEST_HEADERS,
               InvocationLogFeature.RESPONSE_HEADERS);
-      assertThat(records.get(2).getPayload()).contains("X-Request", "yes");
-      assertThat(records.get(3).getPayload()).contains("X-Response", "ok");
+      assertThat(records.get(2).getContent()).contains("X-Request", "yes");
+      assertThat(records.get(3).getContent()).contains("X-Response", "ok");
       assertThat(records)
           .extracting(InvocationLogRecord::getTarget)
           .containsOnly("find() GET /users/{id}");
@@ -203,6 +220,47 @@ class VeloFeignAutoConfigurationTests {
         .hasSize(1)
         .allMatch(value -> value.matches("00-[0-9a-f]{32}-[0-9a-f]{16}-00"));
     assertThat(MDC.get("traceId")).isNull();
+  }
+
+  @Test
+  void loggingDisabledFeignAdapterKeepsTraceForWholeCall() {
+    runner
+        .withPropertyValues("velo.log.enabled=false")
+        .run(
+            context -> {
+              try {
+                ProceedingJoinPoint point = point();
+                RequestTemplate template = new RequestTemplate();
+                List<String> seen = new ArrayList<>();
+                when(point.proceed())
+                    .thenAnswer(
+                        call -> {
+                          seen.add(MDC.get("traceId"));
+                          context.getBean(FeignTraceRequestInterceptor.class).apply(template);
+                          assertThat(MDC.get("traceId")).isEqualTo(seen.get(0));
+                          return "done";
+                        });
+                assertThat(context.getBean(FeignLogAspect.class).logFeignInvocation(point))
+                    .isEqualTo("done");
+                assertThat(seen.get(0)).matches("[0-9a-f]{32}");
+                assertThat(template.headers().get("traceparent"))
+                    .allMatch(value -> value.startsWith("00-" + seen.get(0) + "-"));
+                assertThat(MDC.get("traceId")).isNull();
+              } catch (Throwable error) {
+                throw new AssertionError(error);
+              }
+            });
+  }
+
+  @Test
+  void propagationSwitchDisablesInterceptorWithoutDisablingLogs() {
+    runner
+        .withPropertyValues("velo.trace.feign-propagation-enabled=false")
+        .run(
+            context ->
+                assertThat(context)
+                    .doesNotHaveBean(FeignTraceRequestInterceptor.class)
+                    .hasSingleBean(InvocationLogEngine.class));
   }
 
   private ProceedingJoinPoint point() throws Exception {

@@ -247,7 +247,7 @@ public class VeloProperties {
     /** 是否启用调用日志和相关自动配置。 */
     private boolean enabled = true;
 
-    /** 请求和任务的 traceId 配置。 */
+    /** 旧版 trace 配置入口；运行时独立绑定 velo.trace，新配置逐项优先于这里的值。 */
     private TraceProperties trace = new TraceProperties();
 
     /** 全局默认配置；来源可覆盖，注解优先。 */

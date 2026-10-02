@@ -5,6 +5,46 @@
       "type": "java.lang.Boolean",
       "description": "是否启用开箱即用的全局增强默认值；默认 true，设置为 false 时使用无侵入模式。",
       "defaultValue": true
+    },
+    {
+      "name": "velo.log.trace.enabled",
+      "type": "java.lang.Boolean",
+      "description": "兼容旧 trace 配置；推荐使用独立的 velo.trace 配置，同一项新配置优先。",
+      "defaultValue": true,
+      "deprecation": {
+        "level": "warning",
+        "replacement": "velo.trace.enabled"
+      }
+    },
+    {
+      "name": "velo.log.trace.mdc-key",
+      "type": "java.lang.String",
+      "description": "兼容旧 trace 配置；推荐使用独立的 velo.trace 配置，同一项新配置优先。",
+      "defaultValue": "traceId",
+      "deprecation": {
+        "level": "warning",
+        "replacement": "velo.trace.mdc-key"
+      }
+    },
+    {
+      "name": "velo.log.trace.feign-propagation-enabled",
+      "type": "java.lang.Boolean",
+      "description": "兼容旧 trace 配置；推荐使用独立的 velo.trace 配置，同一项新配置优先。",
+      "defaultValue": true,
+      "deprecation": {
+        "level": "warning",
+        "replacement": "velo.trace.feign-propagation-enabled"
+      }
+    },
+    {
+      "name": "velo.log.trace.logging-pattern-enabled",
+      "type": "java.lang.Boolean",
+      "description": "兼容旧 trace 配置；推荐使用独立的 velo.trace 配置，同一项新配置优先。",
+      "defaultValue": true,
+      "deprecation": {
+        "level": "warning",
+        "replacement": "velo.trace.logging-pattern-enabled"
+      }
     }
   ],
   "hints": [

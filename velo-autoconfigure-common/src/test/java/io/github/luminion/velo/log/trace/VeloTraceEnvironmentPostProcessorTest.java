@@ -64,12 +64,25 @@ class VeloTraceEnvironmentPostProcessorTest {
   }
 
   @Test
-  void shouldSkipWhenLogDisabled() {
+  void shouldKeepTracePatternWhenLogDisabled() {
     MockEnvironment environment = new MockEnvironment().withProperty("velo.log.enabled", "false");
 
     new VeloTraceEnvironmentPostProcessor()
         .postProcessEnvironment(environment, new SpringApplication());
 
-    assertThat(environment.getProperty("logging.pattern.level")).isNull();
+    assertThat(environment.getProperty("logging.pattern.level")).isEqualTo("%5p [%X{traceId}]");
+  }
+
+  @Test
+  void newTraceConfigurationOverridesLegacyPatternSettings() {
+    MockEnvironment environment =
+        new MockEnvironment()
+            .withProperty("velo.log.trace.enabled", "false")
+            .withProperty("velo.log.trace.mdc-key", "legacyId")
+            .withProperty("velo.trace.enabled", "true")
+            .withProperty("velo.trace.mdc-key", "currentId");
+    new VeloTraceEnvironmentPostProcessor()
+        .postProcessEnvironment(environment, new SpringApplication());
+    assertThat(environment.getProperty("logging.pattern.level")).isEqualTo("%5p [%X{currentId}]");
   }
 }
