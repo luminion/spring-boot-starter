@@ -1,160 +1,167 @@
 package io.github.luminion.velo;
 
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Test;
 
 class VeloConfigurationMetadataTest {
 
-    @Test
-    void shouldGenerateConfigurationMetadataForCoreProperties() throws IOException {
-        try (InputStream inputStream = Thread.currentThread()
-                .getContextClassLoader()
-                .getResourceAsStream("META-INF/spring-configuration-metadata.json")) {
-            assertNotNull(inputStream);
-            ByteArrayOutputStream output = new ByteArrayOutputStream();
-            byte[] buffer = new byte[1024];
-            int read;
-            while ((read = inputStream.read(buffer)) != -1) {
-                output.write(buffer, 0, read);
-            }
-            String metadata = new String(output.toByteArray(), StandardCharsets.UTF_8);
+  @Test
+  void shouldGenerateConfigurationMetadataForCoreProperties() throws IOException {
+    try (InputStream inputStream =
+        Thread.currentThread()
+            .getContextClassLoader()
+            .getResourceAsStream("META-INF/spring-configuration-metadata.json")) {
+      assertNotNull(inputStream);
+      ByteArrayOutputStream output = new ByteArrayOutputStream();
+      byte[] buffer = new byte[1024];
+      int read;
+      while ((read = inputStream.read(buffer)) != -1) {
+        output.write(buffer, 0, read);
+      }
+      String metadata = new String(output.toByteArray(), StandardCharsets.UTF_8);
 
-            assertTrue(metadata.contains("\"groups\""));
-            assertTrue(metadata.contains("velo.opinionated"));
-            assertFalse(metadata.contains("velo.mode"));
-            assertFalse(metadata.contains("velo.core.enabled"));
-            assertFalse(metadata.contains("velo.core.fingerprinter-enabled"));
-            assertFalse(metadata.contains("velo.core.naming-suffix-strategy-enabled"));
-            assertFalse(metadata.contains("velo.core.enum-field-convention-enabled"));
-            assertFalse(metadata.contains("velo.core.json-processor-provider-enabled"));
-            assertFalse(metadata.contains("velo.core.enum-code-fields"));
-            assertFalse(metadata.contains("velo.core.enum-desc-fields"));
-            assertTrue(metadata.contains("velo.cache.default-ttl"));
-            assertTrue(metadata.contains("velo.cache.prefix"));
-            assertTrue(metadata.contains("velo.cache.separator"));
-            assertTrue(metadata.contains("velo.cache.ttl"));
-            assertTrue(metadata.contains("velo.cache.null-caching-enabled"));
-            assertTrue(metadata.contains("velo.cache.ttl-jitter-percentage"));
-            assertFalse(metadata.contains("velo.cache.key-prefix"));
-            assertFalse(metadata.contains("velo.cache.key-separator"));
-            assertFalse(metadata.contains("velo.cache.ttl-map"));
-            assertFalse(metadata.contains("velo.cache.cache-manager-enabled"));
-            assertFalse(metadata.contains("velo.cache.redis-cache-configuration-enabled"));
-            assertFalse(metadata.contains("velo.cache.redis-cache-time-map-provider-enabled"));
-            assertTrue(metadata.contains("velo.excel.converters.enabled"));
-            assertTrue(metadata.contains("velo.excel.converters.boolean-enabled"));
-            assertFalse(metadata.contains("velo.excel.converters.boolean-converter-enabled"));
-            assertTrue(metadata.contains("velo.spring-converter.date-time-enabled"));
-            assertFalse(metadata.contains("velo.date-time-format.converters.enabled"));
-            assertFalse(metadata.contains("velo.date-time-format.converters.java-util-date-converter-enabled"));
-            assertFalse(metadata.contains("velo.date-time-format.converters.local-date-time-converter-enabled"));
-            assertFalse(metadata.contains("velo.date-time-format.converters.local-date-converter-enabled"));
-            assertFalse(metadata.contains("velo.date-time-format.converters.local-time-converter-enabled"));
-            assertFalse(metadata.contains("velo.jackson.builder-customizer-enabled"));
-            assertFalse(metadata.contains("velo.jackson.redis-serializer-enabled"));
-            assertTrue(metadata.contains("velo.jackson.date-time-enabled"));
-            assertFalse(metadata.contains("velo.jackson.date-time.enabled"));
-            assertFalse(metadata.contains("velo.jackson.date-time.java-util-date-enabled"));
-            assertFalse(metadata.contains("velo.jackson.date-time.serializers-enabled"));
-            assertFalse(metadata.contains("velo.jackson.date-time.deserializers-enabled"));
-            assertTrue(metadata.contains("velo.jackson.serialize-long-as-string"));
-            assertTrue(metadata.contains("velo.jackson.serialize-big-decimal-as-string"));
-            assertTrue(metadata.contains("velo.jackson.big-decimal-strip-trailing-zeros"));
-            assertTrue(metadata.contains("velo.jackson.serialize-floating-as-string"));
-            assertFalse(metadata.contains("velo.jackson.string-converter-enabled"));
-            assertFalse(metadata.contains("velo.jackson.string-converter.enabled"));
-            assertFalse(metadata.contains("velo.jackson.long-as-string"));
-            assertFalse(metadata.contains("velo.jackson.unsafe-integer-as-string"));
-            assertFalse(metadata.contains("velo.jackson.big-decimal-as-string"));
-            assertFalse(metadata.contains("velo.jackson.floating-as-string"));
-            assertFalse(metadata.contains("velo.jackson.string-converters.enabled"));
-            assertFalse(metadata.contains("velo.jackson.string-converters.serializer-enabled"));
-            assertFalse(metadata.contains("velo.jackson.string-converters.deserializer-enabled"));
-            assertTrue(metadata.contains("velo.feign.enabled"));
-            assertFalse(metadata.contains("velo.feign.request-logging-enabled"));
-            assertFalse(metadata.contains("velo.feign.request-logging-max-payload-length"));
-            assertFalse(metadata.contains("velo.feign.request-logging.enabled"));
-            assertFalse(metadata.contains("velo.feign.request-logging.max-payload-length"));
-            assertTrue(metadata.contains("velo.log.enabled"));
-            assertTrue(metadata.contains("velo.log.level"));
-            assertTrue(metadata.contains("velo.log.trace.enabled"));
-            assertTrue(metadata.contains("velo.log.trace.header-name"));
-            assertTrue(metadata.contains("velo.log.trace.mdc-key"));
-            assertTrue(metadata.contains("velo.log.trace.response-header-enabled"));
-            assertTrue(metadata.contains("velo.log.trace.feign-propagation-enabled"));
-            assertTrue(metadata.contains("velo.log.trace.logging-pattern-enabled"));
-            assertTrue(metadata.contains("velo.log.invocation.max-payload-length"));
-            assertTrue(metadata.contains("velo.log.invocation.include-args"));
-            assertTrue(metadata.contains("velo.log.invocation.include-result"));
-            assertTrue(metadata.contains("velo.log.invocation.include-error-stack-trace"));
-            assertFalse(metadata.contains("velo.log.invocation.sensitive-pattern"));
-            assertFalse(metadata.contains("velo.log.invocation.sensitive-fields"));
-            assertTrue(metadata.contains("velo.log.controller.enabled"));
-            assertTrue(metadata.contains("velo.log.feign.enabled"));
-            assertFalse(metadata.contains("velo.log.invocation.enabled"));
-            assertFalse(metadata.contains("velo.log.invocation.controller.enabled"));
-            assertFalse(metadata.contains("velo.log.invocation.feign.enabled"));
-            assertFalse(metadata.contains("velo.log.invocation.method.enabled"));
-            assertFalse(metadata.contains("velo.log.slf4j-log-writer-enabled"));
-            assertFalse(metadata.contains("velo.log.args-enabled"));
-            assertFalse(metadata.contains("velo.log.result-enabled"));
-            assertFalse(metadata.contains("velo.log.error-enabled"));
-            assertFalse(metadata.contains("velo.log.slow-enabled"));
-            assertFalse(metadata.contains("velo.log.args-aspect-enabled"));
-            assertFalse(metadata.contains("velo.log.result-aspect-enabled"));
-            assertFalse(metadata.contains("velo.log.error-aspect-enabled"));
-            assertFalse(metadata.contains("velo.log.slow-aspect-enabled"));
-            assertTrue(metadata.contains("velo.jackson.enum-desc-enabled"));
-            assertTrue(metadata.contains("velo.jackson.enum-name-suffix"));
-            assertTrue(metadata.contains("velo.jackson.enum-mappings"));
-            assertFalse(metadata.contains("velo.jackson.enum-fields"));
-            assertFalse(metadata.contains("velo.jackson.enum-description-enabled"));
-            assertTrue(metadata.contains("velo.mybatis-plus.enabled"));
-            assertTrue(metadata.contains("velo.mybatis-plus.pagination-enabled"));
-            assertTrue(metadata.contains("velo.mybatis-plus.optimistic-locker-enabled"));
-            assertTrue(metadata.contains("velo.mybatis-plus.block-attack-enabled"));
-            assertFalse(metadata.contains("velo.mybatis-plus.interceptor-enabled"));
-            assertFalse(metadata.contains("velo.mybatis-plus.pagination-inner-interceptor-enabled"));
-            assertFalse(metadata.contains("velo.mybatis-plus.optimistic-locker-inner-interceptor-enabled"));
-            assertFalse(metadata.contains("velo.mybatis-plus.block-attack-inner-interceptor-enabled"));
-            assertFalse(metadata.contains("velo.date-time-format.enabled"));
-            assertTrue(metadata.contains("velo.web.enabled"));
-            assertTrue(metadata.contains("velo.web.cors.enabled"));
-            assertFalse(metadata.contains("velo.web.allow-cors"));
-            assertFalse(metadata.contains("velo.web.mvc-configurer-enabled"));
-            assertFalse(metadata.contains("velo.web.date-time-formatter-registration-enabled"));
-            assertFalse(metadata.contains("velo.web.xss.cleaner-enabled"));
-            assertFalse(metadata.contains("velo.web.xss.string-converter-enabled"));
-            assertFalse(metadata.contains("velo.web.xss.strategy"));
-            assertTrue(metadata.contains("velo.xss.strategy"));
-            assertTrue(metadata.contains("velo.xss.web-enabled"));
-            assertTrue(metadata.contains("velo.xss.jackson-enabled"));
-            assertFalse(metadata.contains("velo.web.request-logging-enabled"));
-            assertFalse(metadata.contains("velo.web.request-logging-max-payload-length"));
-            assertFalse(metadata.contains("velo.web.request-logging.enabled"));
-            assertFalse(metadata.contains("velo.web.request-logging.include-client-info"));
-            assertFalse(metadata.contains("velo.web.request-logging.include-query-string"));
-            assertFalse(metadata.contains("velo.web.request-logging.include-payload"));
-            assertFalse(metadata.contains("velo.web.request-logging.max-payload-length"));
-            assertFalse(metadata.contains("velo.redis.string-object-redis-template-enabled"));
-            assertFalse(metadata.contains("velo.redis.redis-template-enabled"));
-            assertTrue(metadata.contains("velo.idempotent.backend"));
-            assertTrue(metadata.contains("velo.idempotent.prefix"));
-            assertFalse(metadata.contains("velo.idempotent.key-prefix"));
-            assertTrue(metadata.contains("velo.rate-limit.backend"));
-            assertTrue(metadata.contains("velo.rate-limit.prefix"));
-            assertFalse(metadata.contains("velo.rate-limit.key-prefix"));
-            assertTrue(metadata.contains("velo.lock.backend"));
-            assertTrue(metadata.contains("velo.lock.prefix"));
-            assertFalse(metadata.contains("velo.lock.key-prefix"));
-        }
+      assertTrue(metadata.contains("\"groups\""));
+      assertTrue(metadata.contains("velo.opinionated"));
+      assertFalse(metadata.contains("velo.mode"));
+      assertFalse(metadata.contains("velo.core.enabled"));
+      assertFalse(metadata.contains("velo.core.fingerprinter-enabled"));
+      assertFalse(metadata.contains("velo.core.naming-suffix-strategy-enabled"));
+      assertFalse(metadata.contains("velo.core.enum-field-convention-enabled"));
+      assertFalse(metadata.contains("velo.core.json-processor-provider-enabled"));
+      assertFalse(metadata.contains("velo.core.enum-code-fields"));
+      assertFalse(metadata.contains("velo.core.enum-desc-fields"));
+      assertTrue(metadata.contains("velo.cache.default-ttl"));
+      assertTrue(metadata.contains("velo.cache.prefix"));
+      assertTrue(metadata.contains("velo.cache.separator"));
+      assertTrue(metadata.contains("velo.cache.ttl"));
+      assertTrue(metadata.contains("velo.cache.null-caching-enabled"));
+      assertTrue(metadata.contains("velo.cache.ttl-jitter-percentage"));
+      assertFalse(metadata.contains("velo.cache.key-prefix"));
+      assertFalse(metadata.contains("velo.cache.key-separator"));
+      assertFalse(metadata.contains("velo.cache.ttl-map"));
+      assertFalse(metadata.contains("velo.cache.cache-manager-enabled"));
+      assertFalse(metadata.contains("velo.cache.redis-cache-configuration-enabled"));
+      assertFalse(metadata.contains("velo.cache.redis-cache-time-map-provider-enabled"));
+      assertTrue(metadata.contains("velo.excel.converters.enabled"));
+      assertTrue(metadata.contains("velo.excel.converters.boolean-enabled"));
+      assertFalse(metadata.contains("velo.excel.converters.boolean-converter-enabled"));
+      assertTrue(metadata.contains("velo.spring-converter.date-time-enabled"));
+      assertFalse(metadata.contains("velo.date-time-format.converters.enabled"));
+      assertFalse(
+          metadata.contains("velo.date-time-format.converters.java-util-date-converter-enabled"));
+      assertFalse(
+          metadata.contains("velo.date-time-format.converters.local-date-time-converter-enabled"));
+      assertFalse(
+          metadata.contains("velo.date-time-format.converters.local-date-converter-enabled"));
+      assertFalse(
+          metadata.contains("velo.date-time-format.converters.local-time-converter-enabled"));
+      assertFalse(metadata.contains("velo.jackson.builder-customizer-enabled"));
+      assertFalse(metadata.contains("velo.jackson.redis-serializer-enabled"));
+      assertTrue(metadata.contains("velo.jackson.date-time-enabled"));
+      assertFalse(metadata.contains("velo.jackson.date-time.enabled"));
+      assertFalse(metadata.contains("velo.jackson.date-time.java-util-date-enabled"));
+      assertFalse(metadata.contains("velo.jackson.date-time.serializers-enabled"));
+      assertFalse(metadata.contains("velo.jackson.date-time.deserializers-enabled"));
+      assertTrue(metadata.contains("velo.jackson.serialize-long-as-string"));
+      assertTrue(metadata.contains("velo.jackson.serialize-big-decimal-as-string"));
+      assertTrue(metadata.contains("velo.jackson.big-decimal-strip-trailing-zeros"));
+      assertTrue(metadata.contains("velo.jackson.serialize-floating-as-string"));
+      assertFalse(metadata.contains("velo.jackson.string-converter-enabled"));
+      assertFalse(metadata.contains("velo.jackson.string-converter.enabled"));
+      assertFalse(metadata.contains("velo.jackson.long-as-string"));
+      assertFalse(metadata.contains("velo.jackson.unsafe-integer-as-string"));
+      assertFalse(metadata.contains("velo.jackson.big-decimal-as-string"));
+      assertFalse(metadata.contains("velo.jackson.floating-as-string"));
+      assertFalse(metadata.contains("velo.jackson.string-converters.enabled"));
+      assertFalse(metadata.contains("velo.jackson.string-converters.serializer-enabled"));
+      assertFalse(metadata.contains("velo.jackson.string-converters.deserializer-enabled"));
+      assertTrue(metadata.contains("velo.feign.enabled"));
+      assertFalse(metadata.contains("velo.feign.request-logging-enabled"));
+      assertFalse(metadata.contains("velo.feign.request-logging-max-payload-length"));
+      assertFalse(metadata.contains("velo.feign.request-logging.enabled"));
+      assertFalse(metadata.contains("velo.feign.request-logging.max-payload-length"));
+      assertTrue(metadata.contains("velo.log.enabled"));
+      assertFalse(metadata.contains("velo.log.level"));
+      assertTrue(metadata.contains("velo.log.trace.enabled"));
+      assertFalse(metadata.contains("velo.log.trace.header-name"));
+      assertTrue(metadata.contains("velo.log.trace.mdc-key"));
+      assertFalse(metadata.contains("velo.log.trace.response-header-enabled"));
+      assertTrue(metadata.contains("velo.log.trace.feign-propagation-enabled"));
+      assertTrue(metadata.contains("velo.log.trace.logging-pattern-enabled"));
+      assertTrue(metadata.contains("velo.log.defaults.max-payload-length"));
+      assertTrue(metadata.contains("velo.log.defaults.entry-args.enabled"));
+      assertTrue(metadata.contains("velo.log.defaults.exit-args.enabled"));
+      assertTrue(metadata.contains("velo.log.defaults.exit-result.enabled"));
+      assertTrue(metadata.contains("velo.log.defaults.slow-log.threshold-ms"));
+      assertFalse(metadata.contains("velo.log.invocation.sensitive-pattern"));
+      assertFalse(metadata.contains("velo.log.invocation.sensitive-fields"));
+      assertTrue(metadata.contains("velo.log.sources.controller.enabled"));
+      assertTrue(metadata.contains("velo.log.sources.feign.enabled"));
+      assertFalse(metadata.contains("velo.aspect-order.slow-log"));
+      assertFalse(metadata.contains("velo.log.invocation.enabled"));
+      assertFalse(metadata.contains("velo.log.invocation.controller.enabled"));
+      assertFalse(metadata.contains("velo.log.invocation.feign.enabled"));
+      assertFalse(metadata.contains("velo.log.invocation.method.enabled"));
+      assertFalse(metadata.contains("velo.log.slf4j-log-writer-enabled"));
+      assertFalse(metadata.contains("velo.log.args-enabled"));
+      assertFalse(metadata.contains("velo.log.result-enabled"));
+      assertFalse(metadata.contains("velo.log.error-enabled"));
+      assertFalse(metadata.contains("velo.log.slow-enabled"));
+      assertFalse(metadata.contains("velo.log.args-aspect-enabled"));
+      assertFalse(metadata.contains("velo.log.result-aspect-enabled"));
+      assertFalse(metadata.contains("velo.log.error-aspect-enabled"));
+      assertFalse(metadata.contains("velo.log.slow-aspect-enabled"));
+      assertTrue(metadata.contains("velo.jackson.enum-desc-enabled"));
+      assertTrue(metadata.contains("velo.jackson.enum-name-suffix"));
+      assertTrue(metadata.contains("velo.jackson.enum-mappings"));
+      assertFalse(metadata.contains("velo.jackson.enum-fields"));
+      assertFalse(metadata.contains("velo.jackson.enum-description-enabled"));
+      assertTrue(metadata.contains("velo.mybatis-plus.enabled"));
+      assertTrue(metadata.contains("velo.mybatis-plus.pagination-enabled"));
+      assertTrue(metadata.contains("velo.mybatis-plus.optimistic-locker-enabled"));
+      assertTrue(metadata.contains("velo.mybatis-plus.block-attack-enabled"));
+      assertFalse(metadata.contains("velo.mybatis-plus.interceptor-enabled"));
+      assertFalse(metadata.contains("velo.mybatis-plus.pagination-inner-interceptor-enabled"));
+      assertFalse(
+          metadata.contains("velo.mybatis-plus.optimistic-locker-inner-interceptor-enabled"));
+      assertFalse(metadata.contains("velo.mybatis-plus.block-attack-inner-interceptor-enabled"));
+      assertFalse(metadata.contains("velo.date-time-format.enabled"));
+      assertTrue(metadata.contains("velo.web.enabled"));
+      assertTrue(metadata.contains("velo.web.cors.enabled"));
+      assertFalse(metadata.contains("velo.web.allow-cors"));
+      assertFalse(metadata.contains("velo.web.mvc-configurer-enabled"));
+      assertFalse(metadata.contains("velo.web.date-time-formatter-registration-enabled"));
+      assertFalse(metadata.contains("velo.web.xss.cleaner-enabled"));
+      assertFalse(metadata.contains("velo.web.xss.string-converter-enabled"));
+      assertFalse(metadata.contains("velo.web.xss.strategy"));
+      assertTrue(metadata.contains("velo.xss.strategy"));
+      assertTrue(metadata.contains("velo.xss.web-enabled"));
+      assertTrue(metadata.contains("velo.xss.jackson-enabled"));
+      assertFalse(metadata.contains("velo.web.request-logging-enabled"));
+      assertFalse(metadata.contains("velo.web.request-logging-max-payload-length"));
+      assertFalse(metadata.contains("velo.web.request-logging.enabled"));
+      assertFalse(metadata.contains("velo.web.request-logging.include-client-info"));
+      assertFalse(metadata.contains("velo.web.request-logging.include-query-string"));
+      assertFalse(metadata.contains("velo.web.request-logging.include-payload"));
+      assertFalse(metadata.contains("velo.web.request-logging.max-payload-length"));
+      assertFalse(metadata.contains("velo.redis.string-object-redis-template-enabled"));
+      assertFalse(metadata.contains("velo.redis.redis-template-enabled"));
+      assertTrue(metadata.contains("velo.idempotent.backend"));
+      assertTrue(metadata.contains("velo.idempotent.prefix"));
+      assertFalse(metadata.contains("velo.idempotent.key-prefix"));
+      assertTrue(metadata.contains("velo.rate-limit.backend"));
+      assertTrue(metadata.contains("velo.rate-limit.prefix"));
+      assertFalse(metadata.contains("velo.rate-limit.key-prefix"));
+      assertTrue(metadata.contains("velo.lock.backend"));
+      assertTrue(metadata.contains("velo.lock.prefix"));
+      assertFalse(metadata.contains("velo.lock.key-prefix"));
     }
+  }
 }

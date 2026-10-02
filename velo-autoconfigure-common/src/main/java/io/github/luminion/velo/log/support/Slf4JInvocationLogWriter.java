@@ -1,252 +1,112 @@
 package io.github.luminion.velo.log.support;
 
-import io.github.luminion.velo.VeloProperties;
+import io.github.luminion.velo.log.InvocationLogFeature;
 import io.github.luminion.velo.log.InvocationLogRecord;
 import io.github.luminion.velo.log.InvocationLogSupport;
 import io.github.luminion.velo.log.InvocationLogWriter;
 import io.github.luminion.velo.log.InvocationPhase;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.logging.LogLevel;
 import org.springframework.util.StringUtils;
 
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-
-/**
- * SLF4J based unified invocation log writer.
- *
- * <p>写入规则：
- * <ul>
- *   <li>慢日志记录（{@code isSlow=true}）：由 {@code velo.log.slow.level} 控制（默认 WARN）</li>
- *   <li>普通调用记录：由 {@code velo.log.level} 控制（默认 INFO）</li>
- *   <li>已启用的异常记录（{@code !isSuccess}）：提升到 ERROR 级别</li>
- * </ul>
- *
- * <p>格式规则：
- * <ul>
- *   <li>{@link InvocationPhase#ENTRY}：{@code [target] ==> args=...}</li>
- *   <li>{@link InvocationPhase#EXIT}：{@code [target] <== cost=Xms result=...}</li>
- *   <li>phase 为 null（慢日志等）：{@code [target] cost=Xms threshold=Yms args=... result=...}</li>
- * </ul>
- */
+/** 单功能 SLF4J 输出器；不判定业务异常，不输出堆栈或重复关联字段。 */
 public class Slf4JInvocationLogWriter implements InvocationLogWriter {
+  private final ConcurrentMap<String, Logger> loggers = new ConcurrentHashMap<>();
 
-    private static final Logger FALLBACK_LOGGER = LoggerFactory.getLogger(Slf4JInvocationLogWriter.class);
-
-    private final ConcurrentMap<String, Logger> loggerCache = new ConcurrentHashMap<>();
-
-    private final LogLevel level;
-
-    private final LogLevel slowLevel;
-
-    private final boolean includeErrorStackTrace;
-
-    public Slf4JInvocationLogWriter(VeloProperties properties) {
-        this.level = properties.getLog().getLevel();
-        this.slowLevel = properties.getLog().getSlow().getLevel();
-        this.includeErrorStackTrace = properties.getLog().getInvocation().isIncludeErrorStackTrace();
+  @Override
+  public boolean isEnabled(InvocationLogRecord record) {
+    if (record == null || record.getFeature() == null || record.getLevel() == LogLevel.OFF) {
+      return false;
     }
-
-    @Override
-    public void write(InvocationLogRecord record) {
-        if (record == null) {
-            return;
-        }
-        LogLevel configuredLevel = record.isSlow() ? slowLevel : level;
-        if (configuredLevel == LogLevel.OFF) {
-            return;
-        }
-
-        if (!record.isSuccess()) {
-            String message = buildMessage(record);
-            Logger logger = resolveLogger(record.getLoggerName());
-            if (includeErrorStackTrace && record.getError() != null) {
-                resolveLevel(LogLevel.ERROR).logError(logger, message, record.getError());
-            } else {
-                resolveLevel(LogLevel.ERROR).log(logger, message);
-            }
-            return;
-        }
-
-        LogOperations ops = resolveLevel(configuredLevel);
-        Logger logger = resolveLogger(record.getLoggerName());
-        if (!ops.isEnabled(logger)) {
-            return;
-        }
-        ops.log(logger, buildMessage(record));
+    Logger logger = logger(record);
+    switch (level(record)) {
+      case TRACE:
+        return logger.isTraceEnabled();
+      case DEBUG:
+        return logger.isDebugEnabled();
+      case WARN:
+        return logger.isWarnEnabled();
+      case ERROR:
+      case FATAL:
+        return logger.isErrorEnabled();
+      default:
+        return logger.isInfoEnabled();
     }
+  }
 
-    private String buildMessage(InvocationLogRecord record) {
-        InvocationPhase phase = record.getPhase();
-        if (phase == InvocationPhase.ENTRY) {
-            return buildEntryMessage(record);
-        }
-        if (phase == InvocationPhase.EXIT) {
-            return buildExitMessage(record);
-        }
-        // phase 为 null：旧单行格式（慢日志使用）
-        return buildSingleLineMessage(record);
+  @Override
+  public void write(InvocationLogRecord record) {
+    if (!isEnabled(record)) {
+      return;
     }
-
-    /** 进入阶段：{@code [target] ==> args=...} */
-    private String buildEntryMessage(InvocationLogRecord record) {
-        StringBuilder builder = new StringBuilder();
-        builder.append('[').append(text(record.getTarget())).append(']');
-        builder.append(" ==>");
-        append(builder, "args", text(record.getArgs()));
-        return builder.toString();
+    String message = message(record);
+    Logger logger = logger(record);
+    switch (level(record)) {
+      case TRACE:
+        logger.trace(message);
+        break;
+      case DEBUG:
+        logger.debug(message);
+        break;
+      case WARN:
+        logger.warn(message);
+        break;
+      case ERROR:
+      case FATAL:
+        logger.error(message);
+        break;
+      default:
+        logger.info(message);
     }
+  }
 
-    /** 退出阶段：{@code [target] <== cost=Xms args=... result=...} 或 {@code error="..."} */
-    private String buildExitMessage(InvocationLogRecord record) {
-        StringBuilder builder = new StringBuilder();
-        builder.append('[').append(text(record.getTarget())).append(']');
-        builder.append(" <==");
-        append(builder, "cost", record.getCostMs() + "ms");
-        if (record.getArgs() != null) {
-            append(builder, "args", text(record.getArgs()));
-        }
-        if (record.isSuccess()) {
-            append(builder, "result", text(record.getResult()));
-        } else {
-            appendQuoted(builder, "error", InvocationLogSupport.errorSummary(record.getError()));
-        }
-        return builder.toString();
+  private LogLevel level(InvocationLogRecord record) {
+    if (record.getLevel() != null) {
+      return record.getLevel();
     }
+    return record.getFeature() == InvocationLogFeature.SLOW_LOG
+            || record.getFeature() == InvocationLogFeature.ERROR_LOG
+        ? LogLevel.WARN
+        : LogLevel.INFO;
+  }
 
-    /** 单行格式：慢日志 / 旧行为兼容 */
-    private String buildSingleLineMessage(InvocationLogRecord record) {
-        StringBuilder builder = new StringBuilder();
-        builder.append('[').append(text(record.getTarget())).append(']');
-        append(builder, "cost", record.getCostMs() + "ms");
-        if (record.isSlow()) {
-            append(builder, "threshold", record.getSlowThreshold() + "ms");
-        }
-        append(builder, "args", text(record.getArgs()));
-        if (record.isSuccess()) {
-            append(builder, "result", text(record.getResult()));
-        } else {
-            appendQuoted(builder, "error", InvocationLogSupport.errorSummary(record.getError()));
-        }
-        return builder.toString();
+  private Logger logger(InvocationLogRecord record) {
+    String name =
+        StringUtils.hasText(record.getLoggerName()) ? record.getLoggerName() : getClass().getName();
+    return loggers.computeIfAbsent(name, LoggerFactory::getLogger);
+  }
+
+  private String message(InvocationLogRecord record) {
+    String source = record.getSource() == null ? "unknown" : record.getSource().getValue();
+    String prefix =
+        "["
+            + source
+            + "]["
+            + InvocationLogSupport.singleLine(record.getTarget())
+            + "] "
+            + (record.getFeature().getPhase() == InvocationPhase.ENTRY ? "==> " : "<== ")
+            + record.getFeature().getLabel()
+            + " = ";
+    switch (record.getFeature()) {
+      case SLOW_LOG:
+        return prefix
+            + "{\"costMs\":"
+            + record.getCostMs()
+            + ",\"thresholdMs\":"
+            + record.getThresholdMs()
+            + "}";
+      case ERROR_LOG:
+        return prefix
+            + "{\"type\":"
+            + InvocationLogSupport.quote(record.getErrorType())
+            + ",\"message\":"
+            + InvocationLogSupport.quote(record.getErrorMessage())
+            + "}";
+      default:
+        return prefix + InvocationLogSupport.singleLine(record.getPayload());
     }
-
-    private String text(String value) {
-        return StringUtils.hasText(value) ? value : "unknown";
-    }
-
-    private void append(StringBuilder builder, String key, String value) {
-        if (builder.length() > 0) {
-            builder.append(' ');
-        }
-        builder.append(key).append('=').append(value);
-    }
-
-    private void appendQuoted(StringBuilder builder, String key, String value) {
-        if (builder.length() > 0) {
-            builder.append(' ');
-        }
-        builder.append(key).append("=\"").append(escapeQuoted(value)).append('"');
-    }
-
-    /**
-     * 转义带引号日志字段中的特殊字符，避免异常消息破坏日志结构或注入换行。
-     */
-    private String escapeQuoted(String value) {
-        if (value == null || value.isEmpty()) {
-            return value;
-        }
-
-        StringBuilder escaped = new StringBuilder(value.length() + 16);
-        for (int i = 0; i < value.length(); i++) {
-            char ch = value.charAt(i);
-            switch (ch) {
-                case '"':
-                    escaped.append("\\\"");
-                    break;
-                case '\\':
-                    escaped.append("\\\\");
-                    break;
-                case '\b':
-                    escaped.append("\\b");
-                    break;
-                case '\f':
-                    escaped.append("\\f");
-                    break;
-                case '\n':
-                    escaped.append("\\n");
-                    break;
-                case '\r':
-                    escaped.append("\\r");
-                    break;
-                case '\t':
-                    escaped.append("\\t");
-                    break;
-                default:
-                    if (ch < 0x20 || ch == '\u2028' || ch == '\u2029') {
-                        escaped.append("\\u");
-                        String hex = Integer.toHexString(ch);
-                        for (int j = hex.length(); j < 4; j++) {
-                            escaped.append('0');
-                        }
-                        escaped.append(hex);
-                    } else {
-                        escaped.append(ch);
-                    }
-            }
-        }
-        return escaped.toString();
-    }
-
-    private Logger resolveLogger(String loggerName) {
-        if (!StringUtils.hasText(loggerName)) {
-            return FALLBACK_LOGGER;
-        }
-        return loggerCache.computeIfAbsent(loggerName, LoggerFactory::getLogger);
-    }
-
-    private static LogOperations resolveLevel(LogLevel level) {
-        LogLevel target = level == null ? LogLevel.INFO : level;
-        switch (target) {
-            case TRACE: return LogOperations.TRACE;
-            case DEBUG: return LogOperations.DEBUG;
-            case WARN:  return LogOperations.WARN;
-            case ERROR:
-            case FATAL: return LogOperations.ERROR;
-            default:    return LogOperations.INFO;
-        }
-    }
-
-    private enum LogOperations {
-        TRACE {
-            @Override boolean isEnabled(Logger logger) { return logger.isTraceEnabled(); }
-            @Override void log(Logger logger, String msg) { logger.trace(msg); }
-            @Override void logError(Logger logger, String msg, Throwable t) { logger.trace(msg, t); }
-        },
-        DEBUG {
-            @Override boolean isEnabled(Logger logger) { return logger.isDebugEnabled(); }
-            @Override void log(Logger logger, String msg) { logger.debug(msg); }
-            @Override void logError(Logger logger, String msg, Throwable t) { logger.debug(msg, t); }
-        },
-        INFO {
-            @Override boolean isEnabled(Logger logger) { return logger.isInfoEnabled(); }
-            @Override void log(Logger logger, String msg) { logger.info(msg); }
-            @Override void logError(Logger logger, String msg, Throwable t) { logger.info(msg, t); }
-        },
-        WARN {
-            @Override boolean isEnabled(Logger logger) { return logger.isWarnEnabled(); }
-            @Override void log(Logger logger, String msg) { logger.warn(msg); }
-            @Override void logError(Logger logger, String msg, Throwable t) { logger.warn(msg, t); }
-        },
-        ERROR {
-            @Override boolean isEnabled(Logger logger) { return logger.isErrorEnabled(); }
-            @Override void log(Logger logger, String msg) { logger.error(msg); }
-            @Override void logError(Logger logger, String msg, Throwable t) { logger.error(msg, t); }
-        };
-
-        abstract boolean isEnabled(Logger logger);
-        abstract void log(Logger logger, String msg);
-        abstract void logError(Logger logger, String msg, Throwable t);
-    }
+  }
 }

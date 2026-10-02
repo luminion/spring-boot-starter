@@ -102,17 +102,15 @@ public class VeloPropertiesWarningLogger implements InitializingBean {
             if (trace == null) {
                 warnings.add("velo.log.trace 为空，链路追踪相关功能可能在运行时失败。当前仅告警。");
             } else if (trace.isEnabled()) {
-                warnBlank(warnings, "velo.log.trace.header-name", trace.getHeaderName(),
-                        "请求头名称为空时链路 ID 无法正常传递");
                 warnBlank(warnings, "velo.log.trace.mdc-key", trace.getMdcKey(),
                         "MDC 键为空时链路 ID 无法正常写入日志上下文");
             }
 
-            VeloProperties.InvocationProperties invocation = logProperties.getInvocation();
+            VeloProperties.InvocationDefaults invocation = logProperties.getDefaults();
             if (invocation == null) {
-                warnings.add("velo.log.invocation 为空，调用日志相关功能可能在运行时失败。当前仅告警。");
+                warnings.add("velo.log.defaults 为空，调用日志相关功能可能在运行时失败。当前仅告警。");
             } else if (invocation.getMaxPayloadLength() < -1) {
-                warnings.add("velo.log.invocation.max-payload-length 当前值为 "
+                warnings.add("velo.log.defaults.max-payload-length 当前值为 "
                         + invocation.getMaxPayloadLength()
                         + "，仅 -1 或大于等于 0 有明确语义。当前仅告警。");
             }

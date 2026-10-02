@@ -5,7 +5,7 @@
 [![GitHub stars](https://img.shields.io/github/stars/luminion/spring-boot-starter?style=social)](https://github.com/luminion/spring-boot-starter)
 
 Velo Spring Boot Starter 是一组低侵入的 Spring Boot 自动配置扩展。
-项目以 `velo.*` 作为统一配置入口，围绕并发控制、缓存、Jackson、Redis、MyBatis-Plus、Excel、日志、XSS 以及 Web MVC/WebFlux 常用增强提供开箱能力。
+项目以 `velo.*` 作为统一配置入口，围绕并发控制、缓存、Jackson、Redis、MyBatis-Plus、Excel、日志、XSS 以及 Web MVC 常用增强提供开箱能力。
 
 
 首次接入可先查看 [版本与兼容性](#版本与兼容性) 和 [Maven 依赖](#maven-依赖)。
@@ -20,7 +20,7 @@ Velo Spring Boot Starter 是一组低侵入的 Spring Boot 自动配置扩展。
 - 提供 MyBatis-Plus 分页、乐观锁、防全表更新拦截器自动注册
 - 提供 RedisTemplate 序列化风格统一能力
 - 提供 Excel 扩展 converter 自动注册和 helper 工具类
-- 提供注解日志、Controller 请求日志、XSS 清洗和 Web MVC/WebFlux 日期绑定增强
+- 提供注解日志、Controller 请求日志、XSS 清洗和 Web MVC 日期绑定增强
 - 提供可选启动横幅，展示各能力开关及实际后端状态
 
 ---
@@ -39,7 +39,7 @@ velo:
 开关说明：
 
 - `velo.opinionated=true`：默认开箱即用，启用偏全局增强的默认行为
-- `velo.opinionated=false`：无侵入模式，关闭容易自动影响应用行为的默认项，但 `@Idempotent`、`@RateLimit`、`@Lock`、`@InvokeLog`、`@SlowLog` 等显式注解仍可用
+- `velo.opinionated=false`：无侵入模式，关闭容易自动影响应用行为的默认项，但 `@Idempotent`、`@RateLimit`、`@Lock`、`@InvokeLog` 等显式注解仍可用
 - `velo.opinionated=false` 只提供低优先级默认值，业务项目显式配置的属性优先级更高
 - 无侵入模式下重新打开某类能力时，需要显式设置对应的 `enabled` 项，例如 `velo.jackson.enabled=true`
 - 设置为 `false` 后，starter 会在启动日志中输出一条 INFO，列出被默认关闭的能力，便于排查“为什么某全局增强没生效”
@@ -71,11 +71,12 @@ velo:
 
 | 能力 | `velo.opinionated=true` | `velo.opinionated=false` | 说明 |
 | --- | --- | --- | --- |
-| traceId / MDC / 日志 pattern / 响应头 | 开启 | 关闭 | 影响用户自己的日志输出 |
+| traceId / MDC / 日志 pattern | 开启 | 关闭 | 影响用户自己的日志输出 |
+| 文本日志默认日期格式 | `yyyy-MM-dd HH:mm:ss.SSS` | 保持 Spring Boot 默认 | 用户日期配置、完整模板及自定义日志配置优先 |
 | Controller 调用日志 | 开启 | 关闭 | Web 环境下自动记录请求调用 |
 | Feign 调用日志 | 开启 | 关闭 | 存在 Feign 时自动记录远程调用 |
 | Jackson 增强 | 开启 | 关闭 | 影响 JSON 序列化、反序列化扩展 |
-| Spring Converter / Web MVC 与 WebFlux 日期绑定 | 开启 | 关闭 | 影响字符串到日期时间的全局转换 |
+| Spring Converter / Web MVC 日期绑定 | 开启 | 关闭 | 影响字符串到日期时间的全局转换 |
 | MyBatis-Plus 拦截器 | 开启 | 关闭 | 自动补充分页、乐观锁、防全表更新 |
 | RedisTemplate 自动补齐 | 开启 | 关闭 | 依赖 Redis classpath 与连接工厂 |
 | Redis Cache 自动补齐 | 开启 | 关闭 | 依赖 Spring Cache / Redis 条件 |
@@ -87,7 +88,7 @@ velo:
 | --- | --- | --- |
 | Velo Core 基础 Bean | 保留 | 提供指纹解析、消息解析、配置告警和可选 Banner 等基础支持 |
 | `@Idempotent` / `@RateLimit` / `@Lock` | 保留 | 注解驱动能力不由 `velo.opinionated` 默认关闭，仍需对应后端依赖 |
-| `@InvokeLog` / `@SlowLog` | 保留 | 方法级显式日志仍可用；Controller/Feign 自动日志默认关闭 |
+| `@InvokeLog` | 保留 | 方法级显式日志仍可用；Controller/Feign 自动日志默认关闭 |
 | XSS / CORS | 默认关闭，显式配置可开启 | 两者本身默认关闭，不依赖无侵入模式额外处理 |
 | Excel Helper | 保留 | 手工调用 Helper 不受全局 converter 注册开关影响 |
 | Spring Boot 官方自动配置 | 不受影响 | 无侵入模式只注入 `velo.*` 的最低优先级默认值 |
@@ -502,97 +503,169 @@ public void pay(Long orderId) {
 
 ### 7. 日志
 
-Velo 提供一套统一调用日志能力。Controller、Feign 与 `@InvokeLog` 每次调用分别输出进入和退出两条记录：进入记录包含入参，退出记录包含耗时以及返回值或异常。
+Controller、Feign、`@InvokeLog` 和任务入口共用一个 `InvocationLogEngine`。切面只提供调用目标、方法、参数和协议头；引擎解析功能策略并完成调用生命周期，`LogValueFormatter` 转换对象，`InvocationLogWriter` 输出记录。每个功能单独一行，`==>` 表示调用前，`<==` 表示调用完成。
 
-日志序列化器或 `InvocationLogWriter` 发生运行时异常时会记录内部 WARN 并丢弃本次日志，不会阻止业务执行或覆盖原始业务异常。
+```text
+[controller][127.0.0.1 GET /users/{id}] ==> entryArgs = {"id":1}
+[controller][127.0.0.1 GET /users/{id}] ==> requestHeaders = {"X-Demo":["visible"]}
+[controller][127.0.0.1 GET /users/{id}] <== exitArgs = {"id":1}
+[controller][127.0.0.1 GET /users/{id}] <== exitResult = {"name":"Tom"}
+[controller][127.0.0.1 GET /users/{id}] <== responseHeaders = {"X-Result":["ok"]}
+[controller][127.0.0.1 GET /users/{id}] <== slow = {"costMs":1200,"thresholdMs":1000}
+[invoke][find()] <== error = {"type":"java.lang.IllegalArgumentException","message":"参数无效"}
+[feign][remote() GET /log/remote] <== exitResult = {"message":"hello"}
+[scheduled][run()] <== slow = {"costMs":5,"thresholdMs":0}
+[xxl-job][run()] <== slow = {"costMs":5,"thresholdMs":0}
+```
 
-Controller、Feign 是默认调用日志来源，不需要业务方法添加注解；`@InvokeLog` 和 `@SlowLog` 是显式注解来源，没有命中注解的方法不会产生这两类日志。
+固定结构为 `[入口类型][调用目标] 箭头 功能名 = 内容`。入口类型为 `controller/invoke/feign/scheduled/xxl-job`；功能名为 `entryArgs/exitArgs/exitResult/requestHeaders/responseHeaders/slow/error`，慢调用和异常分别使用独立对象，异常摘要不附带堆栈。类名由日志框架输出，Invoke、Scheduled 和 XXL-Job 的调用目标只显示方法名。
 
-基础 starter 默认可用，无需额外依赖。
+正文不重复打印 `traceId`、`source`、`event`、`invocationId`。默认日志格式通过 MDC 在级别位置显示 traceId。自定义 `InvocationLogWriter` 仍可读取记录中的来源、traceId 和 invocationId。
 
-关键配置：
+| 功能注解 | Controller 默认 | Feign 默认 | Invoke 默认 | 默认级别 |
+| --- | --- | --- | --- | --- |
+| `EntryArgs` | 开 | 开 | 开 | INFO |
+| `ExitArgs` | 关 | 关 | 关 | INFO |
+| `ExitResult` | 关 | 关 | 开 | INFO |
+| `SlowLog` | 开，1000ms | 开，1000ms | 开，1000ms | WARN |
+| `RequestHeadersLog` | 关 | 关 | 不适用 | INFO |
+| `ResponseHeadersLog` | 关 | 关 | 不适用 | INFO |
+| `ErrorLog` | 开 | 开 | 开 | WARN |
+
+任务入口包括 `@Scheduled` 和 XXL-Job，默认只开慢调用、异常摘要；参数和返回值默认关闭。普通方法需要 `@InvokeLog` 作为切入点；Controller、Feign、任务入口由自己的切面自动接入，重复标注 `@InvokeLog` 不会重复输出。只有功能注解的普通方法不会自动切入。切面基于 Spring AOP，同类内部直接调用、未经过代理的对象、private/final 方法不保证被拦截。
+
+配置优先级：**方法注解 > 类注解 > 来源配置 > 全局配置 > 内置默认值**。注解为完整配置，例如 `@EntryArgs` 自带 `enabled=true, level=INFO`，会覆盖类或 properties 对该功能的配置。没有方法注解才继承类配置。所有注解只支持类和方法，不支持参数、字段、返回类型；不再提供 `CONFIGURED` 或按慢调用/失败联动打印参数的触发策略。
+
+`@LogIgnore` 排除其所在类或方法的全部调用日志，其他功能注解不能重新开启。它不屏蔽独立的下游调用日志，也不阻断 traceId 传播。`velo.log.enabled=false` 或 `sources.<source>.enabled=false` 是来源总开关，功能注解不能越过总开关。
+
+```java
+@Service
+@InvokeLog
+@EntryArgs(enabled = false)
+public class UserService {
+    @EntryArgs
+    @ExitResult
+    @SlowLog(thresholdMs = 200, level = LogLevel.WARN)
+    public User find(Long id) { /* 业务实现 */ }
+
+    @LogIgnore
+    public Token credentials() { /* 不记录该方法的任何调用日志 */ }
+}
+```
+
+每个功能都有独立 `enabled` 和 `level`，支持 Spring Boot `LogLevel`，`OFF` 关闭该功能。没有普通耗时 `CostLog`；将 SlowLog 阈值设为 `0`、级别设为 `INFO` 即可记录所有耗时。阈值单位毫秒，应大于等于 0。耗时从入口载荷输出后计到业务方法或 Future 完成，结束日志本身不计入耗时。
 
 ```yaml
 velo:
   log:
     enabled: true
-    level: INFO
-    controller:
-      enabled: true
-    feign:
-      enabled: true
-    slow:
-      level: WARN
+    defaults:
+      max-payload-length: 1024
+      entry-args:
+        level: INFO
+      exit-args:
+        enabled: false
+      slow-log:
+        enabled: true
+        threshold-ms: 1000
+        level: WARN
+      error-log:
+        enabled: true
+        level: WARN
+    sources:
+      controller:
+        exit-result:
+          enabled: true
+          level: INFO
+      feign:
+        request-headers:
+          enabled: true
+          allowlist: [traceparent, tracestate, Content-Type]
+        response-headers:
+          enabled: true
+          allowlist: [X-Trace-Id, Content-Type]
+      invoke:
+        slow-log:
+          threshold-ms: 0
+          level: INFO
     trace:
       enabled: true
-      header-name: X-Trace-Id
       mdc-key: traceId
-      response-header-enabled: true
       feign-propagation-enabled: true
       logging-pattern-enabled: true
-    invocation:
-      max-payload-length: -1
-      include-args: true
-      include-result: true
-      include-error-stack-trace: false
 ```
 
-使用示例：
+`ErrorLog` 只在异常结束时输出异常类型和提示信息，默认 WARN，不打印堆栈，不区分业务异常。异常继续原样抛出，由应用异常处理器决定响应、堆栈、ERROR 和告警；框架不注册业务异常分类规则。换行和控制字符会转义，便于 ELK/SLS 按单行采集。同一次失败在不同调用层可能各输出一条摘要。
+
+对象转换只有一个扩展方法：
 
 ```java
-import io.github.luminion.velo.log.annotation.InvokeLog;
-import io.github.luminion.velo.log.annotation.SlowLog;
-
-@InvokeLog
-@SlowLog(300)
-public Object createOrder(CreateOrderCmd cmd) {
-    return null;
-}
-
-@InvokeLog(argsOnFinish = true)
-public void enrichOrder(OrderDTO order) {
-    order.setStatus("READY");
+@Bean
+public LogValueFormatter logValueFormatter() {
+    return value -> myFormatter.format(value);
 }
 ```
 
-说明：
+默认使用应用已有的 Jackson 2/3 Mapper，复用字段忽略、日期格式、命名规则和自定义模块，非 Web 应用也可用；没有 Mapper 时使用 `String.valueOf`。可使用 `@JsonIgnore` 或 MixIn 隐藏 DTO 字段。Jackson 转换失败输出 `serialization-failed`，不会回退到可能暴露敏感字段的 toString。HttpEntity/ResponseEntity 返回值只转换 body，原响应对象保持不变。流、Servlet 等技术对象省略内容；循环容器和异常深度不会无限遍历。
 
-- `traceId` 默认开启，会写入 MDC、响应头，并在 Feign 调用中透传
-- 如果没有自定义 `logging.pattern.level`，会自动把 `%X{traceId}` 加到用户自己的日志中
-- Controller、Feign 与 `@InvokeLog` 的进入日志格式为 `[target] ==> args=...`
-- Controller、Feign 与 `@InvokeLog` 的退出日志格式为 `[target] <== cost=Xms result=...`；无返回值时记录 `result=void`，返回 `null` 时记录 `result=null`，调用失败时输出异常摘要并使用 ERROR 级别
-- 默认 SLF4J 调用日志 writer 会转义异常摘要中的双引号、反斜杠、换行和控制字符，避免破坏单行日志结构；开启异常堆栈时，完整堆栈仍按多行输出
-- `@InvokeLog(argsOnFinish = true)` 会在正常返回和异常结束的退出日志中增加 `args=...`，记录方法结束时的参数状态
-- payload 无法打印时会明确标记原因：`ignored`（注解忽略）、`disabled`（配置关闭）或 `serialization-failed`（序列化失败）
-- `@SlowLog` 的阈值单位固定为毫秒，只在调用耗时超过阈值后输出一条独立慢日志，格式包含 `cost=Xms threshold=Yms`
-- 慢日志级别由 `velo.log.slow.level` 控制，默认 WARN；调用异常且超过阈值时提升为 ERROR，设置为 `OFF` 时完全关闭独立慢日志
-- 同时命中其他调用日志切面时，慢日志默认在 ENTRY、EXIT 日志之后最后输出
-- 如果需要写入 MQ、数据库或审计系统，提供自定义 `InvocationLogWriter` Bean 即可
-- `velo.log.controller.enabled` 和 `velo.log.feign.enabled` 分别控制默认 Controller/Feign 日志；关闭其中一项不会影响另一项，也不会影响注解日志
-- `@InvokeLog` / `@SlowLog` 没有独立的 method 总开关：是否输出由方法或类上是否存在对应注解决定；`velo.log.enabled=false` 仍是所有 Velo 日志的总闸
-- `velo.log.level=OFF` 会关闭 Controller、Feign、`@InvokeLog` 的成功和异常输出；`velo.log.slow.level=OFF` 会关闭 `@SlowLog` 的独立慢日志；自定义 `InvocationLogWriter` 不受这些日志级别约束
+`max-payload-length=-1` 默认不限长，正数截断最终载荷字符串，`0` 关闭参数、结果及协议头载荷日志的输出和序列化，慢调用/异常摘要仍可输出。限长不限制对象遍历或序列化的工作量。框架不按字段名称自动脱敏；协议头的空 allowlist 表示全部头，启用采集时应设置需要的白名单。Feign 在底层客户端构建请求后捕获最终一次尝试的真实请求/响应头，因此请求头日志可能出现在完成阶段；逻辑请求目标使用方法名、HTTP 方法和映射路径，入口和完成阶段保持一致。Controller 响应头取方法或 Future 完成时已设置的头，不代表 Servlet 最终提交后的完整响应。
 
-敏感参数不打印（`@LogPayloadIgnore`）：
+traceId 获取和生成只有一个无参扩展方法，默认注入 `W3cTraceContextResolver`。它从当前 Spring 请求上下文读取 `traceparent` 和 `tracestate`：合法时沿用 traceId 并保留完整协议字段；缺失、重复或非法时生成新的非零 32 位小写十六进制 traceId 和合法的 `traceparent`，无效的 `tracestate` 只会被丢弃。已有 `X-Trace-Id` 请求头不会参与默认解析。规则参考 [W3C Trace Context](https://www.w3.org/TR/trace-context/)。
 
-如果某些方法的入参或返回值包含密码、token 等敏感信息，可用 `@LogPayloadIgnore` 抑制其打印。被忽略的内容在日志中显示为 `ignored`，但调用本身（方法名、耗时、成功/异常状态）仍会记录。该注解对 Controller、Feign、`@InvokeLog`、`@SlowLog` 所有调用日志切面均生效，可标注在方法或类上。
+保留原来的指定头协议，只需注册一个 Bean：
 
 ```java
-import io.github.luminion.velo.log.annotation.LogPayloadIgnore;
-
-// 同时忽略入参与返回值
-@LogPayloadIgnore
-public void deleteUser(Long userId) { }
-
-// 只忽略返回值，仍打印入参
-@LogPayloadIgnore(args = false)
-public UserDTO login(LoginRequest req) { }
-
-// 只忽略入参，仍打印返回值
-@LogPayloadIgnore(result = false)
-public Token issueToken(Credential credential) { }
+@Bean
+public TraceContextResolver traceContextResolver() {
+    return new HeaderTraceContextResolver("X-Trace-Id");
+}
 ```
 
-> 说明：starter 不内置基于字段名正则的自动脱敏，敏感信息控制统一通过 `@LogPayloadIgnore` 按方法显式声明，语义更明确、无误伤风险。
+此实现从指定头读取纯 traceId 并向下游发送同名头；缺失、重复或非法时生成新值。接受 1–128 位 ASCII 字母、数字、`-`、`_`、`.`。构造器只需提供头名称。
+
+更复杂的协议也可自行实现：
+
+```java
+@Bean
+public TraceContextResolver traceContextResolver() {
+    return () -> {
+        String id = myContext.currentTraceIdOrGenerate();
+        Map<String, String> headers = Collections.singletonMap("X-Custom-Trace", id);
+        return new TraceData(id, headers);
+    };
+}
+```
+
+`TraceContextResolver.resolve()` 自己读取当前上下文，可以用 `RequestContextHolder.getRequestAttributes()`，也可以读应用的 ThreadLocal；必须兼容没有 HTTP 请求的调用并保证线程安全。HTTP Filter 在解析期间临时提供包含请求和响应的 `ServletRequestAttributes`，解析后恢复已有 Spring 上下文。解析器返回不可变 `TraceData`，包含 traceId 和下游传播头，不保存 Servlet 对象；框架负责复用、MDC 和请求传播，自定义 ThreadLocal 由应用清理。传播头的空字符串表示移除已有同名头，不发送该值。自定义解析器返回 null 或抛出 RuntimeException 时，框架生成 W3C 兜底上下文，异常不会打断业务。
+
+traceId 生命周期：
+
+- HTTP：每次新请求解析一次，不沿用工作线程残留值。请求属性保存完整快照，异步/错误派发复用；结束后恢复先前 MDC 和框架上下文。
+- Invoke：已有框架上下文直接复用，没有时调用解析器；只有 MDC 标识时由解析器判断是否能沿用。最外层结束后恢复，嵌套调用复用同一快照。自定义多步流程可在外层加 `@InvokeLog`，或用 `try (TraceContext.Scope scope = TraceContext.open("traceId", true, resolver)) { ... }` 包住流程，其中 resolver 为注入的 Bean。两参 `open` 固定使用内置 W3C 实现。
+- Feign：发送快照中的传播头，下游 HTTP 入口使用相同协议即可沿用，实现 A→B 一致。默认透传 `traceparent/tracestate`，保留上游 parent-id 和采样标志，不生成每次调用的 span。没有上层上下文时由引擎建立作用域；仅使用裸拦截器时生成出站头，不给调用线程永久写 MDC。
+- 常见 Spring 执行器：提供 `MdcTaskDecorator` Bean，Boot 支持 TaskDecorator 的自动配置执行器会采用它。提交时复制 MDC 和完整链路快照，任务内复用或调用解析器生成，执行后恢复工作线程。不会复制 Servlet 请求、响应或应用自己的 ThreadLocal。用户已有 TaskDecorator 时保留用户 Bean；自定义线程池需要自行安装该装饰器。
+- `CompletionStage`：日志仅观察原 Future，返回同一对象，保留取消语义。输出完成日志时临时安装完整快照并恢复回调线程上下文；不传播到用户自定义公共池、线程或任意异步回调。取消是否中断实际工作由原 Future 决定。
+- Scheduled/XXL-Job：每次执行调用同一个解析器，不沿用 HTTP 请求或调用方 MDC，结束后恢复。内置实现为每次任务生成新值；自定义 ThreadLocal 的独立性由自定义实现保证。
+
+MDC 只存 traceId，不存 spanId；协议中的 parent-id 只作为传播字段保存。这里是 W3C 上下文透传和日志关联，不采集 span，不改变上游采样决定，完整分布式追踪可另行接入。若同时使用其他追踪组件，应选择一个组件负责出站追踪头，避免多个拦截器相互覆盖。前端发送 `traceparent` 时需自行生成合法字段，并在跨域场景允许该请求头及需要读取的响应头。
+
+框架不在 HTTP 响应中自动返回 traceId。链路关联通过请求头向下游传播；响应回传属于应用可选的诊断约定，W3C 处理模型没有要求该步骤。需要向前端提供排查编号时，由网关、应用 Filter 或异常处理器读取 MDC 后返回响应头或响应体。`ResponseHeadersLog` 仍按配置采集业务实际设置的响应头。
+
+`velo.log.trace.header-name`、`velo.log.trace.response-header-enabled` 和 `TraceData.responseHeaders` 已移除；指定请求头通过 `HeaderTraceContextResolver` Bean 选择，构造 `TraceData` 时只传 traceId 和传播头。
+
+自定义 Logback/Log4j2 格式需自行加入 MDC 键；默认键对应 `%X{traceId}`，例如 Spring Boot 的 `logging.pattern.level: "%5p [%X{traceId}]"`。自定义 `mdc-key` 后同步更改格式。功能级别仍受对应类 logger 的有效级别限制，例如注解选 DEBUG 而该 logger 为 INFO 时不会输出。
+
+默认文本日志的行首时间格式为 `yyyy-MM-dd HH:mm:ss.SSS`。在日志初始化前通过最低优先级属性源补充 `logging.pattern.dateformat`，用户在配置文件、环境变量或 JVM 参数中指定的格式优先，包括直接指定 `LOG_DATEFORMAT_PATTERN`。用户已有完整 console/file pattern、结构化日志配置、`logging.config` 或 classpath 日志配置文件时不补充日期默认值。`velo.opinionated=false` 或 `velo.log.enabled=false` 时保持原日期格式；关闭 traceId 不影响日期默认值。此设置只影响日志行首，不修改 Jackson 日期格式、文件滚动策略或用户自定义模板。
+
+```yaml
+logging:
+  pattern:
+    dateformat: "yyyy-MM-dd HH:mm:ss.SSS" # 可按需覆盖，无需使用 Velo 专用属性
+```
+
+本次将 `InvokeArgs`、`ReturnResult` 统一更名为 `EntryArgs`、`ExitResult`，配置 `invoke-args`、`return-result` 同步更名为 `entry-args`、`exit-result`；`ExitArgs` 不变，不保留旧命名别名。
+
+此前移除的旧 `InvokeEntryArgs/InvokeExitArgs/InvokeExitResult/InvokeLogIgnore`、旧请求/响应头注解、`RuntimeJsonSerializer`、异常分类规则、`slow-threshold-ms` 和统一日志级别配置仍不支持。旧枚举值配置（例如 `entry-args: ALWAYS`、`exit-result: ON_SLOW`）需迁移为带 `enabled/level` 的功能配置对象，慢调用阈值使用 `slow-log.threshold-ms`。
 
 ### 7. XSS
 
@@ -636,12 +709,12 @@ public class UserQuery {
 说明：
 
 - `velo.xss.strategy=NONE` 默认不创建 Velo 内置 `XssCleaner`；选择其他策略才会按依赖情况创建内置清洗器
-- `velo.xss.web-enabled` 默认 `true`，控制 Web MVC/WebFlux 字符串参数转换目标；设为 `false` 后即使已选择策略也不注册该目标转换器
+- `velo.xss.web-enabled` 默认 `true`，控制 Web MVC 字符串参数转换目标；设为 `false` 后即使已选择策略也不注册该目标转换器
 - `velo.xss.jackson-enabled` 默认 `false`，控制 Jackson 普通 `String` 属性的全局清洗；这是独立开关，不影响 `@JsonEncode` / `@JsonDecode` 注解处理
 - `strategy` 可选 `NONE`、`ESCAPE`、`SIMPLE_TEXT`、`BASIC`、`BASIC_WITH_IMAGES`、`RELAXED`
 - `ESCAPE` 不依赖 `jsoup`；其他 HTML 清洗策略必须引入 `jsoup`
 - `ESCAPE` 且无 `jsoup` 时会走 Spring 转义；其他策略缺少 `jsoup` 时只打印 WARN，不注册 `XssCleaner`，也不会自动降级
-- 清洗发生在 Web MVC/WebFlux 的字符串参数绑定阶段，包括 query/form/path 和普通对象参数中通过对应 binder 绑定的 `String` 字段
+- 清洗发生在 Web MVC 的字符串参数绑定阶段，包括 query/form/path 和普通对象参数中通过对应 binder 绑定的 `String` 字段
 - 同时启用 XSS 与 `velo.xss.jackson-enabled` 时，Jackson JSON 请求体中的普通 `String` 字段也会进行清洗；字段上的 `@XssIgnore` 可以跳过清洗，`@JsonDecode` 会在解码后继续执行清洗
 - 用户可以直接提供自己的 `XssCleaner` Bean；`strategy=NONE` 只表示不创建 Velo 内置清洗器，不会阻止用户清洗器在目标开关开启时生效
 
@@ -848,16 +921,17 @@ velo:
 
 ### 3. Controller 调用日志
 
-有 Web 环境时，Velo 默认开启 Controller 调用日志切面，并自动生成或接收 `X-Trace-Id`。
+有 Web 环境时，Velo 默认开启 Controller 调用日志切面，并从 W3C `traceparent` 获取 traceId，缺失或非法时自动生成。指定纯 traceId 请求头的用法见上面的 Resolver Bean 示例。
 
 配置项：
 
 ```yaml
 velo:
   log:
-    controller:
-      enabled: true
-    invocation:
+    sources:
+      controller:
+        enabled: true
+    defaults:
       max-payload-length: -1
     trace:
       enabled: true
@@ -866,38 +940,15 @@ velo:
 说明：
 
 - 默认开启
-- 每次调用输出进入和退出两条日志；进入日志包含请求方法、controller 映射模板路径和入参，退出日志包含耗时、响应体或异常摘要
+- 默认打印 Spring 绑定后的入参；结果载荷默认关闭，达到阈值打印独立慢调用日志，异常时打印独立 WARN 摘要
 - 会过滤掉原始 query string，避免把敏感查询串直接打到日志中
 - `max-payload-length` 为正数时，过长 payload 会按配置长度截断
-- 当前默认 `max-payload-length=-1`，表示不限制长度；`0` 表示不序列化 payload 并记录为 `disabled`
-- 如果不需要这层默认日志，关闭 `velo.log.controller.enabled`；该配置不会关闭 `@InvokeLog` / `@SlowLog`
-
-WebFlux 项目使用同一套配置，应用只需按需引入对应的 `spring-boot-starter-webflux`。Spring Boot 2.7、3.x 和 4.x 均支持 WebFlux，Velo 会根据当前 Starter 版本自动适配；不引入 WebFlux 时，相关自动配置不会生效。
-
-WebFlux 版本的公开组件位于 `io.github.luminion.velo.webflux`：
-
-- `TraceIdWebFluxFilter`：生成/接收 `X-Trace-Id`，写入响应头、Reactor Context 和当前线程 MDC；跨线程场景以 Reactor Context 为准
-- `WebFluxControllerLogAspect`：Mono 在完成、异常或取消时记录退出日志；Flux 不缓存完整流，只记录完成时的元素数量或异常/取消状态
-- `WebFluxIdempotentAspect`、`WebFluxRateLimitAspect`、`WebFluxLockAspect`：让 `@Idempotent`、`@RateLimit`、`@Lock` 在响应式订阅时生效；幂等成功后保留 TTL，异常/取消时清理本次记录，锁在完成/异常/取消时释放，限流检查不会在 Publisher 组装阶段提前执行
-- `WebFluxInvokeLogAspect`、`WebFluxSlowLogAspect`：让方法日志绑定真实的 Mono/Flux 订阅生命周期；Mono 按完成、异常或取消记录，Flux 不缓存完整数据，只记录元素数量，慢日志按真实完成耗时判断
-- `WebFluxUtils`：所有方法显式接收 `ServerWebExchange`；Session、Principal、请求体和响应写入使用 `Mono`/`Flux`，不提供 Servlet 风格的阻塞输入输出流
-- `VeloWebFluxConfigurer`：复用 `velo.spring-converter`、`velo.xss` 和 `velo.web.cors` 配置，提供日期转换、XSS 字符串转换和 CORS
-- `VeloWebFluxExceptionHandler`、`VeloValidationWebFluxExceptionHandler`：与 Servlet 异常基类一样只提供可继承逻辑，不自动注册，具体实现类仍需显式添加 `@RestControllerAdvice`
-
-Controller 日志序列化复用 WebFlux 实际配置的 `HttpMessageWriter`，不直接绑定 Jackson 2 或 Jackson 3；因此 Boot 4 使用 Jackson 3、显式启用 Jackson 2 或用户自定义 WebFlux JSON 编解码器时都可以工作。
-
-WebFlux 响应式注解切面说明：
-
-- 响应式方法需要将返回类型声明为 `Mono`、`Flux` 或其他 Reactive Streams `Publisher`；如果方法声明为 `Object` 但运行时返回 Publisher，Velo 无法在同步切面与响应式切面之间可靠分流，按同步方法处理
-- 响应式切面与同步切面共存，使用相同注解、配置项和 `velo.aspect-order.*` 顺序；同步切面会放行 Publisher，避免在组装阶段重复加锁、限流或写日志
-- JDK、Redis、Redisson 内置锁处理器均支持跨 Reactor 线程的令牌式加锁与释放。用户自定义 `LockHandler` 如需用于 WebFlux `@Lock`，必须同时实现 `ReactiveLockHandler`；只有同步 `lock/unlock` 实现时，响应式 `@Lock` 会在订阅时明确报错，不会尝试使用不安全的线程绑定释放方式
-- Redis/JDK 的响应式锁调用会放到 bounded-elastic 调度器，Redisson 使用显式 thread id 的异步 API；业务 Publisher 本身仍由应用的 Reactor 调度策略决定
-- **bounded-elastic 容量提示**：Reactor 默认的 `boundedElastic` 调度器线程数为 `10 × CPU 核数`，且与本项目所有响应式切面（幂等、限流、锁）及用户代码中的阻塞调用共享。Redis/JDK 锁在等待竞争时会占用一个工作线程直至 `wait-timeout` 超时，若高并发下大量请求同时等待同一批锁，可能耗尽该调度器并拖慢其他切面任务。建议：评估锁竞争强度，必要时调低 `wait-timeout`、优先使用 Redisson 档（异步等待，不占工作线程），或通过 `spring.reactor.context-propagation`/自定义调度器自行隔离
-- 响应式注解切面自动配置与 Web 层配置分离，因此 `velo.web.enabled=false` 不会关闭这些注解能力；`velo.idempotent.enabled`、`velo.rate-limit.enabled`、`velo.lock.enabled` 分别控制对应并发能力，`@InvokeLog` / `@SlowLog` 是否输出由注解决定，并受 `velo.log.enabled` 总闸控制
+- 当前默认 `max-payload-length=-1`，表示不限制长度；`0` 表示不序列化或输出载荷日志
+- 如需关闭 Controller 自动日志，设置 `velo.log.sources.controller.enabled=false`
 
 ### 4. Feign 调用日志
 
-如果项目中存在 `@FeignClient`，Velo 会按统一调用日志格式记录 Feign 调用，并自动透传 `X-Trace-Id`。
+如果项目中存在 `@FeignClient`，Velo 会按统一调用日志格式记录 Feign 调用，并自动透传 Resolver 返回的协议字段；默认发送 W3C `traceparent/tracestate`。
 
 配置项：
 
@@ -906,9 +957,10 @@ velo:
   feign:
     enabled: true
   log:
-    feign:
-      enabled: true
-    invocation:
+    sources:
+      feign:
+        enabled: true
+    defaults:
       max-payload-length: -1
     trace:
       enabled: true
@@ -918,12 +970,14 @@ velo:
 说明：
 
 - 默认开启
-- 每次调用输出进入和退出两条日志，记录 client 名、HTTP 方法、映射路径、耗时、入参与响应体或异常摘要
+- 前缀为 `[feign][方法名() HTTP方法 接口路径]`，例如 `[feign][remote() GET /log/remote]`；类名由日志框架输出，不重复打印 client 名或 contextId
+- 接口路径取 Spring MVC 映射模板，例如 `/users/{id}`，不展开路径变量或拼接查询参数；无法解析映射时省略缺失部分，保留方法名
+- 默认打印入参，结果默认关闭，慢调用和异常各输出独立日志
 - 日志格式和 Controller、`@InvokeLog` 保持一致，便于联调排查
-- 暂不记录 header，只保留调试常用关键信息
+- 请求头和响应头默认不采集，可通过独立配置或注解启用
 - `max-payload-length` 为正数时，过长 payload 会按配置长度截断
-- 当前默认 `max-payload-length=-1`，表示不限制长度；`0` 表示不序列化 payload 并记录为 `disabled`
-- 如果不需要这层默认日志，关闭 `velo.log.feign.enabled`；该配置不会关闭 `@InvokeLog` / `@SlowLog`
+- 当前默认 `max-payload-length=-1`，表示不限制长度；`0` 表示不序列化或输出载荷日志
+- 如需关闭 Feign 自动日志，设置 `velo.log.sources.feign.enabled=false`
 
 ### 5. CORS
 
@@ -962,8 +1016,7 @@ velo:
 ## Web 异常处理扩展
 
 Servlet MVC 使用 `io.github.luminion.velo.web.exception` 下的 `VeloWebExceptionHandler` 和
-`VeloValidationWebExceptionHandler`；WebFlux 使用 `io.github.luminion.velo.webflux.exception` 下的
-`VeloWebFluxExceptionHandler` 和 `VeloValidationWebFluxExceptionHandler`。两套都是可复用的异常处理基类，
+`VeloValidationWebExceptionHandler`。这些都是可复用的异常处理基类，
 不会自动注册为 Spring 组件。
 
 应用继承或实现具体异常处理类时，需要在具体类上显式添加 `@RestControllerAdvice`，并通过构造函数提供失败响应和系统异常响应的转换函数。这样可以避免用户扫描 `io.github.luminion` 等宽范围包时，Spring 误尝试实例化缺少构造函数依赖的泛型基类。
@@ -992,10 +1045,11 @@ velo:
     jackson-enabled: false
   log:
     enabled: false
-    controller:
-      enabled: false
-    feign:
-      enabled: false
+    sources:
+      controller:
+        enabled: false
+      feign:
+        enabled: false
     trace:
       enabled: false
   jackson:

@@ -1,134 +1,73 @@
 package io.github.luminion.velo.web;
 
-import io.github.luminion.velo.VeloProperties;
-import io.github.luminion.velo.log.InvocationLogRecord;
+import io.github.luminion.velo.core.VeloAdvisorOrder;
+import io.github.luminion.velo.core.util.WebUtils;
+import io.github.luminion.velo.log.InvocationLogEngine;
 import io.github.luminion.velo.log.InvocationLogSource;
 import io.github.luminion.velo.log.InvocationLogSupport;
-import io.github.luminion.velo.log.InvocationLogWriter;
-import io.github.luminion.velo.log.InvocationPhase;
-import io.github.luminion.velo.log.annotation.LogPayloadIgnore;
-import io.github.luminion.velo.log.trace.TraceContext;
-import io.github.luminion.velo.spi.RuntimeJsonSerializer;
-import io.github.luminion.velo.core.util.WebUtils;
-import io.github.luminion.velo.core.VeloAdvisorOrder;
-import lombok.RequiredArgsConstructor;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import lombok.Getter;
+import lombok.Setter;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
-import org.aspectj.lang.reflect.MethodSignature;
-import org.springframework.web.servlet.HandlerMapping;
 import org.springframework.core.Ordered;
+import org.springframework.web.servlet.HandlerMapping;
 
-/**
- * Controller 调用日志切面。
- *
- * <p>每次调用写两条记录：进入时写 {@link InvocationPhase#ENTRY}（含入参），
- * 退出时写 {@link InvocationPhase#EXIT}（含耗时与返回值或异常）。</p>
- */
+/** MVC Controller 调用日志切面。 */
 @Aspect
-@RequiredArgsConstructor
 public class ControllerLogAspect implements Ordered {
+  private final InvocationLogEngine engine;
+  @Getter @Setter private int order = VeloAdvisorOrder.LOG_CONTROLLER;
 
-    private final VeloProperties properties;
+  public ControllerLogAspect(InvocationLogEngine engine) {
+    this.engine = engine;
+  }
 
-    private final RuntimeJsonSerializer runtimeJsonSerializer;
-
-    private final InvocationLogWriter invocationLogWriter;
-
-    private int order = VeloAdvisorOrder.LOG_CONTROLLER;
-
-    public void setOrder(int order) {
-        this.order = order;
+  @Around(
+      "execution(public * *(..)) && (within(@org.springframework.web.bind.annotation.RestController"
+          + " *) || @annotation(org.springframework.web.bind.annotation.ResponseBody) ||"
+          + " @within(org.springframework.web.bind.annotation.ResponseBody))")
+  public Object logControllerInvocation(ProceedingJoinPoint point) throws Throwable {
+    String target = "";
+    if (WebUtils.isWebContext()) {
+      Object pattern =
+          WebUtils.getRequest().getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
+      String path = pattern == null ? WebUtils.getRequestURI() : String.valueOf(pattern);
+      target = WebUtils.getRequestIp() + ' ' + WebUtils.getRequestMethod() + ' ' + path;
     }
+    HttpServletRequest request = WebUtils.isWebContext() ? WebUtils.getRequest() : null;
+    HttpServletResponse response = WebUtils.isWebContext() ? WebUtils.getResponse() : null;
+    return engine.invoke(
+        InvocationLogSupport.invocation(point, InvocationLogSource.CONTROLLER, target).toBuilder()
+            .requestHeaders(request == null ? null : () -> requestHeaders(request))
+            .responseHeaders(response == null ? null : () -> responseHeaders(response))
+            .build(),
+        point::proceed);
+  }
 
-    @Override
-    public int getOrder() {
-        return order;
+  private Map<String, List<String>> requestHeaders(HttpServletRequest request) {
+    Map<String, List<String>> headers = new LinkedHashMap<>();
+    Enumeration<String> names = request.getHeaderNames();
+    while (names != null && names.hasMoreElements()) {
+      String name = names.nextElement();
+      headers.put(name, Collections.list(request.getHeaders(name)));
     }
+    return headers;
+  }
 
-    @Around("execution(public * *(..)) && (within(@org.springframework.web.bind.annotation.RestController *) || @annotation(org.springframework.web.bind.annotation.ResponseBody) || @within(org.springframework.web.bind.annotation.ResponseBody))")
-    public Object logControllerInvocation(ProceedingJoinPoint joinPoint) throws Throwable {
-        MethodSignature signature = (MethodSignature) joinPoint.getSignature();
-        Class<?> declaringType = signature.getDeclaringType();
-        String loggerName = declaringType != null ? declaringType.getName() : null;
-        String target = buildRequestTarget();
-        VeloProperties.InvocationProperties invocationProperties = properties.getLog().getInvocation();
-        LogPayloadIgnore logPayloadIgnore = InvocationLogSupport.findLogPayloadIgnore(signature, joinPoint.getTarget());
-        boolean ignoreArgs = logPayloadIgnore != null && logPayloadIgnore.args();
-        boolean ignoreResult = logPayloadIgnore != null && logPayloadIgnore.result();
-        String argsText = ignoreArgs ? InvocationLogSupport.IGNORED_PAYLOAD
-                : InvocationLogSupport.safeBuildArgsText(signature, joinPoint.getTarget(), joinPoint.getArgs(),
-                        runtimeJsonSerializer, invocationProperties);
-
-        // 进入日志：记录请求路径与入参
-        InvocationLogSupport.safeWrite(invocationLogWriter, buildEntryRecord(loggerName, target, argsText));
-
-        long start = System.nanoTime();
-        Object result;
-        try {
-            result = joinPoint.proceed();
-        } catch (Throwable ex) {
-            InvocationLogRecord exitRecord = buildExitRecord(loggerName, target,
-                    null, InvocationLogSupport.elapsedMs(start), ex);
-            InvocationLogSupport.safeWrite(invocationLogWriter, exitRecord);
-            throw ex;
-        }
-
-        InvocationLogRecord exitRecord = buildExitRecord(loggerName, target,
-                signature.getReturnType() == Void.TYPE ? InvocationLogSupport.VOID_RESULT
-                        : ignoreResult ? InvocationLogSupport.IGNORED_PAYLOAD
-                                : InvocationLogSupport.safeBuildResultText(result, runtimeJsonSerializer,
-                                        invocationProperties),
-                InvocationLogSupport.elapsedMs(start), null);
-        InvocationLogSupport.safeWrite(invocationLogWriter, exitRecord);
-        return result;
+  private Map<String, List<String>> responseHeaders(HttpServletResponse response) {
+    Map<String, List<String>> headers = new LinkedHashMap<>();
+    for (String name : response.getHeaderNames()) {
+      headers.put(name, new ArrayList<>(response.getHeaders(name)));
     }
-
-    private InvocationLogRecord buildEntryRecord(String loggerName, String target, String argsText) {
-        InvocationLogRecord record = new InvocationLogRecord();
-        record.setLoggerName(loggerName);
-        record.setTraceId(TraceContext.get(properties.getLog().getTrace().getMdcKey()));
-        record.setSource(InvocationLogSource.CONTROLLER);
-        record.setTarget(target);
-        record.setPhase(InvocationPhase.ENTRY);
-        record.setArgs(argsText);
-        record.setSuccess(true);
-        return record;
-    }
-
-    private InvocationLogRecord buildExitRecord(String loggerName, String target,
-            String resultText, long costMs, Throwable error) {
-        InvocationLogRecord record = new InvocationLogRecord();
-        record.setLoggerName(loggerName);
-        record.setTraceId(TraceContext.get(properties.getLog().getTrace().getMdcKey()));
-        record.setSource(InvocationLogSource.CONTROLLER);
-        record.setTarget(target);
-        record.setPhase(InvocationPhase.EXIT);
-        record.setCostMs(costMs);
-        record.setSuccess(error == null);
-        if (error == null) {
-            record.setResult(resultText);
-        } else {
-            record.setError(error);
-            record.setErrorClass(error.getClass().getName());
-            record.setErrorMessage(error.getMessage());
-        }
-        return record;
-    }
-
-    private String buildRequestTarget() {
-        if (!WebUtils.isWebContext()) {
-            return "";
-        }
-
-        return WebUtils.getRequestIp() + ' ' + WebUtils.getRequestMethod() + ' ' + resolveRequestPath();
-    }
-
-    private String resolveRequestPath() {
-        Object pattern = WebUtils.getRequest().getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
-        if (pattern != null) {
-            return String.valueOf(pattern);
-        }
-        return WebUtils.getRequestURI();
-    }
+    return headers;
+  }
 }

@@ -1,6 +1,5 @@
 package io.github.luminion.velo.lock.support;
 
-import io.github.luminion.velo.lock.LockToken;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -89,21 +88,6 @@ class RedisLockWatchdogTests {
 
         verify(watchdogFuture).cancel(false);
         handler.unlock("order:1");
-    }
-
-    @Test
-    void shouldRenewAndCancelWatchdogForReactiveToken() {
-        when(valueOperations.setIfAbsent(anyString(), anyString(), anyLong(), any(TimeUnit.class))).thenReturn(true);
-        when(redisTemplate.execute(any(RedisScript.class), any(List.class), any(), any())).thenReturn(1L);
-
-        LockToken token = handler.lockToken("reactive:1", 0, -1).toCompletableFuture().join();
-        assertThat(token).isNotNull();
-        captureWatchdog().run();
-
-        handler.unlockToken(token).toCompletableFuture().join();
-        verify(redisTemplate).execute(any(RedisScript.class), eq(Collections.singletonList("reactive:1")),
-                anyString(), eq("30000"));
-        verify(watchdogFuture).cancel(false);
     }
 
     private Runnable captureWatchdog() {

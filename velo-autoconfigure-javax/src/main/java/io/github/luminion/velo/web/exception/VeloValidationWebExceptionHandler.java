@@ -24,10 +24,6 @@ public class VeloValidationWebExceptionHandler<R> extends VeloWebExceptionHandle
         super(failed, error);
     }
 
-    public VeloValidationWebExceptionHandler(Function<String, R> failed, Function<Throwable, R> error,
-            Class<? extends RuntimeException> bizExceptionClass) {
-        super(failed, error, bizExceptionClass);
-    }
 
     /**
      * Bean Validation 参数校验异常 (@RequestParam/@PathVariable)

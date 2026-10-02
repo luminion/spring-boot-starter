@@ -2,7 +2,6 @@ package io.github.luminion.velo.ratelimit.aspect;
 
 import io.github.luminion.velo.core.VeloAdvisorOrder;
 import io.github.luminion.velo.core.VeloMessageResolver;
-import io.github.luminion.velo.core.ReactiveTypeSupport;
 import io.github.luminion.velo.spi.Fingerprinter;
 import io.github.luminion.velo.util.ConcurrencyAnnotationUtils;
 import io.github.luminion.velo.ratelimit.RateLimitHandler;
@@ -64,9 +63,6 @@ public class RateLimitAspect implements Ordered {
 
     private Object applyRateLimit(ProceedingJoinPoint joinPoint, RateLimit rateLimit) throws Throwable {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
-        if (ReactiveTypeSupport.isReactiveType(signature.getReturnType())) {
-            return joinPoint.proceed();
-        }
         Method method = ConcurrencyAnnotationUtils.resolveSpecificMethod(joinPoint.getTarget(), signature.getMethod());
 
         double permits = rateLimit.permits();

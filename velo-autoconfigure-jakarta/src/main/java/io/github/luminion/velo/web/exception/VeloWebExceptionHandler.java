@@ -3,7 +3,6 @@ package io.github.luminion.velo.web.exception;
 import io.github.luminion.velo.idempotent.exception.IdempotentException;
 import io.github.luminion.velo.lock.exception.LockException;
 import io.github.luminion.velo.ratelimit.exception.RateLimitException;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.core.Ordered;
@@ -32,15 +31,14 @@ import java.util.stream.Collectors;
  * @since 1.0.0
  */
 @Slf4j
-@RequiredArgsConstructor
 public class VeloWebExceptionHandler<R> implements Ordered {
 
     protected final Function<String, R> failed;
     protected final Function<Throwable, R> error;
-    protected final Class<? extends RuntimeException> bizExceptionClass;
 
     public VeloWebExceptionHandler(Function<String, R> failed, Function<Throwable, R> error) {
-        this(failed, error, null);
+        this.failed = java.util.Objects.requireNonNull(failed);
+        this.error = java.util.Objects.requireNonNull(error);
     }
 
     private String getBindingResultMessage(BindingResult bindingResult) {
@@ -181,12 +179,6 @@ public class VeloWebExceptionHandler<R> implements Ordered {
      */
     @ExceptionHandler(Exception.class)
     public R handleGlobalException(Exception e) {
-        if (bizExceptionClass != null && bizExceptionClass.isAssignableFrom(e.getClass())) {
-            log.debug("[BizException] message: {}", e.getMessage());
-            // 业务异常 message 可能为 null，兜底避免注入的 failed 实现对入参解引用时 NPE
-            return failed.apply(Objects.toString(e.getMessage(), "系统繁忙，请稍后再试"));
-        }
-        log.error("[InternalError] uncaught system exception: ", e);
         return error.apply(e);
     }
 

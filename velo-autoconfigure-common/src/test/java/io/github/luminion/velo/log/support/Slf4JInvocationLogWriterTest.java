@@ -1,281 +1,88 @@
 package io.github.luminion.velo.log.support;
 
-import io.github.luminion.velo.VeloProperties;
+import static org.assertj.core.api.Assertions.assertThat;
+
+import io.github.luminion.velo.log.InvocationLogFeature;
 import io.github.luminion.velo.log.InvocationLogRecord;
 import io.github.luminion.velo.log.InvocationLogSource;
-import io.github.luminion.velo.log.InvocationLogSupport;
-import io.github.luminion.velo.log.InvocationPhase;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.boot.logging.LogLevel;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 @ExtendWith(OutputCaptureExtension.class)
 class Slf4JInvocationLogWriterTest {
-
-    @Test
-    void shouldWriteUnifiedSuccessLog(CapturedOutput output) {
-        Slf4JInvocationLogWriter writer = new Slf4JInvocationLogWriter(new VeloProperties());
-        InvocationLogRecord record = new InvocationLogRecord();
-        record.setTraceId("trace-001");
-        record.setLoggerName("com.example.UserController");
-        record.setSource(InvocationLogSource.CONTROLLER);
-        record.setTarget("127.0.0.1 GET /users/{id}");
-        record.setCostMs(12);
-        record.setSuccess(true);
-        record.setArgs("{\"id\":1}");
-        record.setResult("{\"name\":\"Tom\"}");
-
-        writer.write(record);
-
-        assertThat(output.getOut())
-                .contains("com.example.UserController")
-                .doesNotContain("traceId=")
-                .doesNotContain("source=")
-                .contains("[127.0.0.1 GET /users/{id}]")
-                .contains("cost=12ms")
-                .doesNotContain("status=")
-                .contains("args={\"id\":1}")
-                .contains("result={\"name\":\"Tom\"}");
+  @Test
+  void writesOneLinePerFeatureWithoutRepeatedMetadata(CapturedOutput output) {
+    Slf4JInvocationLogWriter writer = new Slf4JInvocationLogWriter();
+    for (InvocationLogFeature feature : InvocationLogFeature.values()) {
+      InvocationLogRecord record = record(feature);
+      record.setPayload("{\"id\":1}");
+      record.setCostMs(5);
+      record.setThresholdMs(0);
+      record.setErrorType("example.BusinessException");
+      record.setErrorMessage("bad");
+      writer.write(record);
     }
+    assertThat(output.getOut())
+        .contains(
+            "[invoke][work()] ==> entryArgs = {\"id\":1}",
+            "[invoke][work()] <== exitArgs = {\"id\":1}",
+            "[invoke][work()] <== exitResult = {\"id\":1}",
+            "[invoke][work()] <== slow = {\"costMs\":5,\"thresholdMs\":0}",
+            "[invoke][work()] ==> requestHeaders =",
+            "[invoke][work()] <== responseHeaders =",
+            "[invoke][work()] <== error = {\"type\":\"example.BusinessException\",\"message\":\"bad\"}")
+        .doesNotContain("event=", "source=", "traceId=", "invocationId=", "success=");
+  }
 
-    @Test
-    void shouldWriteUnifiedErrorLogWithoutStackTraceByDefault(CapturedOutput output) {
-        Slf4JInvocationLogWriter writer = new Slf4JInvocationLogWriter(new VeloProperties());
-        InvocationLogRecord record = new InvocationLogRecord();
-        record.setTraceId("trace-001");
-        record.setLoggerName("com.example.DemoClient");
-        record.setSource(InvocationLogSource.FEIGN);
-        record.setTarget("demo-client GET /fail");
-        record.setCostMs(8);
-        record.setSuccess(false);
-        record.setArgs("{}");
-        record.setError(new IllegalStateException("boom"));
+  @Test
+  void errorIsWarnSummaryWithoutStackTraceAndCannotInjectNewlines(CapturedOutput output) {
+    InvocationLogRecord record = record(InvocationLogFeature.ERROR_LOG);
+    record.setErrorType("example.BusinessException");
+    record.setErrorMessage("bad\nmessage\"quoted\"");
+    new Slf4JInvocationLogWriter().write(record);
+    assertThat(output.getOut())
+        .contains(
+            "WARN",
+            "error = {\"type\":\"example.BusinessException\",\"message\":\"bad\\nmessage\\\"quoted\\\"\"}")
+        .doesNotContain("bad\nmessage", "\tat ");
+  }
 
-        writer.write(record);
+  @ParameterizedTest
+  @EnumSource(InvocationLogSource.class)
+  void identifiesEveryEntrySource(InvocationLogSource source, CapturedOutput output) {
+    InvocationLogRecord record = record(InvocationLogFeature.ENTRY_ARGS);
+    record.setSource(source);
+    record.setPayload("{}");
 
-        assertThat(output.getOut())
-                .contains("com.example.DemoClient")
-                .contains("error=\"IllegalStateException: boom\"")
-                .doesNotContain("at io.github");
-    }
+    new Slf4JInvocationLogWriter().write(record);
 
-    @Test
-    void shouldFallbackToOwnLoggerWhenLoggerNameIsNull(CapturedOutput output) {
-        Slf4JInvocationLogWriter writer = new Slf4JInvocationLogWriter(new VeloProperties());
-        InvocationLogRecord record = new InvocationLogRecord();
-        record.setSource(InvocationLogSource.CONTROLLER);
-        record.setTarget("127.0.0.1 GET /test");
-        record.setCostMs(1);
-        record.setSuccess(true);
-        record.setArgs(InvocationLogSupport.DISABLED_PAYLOAD);
-        record.setResult(InvocationLogSupport.DISABLED_PAYLOAD);
+    assertThat(output.getOut())
+        .contains("[" + source.getValue() + "][work()] ==> entryArgs = {}");
+  }
 
-        writer.write(record);
+  @Test
+  void offPreventsOutput(CapturedOutput output) {
+    InvocationLogRecord record = record(InvocationLogFeature.ENTRY_ARGS);
+    record.setLevel(LogLevel.OFF);
+    record.setPayload("hidden-payload");
+    Slf4JInvocationLogWriter writer = new Slf4JInvocationLogWriter();
+    assertThat(writer.isEnabled(record)).isFalse();
+    writer.write(record);
+    assertThat(output.getOut()).doesNotContain("hidden-payload");
+  }
 
-        assertThat(output.getOut())
-                .contains("Slf4JInvocationLogWriter")
-                .doesNotContain("source=")
-                .contains("[127.0.0.1 GET /test]");
-    }
-
-    @Test
-    void shouldWriteEntryLineWithArrowAndArgs(CapturedOutput output) {
-        Slf4JInvocationLogWriter writer = new Slf4JInvocationLogWriter(new VeloProperties());
-        InvocationLogRecord record = new InvocationLogRecord();
-        record.setLoggerName("com.example.UserController");
-        record.setSource(InvocationLogSource.CONTROLLER);
-        record.setTarget("127.0.0.1 GET /users/{id}");
-        record.setPhase(InvocationPhase.ENTRY);
-        record.setSuccess(true);
-        record.setArgs("{\"id\":1}");
-
-        writer.write(record);
-
-        assertThat(output.getOut())
-                .contains("[127.0.0.1 GET /users/{id}] ==>")
-                .contains("args={\"id\":1}")
-                .doesNotContain("cost=")
-                .doesNotContain("result=")
-                .doesNotContain("<==");
-    }
-
-    @Test
-    void shouldWriteExitLineWithFinishArgsAndVoidResult(CapturedOutput output) {
-        Slf4JInvocationLogWriter writer = new Slf4JInvocationLogWriter(new VeloProperties());
-        InvocationLogRecord record = new InvocationLogRecord();
-        record.setLoggerName("com.example.UserController");
-        record.setSource(InvocationLogSource.CONTROLLER);
-        record.setTarget("127.0.0.1 GET /users/{id}");
-        record.setPhase(InvocationPhase.EXIT);
-        record.setCostMs(12);
-        record.setSuccess(true);
-        record.setArgs("{\"name\":\"Tom\"}");
-        record.setResult("void");
-
-        writer.write(record);
-
-        assertThat(output.getOut())
-                .contains("[127.0.0.1 GET /users/{id}] <==")
-                .contains("cost=12ms")
-                .contains("args={\"name\":\"Tom\"}")
-                .contains("result=void")
-                .doesNotContain("==>");
-    }
-
-    @Test
-    void shouldWriteExitLineWithErrorOnException(CapturedOutput output) {
-        Slf4JInvocationLogWriter writer = new Slf4JInvocationLogWriter(new VeloProperties());
-        InvocationLogRecord record = new InvocationLogRecord();
-        record.setLoggerName("com.example.DemoClient");
-        record.setSource(InvocationLogSource.FEIGN);
-        record.setTarget("GET /users/fail");
-        record.setPhase(InvocationPhase.EXIT);
-        record.setCostMs(8);
-        record.setSuccess(false);
-        record.setError(new IllegalStateException("boom"));
-
-        writer.write(record);
-
-        assertThat(output.getOut())
-                .contains("[GET /users/fail] <==")
-                .contains("cost=8ms")
-                .contains("error=\"IllegalStateException: boom\"")
-                .doesNotContain("args=");
-    }
-
-    @Test
-    void shouldEscapeSpecialCharactersInExitErrorSummary(CapturedOutput output) {
-        Slf4JInvocationLogWriter writer = new Slf4JInvocationLogWriter(new VeloProperties());
-        InvocationLogRecord record = new InvocationLogRecord();
-        record.setLoggerName("com.example.DemoClient");
-        record.setSource(InvocationLogSource.FEIGN);
-        record.setTarget("GET /users/fail");
-        record.setPhase(InvocationPhase.EXIT);
-        record.setCostMs(8);
-        record.setSuccess(false);
-        record.setError(new IllegalStateException("bad\"\\\r\nnext\t" + (char) 1));
-
-        writer.write(record);
-
-        assertThat(output.getOut())
-                .contains("error=\"IllegalStateException: bad\\\"\\\\\\r\\nnext\\t\\u0001\"")
-                .doesNotContain("error=\"IllegalStateException: bad\"\r\nnext");
-    }
-
-    @Test
-    void shouldEscapeSpecialCharactersInSlowErrorSummary(CapturedOutput output) {
-        Slf4JInvocationLogWriter writer = new Slf4JInvocationLogWriter(new VeloProperties());
-        InvocationLogRecord record = new InvocationLogRecord();
-        record.setLoggerName("com.example.OrderService");
-        record.setSource(InvocationLogSource.INVOKE);
-        record.setTarget("placeOrder()");
-        record.setCostMs(800);
-        record.setSlow(true);
-        record.setSlowThreshold(300);
-        record.setSuccess(false);
-        record.setError(new IllegalStateException("bad\"\\\r\nnext\t" + (char) 1));
-
-        writer.write(record);
-
-        assertThat(output.getOut())
-                .contains("error=\"IllegalStateException: bad\\\"\\\\\\r\\nnext\\t\\u0001\"")
-                .doesNotContain("error=\"IllegalStateException: bad\"\r\nnext");
-    }
-
-    @Test
-    void shouldWriteSlowLogAtWarnLevelByDefault(CapturedOutput output) {
-        Slf4JInvocationLogWriter writer = new Slf4JInvocationLogWriter(new VeloProperties());
-        InvocationLogRecord record = new InvocationLogRecord();
-        record.setLoggerName("com.example.OrderService");
-        record.setSource(InvocationLogSource.INVOKE);
-        record.setTarget("placeOrder()");
-        record.setCostMs(800);
-        record.setSuccess(true);
-        record.setSlow(true);
-        record.setSlowThreshold(300);
-        record.setArgs("{\"item\":\"book\"}");
-        record.setResult("{\"ok\":true}");
-
-        writer.write(record);
-
-        // 慢日志以单行格式输出，且在 WARN 级别（日志行包含 WARN）
-        assertThat(output.getOut())
-                .contains("[placeOrder()]")
-                .contains("cost=800ms")
-                .contains("threshold=300ms")
-                .doesNotContain("slow=true")
-                .contains("args=")
-                .contains("WARN");
-    }
-
-    @Test
-    void shouldWriteSlowErrorAtErrorLevelWithConfiguredStackTrace(CapturedOutput output) {
-        VeloProperties properties = new VeloProperties();
-        properties.getLog().setLevel(LogLevel.OFF);
-        properties.getLog().getInvocation().setIncludeErrorStackTrace(true);
-        Slf4JInvocationLogWriter writer = new Slf4JInvocationLogWriter(properties);
-        InvocationLogRecord record = new InvocationLogRecord();
-        record.setLoggerName("com.example.OrderService");
-        record.setSource(InvocationLogSource.INVOKE);
-        record.setTarget("placeOrder()");
-        record.setCostMs(800);
-        record.setSuccess(false);
-        record.setSlow(true);
-        record.setSlowThreshold(300);
-        record.setArgs("{\"item\":\"book\"}");
-        record.setError(new IllegalStateException("boom"));
-
-        writer.write(record);
-
-        assertThat(output.getOut())
-                .contains("ERROR")
-                .contains("threshold=300ms")
-                .doesNotContain("slow=true")
-                .contains("error=\"IllegalStateException: boom\"")
-                .contains("at io.github.luminion.velo.log.support.Slf4JInvocationLogWriterTest");
-    }
-
-    @Test
-    void shouldSkipSlowErrorWhenSlowLevelIsOff(CapturedOutput output) {
-        VeloProperties properties = new VeloProperties();
-        properties.getLog().getSlow().setLevel(LogLevel.OFF);
-        Slf4JInvocationLogWriter writer = new Slf4JInvocationLogWriter(properties);
-        InvocationLogRecord record = new InvocationLogRecord();
-        record.setLoggerName("com.example.OrderService");
-        record.setSource(InvocationLogSource.INVOKE);
-        record.setTarget("cancelOrder()");
-        record.setCostMs(800);
-        record.setSuccess(false);
-        record.setSlow(true);
-        record.setSlowThreshold(300);
-        record.setArgs("{\"item\":\"book\"}");
-        record.setError(new IllegalStateException("boom"));
-
-        writer.write(record);
-
-        assertThat(output.getOut()).doesNotContain("[cancelOrder()]");
-    }
-
-    @Test
-    void shouldSkipErrorLogWhenLevelIsOff(CapturedOutput output) {
-        VeloProperties properties = new VeloProperties();
-        properties.getLog().setLevel(LogLevel.OFF);
-        Slf4JInvocationLogWriter writer = new Slf4JInvocationLogWriter(properties);
-        InvocationLogRecord record = new InvocationLogRecord();
-        record.setTraceId("trace-001");
-        record.setSource(InvocationLogSource.FEIGN);
-        record.setTarget("demo-client GET /fail");
-        record.setCostMs(8);
-        record.setSuccess(false);
-        record.setArgs("{}");
-        record.setError(new IllegalStateException("boom"));
-
-        writer.write(record);
-
-        assertThat(output.getOut()).doesNotContain("[demo-client GET /fail]");
-    }
+  private InvocationLogRecord record(InvocationLogFeature feature) {
+    InvocationLogRecord record = new InvocationLogRecord();
+    record.setFeature(feature);
+    record.setSource(InvocationLogSource.INVOKE);
+    record.setTarget("work()");
+    record.setTraceId("trace-1");
+    record.setInvocationId("invocation-1");
+    return record;
+  }
 }

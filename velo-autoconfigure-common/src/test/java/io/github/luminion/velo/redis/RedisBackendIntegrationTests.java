@@ -1,7 +1,6 @@
 package io.github.luminion.velo.redis;
 
 import io.github.luminion.velo.idempotent.support.RedisIdempotentHandler;
-import io.github.luminion.velo.lock.LockToken;
 import io.github.luminion.velo.lock.support.RedisLockHandler;
 import io.github.luminion.velo.ratelimit.support.RedisRateLimitHandler;
 import org.junit.jupiter.api.AfterAll;
@@ -15,7 +14,6 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 import java.net.URI;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -73,32 +71,6 @@ class RedisBackendIntegrationTests {
         } finally {
             first.unlock(key);
             first.unlock(key);
-            second.unlock(key);
-            first.close();
-            second.close();
-            stringRedisTemplate.delete(key);
-        }
-    }
-
-    @Test
-    void watchdogLockCanBeReleasedAcrossThreadsByToken() {
-        String key = uniqueKey("token-lock");
-        RedisLockHandler first = new RedisLockHandler(stringRedisTemplate);
-        RedisLockHandler second = new RedisLockHandler(secondStringRedisTemplate);
-        LockToken token = null;
-        try {
-            token = first.lockToken(key, 0, -1).toCompletableFuture().join();
-            assertThat(token).isNotNull();
-            assertThat(stringRedisTemplate.getExpire(key, TimeUnit.SECONDS)).isPositive();
-            assertThat(second.lock(key, 0, 5_000)).isFalse();
-
-            LockToken acquiredToken = token;
-            CompletableFuture.runAsync(() -> first.unlockToken(acquiredToken).toCompletableFuture().join()).join();
-            assertThat(second.lock(key, 0, 5_000)).isTrue();
-        } finally {
-            if (token != null) {
-                first.unlockToken(token).toCompletableFuture().join();
-            }
             second.unlock(key);
             first.close();
             second.close();

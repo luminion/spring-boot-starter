@@ -1,23 +1,17 @@
 package io.github.luminion.velo.log;
 
-/**
- * Invocation log source.
- */
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+
+/** 调用日志来源及输出标识。 */
+@Getter
+@RequiredArgsConstructor
 public enum InvocationLogSource {
+  CONTROLLER("controller"),
+  FEIGN("feign"),
+  INVOKE("invoke"),
+  XXL_JOB("xxl-job"),
+  SCHEDULED("scheduled");
 
-    CONTROLLER("controller"),
-
-    FEIGN("feign"),
-
-    INVOKE("invoke");
-
-    private final String value;
-
-    InvocationLogSource(String value) {
-        this.value = value;
-    }
-
-    public String getValue() {
-        return value;
-    }
+  private final String value;
 }

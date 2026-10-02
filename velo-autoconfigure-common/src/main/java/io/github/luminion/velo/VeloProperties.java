@@ -2,655 +2,473 @@ package io.github.luminion.velo;
 
 import io.github.luminion.velo.core.VeloAdvisorOrder;
 import io.github.luminion.velo.xss.XssStrategy;
+import java.time.Duration;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.logging.LogLevel;
 
-import java.time.Duration;
-import java.util.LinkedHashMap;
-import java.util.Map;
-
-/**
- * Central configuration properties for the starter.
- *
- * <p>Only this class keeps English comments so that generated metadata stays readable
- * across different IDE and terminal encodings.</p>
- */
+/** Starter 的统一配置属性。 */
 @Data
 @ConfigurationProperties("velo")
 public class VeloProperties {
 
-    /**
-     * 是否启用开箱即用的默认增强；设置为 {@code false} 时使用无侵入模式。
-     */
-    private boolean opinionated = true;
+  /** 是否启用开箱即用的默认增强；设置为 {@code false} 时使用无侵入模式。 */
+  private boolean opinionated = true;
+
+  /** Startup banner settings. */
+  private BannerProperties banner = new BannerProperties();
+
+  /** Date and time formatting settings shared by web, Jackson and Excel features. */
+  private DateTimeFormatProperties dateTimeFormat = new DateTimeFormatProperties();
+
+  /** Spring converter settings. */
+  private SpringConverterProperties springConverter = new SpringConverterProperties();
+
+  /** Idempotent feature settings. */
+  private IdempotentProperties idempotent = new IdempotentProperties();
+
+  /** Rate-limit feature settings. */
+  private RateLimitProperties rateLimit = new RateLimitProperties();
+
+  /** Lock feature settings. */
+  private LockProperties lock = new LockProperties();
+
+  /** Redis helper settings. */
+  private RedisProperties redis = new RedisProperties();
+
+  /** Cache feature settings. */
+  private CacheProperties cache = new CacheProperties();
+
+  /** Excel integration settings. */
+  private ExcelProperties excel = new ExcelProperties();
+
+  /** Jackson integration settings. */
+  private JacksonProperties jackson = new JacksonProperties();
+
+  /** XSS 清洗策略与适配目标设置。 */
+  private XssProperties xss = new XssProperties();
+
+  /** Log auto-configuration settings. */
+  private LogProperties log = new LogProperties();
+
+  /** MyBatis-Plus integration settings. */
+  private MybatisPlusProperties mybatisPlus = new MybatisPlusProperties();
+
+  /** Web related settings. */
+  private WebProperties web = new WebProperties();
+
+  /** Feign related settings. */
+  private FeignProperties feign = new FeignProperties();
+
+  /** Aspect execution order settings. */
+  private AspectOrderProperties aspectOrder = new AspectOrderProperties();
+
+  @Data
+  public static class IdempotentProperties {
+
+    /** Enables idempotent auto-configuration. */
+    private boolean enabled = true;
+
+    /** Backend implementation used by idempotent handler selection. */
+    private ConcurrencyBackend backend = ConcurrencyBackend.AUTO;
+
+    /** Prefix used by idempotent related keys. */
+    private String prefix = "idempotent:";
+  }
+
+  @Data
+  public static class RateLimitProperties {
+
+    /** Enables rate-limit auto-configuration. */
+    private boolean enabled = true;
+
+    /** Backend implementation used by rate-limit handler selection. */
+    private ConcurrencyBackend backend = ConcurrencyBackend.AUTO;
+
+    /** Prefix used by rate-limit related keys. */
+    private String prefix = "rateLimit:";
+  }
+
+  @Data
+  public static class LockProperties {
+
+    /** Enables lock auto-configuration. */
+    private boolean enabled = true;
+
+    /** Backend implementation used by lock handler selection. */
+    private ConcurrencyBackend backend = ConcurrencyBackend.AUTO;
+
+    /** Prefix used by lock related keys. */
+    private String prefix = "lock:";
+
+    /** Polling interval used by the simple Redis lock while waiting for acquisition. */
+    private Duration retryInterval = Duration.ofMillis(10);
+  }
+
+  @Data
+  public static class RedisProperties {
+
+    /** Enables Redis helper auto-configuration. */
+    private boolean enabled = true;
+  }
+
+  @Data
+  public static class CacheProperties {
+
+    /** Enables cache auto-configuration. */
+    private boolean enabled = true;
+
+    /** Static prefix added to cache keys. */
+    private String prefix = "";
+
+    /** Separator used when building cache key prefixes. */
+    private String separator = ":";
+
+    /** Default cache TTL. */
+    private Duration defaultTtl = Duration.ofMinutes(5);
 
     /**
-     * Startup banner settings.
+     * Whether to cache null values. When enabled, null results are cached to prevent cache
+     * penetration. Default is true.
      */
-    private BannerProperties banner = new BannerProperties();
+    private boolean nullCachingEnabled = true;
 
     /**
-     * Date and time formatting settings shared by web, Jackson and Excel features.
+     * Percentage of jitter applied to TTL values to prevent cache stampede. For example, a value of
+     * 10 means each entry's TTL is randomly shifted by up to ±10% when it is written, independently
+     * per key. Set to 0 to disable jitter. Default is 0.
      */
-    private DateTimeFormatProperties dateTimeFormat = new DateTimeFormatProperties();
+    private int ttlJitterPercentage;
+
+    public void setTtlJitterPercentage(int ttlJitterPercentage) {
+      if (ttlJitterPercentage < 0 || ttlJitterPercentage > 100) {
+        throw new IllegalArgumentException(
+            "Cache TTL jitter percentage must be between 0 and 100.");
+      }
+      this.ttlJitterPercentage = ttlJitterPercentage;
+    }
+
+    /** Per-cache TTL overrides. */
+    private Map<String, Duration> ttl = new LinkedHashMap<>();
+  }
+
+  @Data
+  public static class ExcelProperties {
+
+    /** Fine-grained converter switches shared by EasyExcel, FastExcel and Fesod. */
+    private ConverterProperties converters = new ConverterProperties();
+
+    @Data
+    public static class ConverterProperties {
+
+      /** Enables automatic registration of built-in Excel converters. */
+      private boolean enabled = true;
+
+      /** Enables the Boolean Excel converter. */
+      private boolean booleanEnabled = true;
+
+      /** Enables the Long Excel converter. */
+      private boolean longEnabled = true;
+
+      /** Enables the Float Excel converter. */
+      private boolean floatEnabled = true;
+
+      /** Enables the Double Excel converter. */
+      private boolean doubleEnabled = true;
+
+      /** Enables the BigInteger Excel converter. */
+      private boolean bigIntegerEnabled = true;
+
+      /** Enables the BigDecimal Excel converter. */
+      private boolean bigDecimalEnabled = true;
+
+      /** Enables the java.util.Date Excel converter. */
+      private boolean dateEnabled = true;
+
+      /** Enables the LocalDateTime Excel converter. */
+      private boolean localDateTimeEnabled = true;
+
+      /** Enables the LocalDate Excel converter. */
+      private boolean localDateEnabled = true;
+
+      /** Enables the LocalTime Excel converter. */
+      private boolean localTimeEnabled = true;
+    }
+  }
+
+  @Data
+  public static class JacksonProperties {
+
+    /** Enables Jackson auto-configuration. */
+    private boolean enabled = true;
+
+    /** Enables date-time related Jackson customization. */
+    private boolean dateTimeEnabled = true;
 
     /**
-     * Spring converter settings.
+     * Serializes long values as strings on write, to avoid precision loss on the front-end
+     * (JavaScript Number cannot safely represent integers beyond 2^53). Only affects serialization
+     * (write); deserialization accepts both numbers and strings.
      */
-    private SpringConverterProperties springConverter = new SpringConverterProperties();
+    private boolean serializeLongAsString = true;
+
+    /** Serializes BigDecimal values as strings on write. */
+    private boolean serializeBigDecimalAsString = true;
+
+    /** Removes trailing zeros before serializing BigDecimal values. */
+    private boolean bigDecimalStripTrailingZeros = false;
+
+    /** Serializes float and double values as strings on write. */
+    private boolean serializeFloatingAsString = false;
+
+    /** Adds enum description fields during serialization. */
+    private boolean enumDescEnabled = true;
+
+    /** Default suffix used by derived enum description fields. */
+    private String enumNameSuffix = "name";
+
+    /** Candidate enum code-to-name field pairs, matched in declaration order. */
+    private Map<String, String> enumMappings = defaultEnumMappings();
+
+    private static Map<String, String> defaultEnumMappings() {
+      Map<String, String> mappings = new LinkedHashMap<>();
+      mappings.put("code", "name");
+      mappings.put("key", "value");
+      return mappings;
+    }
+  }
+
+  @Data
+  public static class LogProperties {
+    /** 是否启用调用日志和相关自动配置。 */
+    private boolean enabled = true;
+
+    /** 请求和任务的 traceId 配置。 */
+    private TraceProperties trace = new TraceProperties();
+
+    /** 全局默认配置；来源可覆盖，注解优先。 */
+    private InvocationDefaults defaults = new InvocationDefaults();
+
+    private InvocationSources sources = new InvocationSources();
+  }
+
+  @Data
+  public static class LogFeatureProperties {
+    /** 未配置时继承全局或内置默认值。 */
+    private Boolean enabled;
+
+    /** 未配置时继承全局或内置默认级别。 */
+    private LogLevel level;
+  }
+
+  @Data
+  @EqualsAndHashCode(callSuper = true)
+  public static class SlowLogProperties extends LogFeatureProperties {
+    /** 慢调用阈值，单位毫秒；0 表示记录全部耗时。 */
+    private Long thresholdMs;
+  }
+
+  @Data
+  @EqualsAndHashCode(callSuper = true)
+  public static class HeaderCaptureProperties extends LogFeatureProperties {
+    /** 允许采集的头名称；空列表表示全部头。 */
+    private List<String> allowlist;
+  }
+
+  @Data
+  public static class InvocationDefaults {
+    /** -1 不限制，0 不采集对象载荷，正数限制字符串长度。 */
+    private int maxPayloadLength = -1;
+
+    private LogFeatureProperties entryArgs = new LogFeatureProperties();
+    private LogFeatureProperties exitArgs = new LogFeatureProperties();
+    private LogFeatureProperties exitResult = new LogFeatureProperties();
+    private SlowLogProperties slowLog = defaultSlowLog();
+    private HeaderCaptureProperties requestHeaders = new HeaderCaptureProperties();
+    private HeaderCaptureProperties responseHeaders = new HeaderCaptureProperties();
+    private LogFeatureProperties errorLog = new LogFeatureProperties();
+
+    private static SlowLogProperties defaultSlowLog() {
+      SlowLogProperties value = new SlowLogProperties();
+      value.setEnabled(true);
+      value.setLevel(LogLevel.WARN);
+      value.setThresholdMs(1000L);
+      return value;
+    }
+  }
+
+  @Data
+  public static class InvocationSources {
+    private InvocationSourceProperties controller = new InvocationSourceProperties();
+    private InvocationSourceProperties feign = new InvocationSourceProperties();
+    private InvocationSourceProperties invoke = new InvocationSourceProperties();
+    private InvocationSourceProperties xxlJob = new InvocationSourceProperties();
+    private InvocationSourceProperties scheduled = new InvocationSourceProperties();
+  }
+
+  @Data
+  public static class TraceProperties {
+
+    /** 是否自动生成和传播 traceId。 */
+    private boolean enabled = true;
+
+    /** 日志框架读取 traceId 的 MDC 键。 */
+    private String mdcKey = "traceId";
+
+    /** 是否将当前 traceId 传播到 Feign 请求。 */
+    private boolean feignPropagationEnabled = true;
+
+    /** 用户未配置日志格式时，在 Spring Boot 默认级别格式中添加 traceId。 */
+    private boolean loggingPatternEnabled = true;
+  }
+
+  @Data
+  public static class InvocationSourceProperties {
+    /** 是否启用来源日志；关闭后注解不能重新开启。 */
+    private boolean enabled = true;
+
+    private LogFeatureProperties entryArgs = new LogFeatureProperties();
+    private LogFeatureProperties exitArgs = new LogFeatureProperties();
+    private LogFeatureProperties exitResult = new LogFeatureProperties();
+    private SlowLogProperties slowLog = new SlowLogProperties();
+    private HeaderCaptureProperties requestHeaders = new HeaderCaptureProperties();
+    private HeaderCaptureProperties responseHeaders = new HeaderCaptureProperties();
+    private LogFeatureProperties errorLog = new LogFeatureProperties();
+  }
+
+  @Data
+  public static class WebProperties {
+
+    /** 是否启用 Web MVC 自动配置。 */
+    private boolean enabled = true;
+
+    /** CORS settings. */
+    private CorsProperties cors = new CorsProperties();
+  }
+
+  @Data
+  public static class CorsProperties {
+
+    /** 是否启用 Web MVC 跨域配置。 */
+    private boolean enabled;
 
     /**
-     * Idempotent feature settings.
+     * Comma-separated or array-style list of allowed origin patterns. Defaults to {@code *} (all
+     * origins).
      */
-    private IdempotentProperties idempotent = new IdempotentProperties();
+    private String[] allowedOriginPatterns = {"*"};
+
+    /** Comma-separated or array-style list of allowed HTTP methods. */
+    private String[] allowedMethods = {"GET", "POST", "PUT", "DELETE", "OPTIONS"};
 
     /**
-     * Rate-limit feature settings.
+     * Whether browsers may include credentials such as cookies or HTTP authentication in
+     * cross-origin requests. Defaults to {@code false}; enable it only when cross-origin
+     * credentials are required.
      */
-    private RateLimitProperties rateLimit = new RateLimitProperties();
+    private boolean allowCredentials;
+
+    /** Max age of preflight cache in seconds. */
+    private long maxAge = 3600;
+  }
+
+  @Data
+  public static class FeignProperties {
+
+    /** Enables Feign client logging auto-configuration. */
+    private boolean enabled = true;
+  }
+
+  @Data
+  public static class XssProperties {
+
+    /** Default XSS cleaning strategy. {@code NONE} disables the built-in cleaner. */
+    private XssStrategy strategy = XssStrategy.NONE;
 
     /**
-     * Lock feature settings.
+     * 是否启用 Web MVC 字符串转换目标。 A user-provided {@code XssCleaner} can still be used when the built-in
+     * strategy is {@code NONE}.
      */
-    private LockProperties lock = new LockProperties();
+    private boolean webEnabled = true;
 
     /**
-     * Redis helper settings.
+     * Enables XSS cleaning for ordinary Jackson String properties. This is disabled by default
+     * because Jackson customization is global to the mapper.
      */
-    private RedisProperties redis = new RedisProperties();
+    private boolean jacksonEnabled;
+  }
+
+  @Data
+  public static class DateTimeFormatProperties {
+    /** Default time pattern. */
+    private String time = "HH:mm:ss";
+
+    /** Default date pattern. */
+    private String date = "yyyy-MM-dd";
+
+    /** Default date-time pattern. */
+    private String dateTime = "yyyy-MM-dd HH:mm:ss";
+
+    /** Default time zone used by date based converters and serializers. */
+    private String timeZone = "GMT+8";
+  }
+
+  @Data
+  public static class SpringConverterProperties {
+
+    /** Enables automatic registration of built-in date-time converters. */
+    private boolean dateTimeEnabled = true;
+  }
+
+  @Data
+  public static class MybatisPlusProperties {
+
+    /** Enables MyBatis-Plus auto-configuration. */
+    private boolean enabled = true;
+
+    /** 启用分页内部拦截器 Bean；MyBatis-Plus 3.5.9 及以上还需要引入对应的 JSQLParser 扩展模块。 */
+    private boolean paginationEnabled = true;
+
+    /** Enables the optimistic locker inner interceptor bean. */
+    private boolean optimisticLockerEnabled = true;
+
+    /** 启用防全表更新与删除内部拦截器 Bean；MyBatis-Plus 3.5.9 及以上还需要引入对应的 JSQLParser 扩展模块。 */
+    private boolean blockAttackEnabled = true;
+  }
+
+  @Data
+  public static class AspectOrderProperties {
+
+    /** Order for the idempotent aspect. */
+    private int idempotent = VeloAdvisorOrder.CONCURRENCY_IDEMPOTENT;
+
+    /** Order for the rate-limit aspect. */
+    private int rateLimit = VeloAdvisorOrder.CONCURRENCY_RATE_LIMIT;
+
+    /** Order for the lock aspect. */
+    private int lock = VeloAdvisorOrder.CONCURRENCY_LOCK;
+
+    /** Order for the invoke-log aspect. */
+    private int invokeLog = VeloAdvisorOrder.LOG_INVOKE;
+
+    /** Order for the controller-log aspect. */
+    private int controllerLog = VeloAdvisorOrder.LOG_CONTROLLER;
+
+    /** Order for the feign-log aspect. */
+    private int feignLog = VeloAdvisorOrder.LOG_FEIGN;
+  }
+
+  @Data
+  public static class BannerProperties {
 
     /**
-     * Cache feature settings.
+     * Prints the Velo startup banner with a summary of enabled features. Disabled by default;
+     * enable to print the banner on startup.
      */
-    private CacheProperties cache = new CacheProperties();
-
-    /**
-     * Excel integration settings.
-     */
-    private ExcelProperties excel = new ExcelProperties();
-
-    /**
-     * Jackson integration settings.
-     */
-    private JacksonProperties jackson = new JacksonProperties();
-
-    /**
-     * XSS 清洗策略与适配目标设置。
-     */
-    private XssProperties xss = new XssProperties();
-
-    /**
-     * Log auto-configuration settings.
-     */
-    private LogProperties log = new LogProperties();
-
-    /**
-     * MyBatis-Plus integration settings.
-     */
-    private MybatisPlusProperties mybatisPlus = new MybatisPlusProperties();
-
-    /**
-     * Web related settings.
-     */
-    private WebProperties web = new WebProperties();
-
-    /**
-     * Feign related settings.
-     */
-    private FeignProperties feign = new FeignProperties();
-
-    /**
-     * Aspect execution order settings.
-     */
-    private AspectOrderProperties aspectOrder = new AspectOrderProperties();
-
-    @Data
-    public static class IdempotentProperties {
-
-        /**
-         * Enables idempotent auto-configuration.
-         */
-        private boolean enabled = true;
-
-        /**
-         * Backend implementation used by idempotent handler selection.
-         */
-        private ConcurrencyBackend backend = ConcurrencyBackend.AUTO;
-
-        /**
-         * Prefix used by idempotent related keys.
-         */
-        private String prefix = "idempotent:";
-    }
-
-    @Data
-    public static class RateLimitProperties {
-
-        /**
-         * Enables rate-limit auto-configuration.
-         */
-        private boolean enabled = true;
-
-        /**
-         * Backend implementation used by rate-limit handler selection.
-         */
-        private ConcurrencyBackend backend = ConcurrencyBackend.AUTO;
-
-        /**
-         * Prefix used by rate-limit related keys.
-         */
-        private String prefix = "rateLimit:";
-    }
-
-    @Data
-    public static class LockProperties {
-
-        /**
-         * Enables lock auto-configuration.
-         */
-        private boolean enabled = true;
-
-        /**
-         * Backend implementation used by lock handler selection.
-         */
-        private ConcurrencyBackend backend = ConcurrencyBackend.AUTO;
-
-        /**
-         * Prefix used by lock related keys.
-         */
-        private String prefix = "lock:";
-
-        /**
-         * Polling interval used by the simple Redis lock while waiting for acquisition.
-         */
-        private Duration retryInterval = Duration.ofMillis(10);
-    }
-
-    @Data
-    public static class RedisProperties {
-
-        /**
-         * Enables Redis helper auto-configuration.
-         */
-        private boolean enabled = true;
-    }
-
-    @Data
-    public static class CacheProperties {
-
-        /**
-         * Enables cache auto-configuration.
-         */
-        private boolean enabled = true;
-
-        /**
-         * Static prefix added to cache keys.
-         */
-        private String prefix = "";
-
-        /**
-         * Separator used when building cache key prefixes.
-         */
-        private String separator = ":";
-
-        /**
-         * Default cache TTL.
-         */
-        private Duration defaultTtl = Duration.ofMinutes(5);
-
-        /**
-         * Whether to cache null values. When enabled, null results are cached
-         * to prevent cache penetration. Default is true.
-         */
-        private boolean nullCachingEnabled = true;
-
-        /**
-         * Percentage of jitter applied to TTL values to prevent cache stampede.
-         * For example, a value of 10 means each entry's TTL is randomly shifted by up to ±10%
-         * when it is written, independently per key. Set to 0 to disable jitter. Default is 0.
-         */
-        private int ttlJitterPercentage;
-
-        public void setTtlJitterPercentage(int ttlJitterPercentage) {
-            if (ttlJitterPercentage < 0 || ttlJitterPercentage > 100) {
-                throw new IllegalArgumentException("Cache TTL jitter percentage must be between 0 and 100.");
-            }
-            this.ttlJitterPercentage = ttlJitterPercentage;
-        }
-
-        /**
-         * Per-cache TTL overrides.
-         */
-        private Map<String, Duration> ttl = new LinkedHashMap<>();
-
-    }
-
-    @Data
-    public static class ExcelProperties {
-
-        /**
-         * Fine-grained converter switches shared by EasyExcel, FastExcel and Fesod.
-         */
-        private ConverterProperties converters = new ConverterProperties();
-
-        @Data
-        public static class ConverterProperties {
-
-            /**
-             * Enables automatic registration of built-in Excel converters.
-             */
-            private boolean enabled = true;
-
-            /**
-             * Enables the Boolean Excel converter.
-             */
-            private boolean booleanEnabled = true;
-
-            /**
-             * Enables the Long Excel converter.
-             */
-            private boolean longEnabled = true;
-
-            /**
-             * Enables the Float Excel converter.
-             */
-            private boolean floatEnabled = true;
-
-            /**
-             * Enables the Double Excel converter.
-             */
-            private boolean doubleEnabled = true;
-
-            /**
-             * Enables the BigInteger Excel converter.
-             */
-            private boolean bigIntegerEnabled = true;
-
-            /**
-             * Enables the BigDecimal Excel converter.
-             */
-            private boolean bigDecimalEnabled = true;
-
-            /**
-             * Enables the java.util.Date Excel converter.
-             */
-            private boolean dateEnabled = true;
-
-            /**
-             * Enables the LocalDateTime Excel converter.
-             */
-            private boolean localDateTimeEnabled = true;
-
-            /**
-             * Enables the LocalDate Excel converter.
-             */
-            private boolean localDateEnabled = true;
-
-            /**
-             * Enables the LocalTime Excel converter.
-             */
-            private boolean localTimeEnabled = true;
-        }
-    }
-
-    @Data
-    public static class JacksonProperties {
-
-        /**
-         * Enables Jackson auto-configuration.
-         */
-        private boolean enabled = true;
-
-        /**
-         * Enables date-time related Jackson customization.
-         */
-        private boolean dateTimeEnabled = true;
-
-        /**
-         * Serializes long values as strings on write, to avoid precision loss on the
-         * front-end (JavaScript Number cannot safely represent integers beyond 2^53).
-         * Only affects serialization (write); deserialization accepts both numbers and strings.
-         */
-        private boolean serializeLongAsString = true;
-
-        /**
-         * Serializes BigDecimal values as strings on write.
-         */
-        private boolean serializeBigDecimalAsString = true;
-
-        /**
-         * Removes trailing zeros before serializing BigDecimal values.
-         */
-        private boolean bigDecimalStripTrailingZeros = false;
-
-        /**
-         * Serializes float and double values as strings on write.
-         */
-        private boolean serializeFloatingAsString = false;
-
-        /**
-         * Adds enum description fields during serialization.
-         */
-        private boolean enumDescEnabled = true;
-
-        /**
-         * Default suffix used by derived enum description fields.
-         */
-        private String enumNameSuffix = "name";
-
-        /**
-         * Candidate enum code-to-name field pairs, matched in declaration order.
-         */
-        private Map<String, String> enumMappings = defaultEnumMappings();
-
-        private static Map<String, String> defaultEnumMappings() {
-            Map<String, String> mappings = new LinkedHashMap<>();
-            mappings.put("code", "name");
-            mappings.put("key", "value");
-            return mappings;
-        }
-    }
-
-    @Data
-    public static class LogProperties {
-
-        /**
-         * Enables log auto-configuration.
-         */
-        private boolean enabled = true;
-
-        /**
-         * Default log level used by starter managed log components.
-         */
-        private LogLevel level = LogLevel.INFO;
-
-        /**
-         * Trace id settings used by MDC, HTTP responses and Feign propagation.
-         */
-        private TraceProperties trace = new TraceProperties();
-
-        /**
-         * Controller 默认调用日志设置；该日志不需要业务方法添加注解。
-         */
-        private InvocationSourceProperties controller = new InvocationSourceProperties();
-
-        /**
-         * Feign 默认调用日志设置；该日志不需要业务方法添加注解。
-         */
-        private InvocationSourceProperties feign = new InvocationSourceProperties();
-
-        /**
-         * 调用日志 payload 设置，供默认 Controller/Feign 日志和注解日志共同使用。
-         */
-        private InvocationProperties invocation = new InvocationProperties();
-
-        /**
-         * Slow invocation log settings. Slow log is always printed independently at its
-         * own level regardless of whether the method is also covered by other log sources.
-         */
-        private SlowProperties slow = new SlowProperties();
-    }
-
-    @Data
-    public static class SlowProperties {
-
-        /**
-         * Log level used by slow invocation records. Defaults to WARN so that slow calls
-         * are distinguishable from normal invocation traces logged at INFO.
-         */
-        private LogLevel level = LogLevel.WARN;
-    }
-
-    @Data
-    public static class TraceProperties {
-
-        /**
-         * Enables automatic trace id creation and propagation.
-         */
-        private boolean enabled = true;
-
-        /**
-         * Request and response header used for trace id propagation.
-         */
-        private String headerName = "X-Trace-Id";
-
-        /**
-         * MDC key used by logging frameworks.
-         */
-        private String mdcKey = "traceId";
-
-        /**
-         * Writes the trace id back to HTTP responses.
-         */
-        private boolean responseHeaderEnabled = true;
-
-        /**
-         * Propagates the current trace id to Feign requests.
-         */
-        private boolean feignPropagationEnabled = true;
-
-        /**
-         * Adds trace id to Spring Boot default log level pattern when no pattern is customized.
-         */
-        private boolean loggingPatternEnabled = true;
-    }
-
-    @Data
-    public static class InvocationProperties {
-
-        /**
-         * Maximum length of logged argument and result payloads. Use -1 for unlimited output
-         * and 0 to record the {@code disabled} payload status without serializing values.
-         */
-        private int maxPayloadLength = -1;
-
-        /**
-         * Includes invocation arguments in logs.
-         */
-        private boolean includeArgs = true;
-
-        /**
-         * Includes invocation results in successful logs.
-         */
-        private boolean includeResult = true;
-
-        /**
-         * Includes stack traces in error logs.
-         */
-        private boolean includeErrorStackTrace;
-
-    }
-
-    @Data
-    public static class InvocationSourceProperties {
-
-        /**
-         * Enables this invocation log source.
-         */
-        private boolean enabled = true;
-    }
-
-    @Data
-    public static class WebProperties {
-
-        /**
-         * Enables Web MVC/WebFlux auto-configuration.
-         */
-        private boolean enabled = true;
-
-        /**
-         * CORS settings.
-         */
-        private CorsProperties cors = new CorsProperties();
-
-    }
-
-    @Data
-    public static class CorsProperties {
-
-        /**
-         * Enables CORS handling in the Web MVC/WebFlux configurer.
-         */
-        private boolean enabled;
-
-        /**
-         * Comma-separated or array-style list of allowed origin patterns.
-         * Defaults to {@code *} (all origins).
-         */
-        private String[] allowedOriginPatterns = {"*"};
-
-        /**
-         * Comma-separated or array-style list of allowed HTTP methods.
-         */
-        private String[] allowedMethods = {"GET", "POST", "PUT", "DELETE", "OPTIONS"};
-
-        /**
-         * Whether browsers may include credentials such as cookies or HTTP authentication in cross-origin requests.
-         * Defaults to {@code false}; enable it only when cross-origin credentials are required.
-         */
-        private boolean allowCredentials;
-
-        /**
-         * Max age of preflight cache in seconds.
-         */
-        private long maxAge = 3600;
-    }
-
-    @Data
-    public static class FeignProperties {
-
-        /**
-         * Enables Feign client logging auto-configuration.
-         */
-        private boolean enabled = true;
-
-    }
-
-    @Data
-    public static class XssProperties {
-
-        /**
-         * Default XSS cleaning strategy. {@code NONE} disables the built-in cleaner.
-         */
-        private XssStrategy strategy = XssStrategy.NONE;
-
-        /**
-         * Enables the Web MVC/WebFlux String converter target.
-         * A user-provided {@code XssCleaner} can still be used when the built-in strategy is {@code NONE}.
-         */
-        private boolean webEnabled = true;
-
-        /**
-         * Enables XSS cleaning for ordinary Jackson String properties.
-         * This is disabled by default because Jackson customization is global to the mapper.
-         */
-        private boolean jacksonEnabled;
-    }
-
-    @Data
-    public static class DateTimeFormatProperties {
-        /**
-         * Default time pattern.
-         */
-        private String time = "HH:mm:ss";
-
-        /**
-         * Default date pattern.
-         */
-        private String date = "yyyy-MM-dd";
-
-        /**
-         * Default date-time pattern.
-         */
-        private String dateTime = "yyyy-MM-dd HH:mm:ss";
-
-        /**
-         * Default time zone used by date based converters and serializers.
-         */
-        private String timeZone = "GMT+8";
-
-    }
-
-    @Data
-    public static class SpringConverterProperties {
-
-        /**
-         * Enables automatic registration of built-in date-time converters.
-         */
-        private boolean dateTimeEnabled = true;
-    }
-
-    @Data
-    public static class MybatisPlusProperties {
-
-        /**
-         * Enables MyBatis-Plus auto-configuration.
-         */
-        private boolean enabled = true;
-
-        /**
-         * 启用分页内部拦截器 Bean；MyBatis-Plus 3.5.9 及以上还需要引入对应的 JSQLParser 扩展模块。
-         */
-        private boolean paginationEnabled = true;
-
-        /**
-         * Enables the optimistic locker inner interceptor bean.
-         */
-        private boolean optimisticLockerEnabled = true;
-
-        /**
-         * 启用防全表更新与删除内部拦截器 Bean；MyBatis-Plus 3.5.9 及以上还需要引入对应的 JSQLParser 扩展模块。
-         */
-        private boolean blockAttackEnabled = true;
-    }
-
-    @Data
-    public static class AspectOrderProperties {
-
-        /**
-         * Order for the idempotent aspect.
-         */
-        private int idempotent = VeloAdvisorOrder.CONCURRENCY_IDEMPOTENT;
-
-        /**
-         * Order for the rate-limit aspect.
-         */
-        private int rateLimit = VeloAdvisorOrder.CONCURRENCY_RATE_LIMIT;
-
-        /**
-         * Order for the lock aspect.
-         */
-        private int lock = VeloAdvisorOrder.CONCURRENCY_LOCK;
-
-        /**
-         * Order for the invoke-log aspect.
-         */
-        private int invokeLog = VeloAdvisorOrder.LOG_INVOKE;
-
-        /**
-         * Order for the slow-log aspect.
-         */
-        private int slowLog = VeloAdvisorOrder.LOG_SLOW;
-
-        /**
-         * Order for the controller-log aspect.
-         */
-        private int controllerLog = VeloAdvisorOrder.LOG_CONTROLLER;
-
-        /**
-         * Order for the feign-log aspect.
-         */
-        private int feignLog = VeloAdvisorOrder.LOG_FEIGN;
-    }
-
-    @Data
-    public static class BannerProperties {
-
-        /**
-         * Prints the Velo startup banner with a summary of enabled features.
-         * Disabled by default; enable to print the banner on startup.
-         */
-        private boolean enabled = false;
-    }
+    private boolean enabled = false;
+  }
 }

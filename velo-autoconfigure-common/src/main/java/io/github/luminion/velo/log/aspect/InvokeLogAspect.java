@@ -1,161 +1,75 @@
 package io.github.luminion.velo.log.aspect;
 
-import io.github.luminion.velo.VeloProperties;
-import io.github.luminion.velo.core.ReactiveTypeSupport;
 import io.github.luminion.velo.core.VeloAdvisorOrder;
-import io.github.luminion.velo.core.util.ObjectProviderSupport;
-import io.github.luminion.velo.log.InvocationLogRecord;
+import io.github.luminion.velo.log.InvocationLogEngine;
 import io.github.luminion.velo.log.InvocationLogSource;
 import io.github.luminion.velo.log.InvocationLogSupport;
-import io.github.luminion.velo.log.InvocationLogWriter;
-import io.github.luminion.velo.log.InvocationPhase;
-import io.github.luminion.velo.log.annotation.InvokeLog;
-import io.github.luminion.velo.log.annotation.LogPayloadIgnore;
-import io.github.luminion.velo.log.trace.TraceContext;
-import io.github.luminion.velo.spi.RuntimeJsonSerializer;
-import io.github.luminion.velo.spi.provider.HttpMessageConverterRuntimeJsonSerializer;
-import lombok.RequiredArgsConstructor;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
+import lombok.Getter;
+import lombok.Setter;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.aop.support.AopUtils;
-import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.core.Ordered;
+import org.springframework.core.annotation.AnnotatedElementUtils;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.lang.reflect.Method;
-import java.util.Collections;
-
-/**
- * Unified method invocation log aspect.
- *
- * <p>每次调用写两条记录：进入时写 {@link InvocationPhase#ENTRY}（含入参），
- * 退出时写 {@link InvocationPhase#EXIT}（含耗时与返回值或异常）。
- * 慢日志由 {@code SlowLogAspect} 独立处理，本切面不再读取 {@code @SlowLog}。</p>
- */
+/** 普通方法调用日志切面。 */
 @Aspect
-@RequiredArgsConstructor
 public class InvokeLogAspect implements Ordered {
+  private final InvocationLogEngine engine;
+  @Getter @Setter private int order = VeloAdvisorOrder.LOG_INVOKE;
 
-    private final VeloProperties properties;
+  public InvokeLogAspect(InvocationLogEngine engine) {
+    this.engine = engine;
+  }
 
-    private final ObjectProvider<RuntimeJsonSerializer> runtimeJsonSerializerProvider;
-
-    private final InvocationLogWriter invocationLogWriter;
-
-    private int order = VeloAdvisorOrder.LOG_INVOKE;
-
-    public void setOrder(int order) {
-        this.order = order;
+  @Around(
+      "@within(io.github.luminion.velo.log.annotation.InvokeLog) || "
+          + "@annotation(io.github.luminion.velo.log.annotation.InvokeLog)")
+  public Object logInvocation(ProceedingJoinPoint point) throws Throwable {
+    MethodSignature signature = (MethodSignature) point.getSignature();
+    Class<?> type =
+        point.getTarget() == null
+            ? signature.getDeclaringType()
+            : AopUtils.getTargetClass(point.getTarget());
+    Method method = AopUtils.getMostSpecificMethod(signature.getMethod(), type);
+    if (AnnotatedElementUtils.hasAnnotation(type, RestController.class)
+        || AnnotatedElementUtils.hasAnnotation(type, ResponseBody.class)
+        || AnnotatedElementUtils.hasAnnotation(method, ResponseBody.class)
+        || hasFeignClient(type)
+        || hasFeignClient(signature.getDeclaringType())
+        || isAutomaticSource(method)) {
+      return point.proceed();
     }
+    return engine.invoke(
+        InvocationLogSupport.invocation(
+            point, InvocationLogSource.INVOKE, signature.getName() + "()"),
+        point::proceed);
+  }
 
-    @Override
-    public int getOrder() {
-        return order;
+  private boolean hasFeignClient(Class<?> type) {
+    for (Annotation annotation : type.getAnnotations()) {
+      if ("org.springframework.cloud.openfeign.FeignClient"
+          .equals(annotation.annotationType().getName())) {
+        return true;
+      }
     }
+    return false;
+  }
 
-    @Around("@within(io.github.luminion.velo.log.annotation.InvokeLog) " +
-            "|| @annotation(io.github.luminion.velo.log.annotation.InvokeLog)")
-    public Object logInvocation(ProceedingJoinPoint joinPoint) throws Throwable {
-        MethodSignature signature = (MethodSignature) joinPoint.getSignature();
-        if (ReactiveTypeSupport.isReactiveType(signature.getReturnType())) {
-            return joinPoint.proceed();
-        }
-        RuntimeJsonSerializer runtimeJsonSerializer = runtimeJsonSerializer();
-        VeloProperties.InvocationProperties invocationProperties = properties.getLog().getInvocation();
-        LogPayloadIgnore logPayloadIgnore = InvocationLogSupport.findLogPayloadIgnore(signature, joinPoint.getTarget());
-        boolean ignoreArgs = logPayloadIgnore != null && logPayloadIgnore.args();
-        boolean ignoreResult = logPayloadIgnore != null && logPayloadIgnore.result();
-        Object target = joinPoint.getTarget();
-        Class<?> targetType = target != null ? AopUtils.getTargetClass(target) : signature.getDeclaringType();
-        Method targetMethod = targetType != null
-                ? AopUtils.getMostSpecificMethod(signature.getMethod(), targetType)
-                : signature.getMethod();
-        InvokeLog invokeLog = AnnotatedElementUtils.findMergedAnnotation(targetMethod, InvokeLog.class);
-        if (invokeLog == null) {
-            invokeLog = AnnotatedElementUtils.findMergedAnnotation(targetType, InvokeLog.class);
-        }
-        boolean argsOnFinish = invokeLog != null && invokeLog.argsOnFinish();
-        String argsText = ignoreArgs ? InvocationLogSupport.IGNORED_PAYLOAD
-                : InvocationLogSupport.safeBuildArgsText(signature, joinPoint.getTarget(), joinPoint.getArgs(),
-                        runtimeJsonSerializer, invocationProperties);
-
-        // 进入日志：记录方法名与入参
-        InvocationLogSupport.safeWrite(invocationLogWriter, buildEntryRecord(signature, argsText));
-
-        long start = System.nanoTime();
-        Object result;
-        try {
-            result = joinPoint.proceed();
-        } catch (Throwable ex) {
-            long elapsedNanos = InvocationLogSupport.elapsedNanos(start);
-            String finishArgsText = argsOnFinish
-                    ? (ignoreArgs ? InvocationLogSupport.IGNORED_PAYLOAD
-                            : InvocationLogSupport.safeBuildArgsText(signature, joinPoint.getTarget(), joinPoint.getArgs(),
-                                    runtimeJsonSerializer, invocationProperties))
-                    : null;
-            InvocationLogRecord exitRecord = buildExitRecord(signature,
-                    finishArgsText, null, InvocationLogSupport.nanosToMillis(elapsedNanos), ex);
-            InvocationLogSupport.safeWrite(invocationLogWriter, exitRecord);
-            throw ex;
-        }
-
-        long elapsedNanos = InvocationLogSupport.elapsedNanos(start);
-        String finishArgsText = argsOnFinish
-                ? (ignoreArgs ? InvocationLogSupport.IGNORED_PAYLOAD
-                        : InvocationLogSupport.safeBuildArgsText(signature, joinPoint.getTarget(), joinPoint.getArgs(),
-                                runtimeJsonSerializer, invocationProperties))
-                : null;
-        InvocationLogRecord exitRecord = buildExitRecord(signature,
-                finishArgsText,
-                signature.getReturnType() == Void.TYPE ? InvocationLogSupport.VOID_RESULT
-                        : ignoreResult ? InvocationLogSupport.IGNORED_PAYLOAD
-                                : InvocationLogSupport.safeBuildResultText(result, runtimeJsonSerializer,
-                                        invocationProperties),
-                InvocationLogSupport.nanosToMillis(elapsedNanos), null);
-        InvocationLogSupport.safeWrite(invocationLogWriter, exitRecord);
-        return result;
+  private boolean isAutomaticSource(Method method) {
+    for (Annotation annotation : method.getAnnotations()) {
+      String name = annotation.annotationType().getName();
+      if (name.equals("org.springframework.scheduling.annotation.Scheduled")
+          || name.equals("com.xxl.job.core.handler.annotation.XxlJob")) {
+        return true;
+      }
     }
-
-    private InvocationLogRecord buildEntryRecord(MethodSignature signature, String argsText) {
-        InvocationLogRecord record = new InvocationLogRecord();
-        Class<?> declaringType = signature.getDeclaringType();
-        record.setLoggerName(declaringType != null ? declaringType.getName() : null);
-        record.setTraceId(TraceContext.get(properties.getLog().getTrace().getMdcKey()));
-        record.setSource(InvocationLogSource.INVOKE);
-        record.setTarget(signature.getName() + "()");
-        record.setPhase(InvocationPhase.ENTRY);
-        record.setArgs(argsText);
-        record.setSuccess(true);
-        return record;
-    }
-
-    private InvocationLogRecord buildExitRecord(MethodSignature signature, String argsText, String resultText,
-            long costMs, Throwable error) {
-        InvocationLogRecord record = new InvocationLogRecord();
-        Class<?> declaringType = signature.getDeclaringType();
-        record.setLoggerName(declaringType != null ? declaringType.getName() : null);
-        record.setTraceId(TraceContext.get(properties.getLog().getTrace().getMdcKey()));
-        record.setSource(InvocationLogSource.INVOKE);
-        record.setTarget(signature.getName() + "()");
-        record.setPhase(InvocationPhase.EXIT);
-        record.setCostMs(costMs);
-        record.setArgs(argsText);
-        record.setSuccess(error == null);
-        if (error == null) {
-            record.setResult(resultText);
-        } else {
-            record.setError(error);
-            record.setErrorClass(error.getClass().getName());
-            record.setErrorMessage(error.getMessage());
-        }
-        return record;
-    }
-
-    private RuntimeJsonSerializer runtimeJsonSerializer() {
-        return ObjectProviderSupport.resolveUnique(runtimeJsonSerializerProvider,
-                "RuntimeJsonSerializer for invocation log",
-                () -> new HttpMessageConverterRuntimeJsonSerializer(Collections.emptyList()));
-    }
+    return false;
+  }
 }

@@ -1,491 +1,224 @@
 package io.github.luminion.velo.feign;
 
-import feign.RequestTemplate;
-import io.github.luminion.velo.VeloProperties;
-import io.github.luminion.velo.core.VeloCoreAutoConfiguration;
-import io.github.luminion.velo.log.InvocationLogRecord;
-import io.github.luminion.velo.log.InvocationLogSource;
-import io.github.luminion.velo.log.InvocationLogWriter;
-import io.github.luminion.velo.log.InvocationPhase;
-import io.github.luminion.velo.log.trace.TraceContext;
-import io.github.luminion.velo.spi.RuntimeJsonSerializer;
-import org.aspectj.lang.ProceedingJoinPoint;
-import org.aspectj.lang.reflect.MethodSignature;
-import org.junit.jupiter.api.Test;
-import org.springframework.boot.autoconfigure.AutoConfigurations;
-import org.springframework.boot.autoconfigure.aop.AopAutoConfiguration;
-import org.springframework.boot.test.context.FilteredClassLoader;
-import org.springframework.boot.test.context.runner.ApplicationContextRunner;
-import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import feign.RequestTemplate;
+import io.github.luminion.velo.VeloProperties;
+import io.github.luminion.velo.core.VeloCoreAutoConfiguration;
+import io.github.luminion.velo.log.InvocationLogEngine;
+import io.github.luminion.velo.log.InvocationLogFeature;
+import io.github.luminion.velo.log.InvocationLogRecord;
+import io.github.luminion.velo.log.VeloLogAutoConfiguration;
+import io.github.luminion.velo.log.trace.TraceContext;
+import io.github.luminion.velo.log.trace.TraceData;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.reflect.MethodSignature;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.slf4j.MDC;
+import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.test.context.FilteredClassLoader;
+import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+
 class VeloFeignAutoConfigurationTests {
+  private final ApplicationContextRunner runner =
+      new ApplicationContextRunner()
+          .withConfiguration(
+              AutoConfigurations.of(
+                  VeloCoreAutoConfiguration.class,
+                  VeloLogAutoConfiguration.class,
+                  VeloFeignAutoConfiguration.class));
 
-    private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-            .withConfiguration(AutoConfigurations.of(
-                    AopAutoConfiguration.class,
-                    VeloCoreAutoConfiguration.class,
-                    VeloFeignAutoConfiguration.class
-            ))
-            .withUserConfiguration(TestFeignConfiguration.class);
+  @AfterEach
+  void cleanup() {
+    MDC.clear();
+  }
 
-    @Test
-    void shouldCreateFeignLogAspectWhenFeignClientPresent() {
-        contextRunner.run(context -> assertThat(context).hasSingleBean(FeignLogAspect.class));
+  @Test
+  void createsSharedEngineAndFeignAdapters() {
+    runner.run(
+        c -> {
+          assertThat(c)
+              .hasSingleBean(InvocationLogEngine.class)
+              .hasSingleBean(FeignLogAspect.class)
+              .hasSingleBean(FeignTraceRequestInterceptor.class)
+              .hasSingleBean(FeignInvocationCapability.class);
+        });
+  }
+
+  @Test
+  void sourceSwitchKeepsTracePropagation() {
+    runner
+        .withPropertyValues("velo.log.sources.feign.enabled=false")
+        .run(
+            c -> {
+              assertThat(c)
+                  .doesNotHaveBean(FeignLogAspect.class)
+                  .doesNotHaveBean(FeignInvocationCapability.class);
+              assertThat(c).hasSingleBean(FeignTraceRequestInterceptor.class);
+            });
+  }
+
+  @Test
+  void disablesAllLogBeans() {
+    runner
+        .withPropertyValues("velo.log.enabled=false")
+        .run(
+            c -> {
+              assertThat(c)
+                  .doesNotHaveBean(FeignLogAspect.class)
+                  .doesNotHaveBean(FeignTraceRequestInterceptor.class);
+            });
+  }
+
+  @Test
+  void missingFeignSkipsAdapters() {
+    runner
+        .withClassLoader(new FilteredClassLoader("org.springframework.cloud.openfeign"))
+        .run(c -> assertThat(c).doesNotHaveBean(FeignLogAspect.class));
+  }
+
+  @Test
+  void invocationCreatesTraceAndPropagatesWithoutDuplicateHeaders() throws Throwable {
+    VeloProperties p = new VeloProperties();
+    List<InvocationLogRecord> records = new ArrayList<>();
+    FeignLogAspect aspect =
+        new FeignLogAspect(new InvocationLogEngine(p, String::valueOf, records::add));
+    ProceedingJoinPoint point = point();
+    RequestTemplate template = new RequestTemplate();
+    template.header("traceparent", "stale");
+    template.header("tracestate", "vendor=stale");
+    when(point.proceed())
+        .thenAnswer(
+            call -> {
+              new FeignTraceRequestInterceptor(p).apply(template);
+              return "done";
+            });
+    assertThat(aspect.logFeignInvocation(point)).isEqualTo("done");
+    assertThat(records).hasSize(1);
+    InvocationLogRecord entry = records.get(0);
+    assertThat(entry.getFeature()).isEqualTo(InvocationLogFeature.ENTRY_ARGS);
+    assertThat(entry.getTarget()).isEqualTo("find() GET /users/{id}");
+    assertThat(entry.getPayload()).contains("id=1");
+    assertThat(entry.getTraceId()).matches("[0-9a-f]{32}");
+    assertThat(template.headers().get("traceparent"))
+        .hasSize(1)
+        .allMatch(value -> value.startsWith("00-" + entry.getTraceId() + "-"));
+    assertThat(template.headers()).doesNotContainKey("tracestate");
+    assertThat(MDC.get("traceId")).isNull();
+    assertThat(FeignInvocationContext.current()).isNull();
+  }
+
+  @Test
+  void headersAreSeparateAllowlistedRecordsAndContextIsRestored() throws Throwable {
+    VeloProperties p = new VeloProperties();
+    p.getLog().getSources().getFeign().getRequestHeaders().setEnabled(true);
+    p.getLog()
+        .getSources()
+        .getFeign()
+        .getRequestHeaders()
+        .setAllowlist(java.util.Collections.singletonList("x-request"));
+    p.getLog().getSources().getFeign().getResponseHeaders().setEnabled(true);
+    p.getLog()
+        .getSources()
+        .getFeign()
+        .getResponseHeaders()
+        .setAllowlist(java.util.Collections.singletonList("x-response"));
+    List<InvocationLogRecord> records = new ArrayList<>();
+    FeignLogAspect aspect =
+        new FeignLogAspect(new InvocationLogEngine(p, String::valueOf, records::add));
+    FeignInvocationContext outer = FeignInvocationContext.open();
+    try {
+      ProceedingJoinPoint point = point();
+      when(point.proceed())
+          .thenAnswer(
+              call -> {
+                FeignInvocationContext current = FeignInvocationContext.current();
+                current.captureRequestHeaders(
+                    java.util.Collections.singletonMap(
+                        "X-Request", java.util.Collections.singletonList("yes")));
+                current.captureResponseHeaders(
+                    java.util.Collections.singletonMap(
+                        "X-Response", java.util.Collections.singletonList("ok")));
+                throw new IllegalStateException("network");
+              });
+      assertThatThrownBy(() -> aspect.logFeignInvocation(point))
+          .isInstanceOf(IllegalStateException.class)
+          .hasMessage("network");
+      assertThat(records)
+          .extracting(InvocationLogRecord::getFeature)
+          .containsExactly(
+              InvocationLogFeature.ENTRY_ARGS,
+              InvocationLogFeature.ERROR_LOG,
+              InvocationLogFeature.REQUEST_HEADERS,
+              InvocationLogFeature.RESPONSE_HEADERS);
+      assertThat(records.get(2).getPayload()).contains("X-Request", "yes");
+      assertThat(records.get(3).getPayload()).contains("X-Response", "ok");
+      assertThat(records)
+          .extracting(InvocationLogRecord::getTarget)
+          .containsOnly("find() GET /users/{id}");
+      assertThat(FeignInvocationContext.current()).isSameAs(outer);
+    } finally {
+      FeignInvocationContext.close();
     }
+  }
 
-    @Test
-    void shouldCreateFeignLogAspectWithFallbackWriterWhenInvocationLogWriterMissing() {
-        new ApplicationContextRunner()
-                .withConfiguration(AutoConfigurations.of(
-                        AopAutoConfiguration.class,
-                        VeloCoreAutoConfiguration.class,
-                        VeloFeignAutoConfiguration.class
-                ))
-                .run(context -> {
-                    assertThat(context).doesNotHaveBean(InvocationLogWriter.class);
-                    assertThat(context).hasSingleBean(FeignLogAspect.class);
-                });
+  @Test
+  void interceptorReusesFullContextIncludingSamplingAndState() {
+    String id = "4bf92f3577b34da6a3ce929d0e0e4736";
+    String parent = "00-" + id + "-00f067aa0ba902b7-01";
+    Map<String, String> headers = new LinkedHashMap<>();
+    headers.put("traceparent", parent);
+    headers.put("tracestate", "vendor=preserved");
+    TraceData data = new TraceData(id, headers);
+    RequestTemplate template = new RequestTemplate();
+    template.header("Traceparent", "stale");
+    template.header("tracestate", "old=state");
+    try (TraceContext.Scope scope = TraceContext.install("traceId", data, true)) {
+      new FeignTraceRequestInterceptor(new VeloProperties()).apply(template);
+      assertThat(TraceContext.current()).isSameAs(data);
     }
-
-    @Test
-    void shouldSkipFeignLogAspectWhenFeignInvocationLoggingDisabled() {
-        contextRunner
-                .withPropertyValues("velo.log.feign.enabled=false")
-                .run(context -> assertThat(context).doesNotHaveBean(FeignLogAspect.class));
-    }
-
-    @Test
-    void shouldSkipFeignLogAspectWhenAllLoggingDisabled() {
-        contextRunner
-                .withPropertyValues("velo.log.enabled=false")
-                .run(context -> assertThat(context).doesNotHaveBean(FeignLogAspect.class));
-    }
-
-    @Test
-    void shouldSkipFeignLogBeansWhenLogDisabled() {
-        contextRunner
-                .withPropertyValues("velo.log.enabled=false")
-                .run(context -> {
-                    assertThat(context).doesNotHaveBean(FeignLogAspect.class);
-                    assertThat(context).doesNotHaveBean(FeignTraceRequestInterceptor.class);
-                });
-    }
-
-    @Test
-    void shouldSkipAutoConfigurationWhenFeignClientClassMissing() {
-        contextRunner
-                .withClassLoader(new FilteredClassLoader("org.springframework.cloud.openfeign"))
-                .run(context -> assertThat(context).doesNotHaveBean(FeignLogAspect.class));
-    }
-
-    @Test
-    void shouldLogFeignInvocationWithArgumentsAndResponse() throws Throwable {
-        CapturingInvocationLogWriter writer = invokeFindById(new VeloProperties(), runtimeJsonSerializer());
-
-        // 进入记录（index 0）：含入参，不含返回值
-        assertThat(writer.records).hasSize(2);
-        InvocationLogRecord entry = writer.records.get(0);
-        assertThat(entry.getPhase()).isEqualTo(InvocationPhase.ENTRY);
-        assertThat(entry.getSource()).isEqualTo(InvocationLogSource.FEIGN);
-        assertThat(entry.getTarget()).isEqualTo("GET /users/{id}");
-        assertThat(entry.isSuccess()).isTrue();
-        assertThat(entry.getArgs()).contains("\"id\":1");
-
-        // 退出记录（index 1）：含耗时与返回值
-        InvocationLogRecord exit = writer.records.get(1);
-        assertThat(exit.getPhase()).isEqualTo(InvocationPhase.EXIT);
-        assertThat(exit.isSuccess()).isTrue();
-        assertThat(exit.getResult()).isEqualTo("{\"userName\":\"tom\"}");
-    }
-
-    @Test
-    void shouldTruncatePayloadsUsingConfiguredLimit() throws Throwable {
-        VeloProperties properties = new VeloProperties();
-        properties.getLog().getInvocation().setMaxPayloadLength(13);
-
-        CapturingInvocationLogWriter writer = invokeFindById(properties, runtimeJsonSerializer());
-
-        assertThat(writer.records).hasSize(2);
-        assertThat(writer.records.get(1).getResult()).isEqualTo("{\"userName...");
-    }
-
-    @Test
-    void shouldAllowUnlimitedPayloadLoggingWhenConfiguredAsNegativeOne() throws Throwable {
-        VeloProperties properties = new VeloProperties();
-        properties.getLog().getInvocation().setMaxPayloadLength(-1);
-
-        CapturingInvocationLogWriter writer = invokeFindById(properties, runtimeJsonSerializer());
-
-        assertThat(writer.records).hasSize(2);
-        assertThat(writer.records.get(1).getResult()).isEqualTo("{\"userName\":\"tom\"}");
-    }
-
-    @Test
-    void shouldLogDisabledWhenPayloadLimitIsZero() throws Throwable {
-        VeloProperties properties = new VeloProperties();
-        properties.getLog().getInvocation().setMaxPayloadLength(0);
-
-        CapturingInvocationLogWriter writer = invokeFindById(properties, runtimeJsonSerializer());
-
-        assertThat(writer.records).hasSize(2);
-        assertThat(writer.records.get(0).getArgs()).isEqualTo("disabled");   // ENTRY
-        assertThat(writer.records.get(1).getResult()).isEqualTo("disabled"); // EXIT
-    }
-
-    @Test
-    void shouldLogNullWhenResponseBodyIsNull() throws Throwable {
-        CapturingInvocationLogWriter writer = invokePing();
-
-        assertThat(writer.records).hasSize(2);
-        assertThat(writer.records.get(1).getResult()).isEqualTo("null"); // EXIT
-    }
-
-    @Test
-    void shouldLogFailuresWithoutSwallowingException() throws Throwable {
-        CapturingInvocationLogWriter writer = invokeFail();
-
-        assertThat(writer.records).hasSize(2);
-        // ENTRY 记录：入参已写入，方法尚未执行
-        assertThat(writer.records.get(0).getPhase()).isEqualTo(InvocationPhase.ENTRY);
-        assertThat(writer.records.get(0).isSuccess()).isTrue();
-        // EXIT 记录：包含异常信息
-        InvocationLogRecord exit = writer.records.get(1);
-        assertThat(exit.getPhase()).isEqualTo(InvocationPhase.EXIT);
-        assertThat(exit.isSuccess()).isFalse();
-        assertThat(exit.getTarget()).isEqualTo("GET /users/fail");
-        assertThat(exit.getError()).isInstanceOf(IllegalStateException.class);
-        assertThat(exit.getErrorMessage()).isEqualTo("boom");
-    }
-
-    @Test
-    void shouldKeepSuccessfulInvocationWhenPayloadSerializationFails() throws Throwable {
-        VeloProperties properties = new VeloProperties();
-        CapturingInvocationLogWriter writer = new CapturingInvocationLogWriter();
-        RuntimeJsonSerializer serializer = value -> {
-            throw new IllegalStateException("serialization failed");
-        };
-        FeignLogAspect aspect = new FeignLogAspect(properties, serializer, writer);
-        ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
-        MethodSignature signature = mock(MethodSignature.class);
-        ResponseEntity<DemoPayload> expected = ResponseEntity.ok(new DemoPayload("tom"));
-
-        when(joinPoint.getSignature()).thenReturn(signature);
-        when(joinPoint.getTarget()).thenReturn(new DemoFeignClientImpl());
-        when(joinPoint.getArgs()).thenReturn(new Object[] {1L});
-        when(joinPoint.proceed()).thenReturn(expected);
-        when(signature.getMethod()).thenReturn(DemoFeignClient.class.getDeclaredMethod("findById", Long.class));
-        when(signature.getParameterNames()).thenReturn(new String[] {"id"});
-
-        assertThat(aspect.logFeignInvocation(joinPoint)).isSameAs(expected);
-        assertThat(writer.records).hasSize(2);
-        assertThat(writer.records.get(0).getArgs()).isEqualTo("serialization-failed");   // ENTRY
-        assertThat(writer.records.get(1).getResult()).isEqualTo("serialization-failed"); // EXIT
-    }
-
-    @Test
-    void shouldKeepSuccessfulInvocationWhenWriterFails() throws Throwable {
-        VeloProperties properties = new VeloProperties();
-        InvocationLogWriter writer = record -> {
-            throw new IllegalStateException("writer failed");
-        };
-        FeignLogAspect aspect = new FeignLogAspect(properties, runtimeJsonSerializer(), writer);
-        ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
-        MethodSignature signature = mock(MethodSignature.class);
-        ResponseEntity<DemoPayload> expected = ResponseEntity.ok(new DemoPayload("tom"));
-
-        when(joinPoint.getSignature()).thenReturn(signature);
-        when(joinPoint.getTarget()).thenReturn(new DemoFeignClientImpl());
-        when(joinPoint.getArgs()).thenReturn(new Object[] {1L});
-        when(joinPoint.proceed()).thenReturn(expected);
-        when(signature.getMethod()).thenReturn(DemoFeignClient.class.getDeclaredMethod("findById", Long.class));
-        when(signature.getParameterNames()).thenReturn(new String[] {"id"});
-
-        assertThat(aspect.logFeignInvocation(joinPoint)).isSameAs(expected);
-    }
-
-    @Test
-    void shouldPreserveBusinessExceptionWhenWriterFails() throws Throwable {
-        VeloProperties properties = new VeloProperties();
-        InvocationLogWriter writer = record -> {
-            throw new IllegalStateException("writer failed");
-        };
-        FeignLogAspect aspect = new FeignLogAspect(properties, runtimeJsonSerializer(), writer);
-        ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
-        MethodSignature signature = mock(MethodSignature.class);
-        IllegalArgumentException businessError = new IllegalArgumentException("business failed");
-
-        when(joinPoint.getSignature()).thenReturn(signature);
-        when(joinPoint.getTarget()).thenReturn(new DemoFeignClientImpl());
-        when(joinPoint.getArgs()).thenReturn(new Object[0]);
-        when(joinPoint.proceed()).thenThrow(businessError);
-        when(signature.getMethod()).thenReturn(DemoFeignClient.class.getDeclaredMethod("fail"));
-        when(signature.getParameterNames()).thenReturn(new String[0]);
-
-        assertThatThrownBy(() -> aspect.logFeignInvocation(joinPoint)).isSameAs(businessError);
-    }
-
-    @Test
-    void shouldPreserveBusinessExceptionWhenArgumentSerializationFails() throws Throwable {
-        VeloProperties properties = new VeloProperties();
-        RuntimeJsonSerializer serializer = value -> {
-            throw new IllegalStateException("serialization failed");
-        };
-        FeignLogAspect aspect = new FeignLogAspect(properties, serializer, new CapturingInvocationLogWriter());
-        ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
-        MethodSignature signature = mock(MethodSignature.class);
-        IllegalArgumentException businessError = new IllegalArgumentException("business failed");
-
-        when(joinPoint.getSignature()).thenReturn(signature);
-        when(joinPoint.getTarget()).thenReturn(new DemoFeignClientImpl());
-        when(joinPoint.getArgs()).thenReturn(new Object[] {1L});
-        when(joinPoint.proceed()).thenThrow(businessError);
-        when(signature.getMethod()).thenReturn(DemoFeignClient.class.getDeclaredMethod("findById", Long.class));
-        when(signature.getParameterNames()).thenReturn(new String[] {"id"});
-
-        assertThatThrownBy(() -> aspect.logFeignInvocation(joinPoint)).isSameAs(businessError);
-    }
-
-    @Test
-    void shouldNotSwallowWriterError() throws Throwable {
-        VeloProperties properties = new VeloProperties();
-        AssertionError writerError = new AssertionError("writer error");
-        InvocationLogWriter writer = record -> {
-            throw writerError;
-        };
-        FeignLogAspect aspect = new FeignLogAspect(properties, runtimeJsonSerializer(), writer);
-        ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
-        MethodSignature signature = mock(MethodSignature.class);
-
-        when(joinPoint.getSignature()).thenReturn(signature);
-        when(joinPoint.getTarget()).thenReturn(new DemoFeignClientImpl());
-        when(joinPoint.getArgs()).thenReturn(new Object[] {1L});
-        when(joinPoint.proceed()).thenReturn(ResponseEntity.ok(new DemoPayload("tom")));
-        when(signature.getMethod()).thenReturn(DemoFeignClient.class.getDeclaredMethod("findById", Long.class));
-        when(signature.getParameterNames()).thenReturn(new String[] {"id"});
-
-        String mdcKey = properties.getLog().getTrace().getMdcKey();
-        TraceContext.remove(mdcKey);
-        try {
-            assertThatThrownBy(() -> aspect.logFeignInvocation(joinPoint)).isSameAs(writerError);
-            assertThat(TraceContext.get(mdcKey)).isNull();
-        } finally {
-            TraceContext.remove(mdcKey);
-        }
-    }
-
-    @Test
-    void shouldPropagateTraceIdToFeignRequestTemplate() {
-        VeloProperties properties = new VeloProperties();
-        FeignTraceRequestInterceptor interceptor = new FeignTraceRequestInterceptor(properties);
-        RequestTemplate requestTemplate = new RequestTemplate();
-        TraceContext.put(properties.getLog().getTrace().getMdcKey(), "trace-001");
-        try {
-            interceptor.apply(requestTemplate);
-        } finally {
-            TraceContext.remove(properties.getLog().getTrace().getMdcKey());
-        }
-
-        Collection<String> values = requestTemplate.headers().get("X-Trace-Id");
-        assertThat(values).containsExactly("trace-001");
-    }
-
-    private CapturingInvocationLogWriter invokeFindById(VeloProperties properties, RuntimeJsonSerializer serializer)
-            throws Throwable {
-        CapturingInvocationLogWriter writer = new CapturingInvocationLogWriter();
-        FeignLogAspect aspect = new FeignLogAspect(properties, serializer, writer);
-        ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
-        MethodSignature signature = mock(MethodSignature.class);
-
-        when(joinPoint.getSignature()).thenReturn(signature);
-        when(joinPoint.getTarget()).thenReturn(new DemoFeignClientImpl());
-        when(joinPoint.getArgs()).thenReturn(new Object[] {1L});
-        when(joinPoint.proceed()).thenReturn(ResponseEntity.ok(new DemoPayload("tom")));
-        when(signature.getMethod()).thenReturn(DemoFeignClient.class.getDeclaredMethod("findById", Long.class));
-        when(signature.getParameterNames()).thenReturn(new String[] {"id"});
-
-        aspect.logFeignInvocation(joinPoint);
-        return writer;
-    }
-
-    private CapturingInvocationLogWriter invokePing() throws Throwable {
-        VeloProperties properties = new VeloProperties();
-        CapturingInvocationLogWriter writer = new CapturingInvocationLogWriter();
-        FeignLogAspect aspect = new FeignLogAspect(properties, value -> "null", writer);
-        ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
-        MethodSignature signature = mock(MethodSignature.class);
-
-        when(joinPoint.getSignature()).thenReturn(signature);
-        when(joinPoint.getTarget()).thenReturn((NullBodyFeignClient) () -> null);
-        when(joinPoint.getArgs()).thenReturn(new Object[0]);
-        when(joinPoint.proceed()).thenReturn(null);
-        when(signature.getMethod()).thenReturn(NullBodyFeignClient.class.getDeclaredMethod("ping"));
-        when(signature.getParameterNames()).thenReturn(new String[0]);
-
-        aspect.logFeignInvocation(joinPoint);
-        return writer;
-    }
-
-    private CapturingInvocationLogWriter invokeFail() throws Throwable {
-        VeloProperties properties = new VeloProperties();
-        CapturingInvocationLogWriter writer = new CapturingInvocationLogWriter();
-        FeignLogAspect aspect = new FeignLogAspect(properties, runtimeJsonSerializer(), writer);
-        ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
-        MethodSignature signature = mock(MethodSignature.class);
-
-        when(joinPoint.getSignature()).thenReturn(signature);
-        when(joinPoint.getTarget()).thenReturn(new DemoFeignClientImpl());
-        when(joinPoint.getArgs()).thenReturn(new Object[0]);
-        when(joinPoint.proceed()).thenThrow(new IllegalStateException("boom"));
-        when(signature.getMethod()).thenReturn(DemoFeignClient.class.getDeclaredMethod("fail"));
-        when(signature.getParameterNames()).thenReturn(new String[0]);
-
-        try {
-            aspect.logFeignInvocation(joinPoint);
-        } catch (IllegalStateException ignored) {
-        }
-        return writer;
-    }
-
-    private RuntimeJsonSerializer runtimeJsonSerializer() {
-        return value -> {
-            if (value instanceof DemoPayload) {
-                DemoPayload payload = (DemoPayload) value;
-                return "{\"userName\":\"" + payload.getUserName() + "\"}";
-            }
-            if (value instanceof Long) {
-                return String.valueOf(value);
-            }
-            if (value instanceof java.util.Map<?, ?>) {
-                java.util.Map<?, ?> map = (java.util.Map<?, ?>) value;
-                if (map.containsKey("id")) {
-                    return "{\"id\":" + map.get("id") + "}";
-                }
-                return "{\"value\":\"abcdefghijklmnopqrstuvwxyz\"}";
-            }
-            return "null";
-        };
-    }
-
-    @Configuration(proxyBeanMethods = false)
-    static class TestFeignConfiguration {
-
-        @Bean
-        RuntimeJsonSerializer runtimeJsonSerializer() {
-            return value -> {
-                if (value instanceof DemoPayload) {
-                    DemoPayload payload = (DemoPayload) value;
-                    return "{\"userName\":\"" + payload.getUserName() + "\"}";
-                }
-                if (value instanceof Long) {
-                    return String.valueOf(value);
-                }
-                if (value instanceof java.util.Map<?, ?>) {
-                    java.util.Map<?, ?> map = (java.util.Map<?, ?>) value;
-                    if (map.containsKey("id")) {
-                        return "{\"id\":" + map.get("id") + "}";
-                    }
-                    return "{\"value\":\"abcdefghijklmnopqrstuvwxyz\"}";
-                }
-                return "null";
-            };
-        }
-
-        @Bean
-        InvocationLogWriter invocationLogWriter() {
-            return new CapturingInvocationLogWriter();
-        }
-
-        @Bean
-        DemoFeignClient demoFeignClient() {
-            return new DemoFeignClientImpl();
-        }
-    }
-
-    @Configuration(proxyBeanMethods = false)
-    static class NullBodyFeignConfiguration {
-
-        @Bean
-        RuntimeJsonSerializer runtimeJsonSerializer() {
-            return value -> "null";
-        }
-
-        @Bean
-        InvocationLogWriter invocationLogWriter() {
-            return new CapturingInvocationLogWriter();
-        }
-
-        @Bean
-        NullBodyFeignClient nullBodyFeignClient() {
-            return () -> null;
-        }
-    }
-
-    @FeignClient(name = "demo-client")
-    @RequestMapping("/users")
-    interface DemoFeignClient {
-
-        @GetMapping("/{id}")
-        ResponseEntity<DemoPayload> findById(@PathVariable("id") Long id);
-
-        @GetMapping("/fail")
-        ResponseEntity<DemoPayload> fail();
-    }
-
-    static class DemoFeignClientImpl implements DemoFeignClient {
-
-        @Override
-        public ResponseEntity<DemoPayload> findById(Long id) {
-            return ResponseEntity.ok(new DemoPayload("tom"));
-        }
-
-        @Override
-        public ResponseEntity<DemoPayload> fail() {
-            throw new IllegalStateException("boom");
-        }
-    }
-
-    @FeignClient(name = "null-body-client")
-    interface NullBodyFeignClient {
-
-        @GetMapping("/ping")
-        ResponseEntity<Void> ping();
-    }
-
-    static class DemoPayload {
-
-        private final String userName;
-
-        DemoPayload(String userName) {
-            this.userName = userName;
-        }
-
-        public String getUserName() {
-            return userName;
-        }
-    }
-
-    static final class CapturingInvocationLogWriter implements InvocationLogWriter {
-
-        private final List<InvocationLogRecord> records = new ArrayList<>();
-
-        @Override
-        public void write(InvocationLogRecord record) {
-            records.add(record);
-        }
-    }
+    assertThat(template.headers().get("traceparent")).containsExactly(parent);
+    assertThat(template.headers().get("tracestate")).containsExactly("vendor=preserved");
+    assertThat(TraceContext.current()).isNull();
+    assertThat(MDC.get("traceId")).isNull();
+  }
+
+  @Test
+  void interceptorWithoutScopeOnlyCreatesOutgoingTrace() {
+    RequestTemplate template = new RequestTemplate();
+    new FeignTraceRequestInterceptor(new VeloProperties()).apply(template);
+    assertThat(template.headers().get("traceparent"))
+        .hasSize(1)
+        .allMatch(value -> value.matches("00-[0-9a-f]{32}-[0-9a-f]{16}-00"));
+    assertThat(MDC.get("traceId")).isNull();
+  }
+
+  private ProceedingJoinPoint point() throws Exception {
+    ProceedingJoinPoint point = mock(ProceedingJoinPoint.class);
+    MethodSignature signature = mock(MethodSignature.class);
+    when(signature.getMethod()).thenReturn(DemoClient.class.getMethod("find", Long.class));
+    when(signature.getDeclaringType()).thenReturn(DemoClient.class);
+    when(point.getSignature()).thenReturn(signature);
+    when(point.getArgs()).thenReturn(new Object[] {1L});
+    return point;
+  }
+
+  @FeignClient(name = "demo-client")
+  @RequestMapping("/users")
+  interface DemoClient {
+    @GetMapping("/{id}")
+    String find(@PathVariable("id") Long id);
+  }
 }

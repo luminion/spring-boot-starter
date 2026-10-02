@@ -1,84 +1,183 @@
 package io.github.luminion.velo.log.trace;
 
+import java.util.Collections;
+import java.util.Objects;
+import java.util.concurrent.ThreadLocalRandom;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.util.StringUtils;
 
-import java.util.concurrent.ThreadLocalRandom;
-
-/**
- * Trace id helpers backed by SLF4J MDC.
- */
+/** 链路快照和 MDC 的作用域管理；协议解析由可替换的 Resolver 完成。 */
 public final class TraceContext {
+  private static final int MAX_TRACE_ID_LENGTH = 128;
+  private static final ThreadLocal<TraceData> CURRENT = new ThreadLocal<>();
+  private static final TraceContextResolver DEFAULT_RESOLVER = new W3cTraceContextResolver();
+  private static final Logger LOGGER = LoggerFactory.getLogger(TraceContext.class);
 
-    // 入站 traceId 最大长度，超出视为非法。128 足够容纳常见 traceId(如 W3C 32 hex + 业务前缀)
-    private static final int MAX_TRACE_ID_LENGTH = 128;
+  private TraceContext() {}
 
-    private TraceContext() {
+  public static String get(String key) {
+    return StringUtils.hasText(key) ? MDC.get(key) : null;
+  }
+
+  public static void put(String key, String value) {
+    if (StringUtils.hasText(key) && StringUtils.hasText(value)) {
+      MDC.put(key, value);
+    }
+  }
+
+  public static void remove(String key) {
+    if (StringUtils.hasText(key)) {
+      MDC.remove(key);
+    }
+  }
+
+  public static void restore(String key, String previous) {
+    if (StringUtils.hasText(key)) {
+      if (previous == null) {
+        MDC.remove(key);
+      } else {
+        MDC.put(key, previous);
+      }
+    }
+  }
+
+  public static boolean isValid(String value) {
+    if (value == null || value.isEmpty() || value.length() > MAX_TRACE_ID_LENGTH) {
+      return false;
+    }
+    for (int i = 0; i < value.length(); i++) {
+      char c = value.charAt(i);
+      boolean safe =
+          c >= 'a' && c <= 'z'
+              || c >= 'A' && c <= 'Z'
+              || c >= '0' && c <= '9'
+              || c == '-'
+              || c == '_'
+              || c == '.';
+      if (!safe) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  public static String resolveInbound(String candidate) {
+    return isValid(candidate) ? candidate : createTraceId();
+  }
+
+  public static String createTraceId() {
+    ThreadLocalRandom random = ThreadLocalRandom.current();
+    long high;
+    long low;
+    do {
+      high = random.nextLong();
+      low = random.nextLong();
+    } while (high == 0 && low == 0);
+    return String.format("%016x%016x", high, low);
+  }
+
+  static String createParentId() {
+    long value;
+    do {
+      value = ThreadLocalRandom.current().nextLong();
+    } while (value == 0);
+    return String.format("%016x", value);
+  }
+
+  public static TraceData current() {
+    return CURRENT.get();
+  }
+
+  /** 新 HTTP 入口不沿用工作线程的残留数据，Resolver 可以读取当前请求。 */
+  public static TraceData resolveInbound(String key, TraceContextResolver resolver) {
+    try (Scope ignored = install(key, (TraceData) null, true)) {
+      return resolveSafely(resolver);
+    }
+  }
+
+  /** 独立任务不沿用调用方请求；用户自定义 ThreadLocal 仍由其实现自行管理。 */
+  public static Scope root(String key, boolean enabled, TraceContextResolver resolver) {
+    if (!enabled) {
+      return install(key, current(), false);
+    }
+    TraceData data;
+    try (Scope ignored = install(key, (TraceData) null, true)) {
+      data = CurrentRequestHeaders.withoutRequest(() -> resolveSafely(resolver));
+    }
+    return install(key, data, true);
+  }
+
+  /** 有上下文则复用；无上下文时只在当前作用域生成，关闭时恢复。 */
+  public static Scope open(String key, boolean enabled) {
+    return open(key, enabled, DEFAULT_RESOLVER);
+  }
+
+  public static Scope open(String key, boolean enabled, TraceContextResolver resolver) {
+    if (!enabled) {
+      return install(key, current(), false);
+    }
+    TraceData data = current();
+    String existing = get(key);
+    if (data == null || !Objects.equals(existing, data.getTraceId())) {
+      // 兼容只写 MDC 的调用方；具体实现决定该标识能否用于自己的协议。
+      TraceData seed = isValid(existing) ? new TraceData(existing, Collections.emptyMap()) : null;
+      try (Scope ignored = install(key, seed, true)) {
+        data = resolveSafely(resolver);
+      }
+    }
+    return install(key, data, true);
+  }
+
+  private static TraceData resolveSafely(TraceContextResolver resolver) {
+    try {
+      TraceData data = resolver.resolve();
+      if (data != null) {
+        return data;
+      }
+    } catch (RuntimeException error) {
+      LOGGER.warn("Cannot resolve trace context; creating a fallback context");
+    }
+    return CurrentRequestHeaders.withoutRequest(DEFAULT_RESOLVER::resolve);
+  }
+
+  /** 临时安装完整快照，关闭时同时恢复链路数据和 MDC。 */
+  public static Scope install(String key, TraceData value, boolean enabled) {
+    return new Scope(key, value, enabled);
+  }
+
+  public static final class Scope implements AutoCloseable {
+    private final String key;
+    private final String previous;
+    private final TraceData previousData;
+    private final boolean enabled;
+
+    private Scope(String key, TraceData current, boolean enabled) {
+      this.key = key;
+      this.previous = get(key);
+      this.previousData = CURRENT.get();
+      this.enabled = enabled;
+      if (enabled) {
+        setCurrent(current);
+        restore(key, current == null ? null : current.getTraceId());
+      }
     }
 
-    public static String get(String mdcKey) {
-        if (!StringUtils.hasText(mdcKey)) {
-            return null;
-        }
-        return MDC.get(mdcKey);
+    @Override
+    public void close() {
+      if (enabled) {
+        setCurrent(previousData);
+        restore(key, previous);
+      }
     }
 
-    public static void put(String mdcKey, String traceId) {
-        if (!StringUtils.hasText(mdcKey) || !StringUtils.hasText(traceId)) {
-            return;
-        }
-        MDC.put(mdcKey, traceId);
+    private static void setCurrent(TraceData value) {
+      if (value == null) {
+        CURRENT.remove();
+      } else {
+        CURRENT.set(value);
+      }
     }
-
-    public static void remove(String mdcKey) {
-        if (StringUtils.hasText(mdcKey)) {
-            MDC.remove(mdcKey);
-        }
-    }
-
-    /**
-     * 恢复 MDC 到指定值：previous 为 null 时清除，否则写回。
-     * 用于过滤器/切面执行完毕后还原上游(如 Sleuth/Micrometer Tracing)可能已存在的值，避免误清。
-     */
-    public static void restore(String mdcKey, String previous) {
-        if (!StringUtils.hasText(mdcKey)) {
-            return;
-        }
-        if (previous == null) {
-            MDC.remove(mdcKey);
-        } else {
-            MDC.put(mdcKey, previous);
-        }
-    }
-
-    /**
-     * 校验入站 traceId 是否安全：非空、长度不超上限、仅含 ASCII 字母数字与 - _ .。
-     * 拒绝控制字符/换行/空白，防止客户端传入非法值污染或注入日志。
-     */
-    public static boolean isValid(String traceId) {
-        if (traceId == null || traceId.isEmpty() || traceId.length() > MAX_TRACE_ID_LENGTH) {
-            return false;
-        }
-        for (int i = 0; i < traceId.length(); i++) {
-            char c = traceId.charAt(i);
-            boolean safe = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
-                    || (c >= '0' && c <= '9') || c == '-' || c == '_' || c == '.';
-            if (!safe) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    /**
-     * 采纳合法的入站 traceId，非法(含缺失)则重新生成，保证 MDC 中始终是可信值。
-     */
-    public static String resolveInbound(String candidate) {
-        return isValid(candidate) ? candidate : createTraceId();
-    }
-
-    public static String createTraceId() {
-        ThreadLocalRandom random = ThreadLocalRandom.current();
-        return String.format("%016x%016x", random.nextLong(), random.nextLong());
-    }
+  }
 }

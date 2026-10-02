@@ -1,79 +1,79 @@
 package io.github.luminion.velo.web;
 
 import io.github.luminion.velo.VeloProperties;
-import io.github.luminion.velo.log.InvocationLogWriter;
-import io.github.luminion.velo.log.support.Slf4JInvocationLogWriter;
-import io.github.luminion.velo.spi.RuntimeJsonSerializer;
-import io.github.luminion.velo.spi.provider.DeferredHttpMessageConverterRuntimeJsonSerializer;
+import io.github.luminion.velo.log.InvocationLogEngine;
+import io.github.luminion.velo.log.VeloLogAutoConfiguration;
+import io.github.luminion.velo.log.trace.TraceContextResolver;
 import io.github.luminion.velo.xss.converter.XssStringConverter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import jakarta.servlet.DispatcherType;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
-import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter;
+import org.springframework.core.Ordered;
 
-import java.util.Collections;
-
-/**
- * Web MVC 自动配置。
- */
-@AutoConfiguration
+/** Web MVC 自动配置。 */
+@AutoConfiguration(after = VeloLogAutoConfiguration.class)
 @ConditionalOnClass(name = "org.springframework.web.servlet.DispatcherServlet")
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-@ConditionalOnProperty(prefix = "velo.web", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(
+    prefix = "velo.web",
+    name = "enabled",
+    havingValue = "true",
+    matchIfMissing = true)
 public class VeloWebAutoConfiguration {
 
-    private static final Logger log = LoggerFactory.getLogger(VeloWebAutoConfiguration.class);
+  @Bean
+  @ConditionalOnMissingBean
+  public VeloWebMvcConfigurer veloWebMvcConfigurer(
+      ObjectProvider<XssStringConverter> xssStringConverterProvider, VeloProperties properties) {
+    return new VeloWebMvcConfigurer(xssStringConverterProvider, properties);
+  }
 
-    @Bean
-    @ConditionalOnMissingBean
-    public VeloWebMvcConfigurer veloWebMvcConfigurer(ObjectProvider<XssStringConverter> xssStringConverterProvider,
-            VeloProperties properties) {
-        return new VeloWebMvcConfigurer(xssStringConverterProvider, properties);
-    }
+  @Bean
+  @ConditionalOnMissingBean
+  @ConditionalOnClass(ControllerLogAspect.class)
+  @ConditionalOnProperty(
+      prefix = "velo.log",
+      name = {"enabled", "sources.controller.enabled"},
+      havingValue = "true",
+      matchIfMissing = true)
+  public ControllerLogAspect controllerLogAspect(
+      VeloProperties properties, InvocationLogEngine engine) {
+    ControllerLogAspect aspect = new ControllerLogAspect(engine);
+    aspect.setOrder(properties.getAspectOrder().getControllerLog());
+    return aspect;
+  }
 
-    @Bean
-    @ConditionalOnMissingBean
-    @ConditionalOnClass(RequestMappingHandlerAdapter.class)
-    public RuntimeJsonSerializer runtimeJsonSerializer(ObjectProvider<RequestMappingHandlerAdapter> handlerAdapterProvider) {
-        return new DeferredHttpMessageConverterRuntimeJsonSerializer(() -> {
-            RequestMappingHandlerAdapter handlerAdapter = handlerAdapterProvider.getIfAvailable();
-            if (handlerAdapter == null) {
-                log.debug("No RequestMappingHandlerAdapter bean found, using empty HTTP message converter list for RuntimeJsonSerializer");
-                return Collections.emptyList();
-            }
-            return handlerAdapter.getMessageConverters();
-        });
-    }
+  @Bean
+  @ConditionalOnMissingBean
+  @ConditionalOnProperty(
+      prefix = "velo.log",
+      name = {"enabled", "trace.enabled"},
+      havingValue = "true",
+      matchIfMissing = true)
+  public TraceIdFilter traceIdFilter(VeloProperties properties, TraceContextResolver resolver) {
+    return new TraceIdFilter(properties, resolver);
+  }
 
-    @Bean
-    @ConditionalOnMissingBean
-    @ConditionalOnClass(ControllerLogAspect.class)
-    @ConditionalOnProperty(prefix = "velo.log", name = {"enabled", "controller.enabled"},
-            havingValue = "true",
-            matchIfMissing = true)
-    public ControllerLogAspect controllerLogAspect(VeloProperties properties, RuntimeJsonSerializer runtimeJsonSerializer,
-            ObjectProvider<InvocationLogWriter> invocationLogWriterProvider) {
-        InvocationLogWriter invocationLogWriter = invocationLogWriterProvider.getIfAvailable(
-                () -> {
-                    log.debug("No InvocationLogWriter bean found, using Slf4JInvocationLogWriter for ControllerLogAspect");
-                    return new Slf4JInvocationLogWriter(properties);
-                });
-        ControllerLogAspect aspect = new ControllerLogAspect(properties, runtimeJsonSerializer, invocationLogWriter);
-        aspect.setOrder(properties.getAspectOrder().getControllerLog());
-        return aspect;
-    }
-
-    @Bean
-    @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = "velo.log", name = {"enabled", "trace.enabled"}, havingValue = "true",
-            matchIfMissing = true)
-    public TraceIdFilter traceIdFilter(VeloProperties properties) {
-        return new TraceIdFilter(properties);
-    }
+  /** 覆盖请求、异步及错误派发，避免后续派发丢失原请求标识。 */
+  @Bean
+  @ConditionalOnMissingBean(name = "traceIdFilterRegistration")
+  @ConditionalOnProperty(
+      prefix = "velo.log",
+      name = {"enabled", "trace.enabled"},
+      havingValue = "true",
+      matchIfMissing = true)
+  public FilterRegistrationBean<TraceIdFilter> traceIdFilterRegistration(TraceIdFilter filter) {
+    FilterRegistrationBean<TraceIdFilter> registration = new FilterRegistrationBean<>(filter);
+    registration.setDispatcherTypes(
+        DispatcherType.REQUEST, DispatcherType.ASYNC, DispatcherType.ERROR);
+    registration.setAsyncSupported(true);
+    registration.setOrder(Ordered.HIGHEST_PRECEDENCE + 20);
+    return registration;
+  }
 }

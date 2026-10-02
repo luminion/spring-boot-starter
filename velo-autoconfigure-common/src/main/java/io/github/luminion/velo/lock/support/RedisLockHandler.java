@@ -1,7 +1,6 @@
 package io.github.luminion.velo.lock.support;
 
-import io.github.luminion.velo.lock.LockToken;
-import io.github.luminion.velo.lock.ReactiveLockHandler;
+import io.github.luminion.velo.lock.LockHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -14,8 +13,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
@@ -35,7 +32,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * 看门狗只保证进程仍能执行续期任务时的长任务持有，进程崩溃后 Redis TTL 仍会自然过期。
  */
 @Slf4j
-public class RedisLockHandler implements ReactiveLockHandler, AutoCloseable {
+public class RedisLockHandler implements LockHandler, AutoCloseable {
 
     private static final String RELEASE_LUA = "if redis.call('get', KEYS[1]) == ARGV[1] then " +
             "return redis.call('del', KEYS[1]) " +
@@ -187,31 +184,6 @@ public class RedisLockHandler implements ReactiveLockHandler, AutoCloseable {
                 lockValues.remove();
             }
         }
-    }
-
-    @Override
-    public CompletionStage<LockToken> lockToken(String key, long waitTime, long leaseTime) {
-        String lockValue = acquireRedisLock(key, waitTime, leaseTime);
-        if (lockValue != null) {
-            try {
-                startWatchdogIfRequested(key, lockValue, leaseTime);
-            } catch (RuntimeException e) {
-                releaseRedisLock(key, lockValue);
-                throw e;
-            }
-        }
-        return CompletableFuture.completedFuture(lockValue == null ? null : new LockToken(key, lockValue));
-    }
-
-    @Override
-    public CompletionStage<Void> unlockToken(LockToken token) {
-        if (token == null || !(token.getOwner() instanceof String)) {
-            return CompletableFuture.completedFuture(null);
-        }
-        String lockValue = (String) token.getOwner();
-        cancelWatchdog(lockValue);
-        releaseRedisLock(token.getKey(), lockValue);
-        return CompletableFuture.completedFuture(null);
     }
 
     private String acquireRedisLock(String key, long waitTime, long leaseTime) {

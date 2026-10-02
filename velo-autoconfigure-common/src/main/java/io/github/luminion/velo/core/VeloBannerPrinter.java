@@ -82,8 +82,8 @@ public class VeloBannerPrinter implements SmartInitializingSingleton {
         VeloProperties.LogProperties logProperties = properties.getLog();
         line(sb, "log", logProperties == null ? MISSING_CONFIGURATION : logProperties.isEnabled()
                 ? "on (trace=" + traceStatus(logProperties.getTrace())
-                        + ", controller=" + sourceStatus(logProperties.getController())
-                        + ", feign=" + sourceStatus(logProperties.getFeign()) + ")" : "off");
+                        + ", controller=" + sourceStatus(logProperties.getSources().getController())
+                        + ", feign=" + sourceStatus(logProperties.getSources().getFeign()) + ")" : "off");
         VeloProperties.WebProperties web = properties.getWeb();
         line(sb, "web", web == null ? MISSING_CONFIGURATION : onOff(web.isEnabled()));
         line(sb, "xss", xssStatus(properties.getXss()));

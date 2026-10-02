@@ -1,39 +1,58 @@
 package io.github.luminion.velo.log.trace;
 
-import org.springframework.core.task.TaskDecorator;
-import org.slf4j.MDC;
-
 import java.util.Map;
+import org.slf4j.MDC;
+import org.springframework.core.task.TaskDecorator;
 
-/**
- * 把提交线程的 MDC(含 traceId)复制到执行线程，使 {@code @Async} 与 Spring 线程池任务里的日志也能延续 traceId。
- * <p>
- * 纯 SLF4J + Spring core 实现，不引入任何链路追踪依赖；注册为 Bean 后 Spring Boot 会自动套到默认任务线程池。
- * 仅覆盖 Spring 管理的线程池，裸 {@code new Thread()} / {@code CompletableFuture} 公共池等 Spring 触达不到的场景不在范围内。
- */
+/** 默认执行器的 MDC 传播；没有提交方 traceId 时，每次任务生成一个。 */
 public class MdcTaskDecorator implements TaskDecorator {
+  private final String traceKey;
+  private final TraceContextResolver resolver;
 
-    @Override
-    public Runnable decorate(Runnable runnable) {
-        // decorate 在提交线程执行，这里抓取当前 MDC 快照
-        Map<String, String> submitContext = MDC.getCopyOfContextMap();
-        return () -> {
-            // 线程池线程可能被复用，先存执行线程原有 MDC，跑完还原，避免跨任务污染
-            Map<String, String> previous = MDC.getCopyOfContextMap();
-            if (submitContext != null) {
-                MDC.setContextMap(submitContext);
-            } else {
-                MDC.clear();
-            }
-            try {
-                runnable.run();
-            } finally {
-                if (previous != null) {
-                    MDC.setContextMap(previous);
-                } else {
-                    MDC.clear();
-                }
-            }
-        };
-    }
+  public MdcTaskDecorator() {
+    this("traceId");
+  }
+
+  public MdcTaskDecorator(String traceKey) {
+    this(traceKey, new W3cTraceContextResolver());
+  }
+
+  public MdcTaskDecorator(String traceKey, TraceContextResolver resolver) {
+    this.traceKey = traceKey;
+    this.resolver = resolver;
+  }
+
+  @Override
+  public Runnable decorate(Runnable runnable) {
+    Map<String, String> submitted = MDC.getCopyOfContextMap();
+    TraceData captured = TraceContext.current();
+    TraceData submittedData =
+        captured != null
+                && submitted != null
+                && captured.getTraceId().equals(submitted.get(traceKey))
+            ? captured
+            : null;
+    return () -> {
+      Map<String, String> previous = MDC.getCopyOfContextMap();
+      try (TraceContext.Scope snapshot = TraceContext.install(traceKey, submittedData, true)) {
+        if (submitted == null) {
+          MDC.clear();
+        } else {
+          MDC.setContextMap(submitted);
+        }
+        // 线程池只携带链路快照，不复制或继承 Servlet 请求、响应。
+        try (TraceContext.Scope scope =
+            CurrentRequestHeaders.withoutRequest(
+                () -> TraceContext.open(traceKey, true, resolver))) {
+          runnable.run();
+        }
+      } finally {
+        if (previous == null) {
+          MDC.clear();
+        } else {
+          MDC.setContextMap(previous);
+        }
+      }
+    };
+  }
 }

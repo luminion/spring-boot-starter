@@ -1,395 +1,218 @@
 package io.github.luminion.velo.web;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.core.VeloCoreAutoConfiguration;
+import io.github.luminion.velo.log.InvocationLogEngine;
+import io.github.luminion.velo.log.InvocationLogFeature;
 import io.github.luminion.velo.log.InvocationLogRecord;
-import io.github.luminion.velo.log.InvocationLogSource;
-import io.github.luminion.velo.log.InvocationLogWriter;
-import io.github.luminion.velo.log.InvocationPhase;
-import io.github.luminion.velo.log.trace.TraceContext;
-import io.github.luminion.velo.spi.RuntimeJsonSerializer;
-import io.github.luminion.velo.spi.provider.HttpMessageConverterRuntimeJsonSerializer;
-import jakarta.servlet.FilterChain;
+import io.github.luminion.velo.log.LogValueFormatter;
+import io.github.luminion.velo.log.VeloLogAutoConfiguration;
+import io.github.luminion.velo.log.trace.HeaderTraceContextResolver;
+import jakarta.servlet.DispatcherType;
+import jakarta.servlet.ServletException;
+import java.util.ArrayList;
+import java.util.List;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.MDC;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
-import org.springframework.http.ResponseEntity;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.servlet.HandlerMapping;
-import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 class VeloWebAutoConfigurationTests {
+  private final WebApplicationContextRunner runner =
+      new WebApplicationContextRunner()
+          .withConfiguration(
+              AutoConfigurations.of(
+                  VeloCoreAutoConfiguration.class,
+                  VeloLogAutoConfiguration.class,
+                  VeloWebAutoConfiguration.class));
 
-    private final WebApplicationContextRunner webContextRunner = new WebApplicationContextRunner()
-            .withConfiguration(AutoConfigurations.of(
-                    VeloCoreAutoConfiguration.class,
-                    VeloWebAutoConfiguration.class
-            ))
-            .withBean(CapturingInvocationLogWriter.class, CapturingInvocationLogWriter::new);
+  @AfterEach
+  void clear() {
+    MDC.clear();
+    RequestContextHolder.resetRequestAttributes();
+  }
 
-    @Test
-    void shouldCreateWebMvcConfigurerByDefaultInServletApplication() {
-        webContextRunner.run(context -> assertThat(context).hasSingleBean(VeloWebMvcConfigurer.class));
-    }
-
-    @Test
-    void shouldCreateControllerLogAspectAndTraceFilterByDefault() {
-        webContextRunner.run(context -> {
-            assertThat(context).hasSingleBean(RuntimeJsonSerializer.class);
-            assertThat(context).hasSingleBean(ControllerLogAspect.class);
-            assertThat(context).hasSingleBean(TraceIdFilter.class);
+  @Test
+  void createsSharedEngineAndServletAdapters() {
+    runner.run(
+        c -> {
+          assertThat(
+                  c.getBean("traceIdFilterRegistration", FilterRegistrationBean.class)
+                      .isAsyncSupported())
+              .isTrue();
+          assertThat(c)
+              .hasSingleBean(VeloWebMvcConfigurer.class)
+              .hasSingleBean(ControllerLogAspect.class)
+              .hasSingleBean(TraceIdFilter.class)
+              .hasSingleBean(InvocationLogEngine.class)
+              .hasSingleBean(LogValueFormatter.class);
         });
+  }
+
+  @Test
+  void controllerSwitchKeepsTraceFilter() {
+    runner
+        .withPropertyValues("velo.log.sources.controller.enabled=false")
+        .run(
+            c -> {
+              assertThat(c).doesNotHaveBean(ControllerLogAspect.class);
+              assertThat(c).hasSingleBean(TraceIdFilter.class);
+            });
+  }
+
+  @Test
+  void logSwitchDisablesLogBeans() {
+    runner
+        .withPropertyValues("velo.log.enabled=false")
+        .run(
+            c ->
+                assertThat(c)
+                    .doesNotHaveBean(ControllerLogAspect.class)
+                    .doesNotHaveBean(TraceIdFilter.class));
+  }
+
+  @Test
+  void traceSwitchDisablesFilterOnly() {
+    runner
+        .withPropertyValues("velo.log.trace.enabled=false")
+        .run(
+            c -> {
+              assertThat(c).doesNotHaveBean(TraceIdFilter.class);
+              assertThat(c).hasSingleBean(ControllerLogAspect.class);
+            });
+  }
+
+  @Test
+  void acceptsIncomingHeaderAndRestoresExistingMdc() throws Exception {
+    VeloProperties p = new VeloProperties();
+    TraceIdFilter filter = new TraceIdFilter(p, new HeaderTraceContextResolver("X-Trace-Id"));
+    MockHttpServletRequest request = new MockHttpServletRequest();
+    request.addHeader("X-Trace-Id", "incoming");
+    MockHttpServletResponse response = new MockHttpServletResponse();
+    MDC.put("traceId", "caller");
+    MDC.put("user", "alice");
+    filter.doFilter(
+        request, response, (req, res) -> assertThat(MDC.get("traceId")).isEqualTo("incoming"));
+    assertThat(response.getHeader("X-Trace-Id")).isNull();
+    assertThat(MDC.get("traceId")).isEqualTo("caller");
+    assertThat(MDC.get("user")).isEqualTo("alice");
+  }
+
+  @Test
+  void freshRequestsDoNotReuseWorkerTrace() throws Exception {
+    TraceIdFilter filter = new TraceIdFilter(new VeloProperties());
+    MDC.put("traceId", "worker-leftover");
+    List<String> ids = new ArrayList<>();
+    for (int i = 0; i < 2; i++) {
+      filter.doFilter(
+          new MockHttpServletRequest(),
+          new MockHttpServletResponse(),
+          (req, res) -> ids.add(MDC.get("traceId")));
     }
+    assertThat(ids).hasSize(2).allMatch(id -> id.matches("[0-9a-f]{32}"));
+    assertThat(ids.get(0)).isNotEqualTo(ids.get(1));
+    assertThat(MDC.get("traceId")).isEqualTo("worker-leftover");
+  }
 
-    @Test
-    void shouldCreateControllerLogAspectWithFallbackWriterWhenInvocationLogWriterMissing() {
-        new WebApplicationContextRunner()
-                .withConfiguration(AutoConfigurations.of(
-                        VeloCoreAutoConfiguration.class,
-                        VeloWebAutoConfiguration.class
-                ))
-                .run(context -> {
-                    assertThat(context).doesNotHaveBean(InvocationLogWriter.class);
-                    assertThat(context).hasSingleBean(ControllerLogAspect.class);
-                });
+  @Test
+  void rejectsUnsafeHeaderAndCleansUpAfterFailure() {
+    TraceIdFilter filter = new TraceIdFilter(new VeloProperties());
+    MockHttpServletRequest request = new MockHttpServletRequest();
+    request.addHeader("traceparent", "bad trace");
+    assertThatThrownBy(
+            () ->
+                filter.doFilter(
+                    request,
+                    new MockHttpServletResponse(),
+                    (req, res) -> {
+                      assertThat(MDC.get("traceId")).matches("[0-9a-f]{32}");
+                      throw new ServletException("broken");
+                    }))
+        .isInstanceOf(ServletException.class)
+        .hasMessage("broken");
+    assertThat(MDC.get("traceId")).isNull();
+  }
+
+  @Test
+  void asyncAndErrorDispatchReuseRequestTraceAndRestoreWorker() throws Exception {
+    TraceIdFilter filter = new TraceIdFilter(new VeloProperties());
+    MockHttpServletRequest request = new MockHttpServletRequest();
+    List<String> ids = new ArrayList<>();
+    filter.doFilter(
+        request, new MockHttpServletResponse(), (req, res) -> ids.add(MDC.get("traceId")));
+    MDC.put("traceId", "dispatch-worker");
+    for (DispatcherType type : new DispatcherType[] {DispatcherType.ASYNC, DispatcherType.ERROR}) {
+      request.setDispatcherType(type);
+      filter.doFilter(
+          request, new MockHttpServletResponse(), (req, res) -> ids.add(MDC.get("traceId")));
+      assertThat(MDC.get("traceId")).isEqualTo("dispatch-worker");
     }
+    assertThat(ids).hasSize(3).containsOnly(ids.get(0));
+  }
 
-    @Test
-    void shouldSkipControllerLogAspectWhenControllerInvocationLoggingDisabled() {
-        webContextRunner
-                .withPropertyValues("velo.log.controller.enabled=false")
-                .run(context -> assertThat(context).doesNotHaveBean(ControllerLogAspect.class));
+  @Test
+  void customKeyKeepsOtherMdcAndDoesNotWriteTraceResponseHeader() throws Exception {
+    VeloProperties p = new VeloProperties();
+    p.getLog().getTrace().setMdcKey("requestId");
+    MockHttpServletRequest request = new MockHttpServletRequest();
+    request.addHeader("X-Request-Id", "custom");
+    MockHttpServletResponse response = new MockHttpServletResponse();
+    MDC.put("traceId", "unrelated");
+    new TraceIdFilter(p, new HeaderTraceContextResolver("X-Request-Id"))
+        .doFilter(
+            request,
+            response,
+            (req, res) -> {
+              assertThat(MDC.get("requestId")).isEqualTo("custom");
+              assertThat(MDC.get("traceId")).isEqualTo("unrelated");
+            });
+    assertThat(response.getHeader("X-Request-Id")).isNull();
+    assertThat(MDC.get("requestId")).isNull();
+  }
+
+  @Test
+  void controllerUsesMappingTemplateAndOnlyDefaultArgsRecord() throws Throwable {
+    MockHttpServletRequest request = new MockHttpServletRequest("GET", "/users/1");
+    request.setQueryString("secret=hidden");
+    request.setAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE, "/users/{id}");
+    RequestContextHolder.setRequestAttributes(
+        new ServletRequestAttributes(request, new MockHttpServletResponse()));
+    List<InvocationLogRecord> records = new ArrayList<>();
+    ControllerLogAspect aspect =
+        new ControllerLogAspect(
+            new InvocationLogEngine(new VeloProperties(), String::valueOf, records::add));
+    ProceedingJoinPoint point = mock(ProceedingJoinPoint.class);
+    MethodSignature signature = mock(MethodSignature.class);
+    when(signature.getMethod()).thenReturn(Endpoint.class.getMethod("find", Long.class));
+    when(signature.getDeclaringType()).thenReturn(Endpoint.class);
+    when(point.getSignature()).thenReturn(signature);
+    when(point.getTarget()).thenReturn(new Endpoint());
+    when(point.getArgs()).thenReturn(new Object[] {1L});
+    when(point.proceed()).thenReturn("done");
+    assertThat(aspect.logControllerInvocation(point)).isEqualTo("done");
+    assertThat(records).hasSize(1);
+    assertThat(records.get(0).getFeature()).isEqualTo(InvocationLogFeature.ENTRY_ARGS);
+    assertThat(records.get(0).getTarget()).contains("GET /users/{id}").doesNotContain("secret");
+    assertThat(records.get(0).getPayload()).contains("id=1");
+  }
+
+  static class Endpoint {
+    public String find(Long id) {
+      return "done";
     }
-
-    @Test
-    void shouldSkipControllerLogAspectWhenAllLoggingDisabled() {
-        webContextRunner
-                .withPropertyValues("velo.log.enabled=false")
-                .run(context -> assertThat(context).doesNotHaveBean(ControllerLogAspect.class));
-    }
-
-    @Test
-    void shouldSkipLogBeansWhenLogDisabled() {
-        webContextRunner
-                .withPropertyValues("velo.log.enabled=false")
-                .run(context -> {
-                    assertThat(context).doesNotHaveBean(ControllerLogAspect.class);
-                    assertThat(context).doesNotHaveBean(TraceIdFilter.class);
-                });
-    }
-
-    @Test
-    void shouldSkipTraceIdFilterWhenTraceDisabled() {
-        webContextRunner
-                .withPropertyValues("velo.log.trace.enabled=false")
-                .run(context -> assertThat(context).doesNotHaveBean(TraceIdFilter.class));
-    }
-
-    @Test
-    void shouldUseRuntimeMessageConverterForJsonSerialization() {
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.setPropertyNamingStrategy(com.fasterxml.jackson.databind.PropertyNamingStrategies.SNAKE_CASE);
-        RequestMappingHandlerAdapter handlerAdapter = new RequestMappingHandlerAdapter();
-        handlerAdapter.setMessageConverters(Collections.singletonList(new MappingJackson2HttpMessageConverter(objectMapper)));
-
-        webContextRunner
-                .withBean(RequestMappingHandlerAdapter.class, () -> handlerAdapter)
-                .run(context -> assertThat(context.getBean(RuntimeJsonSerializer.class).toJson(new DemoPayload("tomUser")))
-                        .contains("\"user_name\":\"tomUser\""));
-    }
-
-    @Test
-    void shouldOmitOnlyUnsafeArgumentValueWhenSerializingArgumentMap() {
-        RuntimeJsonSerializer serializer = new HttpMessageConverterRuntimeJsonSerializer(Collections.singletonList(
-                new MappingJackson2HttpMessageConverter(new ObjectMapper())));
-        Map<String, Object> argumentMap = new LinkedHashMap<>();
-        argumentMap.put("id", 1L);
-        argumentMap.put("request", new MockHttpServletRequest());
-
-        assertThat(serializer.toJson(argumentMap))
-                .contains("\"id\":1")
-                .contains("\"request\":\"[omitted]\"");
-    }
-
-    @Test
-    void shouldSerializeControllerArgumentsAsSingleJsonObjectAndResponseBodyOnly() throws Throwable {
-        VeloProperties properties = new VeloProperties();
-        CapturingRuntimeJsonSerializer serializer = new CapturingRuntimeJsonSerializer();
-        CapturingInvocationLogWriter writer = new CapturingInvocationLogWriter();
-        ControllerLogAspect aspect = new ControllerLogAspect(properties, serializer, writer);
-        ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
-        MethodSignature signature = mock(MethodSignature.class);
-        DemoPayload body = new DemoPayload("tomUser");
-
-        when(joinPoint.getSignature()).thenReturn(signature);
-        when(joinPoint.getArgs()).thenReturn(new Object[] {1L, "Tom"});
-        when(joinPoint.proceed()).thenReturn(ResponseEntity.ok(body));
-        when(signature.getParameterNames()).thenReturn(new String[] {"id", "name"});
-
-        Object result = aspect.logControllerInvocation(joinPoint);
-
-        assertThat(result).isInstanceOf(ResponseEntity.class);
-        assertThat(serializer.values).hasSize(2);
-        assertThat(serializer.values.get(0)).isInstanceOf(Map.class);
-        Map<?, ?> arguments = (Map<?, ?>) serializer.values.get(0);
-        assertThat(arguments.get("id")).isEqualTo(1L);
-        assertThat(arguments.get("name")).isEqualTo("Tom");
-        assertThat(serializer.values.get(1)).isSameAs(body);
-        assertThat(writer.records).hasSize(2);
-        assertThat(writer.records.get(0).getPhase()).isEqualTo(InvocationPhase.ENTRY);
-        assertThat(writer.records.get(0).getSource()).isEqualTo(InvocationLogSource.CONTROLLER);
-        assertThat(writer.records.get(1).getPhase()).isEqualTo(InvocationPhase.EXIT);
-    }
-
-    @Test
-    void shouldLogArgumentsAsIsWithoutFieldLevelMasking() throws Throwable {
-        VeloProperties properties = new VeloProperties();
-        CapturingRuntimeJsonSerializer serializer = new CapturingRuntimeJsonSerializer();
-        CapturingInvocationLogWriter writer = new CapturingInvocationLogWriter();
-        ControllerLogAspect aspect = new ControllerLogAspect(properties, serializer, writer);
-        ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
-        MethodSignature signature = mock(MethodSignature.class);
-        Map<String, Object> credential = new LinkedHashMap<>();
-
-        credential.put("username", "tom");
-        credential.put("password", "123456");
-        when(joinPoint.getSignature()).thenReturn(signature);
-        when(joinPoint.getArgs()).thenReturn(new Object[] {credential});
-        when(joinPoint.proceed()).thenReturn(ResponseEntity.ok().build());
-        when(signature.getParameterNames()).thenReturn(new String[] {"request"});
-
-        aspect.logControllerInvocation(joinPoint);
-
-        assertThat(serializer.values).hasSize(1);
-        assertThat(serializer.values.get(0)).isInstanceOf(Map.class);
-        Map<?, ?> arguments = (Map<?, ?>) serializer.values.get(0);
-        Object loggedCredential = arguments.get("request");
-        assertThat(loggedCredential).isInstanceOf(Map.class);
-        Map<?, ?> loggedCredentialMap = (Map<?, ?>) loggedCredential;
-        assertThat(loggedCredentialMap.get("username")).isEqualTo("tom");
-        assertThat(loggedCredentialMap.get("password")).isEqualTo("123456");
-        assertThat(writer.records.get(1).getResult()).isEqualTo("null");
-    }
-
-    @Test
-    void shouldOmitRawQueryStringFromInvocationTarget() throws Throwable {
-        CapturingInvocationLogWriter writer = invokeWithRequest("GET", "/converter/query", request -> {
-            request.setQueryString("date1=2010-10-10%2010:10:10&localDate=2010-10-10");
-        });
-
-        assertThat(writer.records).hasSize(2);
-        assertThat(writer.records.get(0).getTarget()).isEqualTo("127.0.0.1 GET /converter/query");
-        assertThat(writer.records.get(0).getTarget()).doesNotContain("date1=");
-    }
-
-    @Test
-    void shouldPreferControllerMappingTemplateWhenAvailable() throws Throwable {
-        CapturingInvocationLogWriter writer = invokeWithRequest("GET", "/converter/query/123", request ->
-                request.setAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE, "/converter/query/{id}"));
-
-        assertThat(writer.records).hasSize(2);
-        assertThat(writer.records.get(0).getTarget()).isEqualTo("127.0.0.1 GET /converter/query/{id}");
-    }
-
-    @Test
-    void shouldTruncateLoggedPayloadsUsingConfiguredLimit() throws Throwable {
-        VeloProperties properties = new VeloProperties();
-        properties.getLog().getInvocation().setMaxPayloadLength(13);
-        String longJson = "{\"value\":\"" + String.join("", Collections.nCopies(2100, "a")) + "\"}";
-        CapturingInvocationLogWriter writer = invokeWithRequest(properties, value -> longJson);
-
-        assertThat(writer.records).hasSize(2);
-        assertThat(writer.records.get(0).getArgs()).isEqualTo("{\"value\":\"...");   // ENTRY
-        assertThat(writer.records.get(1).getResult()).isEqualTo("{\"value\":\"..."); // EXIT
-    }
-
-    @Test
-    void shouldAllowUnlimitedLoggedPayloadsWhenConfiguredAsNegativeOne() throws Throwable {
-        VeloProperties properties = new VeloProperties();
-        properties.getLog().getInvocation().setMaxPayloadLength(-1);
-        String longJson = "{\"value\":\"abcdefghijklmnopqrstuvwxyz\"}";
-        CapturingInvocationLogWriter writer = invokeWithRequest(properties, value -> longJson);
-
-        assertThat(writer.records).hasSize(2);
-        assertThat(writer.records.get(0).getArgs()).isEqualTo(longJson);   // ENTRY
-        assertThat(writer.records.get(1).getResult()).isEqualTo(longJson); // EXIT
-    }
-
-    @Test
-    void shouldLogNullWhenResponseBodyIsNull() throws Throwable {
-        VeloProperties properties = new VeloProperties();
-        CapturingInvocationLogWriter writer = new CapturingInvocationLogWriter();
-        ControllerLogAspect aspect = new ControllerLogAspect(properties, value -> "null", writer);
-        ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
-        MethodSignature signature = mock(MethodSignature.class);
-
-        when(joinPoint.getSignature()).thenReturn(signature);
-        when(joinPoint.getArgs()).thenReturn(new Object[] {new Object()});
-        when(joinPoint.proceed()).thenReturn(null);
-        when(signature.getParameterNames()).thenReturn(new String[] {"arg0"});
-
-        aspect.logControllerInvocation(joinPoint);
-
-        assertThat(writer.records).hasSize(2);
-        assertThat(writer.records.get(1).getResult()).isEqualTo("null"); // EXIT
-    }
-
-    @Test
-    void shouldUseDiscoveredParameterNamesWhenSignatureDoesNotProvideThem() throws Throwable {
-        VeloProperties properties = new VeloProperties();
-        CapturingRuntimeJsonSerializer serializer = new CapturingRuntimeJsonSerializer();
-        CapturingInvocationLogWriter writer = new CapturingInvocationLogWriter();
-        ControllerLogAspect aspect = new ControllerLogAspect(properties, serializer, writer);
-        ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
-        MethodSignature signature = mock(MethodSignature.class);
-
-        when(joinPoint.getSignature()).thenReturn(signature);
-        when(joinPoint.getTarget()).thenReturn(new NamedParameterController());
-        when(joinPoint.getArgs()).thenReturn(new Object[] {1L, "Tom"});
-        when(joinPoint.proceed()).thenReturn(ResponseEntity.ok().build());
-        when(signature.getDeclaringType()).thenReturn(NamedParameterController.class);
-        when(signature.getMethod()).thenReturn(NamedParameterController.class.getDeclaredMethod("find", Long.class, String.class));
-        when(signature.getParameterNames()).thenReturn(null);
-
-        aspect.logControllerInvocation(joinPoint);
-
-        assertThat(serializer.values).hasSize(1);
-        assertThat(serializer.values.get(0)).isInstanceOf(Map.class);
-        Map<?, ?> arguments = (Map<?, ?>) serializer.values.get(0);
-        assertThat(arguments.get("id")).isEqualTo(1L);
-        assertThat(arguments.get("name")).isEqualTo("Tom");
-        assertThat(writer.records.get(1).getResult()).isEqualTo("null");
-    }
-
-    @Test
-    void shouldCreateTraceIdAndWriteResponseHeader() throws Exception {
-        VeloProperties properties = new VeloProperties();
-        TraceIdFilter filter = new TraceIdFilter(properties);
-        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/users");
-        MockHttpServletResponse response = new MockHttpServletResponse();
-        final String[] traceIdInChain = new String[1];
-        FilterChain chain = (servletRequest, servletResponse) ->
-                traceIdInChain[0] = TraceContext.get(properties.getLog().getTrace().getMdcKey());
-
-        filter.doFilter(request, response, chain);
-
-        assertThat(traceIdInChain[0]).isNotBlank();
-        assertThat(response.getHeader("X-Trace-Id")).isEqualTo(traceIdInChain[0]);
-        assertThat(TraceContext.get(properties.getLog().getTrace().getMdcKey())).isNull();
-    }
-
-    @Test
-    void shouldUseIncomingTraceId() throws Exception {
-        VeloProperties properties = new VeloProperties();
-        TraceIdFilter filter = new TraceIdFilter(properties);
-        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/users");
-        MockHttpServletResponse response = new MockHttpServletResponse();
-        request.addHeader("X-Trace-Id", "trace-001");
-        final String[] traceIdInChain = new String[1];
-        FilterChain chain = (servletRequest, servletResponse) ->
-                traceIdInChain[0] = TraceContext.get(properties.getLog().getTrace().getMdcKey());
-
-        filter.doFilter(request, response, chain);
-
-        assertThat(traceIdInChain[0]).isEqualTo("trace-001");
-        assertThat(response.getHeader("X-Trace-Id")).isEqualTo("trace-001");
-    }
-
-    private CapturingInvocationLogWriter invokeWithRequest(String method, String uri, RequestCustomizer customizer)
-            throws Throwable {
-        return invokeWithRequest(new VeloProperties(), value -> "{\"ok\":true}", method, uri, customizer);
-    }
-
-    private CapturingInvocationLogWriter invokeWithRequest(VeloProperties properties, RuntimeJsonSerializer serializer)
-            throws Throwable {
-        return invokeWithRequest(properties, serializer, "POST", "/converter/query", request -> {
-        });
-    }
-
-    private CapturingInvocationLogWriter invokeWithRequest(VeloProperties properties, RuntimeJsonSerializer serializer,
-            String method, String uri, RequestCustomizer customizer) throws Throwable {
-        CapturingInvocationLogWriter writer = new CapturingInvocationLogWriter();
-        ControllerLogAspect aspect = new ControllerLogAspect(properties, serializer, writer);
-        ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
-        MethodSignature signature = mock(MethodSignature.class);
-        MockHttpServletRequest request = new MockHttpServletRequest(method, uri);
-
-        request.setRemoteAddr("127.0.0.1");
-        customizer.customize(request);
-        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
-        try {
-            when(joinPoint.getSignature()).thenReturn(signature);
-            when(joinPoint.getArgs()).thenReturn(new Object[] {"Tom"});
-            when(joinPoint.proceed()).thenReturn(ResponseEntity.ok(new DemoPayload("tomUser")));
-            when(signature.getParameterNames()).thenReturn(new String[] {"name"});
-
-            aspect.logControllerInvocation(joinPoint);
-        } finally {
-            RequestContextHolder.resetRequestAttributes();
-        }
-        return writer;
-    }
-
-    interface RequestCustomizer {
-
-        void customize(MockHttpServletRequest request);
-    }
-
-    static class DemoPayload {
-
-        private final String userName;
-
-        DemoPayload(String userName) {
-            this.userName = userName;
-        }
-
-        public String getUserName() {
-            return userName;
-        }
-    }
-
-    static final class NamedParameterController {
-
-        ResponseEntity<Void> find(Long id, String name) {
-            return ResponseEntity.ok().build();
-        }
-    }
-
-    static final class CapturingRuntimeJsonSerializer implements RuntimeJsonSerializer {
-
-        private final List<Object> values = new ArrayList<>();
-
-        @Override
-        public String toJson(Object value) {
-            values.add(value);
-            return "{}";
-        }
-    }
-
-    static final class CapturingInvocationLogWriter implements InvocationLogWriter {
-
-        private final List<InvocationLogRecord> records = new ArrayList<>();
-
-        @Override
-        public void write(InvocationLogRecord record) {
-            records.add(record);
-        }
-    }
+  }
 }

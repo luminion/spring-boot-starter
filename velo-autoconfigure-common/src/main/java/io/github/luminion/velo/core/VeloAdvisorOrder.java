@@ -22,12 +22,6 @@ public final class VeloAdvisorOrder {
     public static final int LOG_INVOKE = CONCURRENCY_BASE + 25_000;
 
     /**
-     * Slow log aspect order. It wraps the invocation log aspects so that its record is
-     * written last while the advisor chain unwinds after the business invocation.
-     */
-    public static final int LOG_SLOW = CONCURRENCY_BASE + 24_000;
-
-    /**
      * Controller log aspect order.
      */
     public static final int LOG_CONTROLLER = CONCURRENCY_BASE + 35_000;

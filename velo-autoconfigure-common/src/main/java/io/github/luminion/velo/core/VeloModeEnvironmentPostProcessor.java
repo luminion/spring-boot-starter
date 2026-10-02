@@ -37,8 +37,8 @@ public class VeloModeEnvironmentPostProcessor implements EnvironmentPostProcesso
         }
         Map<String, Object> defaults = new LinkedHashMap<>();
         defaults.put("velo.log.trace.enabled", "false");
-        defaults.put("velo.log.controller.enabled", "false");
-        defaults.put("velo.log.feign.enabled", "false");
+        defaults.put("velo.log.sources.controller.enabled", "false");
+        defaults.put("velo.log.sources.feign.enabled", "false");
         defaults.put("velo.jackson.enabled", "false");
         defaults.put("velo.spring-converter.date-time-enabled", "false");
         defaults.put("velo.mybatis-plus.enabled", "false");

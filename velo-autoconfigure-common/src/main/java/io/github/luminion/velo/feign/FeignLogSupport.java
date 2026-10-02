@@ -1,30 +1,21 @@
 package io.github.luminion.velo.feign;
 
+import java.lang.reflect.Method;
 import org.springframework.util.StringUtils;
 
-import java.lang.reflect.Method;
-
-/**
- * Feign 调用日志公共支持。
- */
+/** Feign 调用日志公共支持。 */
 final class FeignLogSupport {
 
-    private FeignLogSupport() {
-    }
+  private FeignLogSupport() {}
 
-    static String buildInvocationTarget(Method method, FeignRequestMetadata requestMetadata) {
-        StringBuilder builder = new StringBuilder();
-        if (requestMetadata != null && StringUtils.hasText(requestMetadata.getHttpMethod())) {
-            builder.append(requestMetadata.getHttpMethod());
-        } else {
-            builder.append("CALL");
-        }
-        builder.append(' ');
-        if (requestMetadata != null && StringUtils.hasText(requestMetadata.getPath())) {
-            builder.append(requestMetadata.getPath());
-        } else {
-            builder.append(method.getDeclaringClass().getSimpleName()).append('.').append(method.getName());
-        }
-        return builder.toString();
+  static String buildInvocationTarget(Method method, FeignRequestMetadata requestMetadata) {
+    StringBuilder builder = new StringBuilder(method.getName()).append("()");
+    if (requestMetadata != null && StringUtils.hasText(requestMetadata.getHttpMethod())) {
+      builder.append(' ').append(requestMetadata.getHttpMethod());
     }
+    if (requestMetadata != null && StringUtils.hasText(requestMetadata.getPath())) {
+      builder.append(' ').append(requestMetadata.getPath());
+    }
+    return builder.toString();
+  }
 }
