@@ -525,7 +525,7 @@ Controller、Feign、`@InvokeLog` 和任务入口共用一个同步 `InvocationL
 | --- | --- | --- | --- | --- |
 | `EntryArgs` | 开 | 开 | 开 | INFO |
 | `ExitArgs` | 关 | 关 | 关 | INFO |
-| `ExitResult` | 关 | 关 | 开 | INFO |
+| `ExitResult` | 开 | 开 | 开 | INFO |
 | `SlowLog` | 开，1000ms | 开，1000ms | 开，1000ms | WARN |
 | `RequestHeadersLog` | 关 | 关 | 不适用 | INFO |
 | `ResponseHeadersLog` | 关 | 关 | 不适用 | INFO |
@@ -944,7 +944,7 @@ velo:
 说明：
 
 - 默认开启
-- 默认打印 Spring 绑定后的入参；结果载荷默认关闭，达到阈值打印独立慢调用日志，异常时打印独立 WARN 摘要
+- 默认打印 Spring 绑定后的入参和返回结果；达到阈值打印独立慢调用日志，异常时打印独立 WARN 摘要
 - 会过滤掉原始 query string，避免把敏感查询串直接打到日志中
 - `max-payload-length` 为正数时，过长 payload 会按配置长度截断
 - 当前默认 `max-payload-length=-1`，表示不限制长度；`0` 表示不序列化或输出载荷日志
@@ -976,7 +976,7 @@ velo:
 - 默认开启
 - 前缀为 `[feign] [方法名() HTTP方法 接口路径]`，例如 `[feign] [remote() GET /log/remote]`；类名由日志框架输出，不重复打印 client 名或 contextId
 - 接口路径取 Spring MVC 映射模板，例如 `/users/{id}`，不展开路径变量或拼接查询参数；无法解析映射时省略缺失部分，保留方法名
-- 默认打印入参，结果默认关闭，慢调用和异常各输出独立日志
+- 默认打印入参和返回结果，慢调用和异常各输出独立日志
 - 日志格式和 Controller、`@InvokeLog` 保持一致，便于联调排查
 - 请求头和响应头默认不采集，可通过独立配置或注解启用
 - `max-payload-length` 为正数时，过长 payload 会按配置长度截断

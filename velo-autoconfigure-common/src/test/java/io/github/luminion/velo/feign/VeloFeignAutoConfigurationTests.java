@@ -121,7 +121,7 @@ class VeloFeignAutoConfigurationTests {
               return "done";
             });
     assertThat(aspect.logFeignInvocation(point)).isEqualTo("done");
-    assertThat(records).hasSize(1);
+		assertThat(records).hasSize(2);
     InvocationLogRecord entry = records.get(0);
     assertThat(entry.getFeature()).isEqualTo(InvocationLogFeature.ENTRY_ARGS);
     assertThat(entry.getTarget()).isEqualTo("find() GET /users/{id}");

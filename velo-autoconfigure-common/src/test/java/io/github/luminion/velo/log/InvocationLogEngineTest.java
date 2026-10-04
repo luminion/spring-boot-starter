@@ -44,10 +44,10 @@ class InvocationLogEngineTest {
       engine.invoke(call(Service.class, "call", source, "input"), () -> "result");
       assertThat(records.get(0).getFeature()).isEqualTo(InvocationLogFeature.ENTRY_ARGS);
       assertThat(records.get(0).getLevel()).isEqualTo(LogLevel.INFO);
-      assertThat(records).hasSize(source == InvocationLogSource.INVOKE ? 2 : 1);
-      if (source == InvocationLogSource.INVOKE) {
-        assertThat(records.get(1).getFeature()).isEqualTo(InvocationLogFeature.EXIT_RESULT);
-      }
+			assertThat(records).hasSize(2);
+			assertThat(records.get(1).getFeature()).isEqualTo(InvocationLogFeature.EXIT_RESULT);
+			assertThat(records.get(1).getLevel()).isEqualTo(LogLevel.INFO);
+			assertThat(records.get(1).getContent()).isEqualTo("result");
     }
   }
 
@@ -86,6 +86,7 @@ class InvocationLogEngineTest {
   @Test
   void slowDoesNotEnablePayloadOrPromoteOtherLevels() throws Throwable {
     properties.getLog().getSources().getController().getEntryArgs().setEnabled(false);
+		properties.getLog().getSources().getController().getExitResult().setEnabled(false);
     properties.getLog().getDefaults().getSlowLog().setThresholdMs(0L);
     engine.invoke(
         call(Service.class, "call", InvocationLogSource.CONTROLLER, "input"), () -> "result");
@@ -107,9 +108,9 @@ class InvocationLogEngineTest {
     properties.getLog().getDefaults().getSlowLog().setThresholdMs(600000L);
     engine.invoke(
         call(Service.class, "slow", InvocationLogSource.CONTROLLER, "input"), () -> "result");
-    assertThat(records.get(1).getFeature()).isEqualTo(InvocationLogFeature.SLOW_LOG);
-    assertThat(records.get(1).getContent()).contains("thresholdMs=0");
-    assertThat(records.get(1).getLevel()).isEqualTo(LogLevel.INFO);
+		assertThat(records.get(2).getFeature()).isEqualTo(InvocationLogFeature.SLOW_LOG);
+		assertThat(records.get(2).getContent()).contains("thresholdMs=0");
+		assertThat(records.get(2).getLevel()).isEqualTo(LogLevel.INFO);
   }
 
   @Test
@@ -241,15 +242,13 @@ class InvocationLogEngineTest {
   void sourceConfigurationIsReadAgainAfterMetadataWasCached() throws Throwable {
     engine.invoke(
         call(Service.class, "call", InvocationLogSource.CONTROLLER, "input"), () -> "result");
-    assertThat(records).hasSize(1);
+		assertThat(records).hasSize(2);
     records.clear();
     properties.getLog().getSources().getController().getEntryArgs().setEnabled(false);
-    properties.getLog().getSources().getController().getExitResult().setEnabled(true);
+		properties.getLog().getSources().getController().getExitResult().setEnabled(false);
     engine.invoke(
         call(Service.class, "call", InvocationLogSource.CONTROLLER, "input"), () -> "result");
-    assertThat(records)
-        .extracting(InvocationLogRecord::getFeature)
-        .containsExactly(InvocationLogFeature.EXIT_RESULT);
+		assertThat(records).isEmpty();
   }
 
   @Test

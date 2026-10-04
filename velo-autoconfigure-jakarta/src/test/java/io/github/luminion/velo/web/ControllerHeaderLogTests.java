@@ -53,18 +53,19 @@ class ControllerHeaderLogTests {
     } finally {
       RequestContextHolder.resetRequestAttributes();
     }
-    assertThat(records)
-        .extracting(InvocationLogRecord::getFeature)
-        .containsExactly(
-            InvocationLogFeature.ENTRY_ARGS,
-            InvocationLogFeature.REQUEST_HEADERS,
-            InvocationLogFeature.RESPONSE_HEADERS);
+		assertThat(records)
+			.extracting(InvocationLogRecord::getFeature)
+			.containsExactly(
+				InvocationLogFeature.ENTRY_ARGS,
+				InvocationLogFeature.REQUEST_HEADERS,
+				InvocationLogFeature.EXIT_RESULT,
+				InvocationLogFeature.RESPONSE_HEADERS);
     assertThat(records.get(1).getContent())
         .contains("x-debug", "yes")
         .doesNotContain("Authorization", "secret");
-    assertThat(records.get(2).getContent())
-        .contains("X-Result", "ok")
-        .doesNotContain("X-Private", "private");
+		assertThat(records.get(3).getContent())
+			.contains("X-Result", "ok")
+			.doesNotContain("X-Private", "private");
   }
 
   static class Endpoint {
