@@ -17,6 +17,41 @@ class VeloExcelAutoConfigurationTests {
             .withConfiguration(AutoConfigurations.of(VeloExcelAutoConfiguration.class));
 
     @Test
+    void basicCellTypesShouldFollowVeloJacksonDefaults() {
+        assertThat(new EasyExcelHelper.BooleanConverter().convertToExcelData(true, null, null).getType())
+                .isEqualTo(com.alibaba.excel.enums.CellDataTypeEnum.BOOLEAN);
+        assertThat(new FastExcelHelper.BooleanConverter().convertToExcelData(true, null, null).getType())
+                .isEqualTo(cn.idev.excel.enums.CellDataTypeEnum.BOOLEAN);
+        assertThat(new FesodExcelHelper.BooleanConverter().convertToExcelData(true, null, null).getType())
+                .isEqualTo(org.apache.fesod.sheet.enums.CellDataTypeEnum.BOOLEAN);
+        assertThat(new EasyExcelHelper.FloatConverter().convertToExcelData(0.25F, null, null).getType())
+                .isEqualTo(com.alibaba.excel.enums.CellDataTypeEnum.NUMBER);
+        assertThat(new FastExcelHelper.DoubleConverter().convertToExcelData(0.125D, null, null).getType())
+                .isEqualTo(cn.idev.excel.enums.CellDataTypeEnum.NUMBER);
+        assertThat(new FesodExcelHelper.DoubleConverter().convertToExcelData(0.125D, null, null).getType())
+                .isEqualTo(org.apache.fesod.sheet.enums.CellDataTypeEnum.NUMBER);
+    }
+
+    @Test
+    void integerConvertersShouldAlwaysExportTextLikeVeloJacksonDefaults() {
+        for (long value : new long[]{1, -1, 1234567890123456L, Long.MIN_VALUE, Long.MAX_VALUE}) {
+            assertThat(new EasyExcelHelper.LongConverter().convertToExcelData(value, null, null).getStringValue())
+                    .isEqualTo(Long.toString(value));
+            assertThat(new FastExcelHelper.LongConverter().convertToExcelData(value, null, null).getStringValue())
+                    .isEqualTo(Long.toString(value));
+            assertThat(new FesodExcelHelper.LongConverter().convertToExcelData(value, null, null).getStringValue())
+                    .isEqualTo(Long.toString(value));
+            java.math.BigInteger integer = java.math.BigInteger.valueOf(value);
+            assertThat(new EasyExcelHelper.BigIntergerConverter().convertToExcelData(integer, null, null).getStringValue())
+                    .isEqualTo(integer.toString());
+            assertThat(new FastExcelHelper.BigIntergerConverter().convertToExcelData(integer, null, null).getStringValue())
+                    .isEqualTo(integer.toString());
+            assertThat(new FesodExcelHelper.BigIntergerConverter().convertToExcelData(integer, null, null).getStringValue())
+                    .isEqualTo(integer.toString());
+        }
+    }
+
+    @Test
     void shouldStartWhenExcelAutoRegistrationIsEnabled() {
         contextRunner
                 .withPropertyValues(

@@ -6,8 +6,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 
-import java.util.concurrent.TimeUnit;
-
 /**
  * 基于 Redisson 的分布式锁实现
  * 支持重入、看门狗续期等高级特性
@@ -22,20 +20,9 @@ public class RedissonLockHandler implements LockHandler {
     private final RedissonClient redissonClient;
 
     @Override
-    public boolean lock(String key, long waitTime, long leaseTime) {
-        RLock lock = redissonClient.getLock(key);
-        try {
-            // waitTime: 等待获取锁的最大时间
-            // leaseTime: 释放锁的时间
-            // 如果 leaseTime 为 -1，则会启用看门狗机制
-            return lock.tryLock(waitTime, leaseTime, TimeUnit.MILLISECONDS);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            return false;
-        } catch (Exception e) {
-            log.error("Redisson lock error, key: {}", key, e);
-            return false;
-        }
+    public boolean tryLock(String key) {
+        // 不等待、不指定固定租期，生命周期和续期全部交给 Redisson 原生看门狗。
+        return redissonClient.getLock(key).tryLock();
     }
 
     @Override

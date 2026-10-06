@@ -21,11 +21,13 @@ public class RedissonRateLimitHandler implements RateLimitHandler {
     private final RedissonClient redissonClient;
 
     @Override
-    public boolean tryAcquire(String key, double rate, long window) {
-        RateLimitWindow resolvedWindow = RateLimitWindow.from(rate, window);
-        long rateValue = resolvedWindow.capacity();
-        Duration interval = Duration.ofMillis(resolvedWindow.intervalMillis());
-        Duration keepAlive = Duration.ofMillis(Math.max(resolvedWindow.intervalMillis(), 1000L));
+    public boolean tryAcquire(String key, int qps) {
+        if (qps <= 0) {
+            throw new IllegalArgumentException("Rate limit qps must be greater than zero.");
+        }
+        long rateValue = qps;
+        Duration interval = Duration.ofSeconds(1);
+        Duration keepAlive = interval;
 
         RRateLimiter rateLimiter = redissonClient.getRateLimiter(key);
 

@@ -22,7 +22,8 @@ public class ScheduledLogAspect extends SourceLogAspectSupport {
         super(engine, trace, InvocationLogSource.SCHEDULED);
     }
 
-    @Around("@annotation(org.springframework.scheduling.annotation.Scheduled)")
+    @Around("@annotation(org.springframework.scheduling.annotation.Scheduled) || "
+            + "@annotation(org.springframework.scheduling.annotation.Schedules)")
     public Object around(ProceedingJoinPoint point) throws Throwable {
         return log(point);
     }

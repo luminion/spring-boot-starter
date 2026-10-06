@@ -18,7 +18,7 @@ import lombok.Setter;
 @Getter
 public final class FeignInvocationContext {
     private static final ThreadLocal<Deque<FeignInvocationContext>> CURRENT =
-            ThreadLocal.withInitial(ArrayDeque::new);
+            new ThreadLocal<>();
     private Map<String, List<String>> requestHeaders;
     private Map<String, List<String>> responseHeaders;
     @Setter
@@ -29,19 +29,32 @@ public final class FeignInvocationContext {
 
     public static FeignInvocationContext open() {
         FeignInvocationContext context = new FeignInvocationContext();
-        CURRENT.get().push(context);
+        Deque<FeignInvocationContext> stack = CURRENT.get();
+        if (stack == null) {
+            stack = new ArrayDeque<>();
+            CURRENT.set(stack);
+        }
+        stack.push(context);
         return context;
     }
 
+    /** 只读取已有上下文，无上下文时不在线程上保留空状态。 */
     public static FeignInvocationContext current() {
-        return CURRENT.get().peek();
+        Deque<FeignInvocationContext> stack = CURRENT.get();
+        if (stack == null || stack.isEmpty()) {
+            CURRENT.remove();
+            return null;
+        }
+        return stack.peek();
     }
 
     public static void close() {
         Deque<FeignInvocationContext> stack = CURRENT.get();
-        if (!stack.isEmpty()) {
-            stack.pop();
+        if (stack == null || stack.isEmpty()) {
+            CURRENT.remove();
+            return;
         }
+        stack.pop();
         if (stack.isEmpty()) {
             CURRENT.remove();
         }

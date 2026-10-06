@@ -1,5 +1,6 @@
 package io.github.luminion.velo.ratelimit.annotation;
 
+import org.springframework.core.annotation.AliasFor;
 import java.lang.annotation.*;
 
 /**
@@ -14,14 +15,17 @@ import java.lang.annotation.*;
 public @interface RateLimit {
 
     /**
-     * 时间窗口内允许的最大请求数。
+     * QPS 的简写属性。
      */
-    double permits() default 50;
+    @AliasFor("qps")
+    int value() default 50;
 
     /**
-     * 限流时间窗口大小，单位为毫秒。
+     * 每秒请求速率，必须为正整数；额度补充节奏由具体后端决定。
+     * Redis 为固定一秒窗口，允许窗口边界突发，不限制任意滚动一秒内的总量。
      */
-    long window() default 1000;
+    @AliasFor("value")
+    int qps() default 50;
 
     /**
      * 用于生成限流分桶后缀的 SpEL 表达式。

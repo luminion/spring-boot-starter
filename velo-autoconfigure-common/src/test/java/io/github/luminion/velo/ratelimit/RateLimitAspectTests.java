@@ -27,9 +27,9 @@ class RateLimitAspectTests {
             if (!StringUtils.hasText(expression)) {
                 return method.getDeclaringClass().getName() + "#" + method.getName();
             }
-            return "tenant:" + args[0];
+            return method.getDeclaringClass().getName() + "#" + method.getName() + ":tenant:" + args[0];
         };
-        RateLimitHandler handler = (key, rate, window) -> {
+        RateLimitHandler handler = (key, qps) -> {
             resolvedKey.set(key);
             return true;
         };
@@ -52,7 +52,7 @@ class RateLimitAspectTests {
     @Test
     void shouldKeepMethodDimensionWhenDifferentMethodsUseSameSpelKey() {
         List<String> resolvedKeys = new ArrayList<>();
-        RateLimitHandler handler = (key, rate, window) -> {
+        RateLimitHandler handler = (key, qps) -> {
             resolvedKeys.add(key);
             return true;
         };
@@ -75,7 +75,7 @@ class RateLimitAspectTests {
         void execute(String userId);
     }
 
-    @RateLimit(key = "#p0", permits = 5, window = 1000)
+    @RateLimit(key = "#p0", qps = 5)
     static class ClassLevelRateLimitedService implements SampleService {
         @Override
         public void execute(String userId) {

@@ -74,8 +74,6 @@ public class VeloPropertiesWarningLogger implements InitializingBean {
       warnings.add("velo.lock 为空，相关功能可能在运行时失败。当前仅告警。");
     } else if (lock.isEnabled()) {
       warnBlank(warnings, "velo.lock.prefix", lock.getPrefix(), "锁键可能与其他业务键发生冲突");
-      warnPositiveDuration(
-          warnings, "velo.lock.retry-interval", lock.getRetryInterval(), "Redis 锁重试间隔必须大于 0");
     }
 
     VeloProperties.CacheProperties cache = properties.getCache();

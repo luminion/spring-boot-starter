@@ -13,8 +13,8 @@ import java.lang.reflect.Method;
 public interface Fingerprinter {
 
     /**
-     * 根据方法调用信息生成一个唯一的签名字符串。
-     * 获取指纹
+     * 生成包含实际用户类完整名称、方法名和参数类型的方法标识。
+     * 非空表达式的结果作为后缀追加，不替代方法维度，确保不同方法独立。
      *
      * @param target     方法调用的目标对象
      * @param method     被调用的方法

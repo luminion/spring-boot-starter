@@ -45,6 +45,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import org.springframework.format.datetime.standard.DateTimeFormatterFactory;
 import java.util.TimeZone;
 
 /**
@@ -80,9 +81,9 @@ public class VeloJacksonAutoConfiguration {
                     String timeZoneId = properties.getDateTimeFormat().getTimeZone();
                     TimeZone timeZone = TimeZone.getTimeZone(timeZoneId);
                     FlexibleDateFormat defaultDateFormat = new FlexibleDateFormat(dateTimeFormat, dateFormat, timeZone);
-                    DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern(dateTimeFormat);
-                    DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern(dateFormat);
-                    DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern(timeFormat);
+                    DateTimeFormatter dateTimeFormatter = new DateTimeFormatterFactory(dateTimeFormat).createDateTimeFormatter();
+                    DateTimeFormatter dateFormatter = new DateTimeFormatterFactory(dateFormat).createDateTimeFormatter();
+                    DateTimeFormatter timeFormatter = new DateTimeFormatterFactory(timeFormat).createDateTimeFormatter();
 
                     builder.featuresToDisable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
                     builder.dateFormat(defaultDateFormat)

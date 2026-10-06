@@ -24,6 +24,52 @@ class VeloMybatisPlusAutoConfigurationTests {
             .withConfiguration(AutoConfigurations.of(VeloMybatisPlusAutoConfiguration.class));
 
     @Test
+    void shouldRespectUserBeanWithDefaultNameAndInterfaceReturnType() {
+        contextRunner.withUserConfiguration(NamedPaginationConfiguration.class).run(context -> {
+            assertThat(context).hasNotFailed().hasSingleBean(PaginationInnerInterceptor.class);
+            assertThat(context.getBean(MybatisPlusInterceptor.class).getInterceptors().stream()
+                    .filter(PaginationInnerInterceptor.class::isInstance))
+                    .containsExactly(context.getBean("paginationInnerInterceptor", InnerInterceptor.class));
+        });
+    }
+
+    @Test
+    void shouldAllowDisablingAllDefaultInterceptors() {
+        contextRunner.withPropertyValues("velo.mybatis-plus.pagination-enabled=false",
+                "velo.mybatis-plus.optimistic-locker-enabled=false", "velo.mybatis-plus.block-attack-enabled=false")
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    assertThat(context.getBean(MybatisPlusInterceptor.class).getInterceptors()).isEmpty();
+                });
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    static class NamedPaginationConfiguration {
+        @Bean
+        InnerInterceptor paginationInnerInterceptor() {
+            return new PaginationInnerInterceptor();
+        }
+    }
+
+    @Test
+    void shouldUseOnlyUserPaginationWhenBeanDeclaresInterfaceReturnType() {
+        contextRunner.withUserConfiguration(InterfacePaginationConfiguration.class).run(context -> {
+            assertThat(context).hasSingleBean(PaginationInnerInterceptor.class);
+            List<InnerInterceptor> chain = context.getBean(MybatisPlusInterceptor.class).getInterceptors();
+            assertThat(chain.stream().filter(PaginationInnerInterceptor.class::isInstance))
+                    .containsExactly(context.getBean("customPagination", InnerInterceptor.class));
+        });
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    static class InterfacePaginationConfiguration {
+        @Bean
+        InnerInterceptor customPagination() {
+            return new PaginationInnerInterceptor();
+        }
+    }
+
+    @Test
     void shouldRegisterParserBasedInterceptorsWhenParserModuleIsPresent() {
         contextRunner
                 .run(context -> {

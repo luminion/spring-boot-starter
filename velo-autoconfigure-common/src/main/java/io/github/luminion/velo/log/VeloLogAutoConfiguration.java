@@ -19,7 +19,7 @@ public class VeloLogAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public LogValueFormatter logValueFormatter() {
-        return String::valueOf;
+        return (value, output) -> output.write(String.valueOf(value));
     }
 
     @Bean

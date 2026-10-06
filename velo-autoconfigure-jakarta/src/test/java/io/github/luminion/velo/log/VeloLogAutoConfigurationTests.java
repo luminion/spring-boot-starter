@@ -104,7 +104,7 @@ class VeloLogAutoConfigurationTests {
 
   @Test
   void usesCustomFormatterAndDecoratorWithoutReplacement() {
-    LogValueFormatter formatter = value -> "custom";
+    LogValueFormatter formatter = (value, output) -> output.write("custom");
     TaskDecorator decorator = task -> task;
     contextRunner
         .withBean(LogValueFormatter.class, () -> formatter)
@@ -119,7 +119,7 @@ class VeloLogAutoConfigurationTests {
   @Test
   void noMapperUsesToStringFallback() {
     contextRunner.run(
-        context -> assertThat(context.getBean(LogValueFormatter.class).format(42)).isEqualTo("42"));
+        context -> assertThat(InvocationLogSupport.format(42, context.getBean(LogValueFormatter.class), -1)).isEqualTo("42"));
   }
 
   @Test

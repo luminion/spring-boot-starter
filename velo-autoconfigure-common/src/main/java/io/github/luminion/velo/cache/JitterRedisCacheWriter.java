@@ -7,12 +7,13 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.time.Duration;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Supplier;
 
 /**
  * 为 {@link RedisCacheWriter} 提供"每个 key 写入时独立 TTL 抖动"的能力。
  * <p>
  * 通过 JDK 动态代理包装真实的 {@code RedisCacheWriter}，仅拦截写入类方法
- * （{@code put} / {@code putIfAbsent} / {@code store}）中类型为 {@link Duration} 的 TTL 参数，
+ * （{@code put} / {@code putIfAbsent} / {@code store} / 带加载器的 {@code get}）中类型为 {@link Duration} 的 TTL 参数，
  * 对其叠加 ±jitterPercentage 的随机偏移，其余方法全部原样委托。
  * <p>
  * 采用代理而非直接实现接口，是为了兼容 Spring Boot 2 / 3 / 4 之间
@@ -70,8 +71,10 @@ public final class JitterRedisCacheWriter {
         @Override
         public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
             String name = method.getName();
-            // 仅对写入类方法的 Duration 参数做抖动；其它方法原样委托。
-            if (args != null && (name.equals("put") || name.equals("putIfAbsent") || name.equals("store"))) {
+            // 加载型 get 会在 delegate 内部写入，必须同时覆盖其 TTL；普通读取保持原有 TTI 语义。
+            boolean loadsValue = name.equals("get") && args != null
+                    && java.util.Arrays.stream(args).anyMatch(Supplier.class::isInstance);
+            if (args != null && (name.equals("put") || name.equals("putIfAbsent") || name.equals("store") || loadsValue)) {
                 for (int i = 0; i < args.length; i++) {
                     if (args[i] instanceof Duration) {
                         args[i] = jitter((Duration) args[i], jitterPercentage);

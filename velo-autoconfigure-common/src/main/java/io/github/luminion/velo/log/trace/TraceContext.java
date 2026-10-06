@@ -86,8 +86,13 @@ public final class TraceContext {
     return String.format("%016x", value);
   }
 
+  /** 无上下文时移除 get() 初始化的空关联。 */
   public static TraceData current() {
-    return CURRENT.get();
+    TraceData data = CURRENT.get();
+    if (data == null) {
+      CURRENT.remove();
+    }
+    return data;
   }
 
   /** 新 HTTP 入口不沿用工作线程的残留数据，Resolver 可以读取当前请求。 */
@@ -156,7 +161,7 @@ public final class TraceContext {
     private Scope(String key, TraceData current, boolean enabled) {
       this.key = key;
       this.previous = get(key);
-      this.previousData = CURRENT.get();
+      this.previousData = TraceContext.current();
       this.enabled = enabled;
       if (enabled) {
         setCurrent(current);

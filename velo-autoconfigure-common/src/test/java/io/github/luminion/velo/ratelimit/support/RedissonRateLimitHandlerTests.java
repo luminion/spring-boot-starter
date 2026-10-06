@@ -19,25 +19,24 @@ import static org.mockito.Mockito.when;
 class RedissonRateLimitHandlerTests {
 
     @Test
-    void shouldInitializeLimiterWithNormalizedWindowAndRefreshTtl() {
+    void shouldInitializeLimiterWithQpsAndRefreshTtl() {
         RedissonClient redissonClient = mock(RedissonClient.class);
         RRateLimiter rateLimiter = mock(RRateLimiter.class);
         when(redissonClient.getRateLimiter("demo")).thenReturn(rateLimiter);
-        when(rateLimiter.isExists()).thenReturn(false);
-        when(rateLimiter.getConfig()).thenReturn(new RateLimiterConfig(RateType.OVERALL, 1334L, 2L));
+        when(rateLimiter.getConfig()).thenReturn(new RateLimiterConfig(RateType.OVERALL, 1000L, 2L));
         when(rateLimiter.tryAcquire()).thenReturn(true);
 
         RedissonRateLimitHandler handler = new RedissonRateLimitHandler(redissonClient);
-        boolean acquired = handler.tryAcquire("demo", 1.5D, 1000L);
+        boolean acquired = handler.tryAcquire("demo", 2);
 
         assertThat(acquired).isTrue();
         verify(rateLimiter).trySetRate(
                 RateType.OVERALL,
                 2L,
-                Duration.ofMillis(1334L),
-                Duration.ofMillis(1334L));
+                Duration.ofSeconds(1),
+                Duration.ofSeconds(1));
         verify(rateLimiter, never()).setRate(any(), anyLong(), any(Duration.class), any(Duration.class));
-        verify(rateLimiter).expire(Duration.ofMillis(1334L));
+        verify(rateLimiter).expire(Duration.ofSeconds(1));
     }
 
     @Test
@@ -45,19 +44,18 @@ class RedissonRateLimitHandlerTests {
         RedissonClient redissonClient = mock(RedissonClient.class);
         RRateLimiter rateLimiter = mock(RRateLimiter.class);
         when(redissonClient.getRateLimiter("demo")).thenReturn(rateLimiter);
-        when(rateLimiter.isExists()).thenReturn(true);
         when(rateLimiter.getConfig()).thenReturn(new RateLimiterConfig(RateType.OVERALL, 1000L, 1L));
         when(rateLimiter.tryAcquire()).thenReturn(true);
 
         RedissonRateLimitHandler handler = new RedissonRateLimitHandler(redissonClient);
-        boolean acquired = handler.tryAcquire("demo", 1.5D, 1000L);
+        boolean acquired = handler.tryAcquire("demo", 2);
 
         assertThat(acquired).isTrue();
         verify(rateLimiter).setRate(
                 RateType.OVERALL,
                 2L,
-                Duration.ofMillis(1334L),
-                Duration.ofMillis(1334L));
-        verify(rateLimiter).expire(Duration.ofMillis(1334L));
+                Duration.ofSeconds(1),
+                Duration.ofSeconds(1));
+        verify(rateLimiter).expire(Duration.ofSeconds(1));
     }
 }

@@ -2,6 +2,7 @@ package io.github.luminion.velo.converter.datetime;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import org.springframework.format.datetime.standard.DateTimeFormatterFactory;
 
 /**
  * @author luminion
@@ -10,7 +11,7 @@ public class StringToLocalDateTimeConverter implements DateTimeConverter<String,
     private final DateTimeFormatter formatter;
 
     public StringToLocalDateTimeConverter(String pattern) {
-        this.formatter = DateTimeFormatter.ofPattern(pattern);
+        this.formatter = new DateTimeFormatterFactory(pattern).createDateTimeFormatter();
     }
 
     @Override

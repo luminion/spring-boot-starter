@@ -49,7 +49,6 @@ class VeloPropertiesWarningLoggerTests {
     properties.getIdempotent().setPrefix("");
     properties.getRateLimit().setPrefix(" ");
     properties.getLock().setPrefix("");
-    properties.getLock().setRetryInterval(Duration.ZERO);
     properties.getCache().setDefaultTtl(Duration.ZERO);
     properties.getCache().setSeparator(" ");
     properties.getCache().getTtl().put("orders", Duration.ofSeconds(-1));
@@ -69,7 +68,7 @@ class VeloPropertiesWarningLoggerTests {
     assertThat(warnings)
         .anySatisfy(warning -> assertThat(warning).contains("velo.idempotent.prefix"))
         .anySatisfy(warning -> assertThat(warning).contains("velo.rate-limit.prefix"))
-        .anySatisfy(warning -> assertThat(warning).contains("velo.lock.retry-interval"))
+        .anySatisfy(warning -> assertThat(warning).contains("velo.lock.prefix"))
         .anySatisfy(warning -> assertThat(warning).contains("velo.cache.default-ttl"))
         .anySatisfy(warning -> assertThat(warning).contains("velo.cache.ttl[orders]"))
         .anySatisfy(warning -> assertThat(warning).contains("velo.log.defaults.max-payload-length"))

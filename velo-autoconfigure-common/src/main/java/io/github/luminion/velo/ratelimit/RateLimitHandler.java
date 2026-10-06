@@ -11,10 +11,9 @@ public interface RateLimitHandler {
      * 尝试获取令牌
      *
      * @param key     限流键
-     * @param rate    时间窗口内允许的最大请求数
-     * @param window 时间窗口大小，单位为毫秒
+     * @param qps     每秒请求速率，必须为正整数；额度补充节奏由具体后端决定
      * @return true 表示允许通过，false 表示被限流
      */
-    boolean tryAcquire(String key, double rate, long window);
+    boolean tryAcquire(String key, int qps);
 
 }

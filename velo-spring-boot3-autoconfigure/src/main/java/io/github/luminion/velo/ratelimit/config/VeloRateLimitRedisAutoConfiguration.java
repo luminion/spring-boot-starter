@@ -5,10 +5,7 @@ import org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration;
 import org.springframework.context.annotation.Import;
 
 /**
- * Spring Boot 3 限流 Redis 自动配置入口。
- *
- * @author luminion
- * @since 1.3.1
+ * Spring Boot 3 Redis 固定一秒窗口限流自动配置入口。
  */
 @AutoConfiguration(after = {RedisAutoConfiguration.class, VeloRateLimitRedissonAutoConfiguration.class})
 @Import(VeloRateLimitRedisConfiguration.class)

@@ -14,6 +14,7 @@ import org.aspectj.lang.reflect.MethodSignature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.Ordered;
+import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.util.StringUtils;
 
 import java.lang.reflect.Method;
@@ -61,6 +62,7 @@ public class IdempotentAspect implements Ordered {
     public Object doIdempotent(ProceedingJoinPoint joinPoint, Idempotent idempotent) throws Throwable {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         Method method = ConcurrencyAnnotationUtils.resolveSpecificMethod(joinPoint.getTarget(), signature.getMethod());
+        idempotent = AnnotationUtils.synthesizeAnnotation(idempotent, method);
         long ttl = idempotent.ttl();
         if (ttl <= 0L) {
             throw new IllegalArgumentException("Idempotent ttl must be greater than zero.");
@@ -78,13 +80,8 @@ public class IdempotentAspect implements Ordered {
 
         // key 始终以方法指纹（类名#方法名(参数类型...)）为前缀，再拼接 SpEL 结果，与限流分桶语义保持一致。
         // 这样不同方法即便用相同的 SpEL key（如都用 #orderId）也不会互相碰撞、共享同一幂等窗口。
-        String methodFingerprint = fingerprinter.resolveMethodFingerprint(
-                joinPoint.getTarget(), method, joinPoint.getArgs(), "");
-        String keyFingerprint = methodFingerprint;
-        if (StringUtils.hasText(idempotent.key())) {
-            keyFingerprint += ':' + fingerprinter.resolveMethodFingerprint(
-                    joinPoint.getTarget(), method, joinPoint.getArgs(), idempotent.key());
-        }
+        String keyFingerprint = fingerprinter.resolveMethodFingerprint(
+                joinPoint.getTarget(), method, joinPoint.getArgs(), idempotent.key());
         String key = ConcurrencyAnnotationUtils.buildPrefixedKey(prefix, keyFingerprint);
 
         // 为本次请求生成唯一 token，失败回滚时只清除自己写入的记录，避免误删并发请求的新记录。

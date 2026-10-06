@@ -20,6 +20,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import org.springframework.format.datetime.standard.DateTimeFormatterFactory;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -31,8 +32,6 @@ import java.util.List;
  */
 @Slf4j
 public abstract class EasyExcelHelper {
-    private static final long MAX_SAFE_INTEGER = 9007199254740991L;
-    private static final BigInteger MAX_SAFE_BIG_INTEGER = BigInteger.valueOf(MAX_SAFE_INTEGER);
     private static final Class<?> CONVERTER_CLASS = Converter.class;
     private static final Class<?> CONVERTER_LOADER_CLASS = DefaultConverterLoader.class;
 
@@ -165,7 +164,7 @@ public abstract class EasyExcelHelper {
             if (value == null) {
                 return new WriteCellData<>("");
             }
-            return new WriteCellData<>(value ? "是" : "否");
+            return new WriteCellData<>(value);
         }
     }
 
@@ -195,10 +194,7 @@ public abstract class EasyExcelHelper {
             if (value == null) {
                 return new WriteCellData<>("");
             }
-            if (value > MAX_SAFE_INTEGER || value < -MAX_SAFE_INTEGER) {
-                return new WriteCellData<>(String.valueOf(value));
-            }
-            return new WriteCellData<>(BigDecimal.valueOf(value));
+            return new WriteCellData<>(String.valueOf(value));
         }
     }
 
@@ -230,7 +226,7 @@ public abstract class EasyExcelHelper {
             if (value == null) {
                 return new WriteCellData<>("");
             }
-            return new WriteCellData<>(new BigDecimal(Float.toString(value)).toPlainString());
+            return new WriteCellData<>(new BigDecimal(Float.toString(value)));
         }
     }
 
@@ -260,7 +256,7 @@ public abstract class EasyExcelHelper {
             if (value == null) {
                 return new WriteCellData<>("");
             }
-            return new WriteCellData<>(new BigDecimal(Double.toString(value)).toPlainString());
+            return new WriteCellData<>(new BigDecimal(Double.toString(value)));
         }
     }
 
@@ -291,10 +287,7 @@ public abstract class EasyExcelHelper {
             if (value == null) {
                 return new WriteCellData<>("");
             }
-            if (value.abs().compareTo(MAX_SAFE_BIG_INTEGER) > 0) {
-                return new WriteCellData<>(String.valueOf(value));
-            }
-            return new WriteCellData<>(new BigDecimal(value));
+            return new WriteCellData<>(String.valueOf(value));
         }
     }
 
@@ -334,7 +327,7 @@ public abstract class EasyExcelHelper {
         private final ZoneId zoneId;
 
         public DateConverter(String pattern, String zoneId) {
-            this.formatter = DateTimeFormatter.ofPattern(pattern);
+            this.formatter = new DateTimeFormatterFactory(pattern).createDateTimeFormatter();
             this.zoneId = ZoneId.of(zoneId);
         }
 
@@ -371,7 +364,7 @@ public abstract class EasyExcelHelper {
         private final DateTimeFormatter formatter;
 
         public LocalDateTimeConverter(String pattern) {
-            formatter = DateTimeFormatter.ofPattern(pattern);
+            formatter = new DateTimeFormatterFactory(pattern).createDateTimeFormatter();
         }
 
         @Override
@@ -408,7 +401,7 @@ public abstract class EasyExcelHelper {
         private final DateTimeFormatter formatter;
 
         public LocalDateConverter(String pattern) {
-            formatter = DateTimeFormatter.ofPattern(pattern);
+            formatter = new DateTimeFormatterFactory(pattern).createDateTimeFormatter();
         }
 
         @Override
@@ -444,7 +437,7 @@ public abstract class EasyExcelHelper {
         private final DateTimeFormatter formatter;
 
         public LocalTimeConverter(String pattern) {
-            formatter = DateTimeFormatter.ofPattern(pattern);
+            formatter = new DateTimeFormatterFactory(pattern).createDateTimeFormatter();
         }
 
         @Override

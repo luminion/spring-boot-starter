@@ -6,6 +6,7 @@ import io.github.luminion.velo.idempotent.IdempotentHandler;
 import io.github.luminion.velo.idempotent.support.CaffeineIdempotentHandler;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 
@@ -17,6 +18,7 @@ import org.springframework.context.annotation.Bean;
  */
 @AutoConfiguration(after = {VeloIdempotentRedissonAutoConfiguration.class, VeloIdempotentRedisConfiguration.class},
         afterName = "io.github.luminion.velo.idempotent.config.VeloIdempotentRedisAutoConfiguration")
+@ConditionalOnClass(name = "com.github.benmanes.caffeine.cache.Cache")
 @ConditionalOnConcurrencyBackend(prefix = "velo.idempotent", value = ConcurrencyBackend.CAFFEINE,
         autoClassNames = {"org.aspectj.weaver.Advice", "com.github.benmanes.caffeine.cache.Cache"})
 @ConditionalOnMissingBean(IdempotentHandler.class)

@@ -1,5 +1,6 @@
 package io.github.luminion.velo.lock.annotation;
 
+import org.springframework.core.annotation.AliasFor;
 import java.lang.annotation.*;
 
 /**
@@ -13,6 +14,10 @@ import java.lang.annotation.*;
 @Documented
 public @interface Lock {
 
+    /** key 的简写属性。 */
+    @AliasFor("key")
+    String value() default "";
+
     /**
      * 锁的 Key（支持 SpEL 表达式）。
      * <p>
@@ -21,28 +26,8 @@ public @interface Lock {
      * <p>
      * 需要按业务维度加锁时请显式指定，例如 {@code key = "#orderId"}。
      */
+    @AliasFor("value")
     String key() default "";
-
-    /**
-     * 等待获取锁的时间，单位为毫秒。
-     * <p>
-     * 默认不等待，获取不到立即失败。
-     */
-    long waitTimeout() default 0;
-
-    /**
-     * 锁的持有时间（自动释放时间），单位为毫秒。
-     * <p>
-     * Redis 简单实现和使用正数租约的 Redisson 都会按该值自动释放锁，防止持有者宕机后锁永不释放；
-     * 本地 Caffeine / JDK 实现忽略该值，靠方法结束时 unlock 释放。
-     * <p>
-     * 默认 30 秒，适用于绝大多数 CRUD 操作。在依赖该兜底的 Redis 后端上，执行时间可能超过 lease 的长任务
-     * （如批量处理、复杂计算）需显式调大，避免锁提前释放。
-     * <p>
-     * 特殊值 {@code -1}：请求看门狗式自动续约。Redisson 使用原生看门狗，Redis 简单实现使用 30 秒初始租约并
-     * 每 10 秒原子续约；两者都在业务结束时释放，适合耗时不确定的长任务。除 {@code -1} 外，其余非正值非法。
-     */
-    long lease() default 30000;
 
     /**
      * 失败提示信息

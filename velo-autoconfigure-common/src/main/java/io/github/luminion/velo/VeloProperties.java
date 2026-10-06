@@ -105,8 +105,8 @@ public class VeloProperties {
     /** Prefix used by lock related keys. */
     private String prefix = "lock:";
 
-    /** Polling interval used by the simple Redis lock while waiting for acquisition. */
-    private Duration retryInterval = Duration.ofMillis(10);
+    /** 简单 Redis 锁的固定 TTL，单位为秒；到期自动释放，不续期。 */
+    private long redisTtlSeconds = 60;
   }
 
   @Data
@@ -281,8 +281,10 @@ public class VeloProperties {
 
   @Data
   public static class InvocationDefaults {
-    /** -1 不限制，0 不采集对象载荷，正数限制字符串长度。 */
-    private int maxPayloadLength = -1;
+    public static final int DEFAULT_MAX_PAYLOAD_LENGTH = 4096;
+
+    /** 默认 4096 字符；-1 不限字符数，0 不采集对象载荷，正数限制单行载荷长度。 */
+    private int maxPayloadLength = DEFAULT_MAX_PAYLOAD_LENGTH;
 
     private LogFeatureProperties entryArgs = new LogFeatureProperties();
     private LogFeatureProperties exitArgs = new LogFeatureProperties();

@@ -20,7 +20,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import lombok.EqualsAndHashCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.boot.logging.LogLevel;
@@ -28,20 +27,32 @@ import org.springframework.core.DefaultParameterNameDiscoverer;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 
 /**
- * 仅缓存静态方法元数据；每次调用重新读取来源和全局配置。
+ * 按目标类缓存静态方法元数据；每次调用重新读取来源和全局配置。
  */
 final class InvocationLogPolicyResolver {
     private final VeloProperties properties;
-    private final ConcurrentMap<MetadataKey, Metadata> cache = new ConcurrentHashMap<>();
-    private final DefaultParameterNameDiscoverer names = new DefaultParameterNameDiscoverer();
+    private final ClassValue<MethodMetadataCache> cache =
+            new ClassValue<MethodMetadataCache>() {
+                @Override
+                protected MethodMetadataCache computeValue(Class<?> type) {
+                    return new MethodMetadataCache();
+                }
+            };
 
     InvocationLogPolicyResolver(VeloProperties properties) {
         this.properties = properties;
     }
 
     Selection resolve(LogInvocation invocation) {
-        MetadataKey key = new MetadataKey(invocation.getMethod(), invocation.getTargetClass());
-        Metadata metadata = cache.computeIfAbsent(key, this::inspect);
+        Method original = invocation.getMethod();
+        Class<?> type = invocation.getTargetClass();
+        if (type == null) {
+            type = original.getDeclaringClass();
+        }
+        Class<?> targetType = type;
+        MethodMetadataCache classCache = cache.get(targetType);
+        Metadata metadata = classCache.methods.computeIfAbsent(
+                original, method -> inspect(method, targetType, classCache.names));
         VeloProperties.InvocationSourceProperties source = source(invocation.getSource());
         boolean ignored = metadata.ignored || !properties.getLog().isEnabled() || !source.isEnabled();
         Map<InvocationLogFeature, FeaturePolicy> policies = new EnumMap<>(InvocationLogFeature.class);
@@ -57,14 +68,13 @@ final class InvocationLogPolicyResolver {
                 metadata, policies, properties.getLog().getDefaults().getMaxPayloadLength());
     }
 
-    private Metadata inspect(MetadataKey key) {
-        Method original = key.method;
-        Method specific = AopUtils.getMostSpecificMethod(original, key.type);
-        boolean ignored = find(specific, original, key.type, LogIgnore.class) != null;
+    private Metadata inspect(Method original, Class<?> type, DefaultParameterNameDiscoverer names) {
+        Method specific = AopUtils.getMostSpecificMethod(original, type);
+        boolean ignored = find(specific, original, type, LogIgnore.class) != null;
         Map<InvocationLogFeature, FeaturePolicy> annotations =
                 new EnumMap<>(InvocationLogFeature.class);
         for (InvocationLogFeature feature : InvocationLogFeature.values()) {
-            Annotation value = find(specific, original, key.type, annotationType(feature));
+            Annotation value = find(specific, original, type, annotationType(feature));
             if (value != null) {
                 annotations.put(feature, fromAnnotation(value));
             }
@@ -256,11 +266,10 @@ final class InvocationLogPolicyResolver {
         }
     }
 
-    @RequiredArgsConstructor
-    @EqualsAndHashCode
-    private static class MetadataKey {
-        private final Method method;
-        private final Class<?> type;
+    private static final class MethodMetadataCache {
+        private final ConcurrentMap<Method, Metadata> methods = new ConcurrentHashMap<>();
+        // Spring 5 的参数名发现器也缓存 Class，必须随目标类管理生命周期。
+        private final DefaultParameterNameDiscoverer names = new DefaultParameterNameDiscoverer();
     }
 
     @RequiredArgsConstructor

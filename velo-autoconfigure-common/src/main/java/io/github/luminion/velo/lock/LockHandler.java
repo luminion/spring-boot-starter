@@ -9,27 +9,23 @@ package io.github.luminion.velo.lock;
 public interface LockHandler {
 
     /**
-     * 尝试加锁。
+     * 尝试加锁一次，获取不到立即返回，不等待或重试。
      * <p>
-     * {@code leaseTime} 是能力依赖后端的参数，各实现按自身能力处理：
+     * 锁的生命周期由后端管理：
      * <ul>
-     *     <li><b>Redisson</b>：{@code >0} 为固定租约到期释放；{@code -1} 启用看门狗，
-     *     在业务执行期间自动续约，直到 {@link #unlock(String)} 释放。</li>
-     *     <li><b>Redis</b>（基于 setIfAbsent 的简单实现）：{@code >0} 为固定 TTL 到期释放；
-     *     {@code -1} 使用 30 秒 TTL 和 10 秒一次的 token 校验续约，进程崩溃后仍会自然过期。</li>
-     *     <li><b>本地 JDK / Caffeine</b>：仅保证单 JVM 互斥，忽略 {@code leaseTime}，
-     *     锁不自动过期，靠配对的 {@link #unlock(String)} 释放（由引用计数清理，无内存泄漏）。</li>
+     *     <li><b>Redisson</b>：使用原生看门狗续期，直到 {@link #unlock(String)} 释放。</li>
+     *     <li><b>Redis</b>：使用构造函数配置的固定 TTL，不续期；业务必须在 TTL 内完成。</li>
+     *     <li><b>本地 JDK</b>：仅保证单 JVM 互斥，不自动过期，
+     *     靠配对的 {@link #unlock(String)} 释放；没有持有者或正在获取锁的调用时立即回收状态。</li>
      * </ul>
      *
-     * <p>可重入语义：同一线程对同一 key 的重入会回源校验持有权（Redis 实现通过 Lua 原子完成
-     * 校验与续期，且只延长不缩短剩余租期）；校验发现锁已丢失时重入失败返回 {@code false}。</p>
+     * <p>Redis 的同线程重入会读取 token 校验持有权，不延长 TTL；
+     * 校验发现锁已丢失时重入失败返回 {@code false}。</p>
      *
-     * @param key       锁的唯一标识
-     * @param waitTime  等待时间，单位为毫秒
-     * @param leaseTime 持有时间，单位为毫秒；{@code -1} 表示请求看门狗式自动续约，具体行为见上方各后端说明
+     * @param key 锁的唯一标识
      * @return true: 加锁成功; false: 加锁失败
      */
-    boolean lock(String key, long waitTime, long leaseTime);
+    boolean tryLock(String key);
 
     /**
      * 释放锁

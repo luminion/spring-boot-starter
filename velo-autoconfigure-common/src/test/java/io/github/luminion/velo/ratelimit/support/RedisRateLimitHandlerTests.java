@@ -4,42 +4,43 @@ import org.junit.jupiter.api.Test;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.RedisScript;
 
-import java.util.List;
+import java.util.Collections;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.within;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 class RedisRateLimitHandlerTests {
 
     @Test
-    void shouldPassPerMillisecondFillRateToLuaScript() {
-        CapturingRedisTemplate redisTemplate = new CapturingRedisTemplate();
-        RedisRateLimitHandler handler = new RedisRateLimitHandler(redisTemplate);
-
-        boolean acquired = handler.tryAcquire("demo", 2D, 1000L);
-
-        assertThat(acquired).isTrue();
-        assertThat(redisTemplate.keys).containsExactly("demo");
-        assertThat(redisTemplate.args[0]).isEqualTo("2");
-        assertThat(Double.parseDouble((String) redisTemplate.args[1]))
-                .isCloseTo(0.002D, within(0.000_000_1D));
-        assertThat(redisTemplate.args).hasSize(3);
-        assertThat(redisTemplate.scriptText).contains("redis.call('time')");
-        assertThat(redisTemplate.scriptText).doesNotContain("ARGV[4]");
+    @SuppressWarnings("unchecked")
+    void scriptCountsAreComparedToQps() {
+        StringRedisTemplate template = mock(StringRedisTemplate.class);
+        when(template.execute(any(RedisScript.class), eq(Collections.singletonList("key"))))
+                .thenReturn(1L, 2L, 3L);
+        RedisRateLimitHandler handler = new RedisRateLimitHandler(template);
+        assertThat(handler.tryAcquire("key", 2)).isTrue();
+        assertThat(handler.tryAcquire("key", 2)).isTrue();
+        assertThat(handler.tryAcquire("key", 2)).isFalse();
     }
 
-    private static class CapturingRedisTemplate extends StringRedisTemplate {
-        private List<String> keys;
-        private Object[] args;
-        private String scriptText;
+    @Test
+    void deferredScriptResultIsRejected() {
+        RedisRateLimitHandler handler = new RedisRateLimitHandler(mock(StringRedisTemplate.class));
+        assertThatThrownBy(() -> handler.tryAcquire("key", 1)).isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("transactions and pipelines");
+    }
 
-        @Override
-        @SuppressWarnings("unchecked")
-        public <T> T execute(RedisScript<T> script, List<String> keys, Object... args) {
-            this.keys = keys;
-            this.args = args;
-            this.scriptText = script.getScriptAsString();
-            return (T) Long.valueOf(1L);
-        }
+    @Test
+    void invalidQpsDoesNotAccessRedis() {
+        StringRedisTemplate template = mock(StringRedisTemplate.class);
+        RedisRateLimitHandler handler = new RedisRateLimitHandler(template);
+        assertThatThrownBy(() -> handler.tryAcquire("key", 0)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> handler.tryAcquire("key", -1)).isInstanceOf(IllegalArgumentException.class);
+        verifyNoInteractions(template);
     }
 }

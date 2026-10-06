@@ -15,7 +15,12 @@ public class EmailMasker implements Function<String, String> {
         if (s == null) {
             return null;
         }
-        return s.replaceAll("(\\w?)(\\w+)(@\\w+\\.[a-z]+(\\.[a-z]+)?)", "$1****$3");
+        int separator = s.lastIndexOf('@');
+        if (separator <= 0 || separator == s.length() - 1) {
+            return "****";
+        }
+        int prefixEnd = s.offsetByCodePoints(0, 1);
+        return s.substring(0, prefixEnd) + "****" + s.substring(separator);
     }
 
 }

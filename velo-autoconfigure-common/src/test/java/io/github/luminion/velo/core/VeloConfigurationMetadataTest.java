@@ -161,6 +161,7 @@ class VeloConfigurationMetadataTest {
       assertFalse(metadata.contains("velo.rate-limit.key-prefix"));
       assertTrue(metadata.contains("velo.lock.backend"));
       assertTrue(metadata.contains("velo.lock.prefix"));
+      assertTrue(metadata.contains("velo.lock.redis-ttl-seconds"));
       assertFalse(metadata.contains("velo.lock.key-prefix"));
     }
   }

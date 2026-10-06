@@ -4,7 +4,6 @@ import io.github.luminion.velo.idempotent.IdempotentHandler;
 import io.github.luminion.velo.idempotent.VeloIdempotentAutoConfiguration;
 import io.github.luminion.velo.idempotent.aspect.IdempotentAspect;
 import io.github.luminion.velo.idempotent.support.CaffeineIdempotentHandler;
-import io.github.luminion.velo.idempotent.support.JdkIdempotentHandler;
 import io.github.luminion.velo.idempotent.support.RedisIdempotentHandler;
 import io.github.luminion.velo.idempotent.support.RedissonIdempotentHandler;
 import io.github.luminion.velo.test.TestRedisTemplate;
@@ -13,6 +12,8 @@ import io.github.luminion.velo.spi.Fingerprinter;
 import org.junit.jupiter.api.Test;
 import org.redisson.api.RedissonClient;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.test.context.FilteredClassLoader;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,6 +23,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 
 class VeloIdempotentAutoConfigurationTests {
@@ -31,8 +33,10 @@ class VeloIdempotentAutoConfigurationTests {
                     VeloIdempotentRedissonAutoConfiguration.class,
                     VeloIdempotentRedisConfiguration.class,
                     VeloIdempotentCaffeineAutoConfiguration.class,
-                    VeloIdempotentJdkAutoConfiguration.class
-            ));
+                    VeloIdempotentAutoConfiguration.class
+            ))
+            .withUserConfiguration(PropertiesConfiguration.class)
+            .withBean(Fingerprinter.class, () -> (target, method, args, expression) -> "fingerprint");
 
     @Test
     void shouldCreateDefaultIdempotentHandler() {
@@ -94,11 +98,12 @@ class VeloIdempotentAutoConfigurationTests {
     }
 
     @Test
-    void shouldUseExplicitBackendWhenConfigured() {
+    void shouldRejectRemovedJdkBackend() {
         contextRunner
                 .withPropertyValues("velo.idempotent.backend=jdk")
-                .run(context -> assertThat(context.getBean(IdempotentHandler.class))
-                        .isInstanceOf(JdkIdempotentHandler.class));
+                .run(context -> assertThat(context.getStartupFailure())
+                        .hasRootCauseInstanceOf(IllegalStateException.class)
+                        .hasStackTraceContaining("velo.idempotent.backend=JDK"));
     }
 
     @Test
@@ -124,12 +129,33 @@ class VeloIdempotentAutoConfigurationTests {
                         VeloIdempotentRedissonAutoConfiguration.class,
                         VeloIdempotentRedisConfiguration.class,
                         VeloIdempotentCaffeineAutoConfiguration.class,
-                        VeloIdempotentJdkAutoConfiguration.class,
                         VeloIdempotentAutoConfiguration.class
                 ))
                 .withBean(VeloProperties.class, VeloProperties::new)
                 .withBean(Fingerprinter.class, () -> (target, method, args, expression) -> "fingerprint")
                 .run(context -> assertThat(context).hasSingleBean(IdempotentAspect.class));
+    }
+
+    @Test
+    void missingCaffeineShouldUseUnavailableHandler() {
+        contextRunner.withClassLoader(new FilteredClassLoader("com.github.benmanes.caffeine"))
+                .run(context -> {
+                    assertThat(context).hasNotFailed().hasSingleBean(IdempotentAspect.class);
+                    assertThatThrownBy(() -> context.getBean(IdempotentHandler.class).tryRecord("test", "token", 3000))
+                            .isInstanceOf(IllegalStateException.class).hasMessageContaining("No IdempotentHandler");
+                });
+    }
+
+    @Test
+    void disabledFeatureShouldNotCreateHandlerOrAspect() {
+        contextRunner.withPropertyValues("velo.idempotent.enabled=false")
+                .run(context -> assertThat(context).hasNotFailed()
+                        .doesNotHaveBean(IdempotentHandler.class).doesNotHaveBean(IdempotentAspect.class));
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    @EnableConfigurationProperties(VeloProperties.class)
+    static class PropertiesConfiguration {
     }
 
     static class CustomIdempotentHandler implements IdempotentHandler {

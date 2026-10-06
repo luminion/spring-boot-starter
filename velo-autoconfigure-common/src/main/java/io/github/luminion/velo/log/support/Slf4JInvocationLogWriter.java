@@ -6,9 +6,6 @@ import io.github.luminion.velo.log.InvocationLogSupport;
 import io.github.luminion.velo.log.InvocationLogWriter;
 import io.github.luminion.velo.log.InvocationPhase;
 
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.logging.LogLevel;
@@ -18,8 +15,6 @@ import org.springframework.util.StringUtils;
  * 单功能 SLF4J 输出器；不判定业务异常，不输出堆栈或重复关联字段。
  */
 public class Slf4JInvocationLogWriter implements InvocationLogWriter {
-    private final ConcurrentMap<String, Logger> loggers = new ConcurrentHashMap<>();
-
     @Override
     public boolean isEnabled(InvocationLogRecord record) {
         if (record == null || record.getFeature() == null || record.getLevel() == LogLevel.OFF) {
@@ -80,7 +75,7 @@ public class Slf4JInvocationLogWriter implements InvocationLogWriter {
     private Logger logger(InvocationLogRecord record) {
         String name =
                 StringUtils.hasText(record.getLoggerName()) ? record.getLoggerName() : getClass().getName();
-        return loggers.computeIfAbsent(name, LoggerFactory::getLogger);
+        return LoggerFactory.getLogger(name);
     }
 
     private String message(InvocationLogRecord record) {

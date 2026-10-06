@@ -29,6 +29,8 @@ public class FlexibleDateFormat extends DateFormat {
         this.fallbackPattern = fallbackPattern;
         TimeZone actualTimeZone = timeZone == null ? TimeZone.getDefault() : timeZone;
         Calendar calendar = Calendar.getInstance(actualTimeZone);
+        // 与 Spring DateFormatter 的默认行为一致；显式 setLenient / @JsonFormat 仍可覆盖。
+        calendar.setLenient(false);
         setCalendar(calendar);
         setNumberFormat(NumberFormat.getIntegerInstance());
     }

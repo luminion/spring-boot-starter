@@ -22,16 +22,17 @@ class ConcurrencyAnnotationDefaultsTest {
     void shouldExposeSafeLockDefaults() throws NoSuchMethodException {
         Lock lock = annotation("lock", Lock.class);
 
-        assertThat(lock.waitTimeout()).isZero();
-        assertThat(lock.lease()).isEqualTo(30000);
+        assertThat(lock.key()).isEmpty();
+        assertThat(Lock.class.getDeclaredMethods()).extracting(Method::getName)
+                .containsExactlyInAnyOrder("value", "key", "message");
     }
 
     @Test
     void shouldExposeSafeRateLimitDefaults() throws NoSuchMethodException {
         RateLimit rateLimit = annotation("rateLimit", RateLimit.class);
 
-        assertThat(rateLimit.permits()).isEqualTo(50);
-        assertThat(rateLimit.window()).isEqualTo(1000);
+        assertThat(rateLimit.qps()).isEqualTo(50);
+        assertThat(rateLimit.value()).isEqualTo(50);
     }
 
     private static <A extends java.lang.annotation.Annotation> A annotation(String methodName, Class<A> type)

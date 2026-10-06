@@ -40,7 +40,7 @@ class Boot3MockMvcIntegrationTest {
 
         ConfigurableApplicationContext context = application.run(
                 "--spring.main.banner-mode=off",
-                "--server.port=18083",
+                "--server.port=0",
                 "--velo.banner.enabled=false",
                 "--velo.web.cors.enabled=true",
                 "--velo.web.cors.allowed-origin-patterns=https://client.example",
@@ -60,13 +60,22 @@ class Boot3MockMvcIntegrationTest {
                     .andExpect(status().isOk())
                     .andExpect(content().string("ok"))
                     .andExpect(header().string("Access-Control-Allow-Origin", "https://client.example"));
+
+            mockMvc.perform(get("/integration/date-time")
+                            .param("date", "2024-01-02 03:04:05")
+                            .param("dateOnly", "2024-01-02")
+                            .param("formattedDate", "2024/01/02")
+                            .param("localDate", "2026-02-30")
+                            .param("localTime", "03:04:05")
+                            .param("localDateTime", "2024-01-02 03:04:05"))
+                    .andExpect(status().isBadRequest());
         } finally {
             context.close();
         }
     }
 
     @SpringBootConfiguration
-    @EnableAutoConfiguration
+    @EnableAutoConfiguration(excludeName = "org.redisson.spring.starter.RedissonAutoConfigurationV2")
     @Import(TestController.class)
     static class TestApplication {
     }

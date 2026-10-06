@@ -55,13 +55,13 @@ class ConcurrencyAspectOrderTests {
             events.add("idempotent");
             return true;
         }));
-        proxyFactory.addAspect(new RateLimitAspect("rateLimit:", new SpelFingerprinter(), (key, rate, window) -> {
+        proxyFactory.addAspect(new RateLimitAspect("rateLimit:", new SpelFingerprinter(), (key, qps) -> {
             events.add("rateLimit");
             return rateLimitAccepted;
         }));
         proxyFactory.addAspect(new LockAspect("lock:", new SpelFingerprinter(), new LockHandler() {
             @Override
-            public boolean lock(String key, long waitTime, long leaseTime) {
+            public boolean tryLock(String key) {
                 events.add("lock");
                 return true;
             }

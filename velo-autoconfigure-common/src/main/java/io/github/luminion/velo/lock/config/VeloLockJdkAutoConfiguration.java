@@ -15,7 +15,8 @@ import org.springframework.context.annotation.Bean;
  * @author luminion
  * @since 1.0.0
  */
-@AutoConfiguration(after = VeloLockCaffeineAutoConfiguration.class)
+@AutoConfiguration(after = {VeloLockRedissonAutoConfiguration.class, VeloLockRedisConfiguration.class},
+        afterName = "io.github.luminion.velo.lock.config.VeloLockRedisAutoConfiguration")
 @ConditionalOnConcurrencyBackend(prefix = "velo.lock", value = ConcurrencyBackend.JDK,
         autoClassNames = "org.aspectj.weaver.Advice")
 @ConditionalOnMissingBean(LockHandler.class)

@@ -10,6 +10,7 @@ import org.springframework.beans.factory.ListableBeanFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -21,6 +22,7 @@ import org.springframework.data.redis.core.RedisTemplate;
  * @since 1.3.1
  */
 @AutoConfiguration(after = VeloIdempotentRedissonAutoConfiguration.class)
+@ConditionalOnClass(name = "org.springframework.data.redis.core.RedisTemplate")
 @ConditionalOnConcurrencyBackend(prefix = "velo.idempotent", value = ConcurrencyBackend.REDIS,
         autoClassNames = {"org.aspectj.weaver.Advice", "org.springframework.data.redis.core.RedisTemplate"})
 @ConditionalOnMissingBean(IdempotentHandler.class)

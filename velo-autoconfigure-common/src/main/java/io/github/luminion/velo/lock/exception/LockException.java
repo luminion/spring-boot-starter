@@ -3,23 +3,19 @@ package io.github.luminion.velo.lock.exception;
 /**
  * 获取锁失败时抛出。
  *
- * <p>除提示信息外，还携带锁 key 与等待/持有配置，便于上层做结构化处理或友好提示。</p>
+ * <p>除提示信息外，还携带锁 key，便于上层做结构化处理或友好提示。</p>
  */
 public class LockException extends RuntimeException {
 
     private final String key;
-    private final long waitTimeout;
-    private final long lease;
 
     public LockException(String message) {
-        this(message, null, 0L, 0L);
+        this(message, null);
     }
 
-    public LockException(String message, String key, long waitTimeout, long lease) {
+    public LockException(String message, String key) {
         super(message);
         this.key = key;
-        this.waitTimeout = waitTimeout;
-        this.lease = lease;
     }
 
     /**
@@ -27,20 +23,6 @@ public class LockException extends RuntimeException {
      */
     public String getKey() {
         return key;
-    }
-
-    /**
-     * 等待获取锁的时间，单位为毫秒。
-     */
-    public long getWaitTimeout() {
-        return waitTimeout;
-    }
-
-    /**
-     * 锁的持有时间，单位为毫秒。
-     */
-    public long getLease() {
-        return lease;
     }
 
 }

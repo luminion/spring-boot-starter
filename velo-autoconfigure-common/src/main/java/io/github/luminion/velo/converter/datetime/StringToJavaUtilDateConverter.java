@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import org.springframework.format.datetime.standard.DateTimeFormatterFactory;
 import java.time.format.DateTimeParseException;
 import java.util.Date;
 
@@ -20,9 +21,9 @@ public class StringToJavaUtilDateConverter implements DateTimeConverter<String, 
     }
 
     public StringToJavaUtilDateConverter(String dateTimePattern, String datePattern, String zoneId) {
-        this.dateTimeFormatter = DateTimeFormatter.ofPattern(dateTimePattern);
+        this.dateTimeFormatter = new DateTimeFormatterFactory(dateTimePattern).createDateTimeFormatter();
         this.dateFormatter = datePattern == null || datePattern.equals(dateTimePattern)
-                ? null : DateTimeFormatter.ofPattern(datePattern);
+                ? null : new DateTimeFormatterFactory(datePattern).createDateTimeFormatter();
         this.zoneId = ZoneId.of(zoneId);
     }
 

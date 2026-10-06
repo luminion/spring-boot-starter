@@ -8,14 +8,22 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
- * Resolves enum code/name fields without depending on a specific Jackson major version.
+ * 解析枚举编码与名称字段，不依赖特定 Jackson 主版本。
  */
 public class JsonEnumMetadataResolver {
 
     private final VeloProperties.JacksonProperties jacksonProperties;
-    private final Map<String, JsonEnumMetadata> metadataCache = new ConcurrentHashMap<>();
+    // 按 Class 身份隔离，避免同名枚举跨 ClassLoader 复用映射。
+    private final ClassValue<ConcurrentMap<String, JsonEnumMetadata>> metadataCache =
+            new ClassValue<ConcurrentMap<String, JsonEnumMetadata>>() {
+                @Override
+                protected ConcurrentMap<String, JsonEnumMetadata> computeValue(Class<?> type) {
+                    return new ConcurrentHashMap<>();
+                }
+            };
 
     public JsonEnumMetadataResolver(VeloProperties.JacksonProperties jacksonProperties) {
         this.jacksonProperties = jacksonProperties;
@@ -52,8 +60,8 @@ public class JsonEnumMetadataResolver {
     }
 
     private JsonEnumMetadata getMetadata(Class<? extends Enum<?>> enumClass, Field codeField, Field nameField) {
-        String cacheKey = enumClass.getName() + ":" + codeField.getName() + ":" + nameField.getName();
-        return metadataCache.computeIfAbsent(cacheKey, key -> {
+        String cacheKey = codeField.getName() + ":" + nameField.getName();
+        return metadataCache.get(enumClass).computeIfAbsent(cacheKey, key -> {
             Map<Object, Object> mapping = new HashMap<>();
             for (Enum<?> constant : enumClass.getEnumConstants()) {
                 try {

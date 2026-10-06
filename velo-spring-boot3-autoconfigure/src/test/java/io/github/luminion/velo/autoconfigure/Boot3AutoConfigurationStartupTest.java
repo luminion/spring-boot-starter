@@ -44,7 +44,7 @@ class Boot3AutoConfigurationStartupTest {
     }
 
     @SpringBootConfiguration
-    @EnableAutoConfiguration
+    @EnableAutoConfiguration(excludeName = "org.redisson.spring.starter.RedissonAutoConfigurationV2")
     static class TestApplication {
     }
 }

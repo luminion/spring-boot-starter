@@ -1,5 +1,6 @@
 package io.github.luminion.velo.ratelimit;
 
+import io.github.luminion.velo.ConcurrencyBackend;
 import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.core.VeloMessageResolver;
 import io.github.luminion.velo.spi.Fingerprinter;
@@ -18,12 +19,25 @@ import org.springframework.context.annotation.Bean;
  */
 @AutoConfiguration(after = {
         io.github.luminion.velo.ratelimit.config.VeloRateLimitRedissonAutoConfiguration.class,
-        io.github.luminion.velo.ratelimit.config.VeloRateLimitCaffeineAutoConfiguration.class,
-        io.github.luminion.velo.ratelimit.config.VeloRateLimitJdkAutoConfiguration.class
+        io.github.luminion.velo.ratelimit.config.VeloRateLimitGuavaAutoConfiguration.class
 }, afterName = "io.github.luminion.velo.ratelimit.config.VeloRateLimitRedisAutoConfiguration")
 @ConditionalOnClass(Advice.class)
 @ConditionalOnProperty(prefix = "velo.rate-limit", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloRateLimitAutoConfiguration {
+
+    @Bean
+    @ConditionalOnMissingBean(RateLimitHandler.class)
+    public RateLimitHandler unavailableRateLimitHandler(VeloProperties properties) {
+        ConcurrencyBackend backend = properties.getRateLimit().getBackend();
+        if (backend != ConcurrencyBackend.AUTO) {
+            throw new IllegalStateException("No RateLimitHandler is available for velo.rate-limit.backend="
+                    + backend + ". Supported backends: REDISSON, REDIS, GUAVA, or a custom RateLimitHandler.");
+        }
+        return (key, qps) -> {
+            throw new IllegalStateException("No RateLimitHandler is available. Configure a supported backend "
+                    + "or provide a custom RateLimitHandler.");
+        };
+    }
 
     @Bean
     @ConditionalOnMissingBean(RateLimitAspect.class)

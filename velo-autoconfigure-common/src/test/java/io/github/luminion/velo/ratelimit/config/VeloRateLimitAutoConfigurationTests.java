@@ -1,172 +1,153 @@
 package io.github.luminion.velo.ratelimit.config;
 
 import io.github.luminion.velo.VeloProperties;
-import io.github.luminion.velo.spi.Fingerprinter;
 import io.github.luminion.velo.ratelimit.RateLimitHandler;
 import io.github.luminion.velo.ratelimit.VeloRateLimitAutoConfiguration;
 import io.github.luminion.velo.ratelimit.aspect.RateLimitAspect;
-import io.github.luminion.velo.ratelimit.support.CaffeineRateLimitHandler;
-import io.github.luminion.velo.ratelimit.support.JdkRateLimitHandler;
+import io.github.luminion.velo.ratelimit.support.GuavaRateLimitHandler;
 import io.github.luminion.velo.ratelimit.support.RedisRateLimitHandler;
 import io.github.luminion.velo.ratelimit.support.RedissonRateLimitHandler;
-import io.github.luminion.velo.test.TestRedisTemplate;
+import io.github.luminion.velo.spi.Fingerprinter;
+import io.github.luminion.velo.spi.fingerprint.SpelFingerprinter;
 import io.github.luminion.velo.test.TestStringRedisTemplate;
 import org.junit.jupiter.api.Test;
 import org.redisson.api.RedissonClient;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.test.context.FilteredClassLoader;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
-import org.springframework.context.annotation.Bean;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.test.util.ReflectionTestUtils;
-
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 
 class VeloRateLimitAutoConfigurationTests {
 
-    private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
+    private final ApplicationContextRunner contextRunner = coreRunner()
             .withConfiguration(AutoConfigurations.of(
                     VeloRateLimitRedissonAutoConfiguration.class,
                     VeloRateLimitRedisConfiguration.class,
-                    VeloRateLimitCaffeineAutoConfiguration.class,
-                    VeloRateLimitJdkAutoConfiguration.class
-            ));
+                    VeloRateLimitGuavaAutoConfiguration.class));
 
-    @Test
-    void shouldCreateDefaultRateLimitHandler() {
-        contextRunner
-                .run(context -> assertThat(context.getBean(RateLimitHandler.class))
-                        .isInstanceOf(CaffeineRateLimitHandler.class));
+    private static ApplicationContextRunner coreRunner() {
+        return new ApplicationContextRunner()
+                .withConfiguration(AutoConfigurations.of(VeloRateLimitAutoConfiguration.class))
+                .withUserConfiguration(PropertiesConfiguration.class)
+                .withBean(Fingerprinter.class, SpelFingerprinter::new);
     }
 
     @Test
-    void shouldPreferRedissonHandlerWhenRedissonAndRedisAreBothAvailable() {
-        contextRunner
-                .withBean(RedissonClient.class, () -> mock(RedissonClient.class))
-                .withBean("redisTemplate", RedisTemplate.class, TestRedisTemplate::new)
-                .withBean("stringRedisTemplate", StringRedisTemplate.class, TestStringRedisTemplate::new)
+    void shouldCreateDefaultRateLimitHandlerAndAspect() {
+        contextRunner.run(context -> {
+            assertThat(context).hasNotFailed().hasSingleBean(RateLimitAspect.class);
+            assertThat(context.getBean(RateLimitHandler.class)).isInstanceOf(GuavaRateLimitHandler.class);
+        });
+    }
+
+    @Test
+    void shouldPreferRedissonWhenRedisIsAlsoAvailable() {
+        contextRunner.withBean(RedissonClient.class, () -> mock(RedissonClient.class))
+                .withBean(StringRedisTemplate.class, TestStringRedisTemplate::new)
                 .run(context -> assertThat(context.getBean(RateLimitHandler.class))
                         .isInstanceOf(RedissonRateLimitHandler.class));
     }
 
     @Test
-    void shouldUseStringRedisTemplateWhenRedissonBackendIsDisabled() {
-        contextRunner
-                .withPropertyValues("velo.rate-limit.backend=redis")
-                .withBean("redisTemplate", RedisTemplate.class, TestRedisTemplate::new)
-                .withBean("stringRedisTemplate", StringRedisTemplate.class, TestStringRedisTemplate::new)
+    void shouldPreferRedisToGuava() {
+        contextRunner.withBean(StringRedisTemplate.class, TestStringRedisTemplate::new)
                 .run(context -> assertThat(context.getBean(RateLimitHandler.class))
                         .isInstanceOf(RedisRateLimitHandler.class));
     }
 
     @Test
-    void shouldUseCustomNamedStringRedisTemplateByType() {
-        contextRunner
-                .withPropertyValues("velo.rate-limit.backend=redis")
-                .withBean("businessRedisTemplate", StringRedisTemplate.class, TestStringRedisTemplate::new)
+    void shouldRejectExplicitRemovedJdkBackend() {
+        contextRunner.withPropertyValues("velo.rate-limit.backend=jdk")
+                .withBean(StringRedisTemplate.class, TestStringRedisTemplate::new)
+                .run(context -> assertThat(context.getStartupFailure()).hasRootCauseInstanceOf(IllegalStateException.class)
+                        .hasStackTraceContaining("velo.rate-limit.backend=JDK")
+                        .hasStackTraceContaining("Supported backends"));
+    }
+
+    @Test
+    void shouldUseExplicitGuavaBackendEvenWhenRedisIsAvailable() {
+        contextRunner.withPropertyValues("velo.rate-limit.backend=guava")
+                .withBean(StringRedisTemplate.class, TestStringRedisTemplate::new)
+                .run(context -> assertThat(context.getBean(RateLimitHandler.class))
+                        .isInstanceOf(GuavaRateLimitHandler.class));
+    }
+
+    @Test
+    void customHandlerShouldOverrideBackendSelection() {
+        RateLimitHandler custom = (key, qps) -> true;
+        contextRunner.withPropertyValues("velo.rate-limit.backend=redis")
+                .withBean(RateLimitHandler.class, () -> custom)
                 .run(context -> {
                     assertThat(context).hasNotFailed();
-                    assertThat(context.getBean(RateLimitHandler.class))
-                            .isInstanceOf(RedisRateLimitHandler.class);
+                    assertThat(context.getBean(RateLimitHandler.class)).isSameAs(custom);
                 });
     }
 
     @Test
-    void shouldUseCustomNamedStringRedisTemplateInAutoBackend() {
-        contextRunner
-                .withBean("businessRedisTemplate", StringRedisTemplate.class, TestStringRedisTemplate::new)
-                .run(context -> assertThat(context.getBean(RateLimitHandler.class))
-                        .isInstanceOf(RedisRateLimitHandler.class));
-    }
-
-    @Test
-    void shouldPreferPrimaryStringRedisTemplateWhenMultipleCandidatesExist() {
-        contextRunner
-                .withPropertyValues("velo.rate-limit.backend=redis")
-                .withUserConfiguration(MultipleStringRedisTemplateConfiguration.class)
-                .run(context -> {
-                    RedisRateLimitHandler handler = (RedisRateLimitHandler) context.getBean(RateLimitHandler.class);
-                    assertThat(ReflectionTestUtils.getField(handler, "redisTemplate"))
-                            .isSameAs(context.getBean("primaryStringRedisTemplate"));
-                });
-    }
-
-    @Test
-    void shouldUseDefaultStringRedisTemplateWhenMultipleCandidatesHaveNoPrimary() {
-        contextRunner
-                .withPropertyValues("velo.rate-limit.backend=redis")
-                .withBean("stringRedisTemplate", StringRedisTemplate.class, TestStringRedisTemplate::new)
-                .withBean("secondaryStringRedisTemplate", StringRedisTemplate.class, TestStringRedisTemplate::new)
-                .run(context -> {
-                    RedisRateLimitHandler handler = (RedisRateLimitHandler) context.getBean(RateLimitHandler.class);
-                    assertThat(ReflectionTestUtils.getField(handler, "redisTemplate"))
-                            .isSameAs(context.getBean("stringRedisTemplate"));
-                });
-    }
-
-    @Test
-    void shouldUseExplicitBackendWhenConfigured() {
-        contextRunner
-                .withPropertyValues("velo.rate-limit.backend=jdk")
-                .run(context -> assertThat(context.getBean(RateLimitHandler.class))
-                        .isInstanceOf(JdkRateLimitHandler.class));
-    }
-
-    @Test
-    void shouldUseUserConfiguredHandlerWhenPresent() {
-        contextRunner
-                .withPropertyValues("velo.rate-limit.backend=redisson")
-                .withBean(RateLimitHandler.class, CustomRateLimitHandler::new)
-                .run(context -> assertThat(context.getBean(RateLimitHandler.class))
-                        .isInstanceOf(CustomRateLimitHandler.class));
-    }
-
-    @Test
-    void shouldFailWhenExplicitBackendDependencyBeanIsMissing() {
-        contextRunner
-                .withPropertyValues("velo.rate-limit.backend=redisson")
+    void shouldFailWhenExplicitRedissonDependencyIsMissing() {
+        contextRunner.withPropertyValues("velo.rate-limit.backend=redisson")
                 .run(context -> assertThat(context.getStartupFailure()).isNotNull());
     }
 
     @Test
-    void shouldCreateAspectWhenCoreDependenciesExist() {
-        new ApplicationContextRunner()
-                .withConfiguration(AutoConfigurations.of(
-                        VeloRateLimitRedissonAutoConfiguration.class,
-                        VeloRateLimitRedisConfiguration.class,
-                        VeloRateLimitCaffeineAutoConfiguration.class,
-                        VeloRateLimitJdkAutoConfiguration.class,
-                        VeloRateLimitAutoConfiguration.class
-                ))
-                .withBean(VeloProperties.class, VeloProperties::new)
-                .withBean(Fingerprinter.class, () -> (target, method, args, expression) -> "fingerprint")
-                .run(context -> assertThat(context).hasSingleBean(RateLimitAspect.class));
+    void disabledFeatureShouldNotCreateHandlerOrAspect() {
+        contextRunner.withPropertyValues("velo.rate-limit.enabled=false")
+                .run(context -> assertThat(context).hasNotFailed()
+                        .doesNotHaveBean(RateLimitHandler.class).doesNotHaveBean(RateLimitAspect.class));
     }
 
-    static class CustomRateLimitHandler implements RateLimitHandler {
+    @Test
+    void missingHandlerShouldFailWhenUsed() {
+        coreRunner().run(context -> {
+            assertThat(context).hasNotFailed().hasSingleBean(RateLimitAspect.class);
+            assertThatThrownBy(() -> context.getBean(RateLimitHandler.class).tryAcquire("test", 1))
+                    .isInstanceOf(IllegalStateException.class).hasMessageContaining("No RateLimitHandler");
+        });
+    }
 
-        @Override
-        public boolean tryAcquire(String key, double rate, long window) {
-            return true;
-        }
+    @Test
+    void missingGuavaShouldUseUnavailableHandler() {
+        contextRunner.withClassLoader(new FilteredClassLoader("com.google.common"))
+                .run(context -> {
+                    assertThat(context).hasNotFailed().hasSingleBean(RateLimitAspect.class);
+                    assertThatThrownBy(() -> context.getBean(RateLimitHandler.class).tryAcquire("test", 1))
+                            .isInstanceOf(IllegalStateException.class).hasMessageContaining("No RateLimitHandler");
+                });
+    }
+
+    @Test
+    void explicitGuavaWithoutDependencyShouldFailClearlyAtStartup() {
+        contextRunner.withClassLoader(new FilteredClassLoader("com.google.common"))
+                .withPropertyValues("velo.rate-limit.backend=guava")
+                .run(context -> assertThat(context.getStartupFailure())
+                        .hasRootCauseInstanceOf(IllegalStateException.class)
+                        .hasStackTraceContaining("velo.rate-limit.backend=GUAVA"));
+    }
+
+    @Test
+    void shouldUseExplicitRedisBackend() {
+        contextRunner.withPropertyValues("velo.rate-limit.backend=redis")
+                .withBean("businessRedisTemplate", StringRedisTemplate.class, TestStringRedisTemplate::new)
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    assertThat(context.getBean(RateLimitHandler.class)).isInstanceOf(RedisRateLimitHandler.class);
+                });
+    }
+
+    @Test
+    void missingExplicitRedisBeanShouldFailAtStartup() {
+        contextRunner.withPropertyValues("velo.rate-limit.backend=redis")
+                .run(context -> assertThat(context.getStartupFailure()).isNotNull());
     }
 
     @Configuration(proxyBeanMethods = false)
-    static class MultipleStringRedisTemplateConfiguration {
-
-        @Bean
-        @Primary
-        StringRedisTemplate primaryStringRedisTemplate() {
-            return new TestStringRedisTemplate();
-        }
-
-        @Bean
-        StringRedisTemplate secondaryStringRedisTemplate() {
-            return new TestStringRedisTemplate();
-        }
+    @EnableConfigurationProperties(VeloProperties.class)
+    static class PropertiesConfiguration {
     }
 }

@@ -1,32 +1,23 @@
 package io.github.luminion.velo.lock.support;
 
 import io.github.luminion.velo.lock.LockHandler;
-import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * 基于 ReentrantLock 的本地锁实现 (兜底方案)
+ * 基于 ReentrantLock 的本地锁，仅在当前 JVM 内互斥。
+ * 活跃锁按 key 共享，最后一个持有者或获取调用离开后立即移除；不需要缓存过期或后台清理。
  *
  * @author luminion
  * @since 1.0.0
  */
-@Slf4j
 public class JdkLockHandler implements LockHandler {
-
-    public JdkLockHandler() {
-        log.warn("[Velo Starter] JdkLockHandler is used as a fallback implementation. " +
-                "This handler is not suitable for distributed environments and may cause lock validation to fail. " +
-                "Consider using Redis or Redisson for distributed locking.");
-    }
 
     private final ConcurrentHashMap<String, LockState> lockMap = new ConcurrentHashMap<>();
 
     @Override
-    public boolean lock(String key, long waitTime, long leaseTime) {
+    public boolean tryLock(String key) {
         LockState state = lockMap.compute(key, (k, existing) -> {
             LockState resolved = existing != null ? existing : new LockState();
             resolved.retain();
@@ -35,11 +26,8 @@ public class JdkLockHandler implements LockHandler {
 
         boolean locked = false;
         try {
-            locked = state.lock.tryLock(waitTime, TimeUnit.MILLISECONDS);
+            locked = state.lock.tryLock();
             return locked;
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            return false;
         } finally {
             if (!locked) {
                 releaseState(key, state);
@@ -53,12 +41,12 @@ public class JdkLockHandler implements LockHandler {
         if (state == null) {
             return;
         }
-        try {
-            if (state.lock.isHeldByCurrentThread()) {
+        if (state.lock.isHeldByCurrentThread()) {
+            try {
                 state.lock.unlock();
+            } finally {
+                releaseState(key, state);
             }
-        } finally {
-            releaseState(key, state);
         }
     }
 
@@ -74,14 +62,15 @@ public class JdkLockHandler implements LockHandler {
 
     private static final class LockState {
         private final ReentrantLock lock = new ReentrantLock();
-        private final AtomicInteger references = new AtomicInteger();
+        // 引用计数仅在同一 key 的 ConcurrentHashMap.compute 内修改。
+        private int references;
 
         private void retain() {
-            references.incrementAndGet();
+            references++;
         }
 
         private int release() {
-            return references.updateAndGet(current -> current > 0 ? current - 1 : 0);
+            return --references;
         }
     }
 }

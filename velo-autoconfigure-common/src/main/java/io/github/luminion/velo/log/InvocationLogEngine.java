@@ -124,7 +124,7 @@ public class InvocationLogEngine {
             if (record != null && selection.maxLength != 0) {
                 String text =
                         selection.metadata.voidResult
-                                ? InvocationLogSupport.VOID_RESULT
+                                ? InvocationLogSupport.limit(InvocationLogSupport.VOID_RESULT, selection.maxLength)
                                 : InvocationLogSupport.formatResult(value, formatter, selection.maxLength);
                 record.setContent(text);
                 write(record);
@@ -138,7 +138,7 @@ public class InvocationLogEngine {
                 Map<String, Object> content = new LinkedHashMap<>();
                 content.put("type", error.getClass().getName());
                 content.put("message", error.getMessage());
-                record.setContent(InvocationLogSupport.format(content, formatter, -1));
+                record.setContent(InvocationLogSupport.format(content, formatter, summaryLimit()));
                 write(record);
             }
         }
@@ -154,7 +154,7 @@ public class InvocationLogEngine {
                 Map<String, Object> content = new LinkedHashMap<>();
                 content.put("costMs", TimeUnit.NANOSECONDS.toMillis(elapsed));
                 content.put("thresholdMs", policy.threshold);
-                record.setContent(InvocationLogSupport.format(content, formatter, -1));
+                record.setContent(InvocationLogSupport.format(content, formatter, summaryLimit()));
                 write(record);
             }
         }
@@ -184,13 +184,20 @@ public class InvocationLogEngine {
                 }
                 record.setContent(InvocationLogSupport.format(selected, formatter, selection.maxLength));
             } catch (RuntimeException error) {
-                record.setContent(InvocationLogSupport.SERIALIZATION_FAILED_PAYLOAD);
+                record.setContent(InvocationLogSupport.limit(
+                        InvocationLogSupport.SERIALIZATION_FAILED_PAYLOAD, selection.maxLength));
             }
             write(record);
         }
 
         private void write(InvocationLogRecord record) {
             InvocationLogSupport.safeWrite(writer, record);
+        }
+
+        private int summaryLimit() {
+            return selection.maxLength > 0
+                    ? selection.maxLength
+                    : VeloProperties.InvocationDefaults.DEFAULT_MAX_PAYLOAD_LENGTH;
         }
     }
 

@@ -10,6 +10,7 @@ import tools.jackson.databind.BeanProperty;
 import tools.jackson.databind.DeserializationContext;
 import tools.jackson.databind.ValueDeserializer;
 import tools.jackson.databind.deser.std.StdDeserializer;
+import tools.jackson.databind.deser.jdk.StringDeserializer;
 
 import java.util.function.Function;
 
@@ -28,8 +29,14 @@ public class JacksonStringDeserializer extends StdDeserializer<String> {
     }
 
     @Override
+    public String getEmptyValue(DeserializationContext context) {
+        return "";
+    }
+
+    @Override
     public String deserialize(JsonParser p, DeserializationContext ctxt) throws JacksonException {
-        String text = p.getValueAsString();
+        // 先遵循 Jackson 的 token 与 coercion 规则，再应用字符串增强。
+        String text = StringDeserializer.instance.deserialize(p, ctxt);
         if (text != null && !text.isEmpty() && xssCleaner != null) {
             return xssCleaner.clean(text);
         }
@@ -66,8 +73,14 @@ public class JacksonStringDeserializer extends StdDeserializer<String> {
         }
 
         @Override
+        public String getEmptyValue(DeserializationContext context) {
+            return "";
+        }
+
+        @Override
         public String deserialize(JsonParser p, DeserializationContext ctxt) throws JacksonException {
-            String text = p.getValueAsString();
+            // 先遵循 Jackson 的 token 与 coercion 规则，再应用字符串增强。
+            String text = StringDeserializer.instance.deserialize(p, ctxt);
             if (text == null || text.isEmpty()) {
                 return text;
             }

@@ -1,61 +1,76 @@
 package io.github.luminion.velo.spi.fingerprint;
 
 import io.github.luminion.velo.spi.Fingerprinter;
+import org.springframework.aop.support.AopUtils;
 import org.springframework.context.expression.MethodBasedEvaluationContext;
 import org.springframework.core.DefaultParameterNameDiscoverer;
 import org.springframework.core.ParameterNameDiscoverer;
 import org.springframework.expression.Expression;
 import org.springframework.expression.ExpressionParser;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
-import org.springframework.util.ObjectUtils;
+import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
 
 import java.lang.reflect.Method;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * 基于 SpEL 的键解析器。
  */
 public class SpelFingerprinter implements Fingerprinter {
-    private static final int EXPRESSION_CACHE_MAX_SIZE = 256;
-    private static final ExpressionParser PARSER = new SpelExpressionParser();
     private static final ParameterNameDiscoverer PND = new DefaultParameterNameDiscoverer();
-    // 表达式不可变、解析结果线程安全；锁-free 读取，超限时整体清空自愈（防动态表达式洪峰撑爆缓存）
-    private static final ConcurrentHashMap<String, Expression> EXPRESSION_CACHE = new ConcurrentHashMap<>();
+    private final ExpressionParser parser;
+    // 仅缓存注解声明的固定表达式，不缓存求值上下文或请求结果。
+    private final ConcurrentMap<String, Expression> expressions = new ConcurrentHashMap<>();
+    // 按实际用户类隔离方法标识；ClassValue 随类卸载回收，不持有全局强引用。
+    private final ClassValue<ConcurrentMap<Method, String>> methodFingerprints =
+            new ClassValue<ConcurrentMap<Method, String>>() {
+                @Override
+                protected ConcurrentMap<Method, String> computeValue(Class<?> type) {
+                    return new ConcurrentHashMap<>();
+                }
+            };
 
     public SpelFingerprinter() {
+        this(new SpelExpressionParser());
     }
 
-    @Deprecated
-    public SpelFingerprinter(Function<Object[], String> ignored) {
-        this();
+    SpelFingerprinter(ExpressionParser parser) {
+        this.parser = parser;
     }
 
     @Override
     public String resolveMethodFingerprint(Object target, Method method, Object[] args, String expression) {
+        Class<?> targetClass = target == null ? method.getDeclaringClass()
+                : ClassUtils.getUserClass(AopUtils.getTargetClass(target));
+        Method specificMethod = AopUtils.getMostSpecificMethod(method, targetClass);
+        String methodFingerprint = methodFingerprints.get(targetClass).computeIfAbsent(specificMethod,
+                resolvedMethod -> buildMethodFingerprint(targetClass, resolvedMethod));
         if (StringUtils.hasText(expression)) {
-            Expression parsedExp = EXPRESSION_CACHE.get(expression);
-            if (parsedExp == null) {
-                // 解析在锁外进行：并发重复解析同一表达式是幂等的，最后一次 put 生效即可
-                parsedExp = PARSER.parseExpression(expression);
-                if (EXPRESSION_CACHE.size() >= EXPRESSION_CACHE_MAX_SIZE) {
-                    EXPRESSION_CACHE.clear();
-                }
-                EXPRESSION_CACHE.put(expression, parsedExp);
-            }
-            MethodBasedEvaluationContext context = new MethodBasedEvaluationContext(target, method, args, PND);
+            Expression parsedExp = expressions.computeIfAbsent(expression, parser::parseExpression);
+            MethodBasedEvaluationContext context = new MethodBasedEvaluationContext(target, specificMethod, args, PND);
             Object value = parsedExp.getValue(context);
             if (value == null) {
                 throw new IllegalArgumentException("SpEL key expression '" + expression + "' resolved to null.");
             }
-            String resolved = ObjectUtils.nullSafeToString(value);
+            if (!(value instanceof String || value instanceof Number || value instanceof Boolean
+                    || value instanceof Character || value instanceof UUID || value instanceof Enum<?>)) {
+                throw new IllegalArgumentException("SpEL key expression '" + expression
+                        + "' must resolve to a scalar value, but got " + value.getClass().getName() + ".");
+            }
+            String resolved = value instanceof Enum<?> ? ((Enum<?>) value).name() : value.toString();
             if (!StringUtils.hasText(resolved)) {
                 throw new IllegalArgumentException("SpEL key expression '" + expression + "' resolved to a blank value.");
             }
-            return resolved.trim();
+            return methodFingerprint + ':' + resolved;
         }
-        StringBuilder fingerprint = new StringBuilder(method.getDeclaringClass().getName())
+        return methodFingerprint;
+    }
+
+    private static String buildMethodFingerprint(Class<?> targetClass, Method method) {
+        StringBuilder fingerprint = new StringBuilder(targetClass.getName())
                 .append('#')
                 .append(method.getName())
                 .append('(');

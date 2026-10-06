@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * 基于 Caffeine 的本地幂等处理器
- * 通过存储过期时间戳并利用 asMap().compute 方法保证原子性
+ * 使用 Caffeine 管理每条记录的 TTL，通过原子 putIfAbsent 防止重复进入。
  *
  * @author luminion
  */
@@ -17,7 +17,7 @@ public class CaffeineIdempotentHandler implements IdempotentHandler {
 
     // 仅按 TTL 过期，不设 maximumSize：容量驱逐会赶走仍在幂等窗口内的记录，
     // 导致被驱逐 key 的重复请求重新通过，破坏“TTL 内拒绝重复提交”语义。
-    // 每个 key 的存活时间由自定义 Expiry 按其 TTL 独立控制，到期即自动清理。
+    // 每个 key 的存活时间由原生 Expiry 按其 TTL 独立控制，到期即失效，物理清理由原生维护执行。
     private final Cache<String, Marker> cache = Caffeine.newBuilder()
             .expireAfter(new Expiry<String, Marker>() {
                 @Override

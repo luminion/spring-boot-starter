@@ -14,7 +14,7 @@ Velo Spring Boot Starter 是一组低侵入的 Spring Boot 自动配置扩展。
 
 - 统一的 `velo.*` 配置模型，集中管理各类自动配置开关
 - 提供 `@Idempotent`、`@RateLimit`、`@Lock` 三类并发控制能力
-- 支持 Redis / Redisson / Caffeine / JDK 多后端，并在启动时按依赖和 Bean 条件自动选择
+- 按功能适配 Redis / Redisson / Guava / Caffeine / JDK，并在启动时按依赖和 Bean 条件自动选择
 - 提供 Spring Cache + Redis Cache 的统一 TTL 和 key 前缀配置
 - 提供 Jackson 日期时间、超大整数、枚举派生字段、字符串转换增强
 - 提供 MyBatis-Plus 分页、乐观锁、防全表更新拦截器自动注册
@@ -115,6 +115,8 @@ velo:
 
 
 
+Velo 组件可直接从 Maven Central 获取，无需额外仓库配置。示例中的 `${velo.version}` 请在业务 POM 的 `properties` 中定义；使用本地安装版本时，与源码的 `revision` 保持一致。
+
 ### Spring Boot 2
 
 ```xml
@@ -172,12 +174,51 @@ Spring Boot 的 `spring.threads.virtual.enabled` 虚拟线程自动配置从 Boo
 </plugin>
 ```
 
-### 验证与发布
+### 本地安装
 
-- 在 Java 17 下运行 `mvn -T 4 verify` 可执行完整构建；CI 还分别验证 Boot 2.7 / Java 8、Boot 3.2 与当前 3.x / Java 17、Boot 4.0 / Java 17。
-- 真实 Redis 集成测试在设置 `VELO_TEST_REDIS_URL=redis://localhost:6379` 后执行；CI 会启动独立 Redis 服务。未设置时该组测试跳过，不影响本地单元测试。
-- Maven Central 发布由 GitHub Actions 的 **Verify and publish** 工作流手动触发，仅允许 `master` 分支且 `publish=true`。兼容性矩阵全部通过后才执行发布。发布环境需配置 `CENTRAL_USERNAME`、`CENTRAL_PASSWORD`、`MAVEN_GPG_KEY`、`MAVEN_GPG_PASSPHRASE` 四项密钥。
-- 本地 `mvn deploy` 默认不会自动公开发布包；确认已完成验证并需要公开发布时显式使用 `mvn -Ppublish deploy`。
+需要使用源码版本时，在 Java 17 环境下执行 `bash ./mvnw -T 4 install -DskipTests -Dmaven.javadoc.skip=true`（Windows 使用 `mvnw.cmd`），随后按上面的 Maven 坐标引用本地仓库中的版本。
+
+### 可选 Redisson 依赖
+
+导入与 Starter 相同主版本的 `velo-spring-boot2/3/4-dependencies` BOM，统一管理可选组件版本：
+
+```xml
+<dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>io.github.luminion</groupId>
+            <artifactId>velo-spring-boot3-dependencies</artifactId>
+            <version>${velo.version}</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
+```
+
+| Spring Boot | Redisson | Spring Data 适配组件 | Redisson 自动配置入口 |
+| --- | --- | --- | --- |
+| 2.7 | 3.40.0 | `redisson-spring-data-27` | `RedissonAutoConfigurationV2` |
+| 3.5（BOM 默认） | 3.50.0 | `redisson-spring-data-35` | `RedissonAutoConfigurationV2` |
+| 4.0 | 4.3.1 | `redisson-spring-data-40` | `RedissonAutoConfigurationV4` |
+
+Boot 3.2 / 3.3 / 3.4 应排除 Redisson starter 默认的 data-35，分别补充同版本的 `redisson-spring-data-32` / `33` / `34`；Boot 3 BOM 也管理这些组件的版本。
+
+Boot 3.5 / 4 在导入对应 BOM 后，添加 `org.redisson:redisson-spring-boot-starter` 即可。Boot 2 的 BOM 会排除 starter 默认携带的 data-34，还必须添加以下 data-27 依赖；BOM 管理版本，不能自行新增传递依赖。
+
+```xml
+<dependency>
+    <groupId>org.redisson</groupId>
+    <artifactId>redisson-spring-boot-starter</artifactId>
+</dependency>
+<!-- 仅 Spring Boot 2 需要补充 -->
+<dependency>
+    <groupId>org.redisson</groupId>
+    <artifactId>redisson-spring-data-27</artifactId>
+</dependency>
+```
+
+适配组件的选择参照 [Redisson 官方 Spring 集成说明](https://redisson.pro/docs/integration-with-spring/)。
 
 ---
 
@@ -254,6 +295,8 @@ public UserDTO getById(Long id) {
 
 ### 2. Excel 自动配置
 
+默认写出类型与 Velo Jackson 默认策略一致：Long / BigInteger / BigDecimal 使用文本，Float / Double 使用数值，Boolean 使用布尔单元格。读取仍支持字符串形式的数字及“是/否”等布尔输入。日期默认拒绝非法日历日期，显式格式配置仍优先。
+
 Velo 提供两层能力：
 
 - Excel helper 工具类，随依赖引入即可直接使用
@@ -324,7 +367,7 @@ EasyExcelHelper.registerConverters(converters);
 
 ### 3. 幂等
 
-`@Idempotent` 用于防重复提交，默认即可使用。
+`@Idempotent` 用于防重复提交，需要 Caffeine、Redis 或 Redisson 后端。
 
 可选额外依赖：
 
@@ -355,10 +398,14 @@ public void submitOrder(Long userId) {
 
 说明：
 
-- `backend` 可选 `AUTO`、`REDISSON`、`REDIS`、`CAFFEINE`、`JDK`
-- `AUTO` 模式下按自动配置顺序选择后端：`REDISSON -> REDIS -> CAFFEINE -> JDK`
+- `backend` 可选 `AUTO`、`REDISSON`、`REDIS`、`CAFFEINE`
+- `AUTO` 模式下按自动配置顺序选择后端：`REDISSON -> REDIS -> CAFFEINE`
+- Caffeine 使用原生缓存过期；Redis 使用 `SET NX` + TTL 和失败时的 token 比对删除；Redisson 使用原生 `RBucket`，Velo 不额外维护本地幂等缓存或清理任务
+- 没有可用实现时，应用仍可启动，调用带注解的方法会在业务执行前报错；显式指定不可用或不支持的后端时启动报错。自定义 `IdempotentHandler` 优先
 - `prefix` 默认 `idempotent:`
 - `ttl` 单位固定为毫秒，默认 `3000`（3 秒）
+- TTL 从首次进入时开始计算，成功结束不重置；默认 3 秒主要用于防连点，长任务应配置更长窗口。TTL 到期后同 key 可再次进入，不保证业务永久只执行一次
+- `value` 与 `key` 互为别名，`@Idempotent("#userId")` 等价于 `@Idempotent(key = "#userId")`；同时设置时必须一致
 - 业务失败（抛异常）时会清除本次幂等记录以允许重试；清除采用 token 比对，只删除本次请求写入的记录，不会误删并发请求在窗口内刚写入的新记录
 - 幂等 key 始终以方法（`全限定类名#方法名(参数类型...)`）为前缀，再拼接 SpEL 结果，与限流分桶语义一致：**不同方法或同名重载方法即使用相同的 SpEL key（如都用 `#orderId`）也不会互相碰撞、共享同一幂等窗口**
 
@@ -384,7 +431,7 @@ public void submitOrder(Long userId) {
 
 - 需要 Redisson 后端时引入 `org.redisson:redisson-spring-boot-starter`
 - 需要 Redis 后端时引入 `spring-boot-starter-data-redis`
-- 需要 Caffeine 后端时引入 `com.github.ben-manes.caffeine:caffeine`
+- 需要 Guava 后端时引入 `com.google.guava:guava`，版本由各 Boot BOM 管理
 
 关键配置：
 
@@ -401,7 +448,7 @@ velo:
 ```java
 import io.github.luminion.velo.ratelimit.annotation.RateLimit;
 
-@RateLimit(key = "#userId", permits = 10, window = 1000)
+@RateLimit(qps = 10, key = "#userId")
 public Object query(Long userId) {
     return null;
 }
@@ -409,11 +456,15 @@ public Object query(Long userId) {
 
 说明：
 
-- `permits` 表示一个时间窗口内允许通过的最大请求数
-- `window` 定义窗口大小，单位固定为毫秒，默认 `1000`（1 秒）
-- `backend` 与幂等一致，也支持 `AUTO/REDISSON/REDIS/CAFFEINE/JDK`
-- `AUTO` 模式下默认选择顺序同幂等：`REDISSON -> REDIS -> CAFFEINE -> JDK`
-- `REDIS` 后端使用 Boot 默认的 `stringRedisTemplate` 执行 Lua，脚本通过 Redis `TIME` 获取统一时钟，不受应用节点时间偏差影响
+- `qps` 表示每秒请求速率，默认 `50`，必须为正整数
+- `value` 与 `qps` 互为别名，`@RateLimit(10)` 等价于 `@RateLimit(qps = 10)`；同时设置时必须一致，`key` 单独配置
+- `backend` 支持 `AUTO/REDISSON/REDIS/GUAVA`，`AUTO` 默认顺序为 `REDISSON -> REDIS -> GUAVA`
+- Guava 使用原生 `RateLimiter`，同 key 共享限流器，空闲五分钟后由 Guava 原生缓存过期；额度补充和空闲突发遵循 Guava 行为，仅保证单 JVM 内有效
+- Redis 使用 Lua 原子计数，首次请求开始固定一秒窗口，后续请求不延长 TTL；过期由 Redis 处理，无本地缓存或清理任务
+- **Redis 允许窗口边界突发**：上一窗口末尾和下一窗口开头可连续消耗各自额度，短时间内最多接近两倍 `qps`；不能当作“任意滚动一秒最多 `qps` 次”的严格限制
+- Redisson 直接使用 `RRateLimiter`，配置为每秒 `qps` 次，额度按 Redisson 原生规则恢复；只保证各后端声明的速率语义，不统一额度归还节奏
+- 多实例共享配额请使用 Redis 或 Redisson；Velo 不统一不同后端的额度归还节奏
+- 没有可用实现时，应用仍可启动，调用带注解的方法会在业务执行前报错；显式指定不可用或不支持的后端时启动报错。自定义 `RateLimitHandler` 优先
 
 关于 `key` 的分桶语义（重要）：
 
@@ -422,25 +473,10 @@ public Object query(Long userId) {
 
 | 写法 | 实际行为 |
 | --- | --- |
-| `@RateLimit(permits=10)` | 所有调用共享 10 次/窗口 |
-| `@RateLimit(key="#userId", permits=10)` | 每个 userId 独立 10 次/窗口 |
+| `@RateLimit(10)` | 该方法所有调用共享每秒 10 次的速率 |
+| `@RateLimit(qps=10, key="#userId")` | 该方法每个 userId 独立按每秒 10 次限流 |
 
 > ⚠️ 如果你期望「每个用户 / 每个资源独立限流」，必须显式指定 `key`，否则会退化为全局共享配额。
-
-关于小数 `permits`：
-
-`permits` 支持小数，用于表达「低于 1 次 / 窗口」的限流需求。换算规则：
-
-- 实际容量 `capacity = ceil(permits)`（向上取整）
-- 实际窗口 `interval = window × (capacity / permits)`（拉长窗口以保持平均速率）
-
-| 配置 | 含义 | 实际实现 |
-| --- | --- | --- |
-| `permits=10, window=1000` | 10 次/秒 | 容量=10，窗口=1000ms |
-| `permits=0.5, window=1000` | 0.5 次/秒（即 2 秒 1 次） | 容量=1，窗口=2000ms |
-| `permits=0.2, window=1000` | 0.2 次/秒（即 5 秒 1 次） | 容量=1，窗口=5000ms |
-
-多数场景用整数更直观，例如「每 5 秒 1 次」可直接写 `@RateLimit(permits=1, window=5000)`，等价于 `permits=0.2, window=1000`。
 
 ### 5. 锁
 
@@ -450,7 +486,6 @@ public Object query(Long userId) {
 
 - 需要 Redisson 后端时引入 `org.redisson:redisson-spring-boot-starter`
 - 需要 Redis 后端时引入 `spring-boot-starter-data-redis`
-- 需要 Caffeine 后端时引入 `com.github.ben-manes.caffeine:caffeine`
 
 关键配置：
 
@@ -460,7 +495,7 @@ velo:
     enabled: true
     backend: AUTO
     prefix: "lock:"
-    retry-interval: 10ms
+    redis-ttl-seconds: 60
 ```
 
 使用示例：
@@ -468,7 +503,7 @@ velo:
 ```java
 import io.github.luminion.velo.lock.annotation.Lock;
 
-@Lock(key = "#orderId", waitTimeout = 1000, lease = 30000)
+@Lock(key = "#orderId")
 public void pay(Long orderId) {
     // ...
 }
@@ -476,19 +511,31 @@ public void pay(Long orderId) {
 
 说明：
 
-- `backend` 也支持 `AUTO`、`REDISSON`、`REDIS`、`CAFFEINE`、`JDK`
-- `AUTO` 默认顺序为 `REDISSON -> REDIS -> CAFFEINE -> JDK`
-- `waitTimeout` 单位固定为毫秒，默认 `0`，表示拿不到锁立即失败
-- `retry-interval` 默认 `10ms`，仅用于简单 Redis 后端等待锁时的轮询；值越小获取越及时，但 Redis 请求频率越高
-- `lease` 单位固定为毫秒，默认 `30000`（30 秒）
-- `lease > 0` 在 Redis 简单实现和 Redisson 中都是固定 TTL；`lease = -1` 才请求看门狗续约。Redis 简单实现使用 30 秒初始 TTL、每 10 秒按 token 原子续约，Redisson 使用自身的原生看门狗
-- 看门狗只能覆盖进程仍可执行续期任务的长调用；进程崩溃或 Redis 长时间不可用时，锁仍会在 TTL 到期后释放。耗时不确定的任务建议显式使用 `lease = -1`，有更高分布式锁要求时优先使用 Redisson
-- `REDIS` / `REDISSON` 更适合分布式场景，`CAFFEINE` / `JDK` 只保证单 JVM 内互斥
-- 本地锁只有一份实现：Caffeine 是纯缓存库、不提供互斥锁 API，因此 `CAFFEINE` 档位与 `JDK` 完全一致（复用同一实现），`backend=CAFFEINE` 仍可用，只是不再单独维护
+- `backend` 支持 `AUTO`、`REDISSON`、`REDIS`、`JDK`
+- `AUTO` 默认顺序为 `REDISSON -> REDIS -> JDK`；JDK 无需额外依赖，自定义 `LockHandler` 优先
+- 三种后端均只尝试一次，拿不到锁立即失败；不提供等待参数或自动重试
+- `value` 与 `key` 互为别名，`@Lock("#orderId")` 等价于 `@Lock(key = "#orderId")`；同时设置时必须一致
+- 自定义 `LockHandler` 实现 `tryLock(String key)` 和 `unlock(String key)`；成功获取后必须在原线程配对释放。Redis / Redisson 获取过程的连接异常向上抛出，与锁被占用返回 `false` 区分
+- 注解和 `LockHandler` 不提供租期参数；锁的生命周期由后端管理
+- Redis 简单锁的固定 TTL 由构造函数指定秒数，自动配置使用 `velo.lock.redis-ttl-seconds`，默认 `60`，必须为正数；重入不重置 TTL，不启动任何自写续期线程
+- Redis TTL 到期后自动释放，不中断正在执行的业务，也不保证到期后的互斥；业务必须在 TTL 内完成。耗时不确定的调用优先使用 Redisson
+- Redisson 使用不指定租期的原生获取接口，由自身看门狗续期；超时时间使用 Redisson 的 `lockWatchdogTimeout` 配置
+- Redis / Redisson 用于分布式场景；JDK 使用原生 `ReentrantLock`，只保证单 JVM 内互斥，不超时释放正在使用的锁
+- JDK 只登记正在获取或持有的锁，获取失败撤销引用，最后一个使用者离开后立即删除；不能每次创建独立锁，也不能按缓存 TTL 淘汰活跃锁，否则会破坏互斥
 - `REDIS` 后端支持同线程可重入（同一线程重复加同一把锁不会自锁死），最外层释放时才真正删除 Redis 锁
+- Redis 锁只在当前线程持有期间记录 token 和重入次数，最外层释放后立即清理；Redis 幂等和 Redisson 三种后端都不额外维护本地键缓存
 - `key` 为空时降级为方法级锁（基于 `全限定类名#方法名(参数类型...)`），表示「该方法全局串行执行」，是一个有意义的语义，因此安静降级、不打告警；需要按业务维度加锁时请显式指定，例如 `@Lock(key = "#orderId")`
+- 显式 `key` 也带完整方法标识，因此不同方法即使使用相同业务值，也会使用不同的锁
 
 ### 6. 并发控制组合顺序
+
+这三项功能不创建 Velo 自己的定时清理任务、续期任务、轮询或后台线程。Guava / Caffeine 的过期和维护交给原生缓存，Redis 的过期交给服务端。JDK / Redisson 锁调用原生无等待的 `tryLock()`，Redis 锁只发送一次 `SET NX`。Redisson 看门狗和 Redis 客户端网络线程仍由第三方管理；Caffeine 原生维护可能使用公共线程池，因此不代表整个应用没有后台线程。
+
+JDK 锁和 Redis 锁的本地记录只保存活跃调用，不随历史业务 key 累积；切面在业务成功或抛出异常时均释放锁。Guava 限流与 Caffeine 幂等缓存依赖原生过期机制，过期记录不再生效，但物理清理不保证发生在到期瞬间。两者未设置容量淘汰上限，避免淘汰仍有效的记录而放过限流或重复提交；大量不同 key 在有效期内仍会占用相应内存，需要按业务控制 key 数量和 TTL。
+
+注解请标在具体实现方法上；`@RateLimit` 也可以标在具体实现类上，作用于该类声明的方法，方法上的注解优先。Starter 不额外搜索父接口或父类上的注解；继承方法是否被拦截沿用 Spring AOP 原生行为，不作为额外继承能力承诺。同类内部直接调用绕过代理时，切面不会生效。
+
+三种注解使用同一套键规则：`功能前缀 + 实际用户类全名#方法名(完整参数类型...) + 可选的 :SpEL结果`。保留完整类名和重载签名，避免简称或同名方法碰撞。表达式结果支持字符串、数字、布尔值、字符、UUID 和枚举（使用 `name()`）；空值、空白或数组、集合、对象等复杂结果会报错，请明确取业务 ID。字符串原样保留，不裁剪首尾空格。解析器只缓存固定声明的表达式和方法标识，每次调用创建独立求值上下文。
 
 当 `@Idempotent`、`@RateLimit`、`@Lock` 同时作用于同一个方法时，starter 内置顺序为：
 
@@ -496,7 +543,7 @@ public void pay(Long orderId) {
 @Idempotent -> @RateLimit -> @Lock -> 业务方法
 ```
 
-这意味着重复提交会最先被拒绝，不消耗限流令牌，也不会尝试加锁；限流失败时不会进入锁等待；只有真正允许执行业务的方法调用才会获取锁。
+这意味着重复提交会最先被拒绝，不消耗限流令牌，也不会尝试加锁；限流失败时不会尝试加锁；只有真正允许执行业务的方法调用才会获取锁。
 
 这些切面使用接近 `Ordered.LOWEST_PRECEDENCE` 的低优先级顺序值，并在三者之间保留较大间隔，便于业务自定义切面通过 `@Order` 插入到合适位置。
 
@@ -601,15 +648,15 @@ velo:
 ```java
 @Bean
 public LogValueFormatter logValueFormatter() {
-    return value -> myFormatter.format(value);
+    return (value, output) -> myMapper.writeValue(output, value);
 }
 ```
 
-默认使用应用已有的 Jackson 2/3 Mapper，复用字段忽略、日期格式、命名规则和自定义模块，非 Web 应用也可用；没有 Mapper 时使用 `String.valueOf`。可使用 `@JsonIgnore` 或 MixIn 隐藏 DTO 字段。Jackson 转换失败输出 `serialization-failed`，不会回退到可能暴露敏感字段的 toString。HttpEntity/ResponseEntity 返回值只转换 body，原响应对象保持不变。流、Servlet 等技术对象省略内容；循环容器和异常深度不会无限遍历。
+默认使用应用已有的 Jackson 2/3 Mapper，直接向提供的 Writer 写出，复用字段忽略、日期格式、命名规则和自定义模块，非 Web 应用也可用；没有 Mapper 时写出 `String.valueOf`。可使用 `@JsonIgnore` 或 MixIn 隐藏 DTO 字段。Jackson 转换失败输出 `serialization-failed`，不会回退到可能暴露敏感字段的 toString。HttpEntity/ResponseEntity 返回值只转换 body，原响应对象保持不变。流、Servlet 等技术对象省略内容；容器预处理共享 256 次访问预算，并保留循环和深度保护。DTO 原样交给 Mapper，不自行反射拆解。自定义 formatter 应直接写入 Writer、不关闭它，并向外传递写出异常；先生成完整字符串的实现仍需自行承担生成成本。
 
 参数、结果、慢日志及异常摘要都使用同一个 formatter；慢日志中的 Long 数值也沿用应用的序列化规则，例如将耗时和阈值输出为字符串。
 
-`max-payload-length=-1` 默认不限长，正数截断最终载荷字符串，`0` 关闭参数、结果及协议头载荷日志的输出和序列化，慢调用/异常摘要仍可输出。限长不限制对象遍历或序列化的工作量。框架不按字段名称自动脱敏；协议头的空 allowlist 表示全部头，启用采集时应设置需要的白名单。Feign 在底层客户端构建请求后捕获最终一次尝试的真实请求/响应头，因此请求头日志可能出现在完成阶段；逻辑请求目标使用方法名、HTTP 方法和映射路径，入口和完成阶段保持一致。Controller 响应头取当前方法返回或抛出异常时已设置的头，不代表 Servlet 最终提交后的完整响应。
+`max-payload-length` 默认 `4096` 字符。正数限制单行转义后的载荷，包含省略号；超限时停止写出并保留文本前缀，不保证是完整 JSON。`0` 关闭参数、结果及协议头载荷日志的输出和序列化，慢调用/异常摘要仍可输出；`-1` 取消载荷字符上限，但容器预处理预算仍生效。摘要在 `0` 或 `-1` 下仍限制为 4096 字符。Jackson 的内部缓冲可能使超限前多处理部分对象；DTO getter、自定义 serializer 或 formatter 自己产生的计算和分配不受 Writer 控制。框架不按字段名称自动脱敏；协议头的空 allowlist 表示全部头，启用采集时应设置需要的白名单。Feign 在底层客户端构建请求后捕获最终一次尝试的真实请求/响应头，因此请求头日志可能出现在完成阶段；逻辑请求目标使用方法名、HTTP 方法和映射路径，入口和完成阶段保持一致。Controller 响应头取当前方法返回或抛出异常时已设置的头，不代表 Servlet 最终提交后的完整响应。
 
 trace 模块通过独立 `VeloTraceAutoConfiguration`、HTTP Filter、Feign 传播配置及入口作用域管理启用。`velo.log.enabled=false` 不影响 trace；`velo.trace.enabled=false` 不影响日志功能。HTTP Filter 保留异步/错误派发复用，TaskDecorator 保留常见执行器传播，两者与 Future 的日志完成监听无关。原公共 Resolver/TraceContext 类型和包名保持不变。
 
@@ -835,6 +882,7 @@ velo:
 - 未引入 MyBatis-Plus 时，相关自动配置会安全跳过，不会因为可选依赖缺失导致应用启动失败
 - 若容器里已经存在同类 `InnerInterceptor` Bean，starter 不会覆盖
 - 默认会把当前容器中的 `InnerInterceptor` 汇总进 `MybatisPlusInterceptor`
+- 用户分页拦截器即使将 `@Bean` 返回类型声明为 `InnerInterceptor`，Velo 也会按实际类型退让，只保留用户的分页 Bean 和唯一执行实例；建议声明具体返回类型，让 Spring 在注册阶段就能识别。
 - Velo 内置拦截器默认按 `OptimisticLocker → BlockAttack → Pagination` 排列，使用低优先级值 `LOWEST_PRECEDENCE - 300/-200/-100`
 - 用户可以在自定义 `InnerInterceptor` Bean 方法上使用 `@Order` 控制执行位置；通常值越小越先执行，未声明 `@Order` 时不承诺与 Velo 的严格相对顺序
 
@@ -863,7 +911,7 @@ velo:
 
 - `velo.redis.enabled` 默认开启
 - 未引入 Spring Data Redis 时，Redis 自动配置会安全跳过，不会触发 Redis 连接配置或导致应用启动失败
-- Redis 连接地址、密码、数据库等仍然走标准 `spring.data.redis.*`
+- Boot 2 的 Redis 连接地址、密码、数据库使用 `spring.redis.*`；Boot 3 / 4 使用 `spring.data.redis.*`
 - starter 会尝试创建：
   - `redisTemplate`
   - `stringObjectRedisTemplate`
@@ -936,7 +984,7 @@ velo:
       controller:
         enabled: true
     defaults:
-      max-payload-length: -1
+      max-payload-length: 4096
   trace:
     enabled: true
 ```
@@ -946,8 +994,8 @@ velo:
 - 默认开启
 - 默认打印 Spring 绑定后的入参和返回结果；达到阈值打印独立慢调用日志，异常时打印独立 WARN 摘要
 - 会过滤掉原始 query string，避免把敏感查询串直接打到日志中
-- `max-payload-length` 为正数时，过长 payload 会按配置长度截断
-- 当前默认 `max-payload-length=-1`，表示不限制长度；`0` 表示不序列化或输出载荷日志
+- `max-payload-length` 为正数时，写出超限即截断，转义及省略号计入上限
+- 默认 `max-payload-length=4096`；`-1` 取消载荷字符上限，`0` 不序列化或输出载荷日志
 - 如需关闭 Controller 自动日志，设置 `velo.log.sources.controller.enabled=false`
 
 ### 4. Feign 调用日志
@@ -965,7 +1013,7 @@ velo:
       feign:
         enabled: true
     defaults:
-      max-payload-length: -1
+      max-payload-length: 4096
   trace:
     enabled: true
     feign-propagation-enabled: true
@@ -979,8 +1027,8 @@ velo:
 - 默认打印入参和返回结果，慢调用和异常各输出独立日志
 - 日志格式和 Controller、`@InvokeLog` 保持一致，便于联调排查
 - 请求头和响应头默认不采集，可通过独立配置或注解启用
-- `max-payload-length` 为正数时，过长 payload 会按配置长度截断
-- 当前默认 `max-payload-length=-1`，表示不限制长度；`0` 表示不序列化或输出载荷日志
+- `max-payload-length` 为正数时，写出超限即截断，转义及省略号计入上限
+- 默认 `max-payload-length=4096`；`-1` 取消载荷字符上限，`0` 不序列化或输出载荷日志
 - 如需关闭 Feign 自动日志，设置 `velo.log.sources.feign.enabled=false`
 
 ### 5. CORS
@@ -1084,7 +1132,7 @@ velo:
 
 - 方法是否被 Spring 代理：`private`、`final`、`static` 方法以及类内部自调用（`this.method()`）都无法被 AOP 拦截，需通过注入的代理对象调用
 - 对应能力是否开启：确认未被 `velo.idempotent.enabled=false` 等关闭；若使用 `velo.opinionated=false` 无侵入模式，需按需显式开启对应能力（注意：这三类注解仍可用，但需对应后端依赖存在）
-- 后端依赖是否就绪：`backend=AUTO` 会在启动时按 `REDISSON -> REDIS -> CAFFEINE -> JDK` 选择；若期望用 Redis 却走了本地实现，检查 classpath 与 Redis Bean 配置
+- 后端依赖是否就绪：幂等的 `AUTO` 顺序为 `REDISSON -> REDIS -> CAFFEINE`，锁为 `REDISSON -> REDIS -> JDK`，限流为 `REDISSON -> REDIS -> GUAVA`；若期望用分布式后端却走了本地实现，检查 classpath 与对应 Bean 配置
 - 开启调试日志观察：
 
 ```yaml
@@ -1097,21 +1145,21 @@ logging:
 
 ### Q2：Redis 连接失败时会怎样？
 
-- `backend=AUTO` 只在启动配置阶段按类路径和 Bean 条件选择后端。Redis/Redisson 的相应条件都不满足时才会选用 Caffeine/JDK 本地后端；不会测试 Redis 连接，也不会在运行期间自动切换后端。
+- `backend=AUTO` 只在启动配置阶段按类路径和 Bean 条件选择后端。Redis/Redisson 条件不满足时，锁使用 JDK，幂等尝试 Caffeine，限流尝试 Guava；后两者没有可用实现时调用报错。不会测试 Redis 连接，也不会在运行期间自动切换后端。
 - 已选中 Redis/Redisson 后，连接失败可能阻止启动或使相应调用失败、抛异常，不会转为本地幂等、限流或锁。Redis Bean 已存在但服务不可达时，`AUTO` 也可能选中该后端。
-- `backend=REDIS` / `REDISSON` 缺少对应依赖或 Bean 时按显式配置的条件快速失败。
+- 显式配置的后端缺少依赖或 Bean，或者不属于该功能支持的实现时，启动报错；提供自定义处理器可以覆盖选择。
 
 生产环境建议显式指定分布式后端，并配合健康检查确保 Redis 可用；业务侧应决定连接故障时如何处理请求。
 
 ### Q3：如何调试 SpEL `key` 表达式？
 
 - 确认已开启编译参数 `-parameters`，否则 `#userId` 这类按参数名引用无法解析，只能用 `#p0`、`#p1`
-- 表达式解析为空字符串会抛出异常（幂等/限流的分桶 key 不允许解析为空白）
+- 表达式解析为空值、空白字符串或复杂对象会抛出异常；三种注解行为一致
 - 可单独用 `SpelExpressionParser` 写单测验证表达式取值是否符合预期
 
 ### Q4：限流被拒绝后多久可以重试？
 
-令牌桶按固定速率恢复令牌，平均恢复一个令牌的间隔约为 `window / permits`。例如 `permits=10, window=1000` 约每 100ms 恢复 1 个令牌，被拒绝后立即重试可能仍失败，建议按该间隔退避重试。
+由具体后端决定。Guava 使用原生速率补充机制，Redis 在当前一秒固定窗口到期后重置，Redisson 使用原生的一秒额度恢复规则。被拒绝后立即重试可能仍失败，业务侧应按所选后端退避，Starter 不承诺统一的重试时间。Redis 固定窗口允许边界两侧的额度连续使用。
 
 ### Q5：异常信息能否做国际化？
 

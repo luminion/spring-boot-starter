@@ -7,6 +7,7 @@ import io.github.luminion.velo.idempotent.support.RedissonIdempotentHandler;
 import org.redisson.api.RedissonClient;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 
@@ -17,7 +18,10 @@ import org.springframework.context.annotation.Bean;
  * @see org.redisson.spring.starter.RedissonAutoConfiguration
  * @since 1.0.0
  */
-@AutoConfiguration(afterName = {"org.redisson.spring.starter.RedissonAutoConfiguration"})
+@AutoConfiguration(afterName = {"org.redisson.spring.starter.RedissonAutoConfiguration",
+        "org.redisson.spring.starter.RedissonAutoConfigurationV2",
+        "org.redisson.spring.starter.RedissonAutoConfigurationV4"})
+@ConditionalOnClass(name = "org.redisson.api.RedissonClient")
 @ConditionalOnConcurrencyBackend(prefix = "velo.idempotent", value = ConcurrencyBackend.REDISSON,
         autoClassNames = {"org.aspectj.weaver.Advice", "org.redisson.api.RedissonClient"})
 @ConditionalOnMissingBean(IdempotentHandler.class)

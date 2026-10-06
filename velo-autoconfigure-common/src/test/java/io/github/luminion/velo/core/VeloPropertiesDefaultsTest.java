@@ -39,7 +39,7 @@ class VeloPropertiesDefaultsTest {
     assertThat(properties.getRateLimit().getPrefix()).isEqualTo("rateLimit:");
     assertThat(properties.getLock().getBackend()).isEqualTo(ConcurrencyBackend.AUTO);
     assertThat(properties.getLock().getPrefix()).isEqualTo("lock:");
-    assertThat(properties.getLock().getRetryInterval()).isEqualTo(java.time.Duration.ofMillis(10));
+    assertThat(properties.getLock().getRedisTtlSeconds()).isEqualTo(60);
     assertThat(properties.getCache().isEnabled()).isTrue();
     assertThat(properties.getCache().getDefaultTtl()).isEqualTo(java.time.Duration.ofMinutes(5));
     assertThat(properties.getCache().isNullCachingEnabled()).isTrue();
@@ -51,7 +51,7 @@ class VeloPropertiesDefaultsTest {
     assertThat(properties.getLog().getTrace().isLoggingPatternEnabled()).isTrue();
     assertThat(properties.getLog().getSources().getController().isEnabled()).isTrue();
     assertThat(properties.getLog().getSources().getFeign().isEnabled()).isTrue();
-    assertThat(properties.getLog().getDefaults().getMaxPayloadLength()).isEqualTo(-1);
+    assertThat(properties.getLog().getDefaults().getMaxPayloadLength()).isEqualTo(4096);
     assertThat(properties.getLog().getDefaults().getSlowLog().getThresholdMs()).isEqualTo(1000L);
     assertThat(properties.getAspectOrder().getIdempotent())
         .isLessThan(properties.getAspectOrder().getRateLimit());

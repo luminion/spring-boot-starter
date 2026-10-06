@@ -1,5 +1,6 @@
 package io.github.luminion.velo.idempotent.annotation;
 
+import org.springframework.core.annotation.AliasFor;
 import java.lang.annotation.*;
 
 /**
@@ -14,11 +15,16 @@ import java.lang.annotation.*;
 @Documented
 public @interface Idempotent {
 
+    /** key 的简写属性。 */
+    @AliasFor("key")
+    String value() default "";
+
     /**
      * 用于生成幂等 Key 的 SpEL 表达式。
      * <p>
      * 为空时使用类名和方法名生成固定 Key。
      */
+    @AliasFor("value")
     String key() default "";
 
     /**

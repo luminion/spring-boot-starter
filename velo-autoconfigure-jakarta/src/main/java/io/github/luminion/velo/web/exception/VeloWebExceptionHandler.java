@@ -130,10 +130,9 @@ public class VeloWebExceptionHandler<R> implements Ordered {
     @ExceptionHandler(RateLimitException.class)
     public R handleRateLimitException(RateLimitException e) {
         if (e.getKey() != null) {
-            log.warn("[RateLimit] key={}, limit={}/{}ms, message={}",
+            log.warn("[RateLimit] key={}, qps={}, message={}",
                     e.getKey(),
-                    e.getPermits(),
-                    e.getWindow(),
+                    e.getQps(),
                     e.getMessage());
         } else {
             log.warn("[RateLimit] {}", e.getMessage());
@@ -163,10 +162,8 @@ public class VeloWebExceptionHandler<R> implements Ordered {
     @ExceptionHandler(LockException.class)
     public R handleLockException(LockException e) {
         if (e.getKey() != null) {
-            log.warn("[Lock] key={}, waitTimeout={}ms, lease={}ms, message={}",
+            log.warn("[Lock] key={}, message={}",
                     e.getKey(),
-                    e.getWaitTimeout(),
-                    e.getLease(),
                     e.getMessage());
         } else {
             log.warn("[Lock] {}", e.getMessage());

@@ -12,16 +12,23 @@ import io.github.luminion.velo.test.TestStringRedisTemplate;
 import org.junit.jupiter.api.Test;
 import org.redisson.api.RedissonClient;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.test.util.ReflectionTestUtils;
+import java.util.concurrent.TimeUnit;
 
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 
 class VeloLockAutoConfigurationTests {
 
@@ -29,13 +36,13 @@ class VeloLockAutoConfigurationTests {
             .withConfiguration(AutoConfigurations.of(
                     VeloLockRedissonAutoConfiguration.class,
                     VeloLockRedisConfiguration.class,
-                    VeloLockCaffeineAutoConfiguration.class,
-                    VeloLockJdkAutoConfiguration.class
-            ));
+                    VeloLockJdkAutoConfiguration.class,
+                    VeloLockAutoConfiguration.class
+            ))
+            .withUserConfiguration(PropertiesConfiguration.class);
 
     @Test
     void shouldCreateDefaultLockHandler() {
-        // 本地后端统一为 JDK 实现：AUTO 默认落到 Caffeine 档位，但该档位复用 JdkLockHandler
         contextRunner
                 .run(context -> assertThat(context.getBean(LockHandler.class))
                         .isInstanceOf(JdkLockHandler.class));
@@ -57,6 +64,33 @@ class VeloLockAutoConfigurationTests {
                 .withBean("stringRedisTemplate", StringRedisTemplate.class, TestStringRedisTemplate::new)
                 .run(context -> assertThat(context.getBean(LockHandler.class))
                         .isInstanceOf(RedisLockHandler.class));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void shouldPassConfiguredTtlSecondsToRedisBackend() {
+        StringRedisTemplate template = mock(StringRedisTemplate.class);
+        ValueOperations<String, String> values = mock(ValueOperations.class);
+        when(template.opsForValue()).thenReturn(values);
+        when(values.setIfAbsent(eq("configured"), anyString(), eq(17L), eq(TimeUnit.SECONDS))).thenReturn(true);
+        contextRunner.withPropertyValues("velo.lock.backend=redis", "velo.lock.redis-ttl-seconds=17")
+                .withBean(StringRedisTemplate.class, () -> template)
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    LockHandler handler = context.getBean(LockHandler.class);
+                    assertThat(handler.tryLock("configured")).isTrue();
+                    verify(values).setIfAbsent(eq("configured"), anyString(), eq(17L), eq(TimeUnit.SECONDS));
+                    handler.unlock("configured");
+                });
+    }
+
+    @Test
+    void nonPositiveRedisTtlShouldFailAtStartup() {
+        contextRunner.withPropertyValues("velo.lock.backend=redis", "velo.lock.redis-ttl-seconds=0")
+                .withBean(StringRedisTemplate.class, TestStringRedisTemplate::new)
+                .run(context -> assertThat(context.getStartupFailure())
+                        .hasRootCauseInstanceOf(IllegalArgumentException.class)
+                        .hasStackTraceContaining("TTL seconds"));
     }
 
     @Test
@@ -105,11 +139,12 @@ class VeloLockAutoConfigurationTests {
     }
 
     @Test
-    void shouldUseJdkHandlerWhenCaffeineBackendIsDisabled() {
+    void shouldRejectRemovedCaffeineBackend() {
         contextRunner
-                .withPropertyValues("velo.lock.backend=jdk")
-                .run(context -> assertThat(context.getBean(LockHandler.class))
-                        .isInstanceOf(JdkLockHandler.class));
+                .withPropertyValues("velo.lock.backend=caffeine")
+                .run(context -> assertThat(context.getStartupFailure())
+                        .hasRootCauseInstanceOf(IllegalStateException.class)
+                        .hasStackTraceContaining("velo.lock.backend=CAFFEINE"));
     }
 
     @Test
@@ -142,7 +177,6 @@ class VeloLockAutoConfigurationTests {
                 .withConfiguration(AutoConfigurations.of(
                         VeloLockRedissonAutoConfiguration.class,
                         VeloLockRedisConfiguration.class,
-                        VeloLockCaffeineAutoConfiguration.class,
                         VeloLockJdkAutoConfiguration.class,
                         VeloLockAutoConfiguration.class
                 ))
@@ -151,10 +185,15 @@ class VeloLockAutoConfigurationTests {
                 .run(context -> assertThat(context).hasSingleBean(LockAspect.class));
     }
 
+    @Configuration(proxyBeanMethods = false)
+    @EnableConfigurationProperties(VeloProperties.class)
+    static class PropertiesConfiguration {
+    }
+
     static class CustomLockHandler implements LockHandler {
 
         @Override
-        public boolean lock(String key, long waitTime, long leaseTime) {
+        public boolean tryLock(String key) {
             return true;
         }
 

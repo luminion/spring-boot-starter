@@ -12,7 +12,7 @@ import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.core.Ordered;
-import org.springframework.util.StringUtils;
+import org.springframework.core.annotation.AnnotationUtils;
 
 import java.lang.reflect.Method;
 
@@ -64,30 +64,20 @@ public class RateLimitAspect implements Ordered {
     private Object applyRateLimit(ProceedingJoinPoint joinPoint, RateLimit rateLimit) throws Throwable {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         Method method = ConcurrencyAnnotationUtils.resolveSpecificMethod(joinPoint.getTarget(), signature.getMethod());
-
-        double permits = rateLimit.permits();
-        long window = rateLimit.window();
-
-        String methodFingerprint = fingerprinter.resolveMethodFingerprint(
-                joinPoint.getTarget(),
-                method,
-                joinPoint.getArgs(),
-                "");
-        String keyFingerprint = methodFingerprint;
-        if (StringUtils.hasText(rateLimit.key())) {
-            keyFingerprint += ':' + fingerprinter.resolveMethodFingerprint(
-                    joinPoint.getTarget(),
-                    method,
-                    joinPoint.getArgs(),
-                    rateLimit.key());
+        rateLimit = AnnotationUtils.synthesizeAnnotation(rateLimit, method);
+        int qps = rateLimit.qps();
+        if (qps <= 0) {
+            throw new IllegalArgumentException("Rate limit qps must be greater than zero.");
         }
+        String keyFingerprint = fingerprinter.resolveMethodFingerprint(
+                joinPoint.getTarget(), method, joinPoint.getArgs(), rateLimit.key());
 
         // 1. 生成基础 Key
         String key = ConcurrencyAnnotationUtils.buildPrefixedKey(prefix, keyFingerprint);
 
         // 2. 执行限流
-        if (!rateLimitHandler.tryAcquire(key, permits, window)) {
-            throw new RateLimitException(resolveMessage(rateLimit.message()), key, permits, window);
+        if (!rateLimitHandler.tryAcquire(key, qps)) {
+            throw new RateLimitException(resolveMessage(rateLimit.message()), key, qps);
         }
 
         return joinPoint.proceed();

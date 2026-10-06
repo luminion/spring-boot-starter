@@ -1,32 +1,37 @@
 package io.github.luminion.velo;
 
 /**
- * Backend implementation used by concurrency-related features.
+ * 并发功能的后端类型，各功能仅支持其中的部分实现。
  */
 public enum ConcurrencyBackend {
 
     /**
-     * Selects the first available backend by auto-configuration order.
+     * 按自动配置顺序选择首个可用后端。
      */
     AUTO,
 
     /**
-     * Redisson based implementation.
+     * Redisson 分布式实现。
      */
     REDISSON,
 
     /**
-     * Spring Data Redis based implementation.
+     * Spring Data Redis 分布式实现。
      */
     REDIS,
 
     /**
-     * Caffeine based local implementation.
+     * Caffeine 本地幂等实现。
      */
     CAFFEINE,
 
     /**
-     * JDK based local implementation.
+     * Guava 本地限流实现。
+     */
+    GUAVA,
+
+    /**
+     * JDK 本地锁实现。
      */
     JDK
 }

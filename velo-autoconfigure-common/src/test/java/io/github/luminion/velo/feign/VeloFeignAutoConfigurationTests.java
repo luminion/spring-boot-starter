@@ -104,7 +104,7 @@ class VeloFeignAutoConfigurationTests {
         new FeignLogAspect(
             new InvocationLogEngine(
                 p,
-                String::valueOf,
+                (logValue, logOutput) -> logOutput.write(String.valueOf(logValue)),
                 record -> {
                   records.add(record);
                   traces.add(MDC.get("traceId"));
@@ -153,7 +153,7 @@ class VeloFeignAutoConfigurationTests {
     List<InvocationLogRecord> records = new ArrayList<>();
     FeignLogAspect aspect =
         new FeignLogAspect(
-            new InvocationLogEngine(p, String::valueOf, records::add),
+            new InvocationLogEngine(p, (logValue, logOutput) -> logOutput.write(String.valueOf(logValue)), records::add),
             new TraceScopeManager(p.getLog().getTrace(), new W3cTraceContextResolver()));
     FeignInvocationContext outer = FeignInvocationContext.open();
     try {

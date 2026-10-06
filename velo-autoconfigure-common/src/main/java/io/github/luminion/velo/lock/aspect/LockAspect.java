@@ -12,6 +12,7 @@ import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.core.Ordered;
+import org.springframework.core.annotation.AnnotationUtils;
 
 import java.lang.reflect.Method;
 
@@ -56,16 +57,7 @@ public class LockAspect implements Ordered {
     public Object doLock(ProceedingJoinPoint joinPoint, Lock lock) throws Throwable {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         Method method = ConcurrencyAnnotationUtils.resolveSpecificMethod(joinPoint.getTarget(), signature.getMethod());
-        long wait = lock.waitTimeout();
-        long lease = lock.lease();
-        if (wait < 0L) {
-            throw new IllegalArgumentException("Lock waitTimeout must not be negative.");
-        }
-        // -1 是看门狗特殊值（Redisson 据此自动续约），需放行；其余非正值仍非法
-        if (lease <= 0L && lease != -1L) {
-            throw new IllegalArgumentException("Lock lease must be greater than zero, or -1 to enable watchdog auto-renewal.");
-        }
-
+        lock = AnnotationUtils.synthesizeAnnotation(lock, method);
         // 1. 生成锁 Key
         // 空 key 会降级为方法级锁（类名#方法名(参数类型...)），表示"该方法全局串行"，这是一个有意义的语义，
         // 因此与 @Idempotent 不同，这里安静降级、不打告警。
@@ -78,9 +70,9 @@ public class LockAspect implements Ordered {
                         lock.key()));
 
         // 2. 尝试获取锁
-        boolean lockSuccess = lockHandler.lock(key, wait, lease);
+        boolean lockSuccess = lockHandler.tryLock(key);
         if (!lockSuccess) {
-            throw new LockException(resolveMessage(lock.message()), key, wait, lease);
+            throw new LockException(resolveMessage(lock.message()), key);
         }
 
         try {

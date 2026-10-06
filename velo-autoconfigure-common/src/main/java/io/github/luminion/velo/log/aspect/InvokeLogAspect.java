@@ -85,6 +85,7 @@ public class InvokeLogAspect implements Ordered {
         for (Annotation annotation : method.getAnnotations()) {
             String name = annotation.annotationType().getName();
             if (name.equals("org.springframework.scheduling.annotation.Scheduled")
+                    || name.equals("org.springframework.scheduling.annotation.Schedules")
                     || name.equals("com.xxl.job.core.handler.annotation.XxlJob")) {
                 return true;
             }

@@ -24,12 +24,6 @@ public class VeloJacksonLogAutoConfiguration {
     @ConditionalOnBean(ObjectMapper.class)
     @ConditionalOnMissingBean(LogValueFormatter.class)
     public LogValueFormatter jacksonLogValueFormatter(ObjectMapper mapper) {
-        return value -> {
-            try {
-                return mapper.writeValueAsString(value);
-            } catch (Exception error) {
-                throw new IllegalArgumentException("Jackson log value serialization failed", error);
-            }
-        };
+        return (value, output) -> mapper.writeValue(output, value);
     }
 }

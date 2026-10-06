@@ -28,7 +28,7 @@ class ControllerHeaderLogTests {
     List<InvocationLogRecord> records = new ArrayList<>();
     InvocationLogWriter writer = records::add;
     ControllerLogAspect aspect =
-        new ControllerLogAspect(new InvocationLogEngine(properties, String::valueOf, writer));
+        new ControllerLogAspect(new InvocationLogEngine(properties, (logValue, logOutput) -> logOutput.write(String.valueOf(logValue)), writer));
     ProceedingJoinPoint point = mock(ProceedingJoinPoint.class);
     MethodSignature signature = mock(MethodSignature.class);
     MockHttpServletRequest request = new MockHttpServletRequest("GET", "/headers");

@@ -59,21 +59,44 @@ class RedisBackendIntegrationTests {
         RedisLockHandler first = new RedisLockHandler(stringRedisTemplate);
         RedisLockHandler second = new RedisLockHandler(secondStringRedisTemplate);
         try {
-            assertThat(first.lock(key, 0, 5_000)).isTrue();
-            assertThat(first.lock(key, 0, 5_000)).isTrue();
-            assertThat(second.lock(key, 0, 5_000)).isFalse();
+            assertThat(first.tryLock(key)).isTrue();
+            assertThat(first.tryLock(key)).isTrue();
+            assertThat(second.tryLock(key)).isFalse();
 
             first.unlock(key);
-            assertThat(second.lock(key, 0, 5_000)).isFalse();
+            assertThat(second.tryLock(key)).isFalse();
 
             first.unlock(key);
-            assertThat(second.lock(key, 0, 5_000)).isTrue();
+            assertThat(second.tryLock(key)).isTrue();
         } finally {
             first.unlock(key);
             first.unlock(key);
             second.unlock(key);
-            first.close();
-            second.close();
+            stringRedisTemplate.delete(key);
+        }
+    }
+
+    @Test
+    void fixedTtlDoesNotRenewAndExpiredOwnerCannotDeleteNewLock() throws InterruptedException {
+        String key = uniqueKey("fixed-lock");
+        RedisLockHandler first = new RedisLockHandler(stringRedisTemplate, 1);
+        RedisLockHandler second = new RedisLockHandler(secondStringRedisTemplate, 1);
+        try {
+            assertThat(first.tryLock(key)).isTrue();
+            long beforeReentry = stringRedisTemplate.getExpire(key, TimeUnit.MILLISECONDS);
+            assertThat(first.tryLock(key)).isTrue();
+            assertThat(stringRedisTemplate.getExpire(key, TimeUnit.MILLISECONDS)).isLessThanOrEqualTo(beforeReentry);
+            first.unlock(key);
+
+            Thread.sleep(1_200);
+            assertThat(second.tryLock(key)).isTrue();
+            assertThat(first.tryLock(key)).isFalse();
+            String newOwner = stringRedisTemplate.opsForValue().get(key);
+            first.unlock(key);
+            assertThat(stringRedisTemplate.opsForValue().get(key)).isEqualTo(newOwner);
+        } finally {
+            first.unlock(key);
+            second.unlock(key);
             stringRedisTemplate.delete(key);
         }
     }
@@ -100,15 +123,45 @@ class RedisBackendIntegrationTests {
     }
 
     @Test
-    void rateLimitIsSharedBetweenHandlers() {
+    void rateLimitSharesOneSecondWindowAcrossClientsWithoutExtendingExpiry() throws InterruptedException {
         String key = uniqueKey("rate-limit");
+        String otherKey = uniqueKey("rate-limit-independent");
         RedisRateLimitHandler first = new RedisRateLimitHandler(stringRedisTemplate);
         RedisRateLimitHandler second = new RedisRateLimitHandler(secondStringRedisTemplate);
         try {
-            assertThat(first.tryAcquire(key, 2.0, 60_000)).isTrue();
-            assertThat(second.tryAcquire(key, 2.0, 60_000)).isTrue();
-            assertThat(first.tryAcquire(key, 2.0, 60_000)).isFalse();
-            assertThat(stringRedisTemplate.getExpire(key, TimeUnit.SECONDS)).isPositive();
+            assertThat(first.tryAcquire(key, 2)).isTrue();
+            long firstTtl = stringRedisTemplate.getExpire(key, TimeUnit.MILLISECONDS);
+            assertThat(firstTtl).isBetween(1L, 1000L);
+            Thread.sleep(100);
+            assertThat(second.tryAcquire(key, 2)).isTrue();
+            assertThat(second.tryAcquire(key, 2)).isFalse();
+            assertThat(stringRedisTemplate.getExpire(key, TimeUnit.MILLISECONDS)).isLessThan(firstTtl);
+            assertThat(second.tryAcquire(otherKey, 2)).isTrue();
+            Thread.sleep(1100);
+            assertThat(first.tryAcquire(key, 2)).isTrue();
+            assertThat(second.tryAcquire(key, 2)).isTrue();
+            assertThat(first.tryAcquire(key, 2)).isFalse();
+        } finally {
+            stringRedisTemplate.delete(key);
+            stringRedisTemplate.delete(otherKey);
+        }
+    }
+
+    @Test
+    void rateLimitAllowsBurstAtFixedWindowBoundary() throws InterruptedException {
+        String key = uniqueKey("rate-limit-boundary");
+        RedisRateLimitHandler handler = new RedisRateLimitHandler(stringRedisTemplate);
+        try {
+            assertThat(handler.tryAcquire(key, 1)).isTrue();
+            assertThat(handler.tryAcquire(key, 1)).isFalse();
+            // 仅缩短测试 key 的当前 TTL 来精确构造边界，避免等待到第 800ms 的时序抖动。
+            // 原生的一秒 TTL、后续请求不续期由上一用例独立验证。
+            assertThat(stringRedisTemplate.expire(key, 1, TimeUnit.MILLISECONDS)).isTrue();
+            Thread.sleep(20);
+            assertThat(stringRedisTemplate.hasKey(key)).isFalse();
+            // 边界两侧可连续各使用一次额度，QPS=1 不代表任意滚动一秒内最多一次。
+            assertThat(handler.tryAcquire(key, 1)).isTrue();
+            assertThat(handler.tryAcquire(key, 1)).isFalse();
         } finally {
             stringRedisTemplate.delete(key);
         }

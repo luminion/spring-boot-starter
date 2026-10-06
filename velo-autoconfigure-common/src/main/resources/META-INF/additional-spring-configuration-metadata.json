@@ -51,30 +51,27 @@
     {
       "name": "velo.idempotent.backend",
       "values": [
-        {"value": "AUTO", "description": "按自动配置顺序选择首个可用后端：REDISSON -> REDIS -> CAFFEINE -> JDK。"},
+        {"value": "AUTO", "description": "按自动配置顺序选择首个可用后端：REDISSON -> REDIS -> CAFFEINE；没有实现时调用报错。"},
         {"value": "REDISSON", "description": "基于 Redisson，适合分布式场景。"},
         {"value": "REDIS", "description": "基于 Spring Data Redis，适合分布式场景。"},
-        {"value": "CAFFEINE", "description": "基于 Caffeine 的本地实现，仅保证单 JVM 内有效。"},
-        {"value": "JDK", "description": "基于 JDK 的本地兜底实现，仅保证单 JVM 内有效。"}
+        {"value": "CAFFEINE", "description": "基于 Caffeine 原生过期缓存，仅保证单 JVM 内有效。"}
       ]
     },
     {
       "name": "velo.rate-limit.backend",
       "values": [
-        {"value": "AUTO", "description": "按自动配置顺序选择首个可用后端：REDISSON -> REDIS -> CAFFEINE -> JDK。"},
+        {"value": "AUTO", "description": "按自动配置顺序选择首个可用后端：REDISSON -> REDIS -> GUAVA；没有实现时调用报错。"},
         {"value": "REDISSON", "description": "基于 Redisson，适合分布式场景。"},
-        {"value": "REDIS", "description": "基于 Spring Data Redis，适合分布式场景。"},
-        {"value": "CAFFEINE", "description": "基于 Caffeine 的本地实现，仅保证单 JVM 内有效。"},
-        {"value": "JDK", "description": "基于 JDK 的本地兜底实现，仅保证单 JVM 内有效。"}
+        {"value": "REDIS", "description": "Redis 固定一秒窗口，允许窗口边界突发。"},
+        {"value": "GUAVA", "description": "Guava 原生限流器和访问过期缓存，仅保证单 JVM 内有效。"}
       ]
     },
     {
       "name": "velo.lock.backend",
       "values": [
-        {"value": "AUTO", "description": "按自动配置顺序选择首个可用后端：REDISSON -> REDIS -> CAFFEINE -> JDK。"},
+        {"value": "AUTO", "description": "按自动配置顺序选择首个可用后端：REDISSON -> REDIS -> JDK。"},
         {"value": "REDISSON", "description": "基于 Redisson，适合分布式场景，支持可重入等高级特性。"},
         {"value": "REDIS", "description": "基于 Spring Data Redis，适合分布式场景。"},
-        {"value": "CAFFEINE", "description": "基于 Caffeine 的本地实现，仅保证单 JVM 内互斥。"},
         {"value": "JDK", "description": "基于 JDK 的本地兜底实现，仅保证单 JVM 内互斥。"}
       ]
     },

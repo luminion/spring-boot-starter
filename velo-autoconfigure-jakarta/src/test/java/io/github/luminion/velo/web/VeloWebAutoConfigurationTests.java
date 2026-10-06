@@ -199,7 +199,7 @@ class VeloWebAutoConfigurationTests {
   }
 
   @Test
-  void controllerUsesMappingTemplateAndOnlyDefaultArgsRecord() throws Throwable {
+  void controllerUsesMappingTemplateAndDefaultArgsAndResultRecords() throws Throwable {
     MockHttpServletRequest request = new MockHttpServletRequest("GET", "/users/1");
     request.setQueryString("secret=hidden");
     request.setAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE, "/users/{id}");
@@ -208,7 +208,7 @@ class VeloWebAutoConfigurationTests {
     List<InvocationLogRecord> records = new ArrayList<>();
     ControllerLogAspect aspect =
         new ControllerLogAspect(
-            new InvocationLogEngine(new VeloProperties(), String::valueOf, records::add));
+            new InvocationLogEngine(new VeloProperties(), (logValue, logOutput) -> logOutput.write(String.valueOf(logValue)), records::add));
     ProceedingJoinPoint point = mock(ProceedingJoinPoint.class);
     MethodSignature signature = mock(MethodSignature.class);
     when(signature.getMethod()).thenReturn(Endpoint.class.getMethod("find", Long.class));
@@ -218,8 +218,11 @@ class VeloWebAutoConfigurationTests {
     when(point.getArgs()).thenReturn(new Object[] {1L});
     when(point.proceed()).thenReturn("done");
     assertThat(aspect.logControllerInvocation(point)).isEqualTo("done");
-    assertThat(records).hasSize(1);
+    assertThat(records).hasSize(2);
     assertThat(records.get(0).getFeature()).isEqualTo(InvocationLogFeature.ENTRY_ARGS);
+    assertThat(records.get(1).getFeature()).isEqualTo(InvocationLogFeature.EXIT_RESULT);
+    assertThat(records.get(1).getTarget()).isEqualTo(records.get(0).getTarget());
+    assertThat(records.get(1).getContent()).contains("done");
     assertThat(records.get(0).getTarget()).contains("GET /users/{id}").doesNotContain("secret");
     assertThat(records.get(0).getContent()).contains("id=1");
   }

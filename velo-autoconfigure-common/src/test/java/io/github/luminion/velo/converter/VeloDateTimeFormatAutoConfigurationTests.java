@@ -24,6 +24,23 @@ class VeloDateTimeFormatAutoConfigurationTests {
             ));
 
     @Test
+    void shouldRejectInvalidCalendarDatesLikeSpringFormatters() {
+        contextRunner.run(context -> {
+            org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                    context.getBean(StringToLocalDateConverter.class).convert("2026-02-30"))
+                    .isInstanceOf(java.time.format.DateTimeParseException.class);
+            org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                    context.getBean(StringToLocalDateTimeConverter.class).convert("2026-02-30 12:00:00"))
+                    .isInstanceOf(java.time.format.DateTimeParseException.class);
+            org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                    context.getBean(StringToJavaUtilDateConverter.class).convert("2026-02-30"))
+                    .isInstanceOf(java.time.format.DateTimeParseException.class);
+            assertThat(context.getBean(StringToLocalDateConverter.class).convert("2024-02-29"))
+                    .isEqualTo(LocalDate.of(2024, 2, 29));
+        });
+    }
+
+    @Test
     void shouldRegisterDateTimeConvertersByDefault() {
         contextRunner.run(context -> {
             assertThat(context).hasSingleBean(StringToLocalDateConverter.class);

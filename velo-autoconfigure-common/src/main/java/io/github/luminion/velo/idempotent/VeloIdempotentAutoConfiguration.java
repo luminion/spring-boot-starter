@@ -1,5 +1,6 @@
 package io.github.luminion.velo.idempotent;
 
+import io.github.luminion.velo.ConcurrencyBackend;
 import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.core.VeloMessageResolver;
 import io.github.luminion.velo.spi.Fingerprinter;
@@ -18,12 +19,25 @@ import org.springframework.context.annotation.Bean;
  */
 @AutoConfiguration(after = {
         io.github.luminion.velo.idempotent.config.VeloIdempotentRedissonAutoConfiguration.class,
-        io.github.luminion.velo.idempotent.config.VeloIdempotentCaffeineAutoConfiguration.class,
-        io.github.luminion.velo.idempotent.config.VeloIdempotentJdkAutoConfiguration.class
+        io.github.luminion.velo.idempotent.config.VeloIdempotentCaffeineAutoConfiguration.class
 }, afterName = "io.github.luminion.velo.idempotent.config.VeloIdempotentRedisAutoConfiguration")
 @ConditionalOnClass(Advice.class)
 @ConditionalOnProperty(prefix = "velo.idempotent", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloIdempotentAutoConfiguration {
+
+    @Bean
+    @ConditionalOnMissingBean(IdempotentHandler.class)
+    public IdempotentHandler unavailableIdempotentHandler(VeloProperties properties) {
+        ConcurrencyBackend backend = properties.getIdempotent().getBackend();
+        if (backend != ConcurrencyBackend.AUTO) {
+            throw new IllegalStateException("No IdempotentHandler is available for velo.idempotent.backend="
+                    + backend + ". Supported backends: REDISSON, REDIS, CAFFEINE, or a custom IdempotentHandler.");
+        }
+        return (key, token, timeout) -> {
+            throw new IllegalStateException("No IdempotentHandler is available. Add Caffeine, configure Redis/Redisson "
+                    + "or provide a custom IdempotentHandler.");
+        };
+    }
 
     @Bean
     @ConditionalOnMissingBean(IdempotentAspect.class)

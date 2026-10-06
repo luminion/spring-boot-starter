@@ -15,7 +15,7 @@ import org.springframework.format.datetime.standard.DateTimeFormatterRegistrar;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-import java.time.format.DateTimeFormatter;
+import org.springframework.format.datetime.standard.DateTimeFormatterFactory;
 import java.util.Arrays;
 import java.util.TimeZone;
 
@@ -47,9 +47,9 @@ public class VeloWebMvcConfigurer implements WebMvcConfigurer {
             String timeZone = properties.getDateTimeFormat().getTimeZone();
 
             DateTimeFormatterRegistrar registrar = new DateTimeFormatterRegistrar();
-            registrar.setTimeFormatter(DateTimeFormatter.ofPattern(timePattern));
-            registrar.setDateFormatter(DateTimeFormatter.ofPattern(datePattern));
-            registrar.setDateTimeFormatter(DateTimeFormatter.ofPattern(dateTimePattern));
+            registrar.setTimeFormatter(new DateTimeFormatterFactory(timePattern).createDateTimeFormatter());
+            registrar.setDateFormatter(new DateTimeFormatterFactory(datePattern).createDateTimeFormatter());
+            registrar.setDateTimeFormatter(new DateTimeFormatterFactory(dateTimePattern).createDateTimeFormatter());
             registrar.registerFormatters(registry);
 
             DateFormatterRegistrar dateRegistrar = new DateFormatterRegistrar();
