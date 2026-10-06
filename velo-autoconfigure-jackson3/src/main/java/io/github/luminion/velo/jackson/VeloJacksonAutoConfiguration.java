@@ -1,13 +1,13 @@
 package io.github.luminion.velo.jackson;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.converter.datetime.FlexibleDateFormat;
 import io.github.luminion.velo.jackson.deserializer.JacksonStringDeserializer;
 import io.github.luminion.velo.jackson.serializer.ConfigurableBigDecimalSerializer;
 import io.github.luminion.velo.jackson.serializer.JacksonStringSerializer;
 import io.github.luminion.velo.jackson.serializer.JsonEnumSerializerModifier;
-import io.github.luminion.velo.jackson.serializer.BigIntegerToStringSerializer;
-import io.github.luminion.velo.jackson.serializer.LongToStringSerializer;
+import io.github.luminion.velo.jackson.serializer.NumericArraySerializer;
 import io.github.luminion.velo.spi.JsonProcessorProvider;
 import io.github.luminion.velo.xss.XssCleaner;
 import org.springframework.beans.factory.BeanFactory;
@@ -32,13 +32,13 @@ import tools.jackson.databind.ext.javatime.ser.LocalDateSerializer;
 import tools.jackson.databind.ext.javatime.ser.LocalDateTimeSerializer;
 import tools.jackson.databind.ext.javatime.ser.LocalTimeSerializer;
 import tools.jackson.databind.module.SimpleModule;
-import tools.jackson.databind.ser.std.ToStringSerializer;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import org.springframework.format.datetime.standard.DateTimeFormatterFactory;
 import java.util.TimeZone;
@@ -72,7 +72,7 @@ public class VeloJacksonAutoConfiguration {
                     String dateFormat = properties.getDateTimeFormat().getDate();
                     String timeFormat = properties.getDateTimeFormat().getTime();
                     String timeZoneId = properties.getDateTimeFormat().getTimeZone();
-                    TimeZone timeZone = TimeZone.getTimeZone(timeZoneId);
+                    TimeZone timeZone = TimeZone.getTimeZone(ZoneId.of(timeZoneId));
                     FlexibleDateFormat defaultDateFormat = new FlexibleDateFormat(dateTimeFormat, dateFormat, timeZone);
                     DateTimeFormatter dateTimeFormatter = new DateTimeFormatterFactory(dateTimeFormat).createDateTimeFormatter();
                     DateTimeFormatter dateFormatter = new DateTimeFormatterFactory(dateFormat).createDateTimeFormatter();
@@ -80,7 +80,6 @@ public class VeloJacksonAutoConfiguration {
 
                     builder.defaultDateFormat(defaultDateFormat);
                     builder.defaultTimeZone(timeZone);
-                    builder.findAndAddModules();
 
                     module.addSerializer(LocalDateTime.class, new LocalDateTimeSerializer(dateTimeFormatter));
                     module.addSerializer(LocalDate.class, new LocalDateSerializer(dateFormatter));
@@ -91,10 +90,10 @@ public class VeloJacksonAutoConfiguration {
                 }
 
                 if (jacksonProperties.isSerializeLongAsString()) {
-                    LongToStringSerializer longSerializer = new LongToStringSerializer();
-                    module.addSerializer(Long.class, longSerializer);
-                    module.addSerializer(Long.TYPE, longSerializer);
-                    module.addSerializer(BigInteger.class, new BigIntegerToStringSerializer());
+                    setStringDefault(builder, Long.class);
+                    setStringDefault(builder, Long.TYPE);
+                    setStringDefault(builder, BigInteger.class);
+                    module.addSerializer(long[].class, new NumericArraySerializer<>(long[].class, Long.class));
                 }
                 if (jacksonProperties.isSerializeBigDecimalAsString() || jacksonProperties.isBigDecimalStripTrailingZeros()) {
                     module.addSerializer(BigDecimal.class, new ConfigurableBigDecimalSerializer(
@@ -102,10 +101,12 @@ public class VeloJacksonAutoConfiguration {
                             jacksonProperties.isBigDecimalStripTrailingZeros()));
                 }
                 if (jacksonProperties.isSerializeFloatingAsString()) {
-                    module.addSerializer(Double.class, ToStringSerializer.instance);
-                    module.addSerializer(Double.TYPE, ToStringSerializer.instance);
-                    module.addSerializer(Float.class, ToStringSerializer.instance);
-                    module.addSerializer(Float.TYPE, ToStringSerializer.instance);
+                    setStringDefault(builder, Double.class);
+                    setStringDefault(builder, Double.TYPE);
+                    setStringDefault(builder, Float.class);
+                    setStringDefault(builder, Float.TYPE);
+                    module.addSerializer(double[].class, new NumericArraySerializer<>(double[].class, Double.class));
+                    module.addSerializer(float[].class, new NumericArraySerializer<>(float[].class, Float.class));
                 }
                 ObjectProvider<JsonProcessorProvider> jsonProcessorProviderObjectProvider = beanFactory
                         .getBeanProvider(JsonProcessorProvider.class);
@@ -125,6 +126,13 @@ public class VeloJacksonAutoConfiguration {
                 }
                 builder.addModule(module);
             };
+        }
+
+        private static void setStringDefault(tools.jackson.databind.json.JsonMapper.Builder builder, Class<?> type) {
+            builder.withConfigOverride(type, override -> {
+                JsonFormat.Value defaultFormat = JsonFormat.Value.forShape(JsonFormat.Shape.STRING);
+                override.setFormat(defaultFormat.withOverrides(override.getFormat()));
+            });
         }
     }
 

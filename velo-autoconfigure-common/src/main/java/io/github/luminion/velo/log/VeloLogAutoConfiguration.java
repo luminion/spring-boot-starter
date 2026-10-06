@@ -19,7 +19,7 @@ public class VeloLogAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public LogValueFormatter logValueFormatter() {
-        return (value, output) -> output.write(String.valueOf(value));
+        return String::valueOf;
     }
 
     @Bean
@@ -31,6 +31,11 @@ public class VeloLogAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public InvocationLogEngine invocationLogEngine(VeloProperties properties, LogValueFormatter formatter, InvocationLogWriter writer) {
+        int maxPayloadLength = properties.getLog().getDefaults().getMaxPayloadLength();
+        if (maxPayloadLength != -1 && maxPayloadLength != 0) {
+            throw new IllegalArgumentException(
+                    "velo.log.defaults.max-payload-length only supports -1 (unlimited) or 0 (disabled)");
+        }
         validateThreshold(properties.getLog().getDefaults().getSlowLog());
         VeloProperties.InvocationSources sources = properties.getLog().getSources();
         validateThreshold(sources.getController().getSlowLog());

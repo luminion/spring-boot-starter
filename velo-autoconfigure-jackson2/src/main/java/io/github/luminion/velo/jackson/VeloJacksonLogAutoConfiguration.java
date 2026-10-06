@@ -1,5 +1,6 @@
 package io.github.luminion.velo.jackson;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.luminion.velo.log.LogValueFormatter;
 import io.github.luminion.velo.log.VeloLogAutoConfiguration;
@@ -24,6 +25,12 @@ public class VeloJacksonLogAutoConfiguration {
     @ConditionalOnBean(ObjectMapper.class)
     @ConditionalOnMissingBean(LogValueFormatter.class)
     public LogValueFormatter jacksonLogValueFormatter(ObjectMapper mapper) {
-        return (value, output) -> mapper.writeValue(output, value);
+        return value -> {
+            try {
+                return mapper.writeValueAsString(value);
+            } catch (JsonProcessingException error) {
+                throw new IllegalArgumentException("Cannot serialize invocation log value", error);
+            }
+        };
     }
 }

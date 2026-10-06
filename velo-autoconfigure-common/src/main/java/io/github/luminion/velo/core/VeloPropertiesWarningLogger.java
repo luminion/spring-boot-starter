@@ -104,11 +104,11 @@ public class VeloPropertiesWarningLogger implements InitializingBean {
       VeloProperties.InvocationDefaults invocation = logProperties.getDefaults();
       if (invocation == null) {
         warnings.add("velo.log.defaults 为空，调用日志相关功能可能在运行时失败。当前仅告警。");
-      } else if (invocation.getMaxPayloadLength() < -1) {
+      } else if (invocation.getMaxPayloadLength() != -1 && invocation.getMaxPayloadLength() != 0) {
         warnings.add(
             "velo.log.defaults.max-payload-length 当前值为 "
                 + invocation.getMaxPayloadLength()
-                + "，仅 -1 或大于等于 0 有明确语义。当前仅告警。");
+                + "，仅支持 -1（完整输出）或 0（关闭载荷），日志引擎启动时会报错。");
       }
     }
 

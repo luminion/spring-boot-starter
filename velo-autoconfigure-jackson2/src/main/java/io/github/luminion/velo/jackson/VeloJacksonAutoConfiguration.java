@@ -1,12 +1,12 @@
 package io.github.luminion.velo.jackson;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateDeserializer;
 import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
@@ -21,8 +21,7 @@ import io.github.luminion.velo.jackson.deserializer.JacksonStringDeserializer;
 import io.github.luminion.velo.jackson.serializer.ConfigurableBigDecimalSerializer;
 import io.github.luminion.velo.jackson.serializer.JacksonStringSerializer;
 import io.github.luminion.velo.jackson.serializer.JsonEnumSerializerModifier;
-import io.github.luminion.velo.jackson.serializer.BigIntegerToStringSerializer;
-import io.github.luminion.velo.jackson.serializer.LongToStringSerializer;
+import io.github.luminion.velo.jackson.serializer.NumericArraySerializer;
 import io.github.luminion.velo.xss.XssCleaner;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.ObjectProvider;
@@ -44,6 +43,7 @@ import java.math.BigInteger;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import org.springframework.format.datetime.standard.DateTimeFormatterFactory;
 import java.util.TimeZone;
@@ -63,6 +63,15 @@ public class VeloJacksonAutoConfiguration {
     static class Jackson2ObjectMapperBuilderCustomizerConfiguration {
 
         @Bean
+        public com.fasterxml.jackson.databind.Module veloEnumModule(VeloProperties properties) {
+            SimpleModule module = new SimpleModule("velo-enum");
+            if (properties.getJackson().isEnumDescEnabled()) {
+                module.setSerializerModifier(new JsonEnumSerializerModifier(properties.getJackson()));
+            }
+            return module;
+        }
+
+        @Bean
         @Order(-1)
         public Jackson2ObjectMapperBuilderCustomizer jackson2ObjectMapperBuilderCustomizer(VeloProperties properties,
                                                                                            BeanFactory beanFactory) {
@@ -79,7 +88,7 @@ public class VeloJacksonAutoConfiguration {
                     String dateFormat = properties.getDateTimeFormat().getDate();
                     String timeFormat = properties.getDateTimeFormat().getTime();
                     String timeZoneId = properties.getDateTimeFormat().getTimeZone();
-                    TimeZone timeZone = TimeZone.getTimeZone(timeZoneId);
+                    TimeZone timeZone = TimeZone.getTimeZone(ZoneId.of(timeZoneId));
                     FlexibleDateFormat defaultDateFormat = new FlexibleDateFormat(dateTimeFormat, dateFormat, timeZone);
                     DateTimeFormatter dateTimeFormatter = new DateTimeFormatterFactory(dateTimeFormat).createDateTimeFormatter();
                     DateTimeFormatter dateFormatter = new DateTimeFormatterFactory(dateFormat).createDateTimeFormatter();
@@ -101,10 +110,12 @@ public class VeloJacksonAutoConfiguration {
                 }
 
                 if (jacksonProperties.isSerializeLongAsString()) {
-                    LongToStringSerializer longSerializer = new LongToStringSerializer();
-                    builder.serializerByType(Long.class, longSerializer)
-                            .serializerByType(Long.TYPE, longSerializer)
-                            .serializerByType(BigInteger.class, new BigIntegerToStringSerializer());
+                    builder.postConfigurer(mapper -> {
+                        setStringDefault(mapper, Long.class);
+                        setStringDefault(mapper, Long.TYPE);
+                        setStringDefault(mapper, BigInteger.class);
+                    });
+                    builder.serializerByType(long[].class, new NumericArraySerializer<>(long[].class, Long.class));
                 }
                 if (jacksonProperties.isSerializeBigDecimalAsString() || jacksonProperties.isBigDecimalStripTrailingZeros()) {
                     builder.serializerByType(BigDecimal.class, new ConfigurableBigDecimalSerializer(
@@ -112,10 +123,14 @@ public class VeloJacksonAutoConfiguration {
                             jacksonProperties.isBigDecimalStripTrailingZeros()));
                 }
                 if (jacksonProperties.isSerializeFloatingAsString()) {
-                    builder.serializerByType(Double.class, ToStringSerializer.instance)
-                            .serializerByType(Double.TYPE, ToStringSerializer.instance)
-                            .serializerByType(Float.class, ToStringSerializer.instance)
-                            .serializerByType(Float.TYPE, ToStringSerializer.instance);
+                    builder.postConfigurer(mapper -> {
+                        setStringDefault(mapper, Double.class);
+                        setStringDefault(mapper, Double.TYPE);
+                        setStringDefault(mapper, Float.class);
+                        setStringDefault(mapper, Float.TYPE);
+                    });
+                    builder.serializerByType(double[].class, new NumericArraySerializer<>(double[].class, Double.class))
+                            .serializerByType(float[].class, new NumericArraySerializer<>(float[].class, Float.class));
                 }
 
                 ObjectProvider<JsonProcessorProvider> jsonProcessorProviderObjectProvider = beanFactory
@@ -135,13 +150,13 @@ public class VeloJacksonAutoConfiguration {
                     builder.serializerByType(String.class, new JacksonStringSerializer(bean));
                 });
 
-                if (jacksonProperties.isEnumDescEnabled()) {
-                    SimpleModule enumModule = new SimpleModule();
-                    enumModule.setSerializerModifier(new JsonEnumSerializerModifier(jacksonProperties));
-                    builder.modulesToInstall(enumModule);
-                }
-
             };
+        }
+
+        private static void setStringDefault(ObjectMapper mapper, Class<?> type) {
+            JsonFormat.Value current = mapper.configOverride(type).getFormat();
+            JsonFormat.Value defaultFormat = JsonFormat.Value.forShape(JsonFormat.Shape.STRING);
+            mapper.configOverride(type).setFormat(defaultFormat.withOverrides(current));
         }
     }
 
@@ -157,13 +172,12 @@ public class VeloJacksonAutoConfiguration {
             ObjectMapper objectMapper = new ObjectMapper();
             objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
             objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
-            objectMapper.configure(DeserializationFeature.FAIL_ON_INVALID_SUBTYPE, false);
             objectMapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
             objectMapper.registerModule(new JavaTimeModule());
 
             // 写入类型信息后，Redis 中的多态对象在反序列化时才能还原真实类型。
             objectMapper.activateDefaultTyping(LaissezFaireSubTypeValidator.instance,
-                    ObjectMapper.DefaultTyping.NON_FINAL, JsonTypeInfo.As.PROPERTY);
+                    ObjectMapper.DefaultTyping.EVERYTHING, JsonTypeInfo.As.PROPERTY);
             GenericJackson2JsonRedisSerializer.registerNullValueSerializer(objectMapper, null);
             return new GenericJackson2JsonRedisSerializer(objectMapper);
         }

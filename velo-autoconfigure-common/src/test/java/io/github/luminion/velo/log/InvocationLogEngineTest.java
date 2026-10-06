@@ -27,7 +27,7 @@ class InvocationLogEngineTest {
   private final VeloProperties properties = new VeloProperties();
   private final List<InvocationLogRecord> records = Collections.synchronizedList(new ArrayList<>());
   private final InvocationLogEngine engine =
-      new InvocationLogEngine(properties, (logValue, logOutput) -> logOutput.write(String.valueOf(logValue)), records::add);
+      new InvocationLogEngine(properties, String::valueOf, records::add);
 
   @AfterEach
   void clear() {
@@ -189,8 +189,7 @@ class InvocationLogEngineTest {
   }
 
   @Test
-  void tinyLimitAlsoAppliesToVoidAndHeaderFailureMarkers() throws Throwable {
-    properties.getLog().getDefaults().setMaxPayloadLength(2);
+  void retainsFullVoidAndHeaderFailureMarkers() throws Throwable {
     properties.getLog().getSources().getController().getRequestHeaders().setEnabled(true);
     LogInvocation invocation = LogInvocation.builder()
         .method(Service.class.getMethod("mutate", StringBuilder.class))
@@ -205,13 +204,12 @@ class InvocationLogEngineTest {
     assertThat(engine.invoke(invocation, () -> null)).isNull();
     assertThat(records).anySatisfy(record -> {
       assertThat(record.getFeature()).isEqualTo(InvocationLogFeature.REQUEST_HEADERS);
-      assertThat(record.getContent()).isEqualTo("se");
+      assertThat(record.getContent()).isEqualTo("serialization-failed");
     });
     assertThat(records).anySatisfy(record -> {
       assertThat(record.getFeature()).isEqualTo(InvocationLogFeature.EXIT_RESULT);
-      assertThat(record.getContent()).isEqualTo("vo");
+      assertThat(record.getContent()).isEqualTo("void");
     });
-    assertThat(records).allSatisfy(record -> assertThat(record.getContent().length()).isLessThanOrEqualTo(2));
   }
 
   @Test
@@ -237,7 +235,7 @@ class InvocationLogEngineTest {
     InvocationLogEngine logging =
         new InvocationLogEngine(
             properties,
-            (logValue, logOutput) -> logOutput.write(String.valueOf(logValue)),
+            String::valueOf,
             record -> {
               records.add(record);
               seen.add(MDC.get("traceId"));
@@ -293,9 +291,9 @@ class InvocationLogEngineTest {
     InvocationLogEngine logging =
         new InvocationLogEngine(
             properties,
-            (value, output) -> {
+            value -> {
               formatted.incrementAndGet();
-              output.write("value");
+              return "value";
             },
             rejecting);
     logging.invoke(call(Service.class, "call", InvocationLogSource.INVOKE, "input"), () -> "done");
@@ -310,7 +308,7 @@ class InvocationLogEngineTest {
     InvocationLogEngine logging =
         new InvocationLogEngine(
             properties,
-            (value, output) -> {
+            value -> {
               throw new IllegalArgumentException();
             },
             record -> {
@@ -333,13 +331,13 @@ class InvocationLogEngineTest {
   }
 
   @Test
-  void exceptionSummaryRemainsLimitedWhenPayloadIsDisabledOrUnlimited() {
+  void exceptionSummaryRemainsCompleteWhenPayloadIsDisabledOrUnlimited() {
     StringBuilder message = new StringBuilder();
     for (int i = 0; i < 10000; i++) {
       message.append('x');
     }
     RuntimeException original = new RuntimeException(message.toString());
-    for (int limit : new int[] {0, -1, 64}) {
+    for (int limit : new int[] {0, -1}) {
       records.clear();
       properties.getLog().getDefaults().setMaxPayloadLength(limit);
       assertThatThrownBy(() -> engine.invoke(
@@ -348,8 +346,7 @@ class InvocationLogEngineTest {
           })).isSameAs(original);
       InvocationLogRecord error = records.get(records.size() - 1);
       assertThat(error.getFeature()).isEqualTo(InvocationLogFeature.ERROR_LOG);
-      assertThat(error.getContent().length()).isLessThanOrEqualTo(limit > 0 ? limit : 4096);
-      assertThat(error.getContent()).endsWith("...");
+      assertThat(error.getContent()).contains(message.toString()).doesNotEndWith("...");
       if (limit == 0) {
         assertThat(records).hasSize(1);
       }

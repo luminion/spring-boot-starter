@@ -7,64 +7,73 @@ import tools.jackson.core.JsonGenerator;
 import tools.jackson.databind.BeanProperty;
 import tools.jackson.databind.SerializationContext;
 import tools.jackson.databind.ValueSerializer;
+import tools.jackson.databind.jsontype.TypeSerializer;
+import tools.jackson.databind.ser.jdk.StringSerializer;
 import tools.jackson.databind.ser.std.StdSerializer;
 
 import java.util.function.Function;
 
 /**
- * Jackson 3 string serializer that applies @JsonEncode on a per-property basis.
+ * 按属性应用 @JsonEncode，字符串写出与类型处理委托 Jackson 3 原生实现。
  */
 public class JacksonStringSerializer extends StdSerializer<String> {
 
+    private static final StringSerializer STRING_SERIALIZER = StringSerializer.instance;
+
     private final JsonProcessorProvider jsonProcessorProvider;
+    private final Function<String, String> function;
 
     public JacksonStringSerializer(JsonProcessorProvider jsonProcessorProvider) {
+        this(jsonProcessorProvider, null);
+    }
+
+    private JacksonStringSerializer(JsonProcessorProvider jsonProcessorProvider, Function<String, String> function) {
         super(String.class);
         this.jsonProcessorProvider = jsonProcessorProvider;
+        this.function = function;
     }
 
     @Override
     public void serialize(String value, JsonGenerator gen, SerializationContext ctxt) throws JacksonException {
-        if (value == null) {
+        String result = encode(value);
+        if (result == null) {
             gen.writeNull();
             return;
         }
-        gen.writeString(value);
+        STRING_SERIALIZER.serialize(result, gen, ctxt);
+    }
+
+    @Override
+    public void serializeWithType(String value, JsonGenerator gen, SerializationContext ctxt,
+                                  TypeSerializer typeSerializer) throws JacksonException {
+        String result = encode(value);
+        if (result == null) {
+            gen.writeNull();
+            return;
+        }
+        // 自然字符串的类型处理交给 Jackson，避免自行写入多态包装。
+        STRING_SERIALIZER.serializeWithType(result, gen, ctxt, typeSerializer);
+    }
+
+    @Override
+    public boolean isEmpty(SerializationContext ctxt, String value) {
+        return value == null || STRING_SERIALIZER.isEmpty(ctxt, value);
+    }
+
+    private String encode(String value) {
+        return value == null || function == null ? value : function.apply(value);
     }
 
     @Override
     public ValueSerializer<?> createContextual(SerializationContext ctxt, BeanProperty property) {
         if (property == null) {
-            return this;
+            return STRING_SERIALIZER;
         }
         JsonEncode jsonEncode = property.getAnnotation(JsonEncode.class);
         if (jsonEncode == null) {
-            return this;
+            return STRING_SERIALIZER;
         }
-        return new JsonStringFunctionSerializer(jsonProcessorProvider.getProcessor(jsonEncode.value()));
-    }
-
-    private static class JsonStringFunctionSerializer extends StdSerializer<String> {
-        private final Function<String, String> function;
-
-        JsonStringFunctionSerializer(Function<String, String> function) {
-            super(String.class);
-            this.function = function;
-        }
-
-        @Override
-        public void serialize(String value, JsonGenerator gen, SerializationContext ctxt) throws JacksonException {
-            // 与 jackson2 实现对齐：null 直接 writeNull，不把 null 传入用户的 encode 函数，避免其未防 null 时 NPE
-            if (value == null) {
-                gen.writeNull();
-                return;
-            }
-            String result = function == null ? value : function.apply(value);
-            if (result == null) {
-                gen.writeNull();
-                return;
-            }
-            gen.writeString(result);
-        }
+        Function<String, String> processor = jsonProcessorProvider.getProcessor(jsonEncode.value());
+        return processor == null ? STRING_SERIALIZER : new JacksonStringSerializer(jsonProcessorProvider, processor);
     }
 }

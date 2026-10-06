@@ -17,7 +17,7 @@ class ScheduledLogAspectTests {
         VeloProperties properties = new VeloProperties();
         properties.getLog().getSources().getScheduled().getSlowLog().setThresholdMs(0L);
         List<InvocationLogRecord> records = new ArrayList<>();
-        InvocationLogEngine engine = new InvocationLogEngine(properties, (logValue, logOutput) -> logOutput.write(String.valueOf(logValue)), records::add);
+        InvocationLogEngine engine = new InvocationLogEngine(properties, String::valueOf, records::add);
         AspectJProxyFactory factory = new AspectJProxyFactory(new Tasks());
         factory.addAspect(new ScheduledLogAspect(properties, engine));
         Tasks tasks = factory.getProxy();

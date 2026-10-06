@@ -1,12 +1,10 @@
 package io.github.luminion.velo.log;
 
 import io.github.luminion.velo.util.InvocationUtils;
-import java.io.IOException;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.IdentityHashMap;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -19,9 +17,7 @@ import org.springframework.util.ReflectionUtils;
 
 /** 调用适配、对象载荷和安全日志工具。 */
 public final class InvocationLogSupport {
-  private static final int MAX_SANITIZED_VALUES = 256;
   private static final Logger LOGGER = LoggerFactory.getLogger(InvocationLogSupport.class);
-  public static final String DISABLED_PAYLOAD = "disabled";
   public static final String SERIALIZATION_FAILED_PAYLOAD = "serialization-failed";
   public static final String VOID_RESULT = "void";
 
@@ -53,30 +49,18 @@ public final class InvocationLogSupport {
     return values;
   }
 
-  public static String format(Object value, LogValueFormatter formatter, int maxLength) {
-    if (maxLength == 0) {
-      return DISABLED_PAYLOAD;
-    }
-    LogPayloadWriter output = new LogPayloadWriter(maxLength);
-    SanitizationBudget budget = new SanitizationBudget();
+  public static String format(Object value, LogValueFormatter formatter) {
     try {
-      Object safeValue = sanitize(value, new IdentityHashMap<>(), 0, budget);
-      formatter.format(safeValue, output);
-      return output.content(budget.omitted);
-    } catch (IOException | RuntimeException error) {
-      if (output.isLimitReached(error)) {
-        return output.content(budget.omitted);
-      }
+      Object safeValue = sanitize(value, new IdentityHashMap<>(), 0);
+      return singleLine(formatter.format(safeValue));
+    } catch (RuntimeException error) {
       // 不用 toString 回退，避免绕过 Jackson 的字段忽略规则。
-      return limit(SERIALIZATION_FAILED_PAYLOAD, maxLength);
+      return SERIALIZATION_FAILED_PAYLOAD;
     }
   }
 
   /** HTTP 返回包装只记录 body，保持 Jackson 字段规则，不序列化包装中的技术状态。 */
-  static String formatResult(Object value, LogValueFormatter formatter, int maxLength) {
-    if (maxLength == 0) {
-      return DISABLED_PAYLOAD;
-    }
+  static String formatResult(Object value, LogValueFormatter formatter) {
     try {
       if (value != null) {
         for (Class<?> type = value.getClass(); type != null; type = type.getSuperclass()) {
@@ -88,9 +72,9 @@ public final class InvocationLogSupport {
           }
         }
       }
-      return format(value, formatter, maxLength);
+      return format(value, formatter);
     } catch (RuntimeException error) {
-      return limit(SERIALIZATION_FAILED_PAYLOAD, maxLength);
+      return SERIALIZATION_FAILED_PAYLOAD;
     }
   }
 
@@ -112,8 +96,7 @@ public final class InvocationLogSupport {
 
   /** 保留 DTO，避免改写 Jackson 字段语义；流、Servlet 等技术对象不读取内容。 */
   private static Object sanitize(
-      Object value, IdentityHashMap<Object, Boolean> visited, int depth, SanitizationBudget budget) {
-    budget.remaining--;
+      Object value, IdentityHashMap<Object, Boolean> visited, int depth) {
     if (value == null) {
       return null;
     }
@@ -131,33 +114,18 @@ public final class InvocationLogSupport {
         if (value instanceof Map<?, ?>) {
           Map<Object, Object> result = new LinkedHashMap<>();
           for (Map.Entry<?, ?> entry : ((Map<?, ?>) value).entrySet()) {
-            if (budget.remaining == 0) {
-              budget.omitted = true;
-              break;
-            }
-            result.put(entry.getKey(), sanitize(entry.getValue(), visited, depth + 1, budget));
+            result.put(entry.getKey(), sanitize(entry.getValue(), visited, depth + 1));
           }
           return result;
         }
         Collection<Object> result = new ArrayList<>();
         if (value instanceof Collection<?>) {
-          Iterator<?> items = ((Collection<?>) value).iterator();
-          while (items.hasNext()) {
-            if (budget.remaining == 0) {
-              budget.omitted = true;
-              result.add("[omitted]");
-              break;
-            }
-            result.add(sanitize(items.next(), visited, depth + 1, budget));
+          for (Object item : (Collection<?>) value) {
+            result.add(sanitize(item, visited, depth + 1));
           }
         } else {
           for (int i = 0; i < Array.getLength(value); i++) {
-            if (budget.remaining == 0) {
-              budget.omitted = true;
-              result.add("[omitted]");
-              break;
-            }
-            result.add(sanitize(Array.get(value, i), visited, depth + 1, budget));
+            result.add(sanitize(Array.get(value, i), visited, depth + 1));
           }
         }
         return result;
@@ -166,11 +134,6 @@ public final class InvocationLogSupport {
       }
     }
     return InvocationUtils.isLoggableValue(value) ? value : "[omitted]";
-  }
-
-  private static final class SanitizationBudget {
-    private int remaining = MAX_SANITIZED_VALUES;
-    private boolean omitted;
   }
 
   public static String singleLine(String value) {
@@ -199,17 +162,6 @@ public final class InvocationLogSupport {
     String escaped =
         singleLine(value == null ? null : value.replace("\\", "\\\\").replace("\"", "\\\""));
     return "\"" + escaped + "\"";
-  }
-
-  static String limit(String value, int maxLength) {
-    if (maxLength < 0 || value.length() <= maxLength) {
-      return value;
-    }
-    int end = maxLength <= 3 ? maxLength : maxLength - 3;
-    if (end > 0 && Character.isHighSurrogate(value.charAt(end - 1))) {
-      end--;
-    }
-    return value.substring(0, end) + (maxLength > 3 ? "..." : "");
   }
 
   public static boolean exceedsSlowThresholdNanos(long elapsedNanos, long threshold) {

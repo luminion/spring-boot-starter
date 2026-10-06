@@ -104,7 +104,7 @@ class VeloLogAutoConfigurationTests {
 
   @Test
   void usesCustomFormatterAndDecoratorWithoutReplacement() {
-    LogValueFormatter formatter = (value, output) -> output.write("custom");
+    LogValueFormatter formatter = value -> "custom";
     TaskDecorator decorator = task -> task;
     contextRunner
         .withBean(LogValueFormatter.class, () -> formatter)
@@ -119,7 +119,7 @@ class VeloLogAutoConfigurationTests {
   @Test
   void noMapperUsesToStringFallback() {
     contextRunner.run(
-        context -> assertThat(InvocationLogSupport.format(42, context.getBean(LogValueFormatter.class), -1)).isEqualTo("42"));
+        context -> assertThat(InvocationLogSupport.format(42, context.getBean(LogValueFormatter.class))).isEqualTo("42"));
   }
 
   @Test
@@ -146,6 +146,23 @@ class VeloLogAutoConfigurationTests {
     contextRunner
         .withPropertyValues("velo.log.sources.feign.slow-log.threshold-ms=-1")
         .run(context -> assertThat(context).hasFailed());
+  }
+
+  @Test
+  void rejectsUnsupportedPayloadLengthsAtStartup() {
+    for (int length : new int[] {-2, 1, 2048}) {
+      contextRunner
+          .withPropertyValues("velo.log.defaults.max-payload-length=" + length)
+          .run(context -> assertThat(context).hasFailed()
+              .getFailure().hasRootCauseMessage(
+                  "velo.log.defaults.max-payload-length only supports -1 (unlimited) or 0 (disabled)"));
+    }
+  }
+
+  @Test
+  void acceptsDisabledPayloadAtStartup() {
+    contextRunner.withPropertyValues("velo.log.defaults.max-payload-length=0")
+        .run(context -> assertThat(context).hasSingleBean(InvocationLogEngine.class));
   }
 
   static final class CustomInvocationLogWriter implements InvocationLogWriter {

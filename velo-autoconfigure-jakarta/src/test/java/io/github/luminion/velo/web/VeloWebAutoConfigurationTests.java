@@ -208,7 +208,7 @@ class VeloWebAutoConfigurationTests {
     List<InvocationLogRecord> records = new ArrayList<>();
     ControllerLogAspect aspect =
         new ControllerLogAspect(
-            new InvocationLogEngine(new VeloProperties(), (logValue, logOutput) -> logOutput.write(String.valueOf(logValue)), records::add));
+            new InvocationLogEngine(new VeloProperties(), String::valueOf, records::add));
     ProceedingJoinPoint point = mock(ProceedingJoinPoint.class);
     MethodSignature signature = mock(MethodSignature.class);
     when(signature.getMethod()).thenReturn(Endpoint.class.getMethod("find", Long.class));

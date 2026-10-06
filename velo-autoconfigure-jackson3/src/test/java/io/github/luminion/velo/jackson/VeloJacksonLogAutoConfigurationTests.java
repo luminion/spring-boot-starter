@@ -31,7 +31,7 @@ class VeloJacksonLogAutoConfigurationTests {
                             assertThat(c).hasSingleBean(LogValueFormatter.class);
                             assertThat(
                                     InvocationLogSupport.format(new Payload("visible", "secret"),
-                                            c.getBean(LogValueFormatter.class), -1))
+                                            c.getBean(LogValueFormatter.class)))
                                     .isEqualTo("{\"value\":\"visible\"}");
                         });
     }
@@ -43,7 +43,7 @@ class VeloJacksonLogAutoConfigurationTests {
 
     @Test
     void userFormatterWins() {
-        LogValueFormatter custom = (value, output) -> output.write("custom");
+        LogValueFormatter custom = value -> "custom";
         runner
                 .withBean(ObjectMapper.class, ObjectMapper::new)
                 .withBean(LogValueFormatter.class, () -> custom)
@@ -51,24 +51,23 @@ class VeloJacksonLogAutoConfigurationTests {
     }
 
     @Test
-    void largeDtoCollectionStopsBeforeFullTraversalWithoutReadingIgnoredGetter() {
+    void largeDtoCollectionIsFullySerializedWithoutReadingIgnoredGetter() {
         AtomicInteger visited = new AtomicInteger();
         runner.withBean(ObjectMapper.class, ObjectMapper::new).run(c -> {
             String text = InvocationLogSupport.format(new LargePayload(visited),
-                    c.getBean(LogValueFormatter.class), 64);
-            assertThat(text.length()).isLessThanOrEqualTo(64);
-            assertThat(text).startsWith("{\"values\":[").endsWith("...");
-            assertThat(visited.get()).isPositive().isLessThan(2000);
+                    c.getBean(LogValueFormatter.class));
+            assertThat(text).startsWith("{\"values\":[").endsWith("{\"value\":1000}]}");
+            assertThat(visited).hasValue(1000);
         });
     }
 
     @Test
-    void longStringLimitDoesNotChangeTheApplicationMapper() throws Exception {
+    void longStringIsCompleteAndDoesNotChangeTheApplicationMapper() throws Exception {
         ObjectMapper mapper = new ObjectMapper();
         String value = String.join("", Collections.nCopies(10000, "x"));
         runner.withBean(ObjectMapper.class, () -> mapper).run(c -> {
-            String text = InvocationLogSupport.format(value, c.getBean(LogValueFormatter.class), 64);
-            assertThat(text).hasSize(64).startsWith("\"").endsWith("...");
+            String text = InvocationLogSupport.format(value, c.getBean(LogValueFormatter.class));
+            assertThat(text).isEqualTo("\"" + value + "\"");
         });
         assertThat(mapper.writeValueAsString(value)).hasSize(value.length() + 2);
     }
@@ -81,7 +80,7 @@ class VeloJacksonLogAutoConfigurationTests {
         }
 
         public List<CountingPayload> getValues() {
-            return Collections.nCopies(100000, new CountingPayload(visited));
+            return Collections.nCopies(1000, new CountingPayload(visited));
         }
     }
 
@@ -110,7 +109,7 @@ class VeloJacksonLogAutoConfigurationTests {
                         c -> {
                             assertThat(
                                     InvocationLogSupport.format(
-                                            new BrokenPayload(), c.getBean(LogValueFormatter.class), -1))
+                                            new BrokenPayload(), c.getBean(LogValueFormatter.class)))
                                     .isEqualTo("serialization-failed");
                         });
     }

@@ -24,6 +24,6 @@ public class VeloJacksonLogAutoConfiguration {
     @ConditionalOnBean(ObjectMapper.class)
     @ConditionalOnMissingBean(LogValueFormatter.class)
     public LogValueFormatter jacksonLogValueFormatter(ObjectMapper mapper) {
-        return (value, output) -> mapper.writeValue(output, value);
+        return mapper::writeValueAsString;
     }
 }

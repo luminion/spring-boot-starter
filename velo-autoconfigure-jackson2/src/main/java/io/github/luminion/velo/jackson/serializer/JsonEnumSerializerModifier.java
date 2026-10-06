@@ -1,12 +1,26 @@
 package io.github.luminion.velo.jackson.serializer;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.BeanDescription;
+import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.fasterxml.jackson.databind.PropertyName;
 import com.fasterxml.jackson.databind.SerializationConfig;
 import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.cfg.HandlerInstantiator;
+import com.fasterxml.jackson.databind.cfg.MapperConfig;
+import com.fasterxml.jackson.databind.introspect.AnnotatedClass;
+import com.fasterxml.jackson.databind.introspect.AnnotatedField;
+import com.fasterxml.jackson.databind.introspect.AnnotatedMethod;
+import com.fasterxml.jackson.databind.introspect.BeanPropertyDefinition;
 import com.fasterxml.jackson.databind.ser.BeanPropertyWriter;
 import com.fasterxml.jackson.databind.ser.BeanSerializerModifier;
+import com.fasterxml.jackson.databind.ser.VirtualBeanPropertyWriter;
+import com.fasterxml.jackson.databind.ser.std.StringSerializer;
+import com.fasterxml.jackson.databind.util.ClassUtil;
+import com.fasterxml.jackson.databind.util.SimpleBeanPropertyDefinition;
 import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.jackson.annotation.JsonEnum;
 import io.github.luminion.velo.jackson.support.JsonEnumMetadata;
@@ -16,7 +30,9 @@ import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Slf4j
@@ -35,6 +51,11 @@ public class JsonEnumSerializerModifier extends BeanSerializerModifier {
                                                      List<BeanPropertyWriter> beanProperties) {
         List<BeanPropertyWriter> newProperties = new ArrayList<>(beanProperties);
         Set<String> existNames = new HashSet<>();
+        Map<String, BeanPropertyDefinition> definitions = new HashMap<>();
+        for (BeanPropertyDefinition definition : beanDesc.findProperties()) {
+            definitions.put(definition.getName(), definition);
+        }
+        PropertyNamingStrategy strategy = namingStrategy(config, beanDesc.getClassInfo());
         for (BeanPropertyWriter writer : beanProperties) {
             existNames.add(writer.getName());
         }
@@ -58,60 +79,104 @@ public class JsonEnumSerializerModifier extends BeanSerializerModifier {
                 continue;
             }
 
-            String targetName = targetName(config, writer.getName(), ann.nameSuffix());
+            String targetName = targetName(config, writer, definitions.get(writer.getName()), strategy, ann.nameSuffix());
             if (existNames.contains(targetName)) {
                 log.warn("Skip JsonEnum derived property because target property already exists: {}", targetName);
                 continue;
             }
 
-            newProperties.add(new JsonEnumPropertyWriter(writer, targetName, metadata));
+            newProperties.add(new JsonEnumPropertyWriter(config, beanDesc, writer, targetName, metadata));
             existNames.add(targetName);
         }
         return newProperties;
     }
 
-    private String targetName(SerializationConfig config, String baseName, String annotationSuffix) {
-        String suffix = StringUtils.hasText(annotationSuffix) ? annotationSuffix : jacksonProperties.getEnumNameSuffix();
-        String logicalName = baseName + StringUtils.capitalize(suffix);
-        if (config.getPropertyNamingStrategy() == null) {
-            return logicalName;
+    private PropertyNamingStrategy namingStrategy(SerializationConfig config, AnnotatedClass declaringClass) {
+        Object definition = config.getAnnotationIntrospector().findNamingStrategy(declaringClass);
+        if (definition == null) {
+            return config.getPropertyNamingStrategy();
         }
-        return config.getPropertyNamingStrategy().nameForField(config, null, logicalName);
+        if (definition instanceof PropertyNamingStrategy) {
+            return (PropertyNamingStrategy) definition;
+        }
+        Class<?> strategyClass = (Class<?>) definition;
+        if (strategyClass == PropertyNamingStrategy.class) {
+            return null;
+        }
+        HandlerInstantiator instantiator = config.getHandlerInstantiator();
+        PropertyNamingStrategy strategy = instantiator == null ? null
+                : instantiator.namingStrategyInstance(config, declaringClass, strategyClass);
+        return strategy == null
+                ? (PropertyNamingStrategy) ClassUtil.createInstance(strategyClass, config.canOverrideAccessModifiers())
+                : strategy;
     }
 
-    private static class JsonEnumPropertyWriter extends BeanPropertyWriter {
-        private final String targetName;
+    private String targetName(SerializationConfig config, BeanPropertyWriter writer, BeanPropertyDefinition definition,
+                              PropertyNamingStrategy strategy, String annotationSuffix) {
+        String suffix = StringUtils.hasText(annotationSuffix) ? annotationSuffix : jacksonProperties.getEnumNameSuffix();
+        String baseName = definition == null || definition.isExplicitlyNamed()
+                ? writer.getName() : definition.getInternalName();
+        String logicalName = baseName + StringUtils.capitalize(suffix);
+        if (strategy == null) {
+            return logicalName;
+        }
+        if (writer.getMember() instanceof AnnotatedMethod) {
+            return strategy.nameForGetterMethod(config, (AnnotatedMethod) writer.getMember(), logicalName);
+        }
+        return strategy.nameForField(config, (AnnotatedField) writer.getMember(), logicalName);
+    }
+
+    private static class JsonEnumPropertyWriter extends VirtualBeanPropertyWriter {
+        private final SourcePropertyWriter source;
         private final JsonEnumMetadata metadata;
 
-        public JsonEnumPropertyWriter(BeanPropertyWriter base, String targetName, JsonEnumMetadata metadata) {
-            super(base, new PropertyName(targetName));
-            this.targetName = targetName;
+        JsonEnumPropertyWriter(SerializationConfig config, BeanDescription beanDesc, BeanPropertyWriter base,
+                               String targetName, JsonEnumMetadata metadata) {
+            super(SimpleBeanPropertyDefinition.construct(config, base.getMember(), new PropertyName(targetName)),
+                    beanDesc.getClassAnnotations(), config.constructType(String.class), new StringSerializer(),
+                    null, null, JsonInclude.Value.construct(JsonInclude.Include.NON_NULL, JsonInclude.Include.ALWAYS),
+                    base.getViews());
+            this.source = new SourcePropertyWriter(base);
             this.metadata = metadata;
         }
 
         @Override
-        public void serializeAsField(Object bean, JsonGenerator gen, SerializerProvider prov) throws Exception {
-            Object value;
-            try {
-                value = getMember().getValue(bean);
-            } catch (Exception e) {
-                log.warn("Failed to read JsonEnum source property: {}", getName(), e);
-                return;
+        protected Object value(Object bean, JsonGenerator generator, SerializerProvider provider) throws Exception {
+            Object value = source.get(bean);
+            if (source.isSuppressed(value, provider)) {
+                return null;
             }
-            if (value == null) {
-                return;
-            }
+            Object name = metadata.getName(value);
+            return name == null ? null : name.toString();
+        }
 
-            Object name;
-            try {
-                name = metadata.getName(value);
-            } catch (RuntimeException e) {
-                log.warn("Failed to resolve JsonEnum derived value for property: {}", getName(), e);
-                return;
+        @Override
+        public VirtualBeanPropertyWriter withConfig(MapperConfig<?> config, AnnotatedClass declaringClass,
+                                                    BeanPropertyDefinition definition, JavaType type) {
+            return this;
+        }
+    }
+
+    /**
+     * 沿用原字段已经计算好的包含策略，派生值再交由原生虚拟属性输出。
+     */
+    private static class SourcePropertyWriter extends BeanPropertyWriter {
+        SourcePropertyWriter(BeanPropertyWriter source) {
+            super(source);
+        }
+
+        boolean isSuppressed(Object value, SerializerProvider provider) throws Exception {
+            if (value == null) {
+                return true;
             }
-            if (name != null) {
-                gen.writeStringField(targetName, name.toString());
+            if (_suppressableValue == MARKER_FOR_EMPTY) {
+                JsonSerializer<Object> serializer = _serializer;
+                if (serializer == null) {
+                    serializer = provider.findValueSerializer(getType(), this);
+                }
+                return serializer.isEmpty(provider, value);
             }
+            return _suppressableValue != null && _suppressableValue.equals(value);
         }
     }
 }

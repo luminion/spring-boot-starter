@@ -110,22 +110,22 @@ public class InvocationLogEngine {
 
         private void arguments(InvocationLogFeature feature) {
             InvocationLogRecord record = record(feature);
-            if (record != null && selection.maxLength != 0) {
+            if (record != null && selection.payloadEnabled) {
                 Map<String, Object> values =
                         InvocationLogSupport.arguments(
                                 selection.metadata.parameterNames, invocation.getArguments());
-                record.setContent(InvocationLogSupport.format(values, formatter, selection.maxLength));
+                record.setContent(InvocationLogSupport.format(values, formatter));
                 write(record);
             }
         }
 
         private void result(Object value) {
             InvocationLogRecord record = record(InvocationLogFeature.EXIT_RESULT);
-            if (record != null && selection.maxLength != 0) {
+            if (record != null && selection.payloadEnabled) {
                 String text =
                         selection.metadata.voidResult
-                                ? InvocationLogSupport.limit(InvocationLogSupport.VOID_RESULT, selection.maxLength)
-                                : InvocationLogSupport.formatResult(value, formatter, selection.maxLength);
+                                ? InvocationLogSupport.VOID_RESULT
+                                : InvocationLogSupport.formatResult(value, formatter);
                 record.setContent(text);
                 write(record);
             }
@@ -138,7 +138,7 @@ public class InvocationLogEngine {
                 Map<String, Object> content = new LinkedHashMap<>();
                 content.put("type", error.getClass().getName());
                 content.put("message", error.getMessage());
-                record.setContent(InvocationLogSupport.format(content, formatter, summaryLimit()));
+                record.setContent(InvocationLogSupport.format(content, formatter));
                 write(record);
             }
         }
@@ -154,14 +154,14 @@ public class InvocationLogEngine {
                 Map<String, Object> content = new LinkedHashMap<>();
                 content.put("costMs", TimeUnit.NANOSECONDS.toMillis(elapsed));
                 content.put("thresholdMs", policy.threshold);
-                record.setContent(InvocationLogSupport.format(content, formatter, summaryLimit()));
+                record.setContent(InvocationLogSupport.format(content, formatter));
                 write(record);
             }
         }
 
         private void headers(
                 InvocationLogFeature feature, Supplier<Map<String, List<String>>> supplier) {
-            if (supplier == null || selection.maxLength == 0) {
+            if (supplier == null || !selection.payloadEnabled) {
                 return;
             }
             InvocationLogRecord record = record(feature);
@@ -182,10 +182,9 @@ public class InvocationLogEngine {
                         selected.put(entry.getKey(), entry.getValue());
                     }
                 }
-                record.setContent(InvocationLogSupport.format(selected, formatter, selection.maxLength));
+                record.setContent(InvocationLogSupport.format(selected, formatter));
             } catch (RuntimeException error) {
-                record.setContent(InvocationLogSupport.limit(
-                        InvocationLogSupport.SERIALIZATION_FAILED_PAYLOAD, selection.maxLength));
+                record.setContent(InvocationLogSupport.SERIALIZATION_FAILED_PAYLOAD);
             }
             write(record);
         }
@@ -194,11 +193,6 @@ public class InvocationLogEngine {
             InvocationLogSupport.safeWrite(writer, record);
         }
 
-        private int summaryLimit() {
-            return selection.maxLength > 0
-                    ? selection.maxLength
-                    : VeloProperties.InvocationDefaults.DEFAULT_MAX_PAYLOAD_LENGTH;
-        }
     }
 
     private static Throwable unwrap(Throwable throwable) {

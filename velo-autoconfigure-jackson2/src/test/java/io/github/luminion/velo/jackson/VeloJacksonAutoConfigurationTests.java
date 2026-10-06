@@ -534,6 +534,8 @@ class VeloJacksonAutoConfigurationTests {
         if (propertyNamingStrategy != null) {
             builder.propertyNamingStrategy(propertyNamingStrategy);
         }
+        builder.modulesToInstall(context.getBeansOfType(com.fasterxml.jackson.databind.Module.class)
+                .values().toArray(new com.fasterxml.jackson.databind.Module[0]));
         context.getBeansOfType(Jackson2ObjectMapperBuilderCustomizer.class)
                 .values()
                 .forEach(customizer -> customizer.customize(builder));

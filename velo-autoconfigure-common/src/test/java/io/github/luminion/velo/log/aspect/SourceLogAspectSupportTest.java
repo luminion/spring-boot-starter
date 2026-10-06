@@ -41,7 +41,7 @@ class SourceLogAspectSupportTest {
             p,
             new InvocationLogEngine(
                 p,
-                (logValue, logOutput) -> logOutput.write(String.valueOf(logValue)),
+                String::valueOf,
                 record -> {
                   records.add(record);
                   traces.add(MDC.get("traceId"));
@@ -73,7 +73,7 @@ class SourceLogAspectSupportTest {
             p,
             new InvocationLogEngine(
                 p,
-                (logValue, logOutput) -> logOutput.write(String.valueOf(logValue)),
+                String::valueOf,
                 record -> {
                   records.add(record);
                   traces.add(MDC.get("traceId"));
@@ -95,7 +95,7 @@ class SourceLogAspectSupportTest {
     AtomicInteger calls = new AtomicInteger();
     TraceContextResolver resolver =
         () -> new TraceData("task-" + calls.incrementAndGet(), Collections.emptyMap());
-    InvocationLogEngine engine = new InvocationLogEngine(properties, (logValue, logOutput) -> logOutput.write(String.valueOf(logValue)), r -> {});
+    InvocationLogEngine engine = new InvocationLogEngine(properties, String::valueOf, r -> {});
     TraceScopeManager trace = new TraceScopeManager(properties.getLog().getTrace(), resolver);
     ProceedingJoinPoint point = point();
     List<String> ids = new ArrayList<>();
@@ -119,7 +119,7 @@ class SourceLogAspectSupportTest {
     VeloProperties p = new VeloProperties();
     p.getLog().getTrace().setEnabled(false);
     ScheduledLogAspect aspect =
-        new ScheduledLogAspect(p, new InvocationLogEngine(p, (logValue, logOutput) -> logOutput.write(String.valueOf(logValue)), r -> {}));
+        new ScheduledLogAspect(p, new InvocationLogEngine(p, String::valueOf, r -> {}));
     ProceedingJoinPoint point = point();
     MDC.put("traceId", "caller");
     when(point.proceed())

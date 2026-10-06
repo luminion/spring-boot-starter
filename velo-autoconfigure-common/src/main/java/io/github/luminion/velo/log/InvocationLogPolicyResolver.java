@@ -65,7 +65,7 @@ final class InvocationLogPolicyResolver {
             }
         }
         return new Selection(
-                metadata, policies, properties.getLog().getDefaults().getMaxPayloadLength());
+                metadata, policies, properties.getLog().getDefaults().getMaxPayloadLength() != 0);
     }
 
     private Metadata inspect(Method original, Class<?> type, DefaultParameterNameDiscoverer names) {
@@ -284,7 +284,7 @@ final class InvocationLogPolicyResolver {
     static class Selection {
         final Metadata metadata;
         final Map<InvocationLogFeature, FeaturePolicy> policies;
-        final int maxLength;
+        final boolean payloadEnabled;
     }
 
     static class FeaturePolicy {

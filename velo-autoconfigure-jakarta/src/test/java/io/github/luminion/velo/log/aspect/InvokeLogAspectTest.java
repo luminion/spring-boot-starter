@@ -23,16 +23,15 @@ class InvokeLogAspectTest {
   @Test
   void shouldCaptureFinishArgsForNormalAndExceptionalCompletion() {
     LogValueFormatter formatter =
-        (value, output) -> {
+        value -> {
           if (!(value instanceof Map)) {
-            output.write(String.valueOf(value));
-            return;
+            return String.valueOf(value);
           }
           Object argument = ((Map<?, ?>) value).values().iterator().next();
           String text = argument instanceof MutableArgument
               ? ((MutableArgument) argument).value
               : String.valueOf(value);
-          output.write(text);
+          return text;
         };
     CapturingInvocationLogWriter writer = new CapturingInvocationLogWriter();
     InvokeLogAspect aspect =

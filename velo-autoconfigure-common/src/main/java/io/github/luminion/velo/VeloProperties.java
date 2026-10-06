@@ -11,7 +11,7 @@ import lombok.EqualsAndHashCode;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.logging.LogLevel;
 
-/** Starter 的统一配置属性。 */
+/** Velo 的统一配置属性。 */
 @Data
 @ConfigurationProperties("velo")
 public class VeloProperties {
@@ -19,90 +19,90 @@ public class VeloProperties {
   /** 是否启用开箱即用的默认增强；设置为 {@code false} 时使用无侵入模式。 */
   private boolean opinionated = true;
 
-  /** Startup banner settings. */
+  /** 启动横幅配置。 */
   private BannerProperties banner = new BannerProperties();
 
-  /** Date and time formatting settings shared by web, Jackson and Excel features. */
+  /** Web、Jackson 和 Excel 功能共用的日期时间格式配置。 */
   private DateTimeFormatProperties dateTimeFormat = new DateTimeFormatProperties();
 
-  /** Spring converter settings. */
+  /** Spring 类型转换器配置。 */
   private SpringConverterProperties springConverter = new SpringConverterProperties();
 
-  /** Idempotent feature settings. */
+  /** 幂等功能配置。 */
   private IdempotentProperties idempotent = new IdempotentProperties();
 
-  /** Rate-limit feature settings. */
+  /** 限流功能配置。 */
   private RateLimitProperties rateLimit = new RateLimitProperties();
 
-  /** Lock feature settings. */
+  /** 锁功能配置。 */
   private LockProperties lock = new LockProperties();
 
-  /** Redis helper settings. */
+  /** Redis 辅助功能配置。 */
   private RedisProperties redis = new RedisProperties();
 
-  /** Cache feature settings. */
+  /** 缓存功能配置。 */
   private CacheProperties cache = new CacheProperties();
 
-  /** Excel integration settings. */
+  /** Excel 集成配置。 */
   private ExcelProperties excel = new ExcelProperties();
 
-  /** Jackson integration settings. */
+  /** Jackson 集成配置。 */
   private JacksonProperties jackson = new JacksonProperties();
 
   /** XSS 清洗策略与适配目标设置。 */
   private XssProperties xss = new XssProperties();
 
-  /** Log auto-configuration settings. */
+  /** 日志自动配置。 */
   private LogProperties log = new LogProperties();
 
-  /** MyBatis-Plus integration settings. */
+  /** MyBatis-Plus 集成配置。 */
   private MybatisPlusProperties mybatisPlus = new MybatisPlusProperties();
 
-  /** Web related settings. */
+  /** Web 相关配置。 */
   private WebProperties web = new WebProperties();
 
-  /** Feign related settings. */
+  /** Feign 相关配置。 */
   private FeignProperties feign = new FeignProperties();
 
-  /** Aspect execution order settings. */
+  /** 切面执行顺序配置。 */
   private AspectOrderProperties aspectOrder = new AspectOrderProperties();
 
   @Data
   public static class IdempotentProperties {
 
-    /** Enables idempotent auto-configuration. */
+    /** 是否启用幂等自动配置。 */
     private boolean enabled = true;
 
-    /** Backend implementation used by idempotent handler selection. */
+    /** 幂等处理器选用的后端实现。 */
     private ConcurrencyBackend backend = ConcurrencyBackend.AUTO;
 
-    /** Prefix used by idempotent related keys. */
+    /** 幂等相关键的前缀。 */
     private String prefix = "idempotent:";
   }
 
   @Data
   public static class RateLimitProperties {
 
-    /** Enables rate-limit auto-configuration. */
+    /** 是否启用限流自动配置。 */
     private boolean enabled = true;
 
-    /** Backend implementation used by rate-limit handler selection. */
+    /** 限流处理器选用的后端实现。 */
     private ConcurrencyBackend backend = ConcurrencyBackend.AUTO;
 
-    /** Prefix used by rate-limit related keys. */
+    /** 限流相关键的前缀。 */
     private String prefix = "rateLimit:";
   }
 
   @Data
   public static class LockProperties {
 
-    /** Enables lock auto-configuration. */
+    /** 是否启用锁自动配置。 */
     private boolean enabled = true;
 
-    /** Backend implementation used by lock handler selection. */
+    /** 锁处理器选用的后端实现。 */
     private ConcurrencyBackend backend = ConcurrencyBackend.AUTO;
 
-    /** Prefix used by lock related keys. */
+    /** 锁相关键的前缀。 */
     private String prefix = "lock:";
 
     /** 简单 Redis 锁的固定 TTL，单位为秒；到期自动释放，不续期。 */
@@ -112,35 +112,33 @@ public class VeloProperties {
   @Data
   public static class RedisProperties {
 
-    /** Enables Redis helper auto-configuration. */
+    /** 是否启用 Redis 辅助功能自动配置。 */
     private boolean enabled = true;
   }
 
   @Data
   public static class CacheProperties {
 
-    /** Enables cache auto-configuration. */
+    /** 是否启用缓存自动配置。 */
     private boolean enabled = true;
 
-    /** Static prefix added to cache keys. */
+    /** 缓存键的固定前缀。 */
     private String prefix = "";
 
-    /** Separator used when building cache key prefixes. */
+    /** 构建缓存键前缀时使用的分隔符。 */
     private String separator = ":";
 
-    /** Default cache TTL. */
+    /** 缓存的默认有效期。 */
     private Duration defaultTtl = Duration.ofMinutes(5);
 
     /**
-     * Whether to cache null values. When enabled, null results are cached to prevent cache
-     * penetration. Default is true.
+     * 是否缓存空值。启用后缓存空结果，以防止缓存穿透。默认启用。
      */
     private boolean nullCachingEnabled = true;
 
     /**
-     * Percentage of jitter applied to TTL values to prevent cache stampede. For example, a value of
-     * 10 means each entry's TTL is randomly shifted by up to ±10% when it is written, independently
-     * per key. Set to 0 to disable jitter. Default is 0.
+     * 缓存有效期的随机抖动百分比，用于避免缓存集中失效。例如设置为 10 时，
+     * 每个键在写入时独立计算有效期，随机调整幅度不超过 ±10%。设置为 0 时关闭抖动，默认值为 0。
      */
     private int ttlJitterPercentage;
 
@@ -152,50 +150,50 @@ public class VeloProperties {
       this.ttlJitterPercentage = ttlJitterPercentage;
     }
 
-    /** Per-cache TTL overrides. */
+    /** 按缓存名称覆盖默认有效期。 */
     private Map<String, Duration> ttl = new LinkedHashMap<>();
   }
 
   @Data
   public static class ExcelProperties {
 
-    /** Fine-grained converter switches shared by EasyExcel, FastExcel and Fesod. */
+    /** EasyExcel、FastExcel 和 Fesod 共用的细粒度转换器开关。 */
     private ConverterProperties converters = new ConverterProperties();
 
     @Data
     public static class ConverterProperties {
 
-      /** Enables automatic registration of built-in Excel converters. */
+      /** 是否自动注册内置 Excel 转换器。 */
       private boolean enabled = true;
 
-      /** Enables the Boolean Excel converter. */
+      /** 是否启用 Boolean 类型的 Excel 转换器。 */
       private boolean booleanEnabled = true;
 
-      /** Enables the Long Excel converter. */
+      /** 是否启用 Long 类型的 Excel 转换器。 */
       private boolean longEnabled = true;
 
-      /** Enables the Float Excel converter. */
+      /** 是否启用 Float 类型的 Excel 转换器。 */
       private boolean floatEnabled = true;
 
-      /** Enables the Double Excel converter. */
+      /** 是否启用 Double 类型的 Excel 转换器。 */
       private boolean doubleEnabled = true;
 
-      /** Enables the BigInteger Excel converter. */
+      /** 是否启用 BigInteger 类型的 Excel 转换器。 */
       private boolean bigIntegerEnabled = true;
 
-      /** Enables the BigDecimal Excel converter. */
+      /** 是否启用 BigDecimal 类型的 Excel 转换器。 */
       private boolean bigDecimalEnabled = true;
 
-      /** Enables the java.util.Date Excel converter. */
+      /** 是否启用 java.util.Date 类型的 Excel 转换器。 */
       private boolean dateEnabled = true;
 
-      /** Enables the LocalDateTime Excel converter. */
+      /** 是否启用 LocalDateTime 类型的 Excel 转换器。 */
       private boolean localDateTimeEnabled = true;
 
-      /** Enables the LocalDate Excel converter. */
+      /** 是否启用 LocalDate 类型的 Excel 转换器。 */
       private boolean localDateEnabled = true;
 
-      /** Enables the LocalTime Excel converter. */
+      /** 是否启用 LocalTime 类型的 Excel 转换器。 */
       private boolean localTimeEnabled = true;
     }
   }
@@ -203,35 +201,35 @@ public class VeloProperties {
   @Data
   public static class JacksonProperties {
 
-    /** Enables Jackson auto-configuration. */
+    /** 是否启用 Jackson 自动配置。 */
     private boolean enabled = true;
 
-    /** Enables date-time related Jackson customization. */
+    /** 是否启用 Jackson 日期时间格式增强。 */
     private boolean dateTimeEnabled = true;
 
     /**
-     * Serializes long values as strings on write, to avoid precision loss on the front-end
-     * (JavaScript Number cannot safely represent integers beyond 2^53). Only affects serialization
-     * (write); deserialization accepts both numbers and strings.
+     * 序列化时将 long 值输出为字符串，避免前端精度丢失
+     * （JavaScript 的 Number 无法安全表示超过 2^53 的整数）。
+     * 仅影响序列化；反序列化同时接受数字和字符串。
      */
     private boolean serializeLongAsString = true;
 
-    /** Serializes BigDecimal values as strings on write. */
+    /** 是否在序列化时将 BigDecimal 值输出为字符串。 */
     private boolean serializeBigDecimalAsString = true;
 
-    /** Removes trailing zeros before serializing BigDecimal values. */
+    /** 是否在序列化 BigDecimal 值前移除尾零。 */
     private boolean bigDecimalStripTrailingZeros = false;
 
-    /** Serializes float and double values as strings on write. */
+    /** 是否在序列化时将 float 和 double 值输出为字符串。 */
     private boolean serializeFloatingAsString = false;
 
-    /** Adds enum description fields during serialization. */
+    /** 是否在序列化时添加枚举描述字段。 */
     private boolean enumDescEnabled = true;
 
-    /** Default suffix used by derived enum description fields. */
+    /** 派生枚举描述字段的默认后缀。 */
     private String enumNameSuffix = "name";
 
-    /** Candidate enum code-to-name field pairs, matched in declaration order. */
+    /** 枚举编码字段与名称字段的候选映射，按声明顺序匹配。 */
     private Map<String, String> enumMappings = defaultEnumMappings();
 
     private static Map<String, String> defaultEnumMappings() {
@@ -281,10 +279,9 @@ public class VeloProperties {
 
   @Data
   public static class InvocationDefaults {
-    public static final int DEFAULT_MAX_PAYLOAD_LENGTH = 4096;
 
-    /** 默认 4096 字符；-1 不限字符数，0 不采集对象载荷，正数限制单行载荷长度。 */
-    private int maxPayloadLength = DEFAULT_MAX_PAYLOAD_LENGTH;
+    /** 默认 -1 完整输出，0 关闭对象载荷；不支持字符截断，其他值会在日志引擎启动时报错。 */
+    private int maxPayloadLength = -1;
 
     private LogFeatureProperties entryArgs = new LogFeatureProperties();
     private LogFeatureProperties exitArgs = new LogFeatureProperties();
@@ -348,7 +345,7 @@ public class VeloProperties {
     /** 是否启用 Web MVC 自动配置。 */
     private boolean enabled = true;
 
-    /** CORS settings. */
+    /** 跨域配置。 */
     private CorsProperties cors = new CorsProperties();
   }
 
@@ -359,83 +356,82 @@ public class VeloProperties {
     private boolean enabled;
 
     /**
-     * Comma-separated or array-style list of allowed origin patterns. Defaults to {@code *} (all
-     * origins).
+     * 允许的来源匹配模式列表，支持逗号分隔或数组形式。
+     * 默认值为 {@code *}，表示允许所有来源。
      */
     private String[] allowedOriginPatterns = {"*"};
 
-    /** Comma-separated or array-style list of allowed HTTP methods. */
+    /** 允许的 HTTP 方法列表，支持逗号分隔或数组形式。 */
     private String[] allowedMethods = {"GET", "POST", "PUT", "DELETE", "OPTIONS"};
 
     /**
-     * Whether browsers may include credentials such as cookies or HTTP authentication in
-     * cross-origin requests. Defaults to {@code false}; enable it only when cross-origin
-     * credentials are required.
+     * 是否允许浏览器在跨域请求中携带 Cookie 或 HTTP 身份认证等凭据。
+     * 默认为 {@code false}，仅在需要跨域凭据时启用。
      */
     private boolean allowCredentials;
 
-    /** Max age of preflight cache in seconds. */
+    /** 预检请求的缓存有效期，单位为秒。 */
     private long maxAge = 3600;
   }
 
   @Data
   public static class FeignProperties {
 
-    /** Enables Feign client logging auto-configuration. */
+    /** 是否启用 Feign 客户端日志自动配置。 */
     private boolean enabled = true;
   }
 
   @Data
   public static class XssProperties {
 
-    /** Default XSS cleaning strategy. {@code NONE} disables the built-in cleaner. */
+    /** 默认 XSS 清洗策略；设置为 {@code NONE} 时禁用内置清洗器。 */
     private XssStrategy strategy = XssStrategy.NONE;
 
     /**
-     * 是否启用 Web MVC 字符串转换目标。 A user-provided {@code XssCleaner} can still be used when the built-in
-     * strategy is {@code NONE}.
+     * 是否启用 Web MVC 字符串转换目标。内置策略为 {@code NONE} 时，
+     * 仍可使用用户提供的 {@code XssCleaner}。
      */
     private boolean webEnabled = true;
 
     /**
-     * Enables XSS cleaning for ordinary Jackson String properties. This is disabled by default
-     * because Jackson customization is global to the mapper.
+     * 是否对 Jackson 的普通 String 属性启用 XSS 清洗。
+     * 由于 Jackson 配置会影响整个映射器，默认关闭此功能。
      */
     private boolean jacksonEnabled;
   }
 
   @Data
   public static class DateTimeFormatProperties {
-    /** Default time pattern. */
+    /** 默认时间格式。 */
     private String time = "HH:mm:ss";
 
-    /** Default date pattern. */
+    /** 默认日期格式。 */
     private String date = "yyyy-MM-dd";
 
-    /** Default date-time pattern. */
+    /** 默认日期时间格式。 */
     private String dateTime = "yyyy-MM-dd HH:mm:ss";
 
-    /** Default time zone used by date based converters and serializers. */
+    /** 日期转换器和序列化器使用的默认时区。 */
     private String timeZone = "GMT+8";
   }
 
   @Data
   public static class SpringConverterProperties {
 
-    /** Enables automatic registration of built-in date-time converters. */
+    /** 是否自动注册内置日期时间转换器。 */
     private boolean dateTimeEnabled = true;
   }
 
   @Data
   public static class MybatisPlusProperties {
 
-    /** Enables MyBatis-Plus auto-configuration. */
+    /** 是否启用 MyBatis-Plus 自动配置。 */
     private boolean enabled = true;
 
     /** 启用分页内部拦截器 Bean；MyBatis-Plus 3.5.9 及以上还需要引入对应的 JSQLParser 扩展模块。 */
     private boolean paginationEnabled = true;
 
-    /** Enables the optimistic locker inner interceptor bean. */
+    /** 是否启用乐观锁内部拦截器 Bean。 */
     private boolean optimisticLockerEnabled = true;
 
     /** 启用防全表更新与删除内部拦截器 Bean；MyBatis-Plus 3.5.9 及以上还需要引入对应的 JSQLParser 扩展模块。 */
@@ -445,22 +441,22 @@ public class VeloProperties {
   @Data
   public static class AspectOrderProperties {
 
-    /** Order for the idempotent aspect. */
+    /** 幂等切面的执行顺序。 */
     private int idempotent = VeloAdvisorOrder.CONCURRENCY_IDEMPOTENT;
 
-    /** Order for the rate-limit aspect. */
+    /** 限流切面的执行顺序。 */
     private int rateLimit = VeloAdvisorOrder.CONCURRENCY_RATE_LIMIT;
 
-    /** Order for the lock aspect. */
+    /** 锁切面的执行顺序。 */
     private int lock = VeloAdvisorOrder.CONCURRENCY_LOCK;
 
-    /** Order for the invoke-log aspect. */
+    /** 方法调用日志切面的执行顺序。 */
     private int invokeLog = VeloAdvisorOrder.LOG_INVOKE;
 
-    /** Order for the controller-log aspect. */
+    /** 控制器日志切面的执行顺序。 */
     private int controllerLog = VeloAdvisorOrder.LOG_CONTROLLER;
 
-    /** Order for the feign-log aspect. */
+    /** Feign 日志切面的执行顺序。 */
     private int feignLog = VeloAdvisorOrder.LOG_FEIGN;
   }
 
@@ -468,8 +464,7 @@ public class VeloProperties {
   public static class BannerProperties {
 
     /**
-     * Prints the Velo startup banner with a summary of enabled features. Disabled by default;
-     * enable to print the banner on startup.
+     * 是否在启动时打印 Velo 横幅及已启用功能的摘要。默认关闭，启用后在启动时输出。
      */
     private boolean enabled = false;
   }

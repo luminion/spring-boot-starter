@@ -606,7 +606,7 @@ velo:
   log:
     enabled: true
     defaults:
-      max-payload-length: 1024
+      max-payload-length: -1
       entry-args:
         level: INFO
       exit-args:
@@ -648,15 +648,26 @@ velo:
 ```java
 @Bean
 public LogValueFormatter logValueFormatter() {
-    return (value, output) -> myMapper.writeValue(output, value);
+    return value -> myFormatter.format(value);
 }
 ```
 
-默认使用应用已有的 Jackson 2/3 Mapper，直接向提供的 Writer 写出，复用字段忽略、日期格式、命名规则和自定义模块，非 Web 应用也可用；没有 Mapper 时写出 `String.valueOf`。可使用 `@JsonIgnore` 或 MixIn 隐藏 DTO 字段。Jackson 转换失败输出 `serialization-failed`，不会回退到可能暴露敏感字段的 toString。HttpEntity/ResponseEntity 返回值只转换 body，原响应对象保持不变。流、Servlet 等技术对象省略内容；容器预处理共享 256 次访问预算，并保留循环和深度保护。DTO 原样交给 Mapper，不自行反射拆解。自定义 formatter 应直接写入 Writer、不关闭它，并向外传递写出异常；先生成完整字符串的实现仍需自行承担生成成本。
+默认使用应用已有的 Jackson 2/3 Mapper 生成完整字符串，复用字段忽略、日期格式、命名规则和自定义模块，非 Web 应用也可用；没有 Mapper 时使用 `String.valueOf`。可使用 `@JsonIgnore` 或 MixIn 隐藏 DTO 字段，这些规则也会影响使用同一 Mapper 的业务序列化。Jackson 转换失败输出 `serialization-failed`，不会回退到可能暴露敏感字段的 toString。HttpEntity/ResponseEntity 返回值只转换 body，原响应对象保持不变。流、Servlet 等技术对象省略内容；容器保留循环和深度保护，不限制元素数量。DTO 原样交给 Mapper，不自行反射拆解。自定义 formatter 返回完整文本，框架统一转义换行和控制字符。
 
 参数、结果、慢日志及异常摘要都使用同一个 formatter；慢日志中的 Long 数值也沿用应用的序列化规则，例如将耗时和阈值输出为字符串。
 
-`max-payload-length` 默认 `4096` 字符。正数限制单行转义后的载荷，包含省略号；超限时停止写出并保留文本前缀，不保证是完整 JSON。`0` 关闭参数、结果及协议头载荷日志的输出和序列化，慢调用/异常摘要仍可输出；`-1` 取消载荷字符上限，但容器预处理预算仍生效。摘要在 `0` 或 `-1` 下仍限制为 4096 字符。Jackson 的内部缓冲可能使超限前多处理部分对象；DTO getter、自定义 serializer 或 formatter 自己产生的计算和分配不受 Writer 控制。框架不按字段名称自动脱敏；协议头的空 allowlist 表示全部头，启用采集时应设置需要的白名单。Feign 在底层客户端构建请求后捕获最终一次尝试的真实请求/响应头，因此请求头日志可能出现在完成阶段；逻辑请求目标使用方法名、HTTP 方法和映射路径，入口和完成阶段保持一致。Controller 响应头取当前方法返回或抛出异常时已设置的头，不代表 Servlet 最终提交后的完整响应。
+`max-payload-length` 默认 `-1`，完整输出，不做字符截断。仅支持 `-1` 和 `0`，其他值会在日志引擎启动时报错；`0` 关闭参数、结果及协议头载荷日志的输出和序列化，慢调用/异常摘要仍可完整输出。
+
+对于预期的超大字符串、大集合或大对象，应在应用中忽略对应载荷日志，避免无用的序列化和日志输出成本。可通过方法或类上的注解关闭参数、返回值日志，保留慢调用和异常摘要：
+
+```java
+@EntryArgs(enabled = false)
+@ExitArgs(enabled = false)
+@ExitResult(enabled = false)
+public ExportResult export(ExportRequest request) { /* 业务实现 */ }
+```
+
+需要忽略该方法的全部调用日志时使用 `@LogIgnore`；也可通过来源或全局配置关闭对应功能。框架不按字段名称自动脱敏；协议头的空 allowlist 表示全部头，启用采集时应设置需要的白名单。Feign 在底层客户端构建请求后捕获最终一次尝试的真实请求/响应头，因此请求头日志可能出现在完成阶段；逻辑请求目标使用方法名、HTTP 方法和映射路径，入口和完成阶段保持一致。Controller 响应头取当前方法返回或抛出异常时已设置的头，不代表 Servlet 最终提交后的完整响应。
 
 trace 模块通过独立 `VeloTraceAutoConfiguration`、HTTP Filter、Feign 传播配置及入口作用域管理启用。`velo.log.enabled=false` 不影响 trace；`velo.trace.enabled=false` 不影响日志功能。HTTP Filter 保留异步/错误派发复用，TaskDecorator 保留常见执行器传播，两者与 Future 的日志完成监听无关。原公共 Resolver/TraceContext 类型和包名保持不变。
 
@@ -811,14 +822,18 @@ public class OrderVO {
 说明：
 
 - Boot 2 / 3 使用 Jackson 2 自动配置，Boot 4 使用 Jackson 3 自动配置
-- `serialize-long-as-string=true` 时，`Long` / `BigInteger` 在**序列化（写出给前端）**时统一转为字符串，避免 JS Number 超过 2^53 精度丢失
+- `serialize-long-as-string=true` 时，`long` / `Long` / `BigInteger` 默认按字符串写出，包括基本类型数组、包装类型数组及嵌套数组，避免 JS Number 超过 2^53 精度丢失
+- 数字转换是默认规则，字段上的 `@JsonFormat(shape = JsonFormat.Shape.NUMBER)` 可恢复数值输出；关闭默认转换后，显式 `Shape.STRING` 仍沿用 Jackson 原生行为
 - 这些 `serialize-*` 开关**只影响序列化方向**；反序列化（前端传入）时数字和字符串都能正常绑定，无需前端特殊处理
-- `serialize-big-decimal-as-string=true` 默认开启
-- `enum-desc-enabled=true` 时，`@JsonEnum` 可为数值字段派生出描述字段，例如 `statusName`
+- `serialize-big-decimal-as-string=true` 默认开启，`BigDecimal[]` 与单值使用同样的字符串输出及尾零处理规则；开启 `serialize-floating-as-string` 后，`float[]` / `double[]` 与包装类型数组同样生效
+- `enum-desc-enabled=true` 时，`@JsonEnum` 可为数值字段派生出描述字段，例如 `statusName`；派生字段遵循原字段的包含策略和视图，并支持类级命名策略及数组输出形态
 - `enum-mappings` 为空时只关闭按全局约定进行的隐式匹配；`@JsonEnum` 同时指定 `codeField` 和 `nameField` 时仍独立生效
 - `@JsonEncode` / `@JsonDecode` 是注解驱动能力：只要 Jackson 扩展与 `JsonProcessorProvider` 生效，带注解字段就会转换；未使用注解的字段不会执行转换，因此不再提供额外的 `string-converter-enabled` 总开关
 - Jackson 的普通字符串 XSS 清洗由独立的 `velo.xss.jackson-enabled` 控制，默认关闭，避免把全局 Mapper 的所有字符串都意外改写
 - 日期时间格式依然复用 `velo.date-time-format.*`；未标注的 `Date` 默认兼容日期-only 和完整日期时间，字段上的 `@JsonFormat` 优先
+- `velo.date-time-format.time-zone` 默认 `GMT+8`，支持 `+08:00`、`GMT+08:00`、`Asia/Shanghai` 等 `ZoneId` 写法；日期增强启用时，非法时区使初始化失败，不会静默退回 GMT
+- 字符串编码先执行 `@JsonEncode` 转换，再交给 Jackson 原生字符串序列化器写出，保留自然字符串的多态处理及空字符串包含规则
+- Boot 4 的模块自动发现由 `spring.jackson.find-and-add-modules` 控制，关闭后可通过 Module Bean 或显式注册提供扩展；Velo 不额外扫描模块
 
 ### 9. MyBatis-Plus 自动配置
 
@@ -984,7 +999,7 @@ velo:
       controller:
         enabled: true
     defaults:
-      max-payload-length: 4096
+      max-payload-length: -1
   trace:
     enabled: true
 ```
@@ -994,8 +1009,8 @@ velo:
 - 默认开启
 - 默认打印 Spring 绑定后的入参和返回结果；达到阈值打印独立慢调用日志，异常时打印独立 WARN 摘要
 - 会过滤掉原始 query string，避免把敏感查询串直接打到日志中
-- `max-payload-length` 为正数时，写出超限即截断，转义及省略号计入上限
-- 默认 `max-payload-length=4096`；`-1` 取消载荷字符上限，`0` 不序列化或输出载荷日志
+- 默认 `max-payload-length=-1`，完整输出；`0` 不序列化或输出载荷日志，其他值启动时报错
+- 预期的超大对象应通过注解或配置关闭对应载荷日志
 - 如需关闭 Controller 自动日志，设置 `velo.log.sources.controller.enabled=false`
 
 ### 4. Feign 调用日志
@@ -1013,7 +1028,7 @@ velo:
       feign:
         enabled: true
     defaults:
-      max-payload-length: 4096
+      max-payload-length: -1
   trace:
     enabled: true
     feign-propagation-enabled: true
@@ -1027,8 +1042,8 @@ velo:
 - 默认打印入参和返回结果，慢调用和异常各输出独立日志
 - 日志格式和 Controller、`@InvokeLog` 保持一致，便于联调排查
 - 请求头和响应头默认不采集，可通过独立配置或注解启用
-- `max-payload-length` 为正数时，写出超限即截断，转义及省略号计入上限
-- 默认 `max-payload-length=4096`；`-1` 取消载荷字符上限，`0` 不序列化或输出载荷日志
+- 默认 `max-payload-length=-1`，完整输出；`0` 不序列化或输出载荷日志，其他值启动时报错
+- 预期的超大对象应通过注解或配置关闭对应载荷日志
 - 如需关闭 Feign 自动日志，设置 `velo.log.sources.feign.enabled=false`
 
 ### 5. CORS
