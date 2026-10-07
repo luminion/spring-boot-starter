@@ -1,7 +1,9 @@
 package io.github.luminion.velo.cache;
 
 import io.github.luminion.velo.VeloProperties;
+
 import java.time.Duration;
+
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.cache.CacheProperties;
 import org.springframework.boot.autoconfigure.cache.RedisCacheManagerBuilderCustomizer;
@@ -57,7 +59,7 @@ public class VeloCacheAutoConfiguration {
         @Bean
         @ConditionalOnMissingBean(RedisCacheConfiguration.class)
         RedisCacheConfiguration redisCacheConfiguration(CacheProperties springProperties, VeloProperties properties,
-                ObjectProvider<RedisSerializer<Object>> serializerProvider) {
+                                                        ObjectProvider<RedisSerializer<Object>> serializerProvider) {
             CacheProperties.Redis redis = springProperties.getRedis();
             Duration ttl = redis.getTimeToLive() == null ? VeloCacheConfiguration.DEFAULT_TTL : redis.getTimeToLive();
             VeloCacheConfiguration.validateTtl(ttl, "spring.cache.redis.time-to-live");
@@ -87,7 +89,7 @@ public class VeloCacheAutoConfiguration {
         @Bean
         @Order(Ordered.HIGHEST_PRECEDENCE)
         RedisCacheManagerBuilderCustomizer veloRedisCacheManagerBuilderCustomizer(RedisCacheWriter writer,
-                RedisCacheConfiguration defaults, RedisCacheTimeMapProvider timeMapProvider, VeloProperties properties) {
+                                                                                  RedisCacheConfiguration defaults, RedisCacheTimeMapProvider timeMapProvider, VeloProperties properties) {
             return builder -> VeloCacheConfiguration.customizeBuilder(builder, writer, defaults, timeMapProvider, properties);
         }
     }

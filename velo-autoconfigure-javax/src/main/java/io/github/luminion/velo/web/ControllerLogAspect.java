@@ -31,10 +31,12 @@ public class ControllerLogAspect implements Ordered {
     this.engine = engine;
   }
 
-  @Around(
-      "execution(public * *(..)) && (within(@org.springframework.web.bind.annotation.RestController"
-          + " *) || @annotation(org.springframework.web.bind.annotation.ResponseBody) ||"
-          + " @within(org.springframework.web.bind.annotation.ResponseBody))")
+    @Around("execution(" +
+            "public * *(..))"
+            + " && (within(@org.springframework.web.bind.annotation.RestController *) "
+            + "|| @annotation(org.springframework.web.bind.annotation.ResponseBody)"
+            + " || @within(org.springframework.web.bind.annotation.ResponseBody)" +
+            ")")
   public Object logControllerInvocation(ProceedingJoinPoint point) throws Throwable {
     String target = "";
     if (WebUtils.isWebContext()) {
