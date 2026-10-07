@@ -30,6 +30,7 @@ import static org.mockito.Mockito.mock;
  *
  * @author luminion
  */
+@SuppressWarnings("removal")
 class Boot4CacheSerializerSelectionTest {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()

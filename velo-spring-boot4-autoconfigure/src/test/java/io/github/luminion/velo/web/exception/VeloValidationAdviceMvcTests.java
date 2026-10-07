@@ -4,8 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import org.junit.jupiter.api.Test;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
-import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.http.converter.HttpMessageConverters;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.context.annotation.Bean;
@@ -74,12 +73,8 @@ class VeloValidationAdviceMvcTests {
     @EnableWebMvc
     static class WebConfig implements WebMvcConfigurer {
         @Override
-        public void extendMessageConverters(List<HttpMessageConverter<?>> converters) {
-            for (HttpMessageConverter<?> converter : converters) {
-                if (converter instanceof StringHttpMessageConverter) {
-                    ((StringHttpMessageConverter) converter).setDefaultCharset(StandardCharsets.UTF_8);
-                }
-            }
+        public void configureMessageConverters(HttpMessageConverters.ServerBuilder builder) {
+            builder.withStringConverter(new StringHttpMessageConverter(StandardCharsets.UTF_8));
         }
 
         @Bean
