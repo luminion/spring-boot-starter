@@ -15,28 +15,34 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 class RedissonRateLimitHandlerTests {
 
     @Test
-    void shouldInitializeLimiterWithQpsAndRefreshTtl() {
+    void shouldReuseMatchingLimiterWithoutAttemptingInitialization() {
         RedissonClient redissonClient = mock(RedissonClient.class);
         RRateLimiter rateLimiter = mock(RRateLimiter.class);
         when(redissonClient.getRateLimiter("demo")).thenReturn(rateLimiter);
         when(rateLimiter.getConfig()).thenReturn(new RateLimiterConfig(RateType.OVERALL, 1000L, 2L));
+        when(rateLimiter.expire(Duration.ofSeconds(1))).thenReturn(true);
         when(rateLimiter.tryAcquire()).thenReturn(true);
 
         RedissonRateLimitHandler handler = new RedissonRateLimitHandler(redissonClient);
         boolean acquired = handler.tryAcquire("demo", 2);
 
         assertThat(acquired).isTrue();
-        verify(rateLimiter).trySetRate(
+        verify(rateLimiter, never()).trySetRate(
                 RateType.OVERALL,
                 2L,
                 Duration.ofSeconds(1),
                 Duration.ofSeconds(1));
         verify(rateLimiter, never()).setRate(any(), anyLong(), any(Duration.class), any(Duration.class));
         verify(rateLimiter).expire(Duration.ofSeconds(1));
+        verify(rateLimiter).getConfig();
+        verify(rateLimiter).tryAcquire();
+        verifyNoMoreInteractions(rateLimiter);
     }
 
     @Test
@@ -57,5 +63,54 @@ class RedissonRateLimitHandlerTests {
                 Duration.ofSeconds(1),
                 Duration.ofSeconds(1));
         verify(rateLimiter).expire(Duration.ofSeconds(1));
+    }
+
+    @Test
+    void shouldInitializeMissingLimiterAndExpireNativeKeys() {
+        RedissonClient redissonClient = mock(RedissonClient.class);
+        RRateLimiter rateLimiter = mock(RRateLimiter.class);
+        when(redissonClient.getRateLimiter("demo")).thenReturn(rateLimiter);
+        when(rateLimiter.getConfig()).thenReturn(new RateLimiterConfig(RateType.OVERALL, 0L, 0L));
+        when(rateLimiter.trySetRate(RateType.OVERALL, 2L, Duration.ofSeconds(1), Duration.ofSeconds(1)))
+                .thenReturn(true);
+        when(rateLimiter.tryAcquire()).thenReturn(true);
+
+        assertThat(new RedissonRateLimitHandler(redissonClient).tryAcquire("demo", 2)).isTrue();
+
+        verify(rateLimiter, never()).setRate(any(), anyLong(), any(Duration.class), any(Duration.class));
+        verify(rateLimiter).expire(Duration.ofSeconds(1));
+    }
+
+    @Test
+    void shouldNotResetPermitsWhenAnotherRequestWinsInitialization() {
+        RedissonClient redissonClient = mock(RedissonClient.class);
+        RRateLimiter rateLimiter = mock(RRateLimiter.class);
+        when(redissonClient.getRateLimiter("demo")).thenReturn(rateLimiter);
+        when(rateLimiter.getConfig()).thenReturn(new RateLimiterConfig(RateType.OVERALL, 0L, 0L),
+                new RateLimiterConfig(RateType.OVERALL, 1000L, 2L));
+        when(rateLimiter.tryAcquire()).thenReturn(false);
+
+        assertThat(new RedissonRateLimitHandler(redissonClient).tryAcquire("demo", 2)).isFalse();
+
+        verify(rateLimiter, times(2)).getConfig();
+        verify(rateLimiter, never()).setRate(any(), anyLong(), any(Duration.class), any(Duration.class));
+        verify(rateLimiter).expire(Duration.ofSeconds(1));
+    }
+
+    @Test
+    void shouldReinitializeWhenMatchingConfigurationExpiresBeforeRefresh() {
+        RedissonClient redissonClient = mock(RedissonClient.class);
+        RRateLimiter rateLimiter = mock(RRateLimiter.class);
+        when(redissonClient.getRateLimiter("demo")).thenReturn(rateLimiter);
+        when(rateLimiter.getConfig()).thenReturn(new RateLimiterConfig(RateType.OVERALL, 1000L, 2L));
+        when(rateLimiter.expire(Duration.ofSeconds(1))).thenReturn(false);
+        when(rateLimiter.trySetRate(RateType.OVERALL, 2L, Duration.ofSeconds(1), Duration.ofSeconds(1)))
+                .thenReturn(true);
+        when(rateLimiter.tryAcquire()).thenReturn(true);
+
+        assertThat(new RedissonRateLimitHandler(redissonClient).tryAcquire("demo", 2)).isTrue();
+
+        verify(rateLimiter).trySetRate(RateType.OVERALL, 2L, Duration.ofSeconds(1), Duration.ofSeconds(1));
+        verify(rateLimiter, never()).setRate(any(), anyLong(), any(Duration.class), any(Duration.class));
     }
 }

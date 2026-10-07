@@ -4,6 +4,8 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.context.MessageSourceResolvable;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -11,8 +13,7 @@ import java.util.stream.Collectors;
 /**
  * 支持 Bean Validation 的 Web 异常处理器。
  *
- * <p>该类仅提供校验异常处理逻辑，不会自动注册为 Spring 组件。应用应在具体实现类上显式添加
- * {@code @RestControllerAdvice}。</p>
+ * <p>通过 {@code @Bean} 注册并提供响应转换函数即可生效；不会被组件扫描自动实例化。</p>
  *
  * @author luminion
  * @since 1.0.0
@@ -24,6 +25,18 @@ public class VeloValidationWebExceptionHandler<R> extends VeloWebExceptionHandle
         super(failed, error);
     }
 
+
+    /** Spring 6.1+ MVC 方法校验；返回值校验失败交给服务器错误转换函数。 */
+    @ExceptionHandler(HandlerMethodValidationException.class)
+    public R handleHandlerMethodValidationException(HandlerMethodValidationException e) {
+        if (e.isForReturnValue()) {
+            return error.apply(e);
+        }
+        String message = e.getAllErrors().stream()
+                .map(MessageSourceResolvable::getDefaultMessage)
+                .collect(Collectors.joining("; "));
+        return failed.apply(message);
+    }
 
     /**
      * Bean Validation 参数校验异常 (@RequestParam/@PathVariable)

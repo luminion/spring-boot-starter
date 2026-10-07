@@ -2,9 +2,9 @@ package io.github.luminion.velo.web;
 
 import io.github.luminion.velo.core.VeloAdvisorOrder;
 import io.github.luminion.velo.core.util.WebUtils;
-import io.github.luminion.velo.log.InvocationLogEngine;
-import io.github.luminion.velo.log.InvocationLogSource;
-import io.github.luminion.velo.log.InvocationLogSupport;
+import io.github.luminion.velo.log.core.InvocationLogEngine;
+import io.github.luminion.velo.log.core.InvocationLogSource;
+import io.github.luminion.velo.log.core.InvocationLogSupport;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
@@ -14,7 +14,6 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import lombok.Getter;
-import lombok.Setter;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -25,10 +24,15 @@ import org.springframework.web.servlet.HandlerMapping;
 @Aspect
 public class ControllerLogAspect implements Ordered {
   private final InvocationLogEngine engine;
-  @Getter @Setter private int order = VeloAdvisorOrder.LOG_CONTROLLER;
+  @Getter private final int order;
 
   public ControllerLogAspect(InvocationLogEngine engine) {
+    this(engine, VeloAdvisorOrder.LOG_CONTROLLER);
+  }
+
+  public ControllerLogAspect(InvocationLogEngine engine, int order) {
     this.engine = engine;
+    this.order = order;
   }
 
     @Around("execution(" +

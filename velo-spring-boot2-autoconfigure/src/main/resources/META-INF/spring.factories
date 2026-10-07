@@ -13,9 +13,9 @@ io.github.luminion.velo.ratelimit.config.VeloRateLimitRedissonAutoConfiguration,
 io.github.luminion.velo.ratelimit.config.VeloRateLimitRedisAutoConfiguration,\
 io.github.luminion.velo.ratelimit.config.VeloRateLimitGuavaAutoConfiguration,\
 io.github.luminion.velo.ratelimit.VeloRateLimitAutoConfiguration,\
-io.github.luminion.velo.log.trace.VeloTraceAutoConfiguration,\
-io.github.luminion.velo.log.VeloLogAutoConfiguration,\
-io.github.luminion.velo.log.VeloSourceLogAutoConfiguration,\
+io.github.luminion.velo.trace.VeloTraceAutoConfiguration,\
+io.github.luminion.velo.log.config.VeloLogAutoConfiguration,\
+io.github.luminion.velo.log.config.VeloSourceLogAutoConfiguration,\
 io.github.luminion.velo.feign.VeloFeignTraceAutoConfiguration,\
 io.github.luminion.velo.feign.VeloFeignAutoConfiguration,\
 io.github.luminion.velo.mybatisplus.VeloMybatisPlusAutoConfiguration,\
@@ -26,4 +26,5 @@ io.github.luminion.velo.xss.VeloXssAutoConfiguration,\
 io.github.luminion.velo.converter.VeloDateTimeFormatAutoConfiguration,\
 io.github.luminion.velo.excel.VeloExcelAutoConfiguration,\
 io.github.luminion.velo.jackson.VeloJacksonLogAutoConfiguration,\
+io.github.luminion.velo.jackson.VeloRedisJsonAutoConfiguration,\
 io.github.luminion.velo.jackson.VeloJacksonAutoConfiguration

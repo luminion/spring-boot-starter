@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.github.luminion.velo.log.InvocationLogSupport;
+import io.github.luminion.velo.log.core.InvocationLogSupport;
 import io.github.luminion.velo.log.LogValueFormatter;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +16,25 @@ import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 class VeloJacksonLogAutoConfigurationTests {
+    @Test
+    void springMapperAndApplicationModuleAreReadyBeforeLoggingFormatter() {
+        com.fasterxml.jackson.databind.module.SimpleModule module = new com.fasterxml.jackson.databind.module.SimpleModule();
+        module.setMixInAnnotation(Payload.class, PayloadMixin.class);
+        new ApplicationContextRunner()
+                .withConfiguration(AutoConfigurations.of(
+                        org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration.class,
+                        VeloJacksonLogAutoConfiguration.class,
+                        io.github.luminion.velo.core.VeloCoreAutoConfiguration.class,
+                        io.github.luminion.velo.log.config.VeloLogAutoConfiguration.class))
+                .withBean(com.fasterxml.jackson.databind.Module.class, () -> module)
+                .run(context -> {
+                    assertThat(context).hasNotFailed().hasSingleBean(LogValueFormatter.class);
+                    String text = InvocationLogSupport.format(new Payload("visible", "secret"),
+                            context.getBean(LogValueFormatter.class));
+                    assertThat(text).isEqualTo("{\"value\":\"visible\"}");
+                });
+    }
+
     private final ApplicationContextRunner runner =
             new ApplicationContextRunner()
                     .withConfiguration(AutoConfigurations.of(VeloJacksonLogAutoConfiguration.class));

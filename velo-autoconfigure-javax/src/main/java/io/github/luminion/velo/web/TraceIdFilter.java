@@ -2,10 +2,10 @@ package io.github.luminion.velo.web;
 
 import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.VeloProperties.TraceProperties;
-import io.github.luminion.velo.log.trace.TraceContext;
-import io.github.luminion.velo.log.trace.TraceContextResolver;
-import io.github.luminion.velo.log.trace.TraceData;
-import io.github.luminion.velo.log.trace.W3cTraceContextResolver;
+import io.github.luminion.velo.trace.TraceContext;
+import io.github.luminion.velo.trace.TraceContextResolver;
+import io.github.luminion.velo.trace.TraceData;
+import io.github.luminion.velo.trace.W3cTraceContextResolver;
 
 import java.io.IOException;
 import javax.servlet.FilterChain;

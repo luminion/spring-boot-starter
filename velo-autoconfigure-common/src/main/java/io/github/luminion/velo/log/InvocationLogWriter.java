@@ -1,5 +1,7 @@
 package io.github.luminion.velo.log;
 
+import io.github.luminion.velo.log.core.InvocationLogRecord;
+
 /**
  * 日志输出接口；每次写入一条功能记录。
  */

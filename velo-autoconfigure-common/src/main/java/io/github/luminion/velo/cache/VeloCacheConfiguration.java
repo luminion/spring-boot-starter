@@ -1,8 +1,11 @@
 package io.github.luminion.velo.cache;
 
 import io.github.luminion.velo.VeloProperties;
+import io.github.luminion.velo.redis.RedisJsonSerializerFactory;
 
 import java.time.Duration;
+import java.lang.reflect.Type;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.springframework.beans.factory.ObjectProvider;
@@ -33,10 +36,12 @@ public final class VeloCacheConfiguration {
      * 用户提供完整 RedisCacheConfiguration Bean 时，各版本适配器会跳过此方法。
      */
     public static RedisCacheConfiguration customizeDefaults(RedisCacheConfiguration defaults,
-                                                            ObjectProvider<RedisSerializer<Object>> serializerProvider, String keyPrefix,
+                                                            ObjectProvider<RedisSerializer<Object>> serializerProvider,
+                                                            ObjectProvider<RedisJsonSerializerFactory> jsonFactoryProvider, String keyPrefix,
                                                             VeloProperties properties) {
         // 候选不明确时沿用 Spring 的异常，避免悄然切换缓存读写格式。
-        RedisSerializer<Object> serializer = serializerProvider.getIfAvailable(RedisSerializer::json);
+        RedisSerializer<Object> serializer = serializerProvider.getIfAvailable(
+                () -> jsonFactoryProvider.getObject().genericCacheSerializer());
         RedisCacheConfiguration configuration = defaults.serializeValuesWith(
                 RedisSerializationContext.SerializationPair.fromSerializer(serializer));
         if (configuration.usePrefix()) {
@@ -72,6 +77,29 @@ public final class VeloCacheConfiguration {
         if (properties.getCache().isTransactionAware()) {
             builder.transactionAware();
         }
+    }
+
+    /**
+     * 显式登记类型后全部使用纯 JSON，并由原生管理器拒绝未登记的缓存名。
+     * 在已有分缓存配置上替换值序列化器，保留 TTL、前缀和 null 策略。
+     */
+    public static void customizeTypes(RedisCacheManagerBuilder builder, RedisCacheConfiguration defaults,
+                                      RedisCacheTypeMapProvider typeMapProvider, RedisJsonSerializerFactory jsonFactory) {
+        Map<String, Type> cacheTypes = typeMapProvider.getCacheTypes();
+        for (String name : builder.getConfiguredCaches()) {
+            if (!cacheTypes.containsKey(name)) {
+                throw new IllegalArgumentException("Redis 缓存 " + name
+                        + " 未登记目标类型，请在 RedisCacheTypeMapProvider 中配置");
+            }
+        }
+        Map<String, RedisCacheConfiguration> configurations = new LinkedHashMap<>();
+        cacheTypes.forEach((name, type) -> {
+            RedisCacheConfiguration base = builder.getCacheConfigurationFor(name).orElse(defaults);
+            RedisSerializer<Object> serializer = jsonFactory.create(type);
+            configurations.put(name, base.serializeValuesWith(
+                    RedisSerializationContext.SerializationPair.fromSerializer(serializer)));
+        });
+        builder.withInitialCacheConfigurations(configurations).disableCreateOnMissingCache();
     }
 
     /**

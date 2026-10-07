@@ -1,17 +1,16 @@
 package io.github.luminion.velo.log.aspect;
 
 import io.github.luminion.velo.core.VeloAdvisorOrder;
-import io.github.luminion.velo.log.InvocationLogEngine;
-import io.github.luminion.velo.log.InvocationLogSource;
-import io.github.luminion.velo.log.InvocationLogSupport;
-import io.github.luminion.velo.log.trace.TraceContext;
-import io.github.luminion.velo.log.trace.TraceScopeManager;
+import io.github.luminion.velo.log.core.InvocationLogEngine;
+import io.github.luminion.velo.log.core.InvocationLogSource;
+import io.github.luminion.velo.log.core.InvocationLogSupport;
+import io.github.luminion.velo.trace.TraceContext;
+import io.github.luminion.velo.trace.TraceScopeManager;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 
 import lombok.Getter;
-import lombok.Setter;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -30,16 +29,20 @@ public class InvokeLogAspect implements Ordered {
     private final InvocationLogEngine engine;
     private final TraceScopeManager trace;
     @Getter
-    @Setter
-    private int order = VeloAdvisorOrder.LOG_INVOKE;
+    private final int order;
 
     public InvokeLogAspect(InvocationLogEngine engine) {
         this(engine, null);
     }
 
     public InvokeLogAspect(InvocationLogEngine engine, TraceScopeManager trace) {
+        this(engine, trace, VeloAdvisorOrder.LOG_INVOKE);
+    }
+
+    public InvokeLogAspect(InvocationLogEngine engine, TraceScopeManager trace, int order) {
         this.engine = engine;
         this.trace = trace;
+        this.order = order;
     }
 
     @Around(

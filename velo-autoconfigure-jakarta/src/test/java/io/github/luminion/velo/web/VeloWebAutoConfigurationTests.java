@@ -7,13 +7,13 @@ import static org.mockito.Mockito.when;
 
 import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.core.VeloCoreAutoConfiguration;
-import io.github.luminion.velo.log.InvocationLogEngine;
-import io.github.luminion.velo.log.InvocationLogFeature;
-import io.github.luminion.velo.log.InvocationLogRecord;
+import io.github.luminion.velo.log.core.InvocationLogEngine;
+import io.github.luminion.velo.log.core.InvocationLogFeature;
+import io.github.luminion.velo.log.core.InvocationLogRecord;
 import io.github.luminion.velo.log.LogValueFormatter;
-import io.github.luminion.velo.log.VeloLogAutoConfiguration;
-import io.github.luminion.velo.log.trace.HeaderTraceContextResolver;
-import io.github.luminion.velo.log.trace.VeloTraceAutoConfiguration;
+import io.github.luminion.velo.log.config.VeloLogAutoConfiguration;
+import io.github.luminion.velo.trace.HeaderTraceContextResolver;
+import io.github.luminion.velo.trace.VeloTraceAutoConfiguration;
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.ServletException;
 

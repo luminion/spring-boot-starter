@@ -7,7 +7,6 @@ import io.github.luminion.velo.util.ConcurrencyAnnotationUtils;
 import io.github.luminion.velo.idempotent.IdempotentHandler;
 import io.github.luminion.velo.idempotent.annotation.Idempotent;
 import io.github.luminion.velo.idempotent.exception.IdempotentException;
-import lombok.Setter;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -36,8 +35,7 @@ public class IdempotentAspect implements Ordered {
     private final IdempotentHandler idempotentHandler;
     private final VeloMessageResolver messageResolver;
 
-    @Setter
-    private int order = VeloAdvisorOrder.CONCURRENCY_IDEMPOTENT;
+    private final int order;
 
     public IdempotentAspect(String prefix, Fingerprinter fingerprinter, IdempotentHandler idempotentHandler) {
         this(prefix, fingerprinter, idempotentHandler, null);
@@ -45,10 +43,17 @@ public class IdempotentAspect implements Ordered {
 
     public IdempotentAspect(String prefix, Fingerprinter fingerprinter, IdempotentHandler idempotentHandler,
                             VeloMessageResolver messageResolver) {
+        this(prefix, fingerprinter, idempotentHandler, messageResolver,
+                VeloAdvisorOrder.CONCURRENCY_IDEMPOTENT);
+    }
+
+    public IdempotentAspect(String prefix, Fingerprinter fingerprinter, IdempotentHandler idempotentHandler,
+                            VeloMessageResolver messageResolver, int order) {
         this.prefix = prefix;
         this.fingerprinter = fingerprinter;
         this.idempotentHandler = idempotentHandler;
         this.messageResolver = messageResolver;
+        this.order = order;
     }
 
     @Override

@@ -93,6 +93,30 @@ class SpelFingerprinterTests {
     }
 
     @Test
+    void shouldResolveNamedParametersAndArgumentProperties() {
+        assertThat(resolve(new KeyArgument("order-1"), "#value.id"))
+                .isEqualTo(methodKey + ":order-1");
+        assertThat(resolve(new KeyArgument("order-2"), "#value.id"))
+                .isEqualTo(methodKey + ":order-2");
+    }
+
+    @Test
+    void shouldIsolateCachedExpressionMetadataByActualUserClass() {
+        CountingParser parser = new CountingParser();
+        SpelFingerprinter cached = new SpelFingerprinter(parser);
+        assertThat(cached.resolveMethodFingerprint(new FirstService(), method,
+                new Object[]{new KeyArgument("first")}, "#value.id"))
+                .isEqualTo(FirstService.class.getName() + "#execute(java.lang.Object):first");
+        assertThat(cached.resolveMethodFingerprint(new SecondService(), method,
+                new Object[]{new KeyArgument("second")}, "#value.id"))
+                .isEqualTo(SecondService.class.getName() + "#execute(java.lang.Object):second");
+        cached.resolveMethodFingerprint(new FirstService(), method,
+                new Object[]{new KeyArgument("next")}, "#value.id");
+
+        assertThat(parser.parses.get()).isEqualTo(2);
+    }
+
+    @Test
     void concurrentEvaluationShouldKeepRequestArgumentsIsolated() throws Exception {
         CountingParser parser = new CountingParser();
         SpelFingerprinter cached = new SpelFingerprinter(parser);
@@ -145,6 +169,18 @@ class SpelFingerprinterTests {
 
     static class SampleService {
         public void execute(Object value) {
+        }
+    }
+
+    static class KeyArgument {
+        private final String id;
+
+        KeyArgument(String id) {
+            this.id = id;
+        }
+
+        public String getId() {
+            return id;
         }
     }
 

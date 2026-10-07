@@ -1,5 +1,6 @@
 package io.github.luminion.velo.autoconfigure;
 
+import io.github.luminion.velo.redis.RedisJsonSerializerFactory;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.SpringBootConfiguration;
@@ -7,7 +8,6 @@ import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.serializer.RedisSerializer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -30,14 +30,16 @@ class Boot2AutoConfigurationStartupTest {
         );
         try {
             assertThat(context).isNotNull();
-            RedisSerializer<?> redisSerializer = context.getBean("redisSerializer", RedisSerializer.class);
+            assertThat(context.containsBean("redisSerializer")).isFalse();
+            RedisJsonSerializerFactory factory = context.getBean(RedisJsonSerializerFactory.class);
+            Class<?> serializerType = factory.create(Object.class).getClass();
             assertThat(context.containsBean("redisTemplate")).isTrue();
             assertThat(context.containsBean("stringRedisTemplate")).isTrue();
             assertThat(context.containsBean("stringObjectRedisTemplate")).isTrue();
             assertThat(context.getBean("redisTemplate", RedisTemplate.class).getValueSerializer())
-                    .isSameAs(redisSerializer);
+                    .isInstanceOf(serializerType);
             assertThat(context.getBean("stringObjectRedisTemplate", RedisTemplate.class).getValueSerializer())
-                    .isSameAs(redisSerializer);
+                    .isInstanceOf(serializerType);
         } finally {
             context.close();
         }

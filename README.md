@@ -289,7 +289,7 @@ public UserDTO getById(Long id) {
 - 默认 TTL 为 `5m`，通过 `spring.cache.redis.time-to-live` 覆盖；`velo.cache.ttl.<cacheName>` 可按缓存名单独覆盖
 - 通用配置已统一到 Spring：原 `velo.cache.default-ttl`、`velo.cache.prefix`、`velo.cache.null-caching-enabled` 已移除，分别改用 `spring.cache.redis.time-to-live`、`key-prefix`、`cache-null-values`。原业务前缀 `app` 需改为 `key-prefix: "app:"`，新入口不会自动追加业务前缀分隔符
 - TTL 只允许 `0`（不过期）或至少 `1ms` 的正值；负值、非零但不足 `1ms` 的值，以及超出 long 毫秒范围的值会在缓存初始化时导致启动失败
-- 空值缓存、前缀开关及统计使用 `spring.cache.redis.cache-null-values`、`use-key-prefix`、`enable-statistics`；`spring.cache.cache-names` 用于预创建缓存，默认仍允许按名称动态创建
+- 空值缓存、前缀开关及统计使用 `spring.cache.redis.cache-null-values`、`use-key-prefix`、`enable-statistics`；`spring.cache.cache-names` 用于预创建缓存；未登记类型的通用模式允许动态创建，登记类型后只允许已登记名称
 - key 前缀格式为 `spring.cache.redis.key-prefix + cacheName + velo.cache.separator`。业务前缀原样拼接；例如 `key-prefix: "app:"` 和默认分隔符生成 `app:user:123`
 - 建议保留默认 `use-key-prefix=true`。关闭前缀后，原生整缓存清空会使用不带缓存名前缀的匹配模式，可能删除同库其他条目；只有独占 Redis 键空间时才适合关闭
 - `cacheNames` 应使用固定名称，例如 `user`、`order`；业务 ID 和动态查询条件放在 `key` 中，避免持续创建不同名称的 Cache 实例
@@ -302,13 +302,40 @@ public UserDTO getById(Long id) {
 - Velo 默认 writer 在 Lettuce 连接工厂下使用原生 `BatchStrategies.scan(1000)` 清空缓存；其他连接工厂保留原生 KEYS 策略，避免对未知驱动或 Jedis 集群作兼容假设。SCAN 分批查找并删除，会增加命令往返，也不提供并发写入时的原子清空保证；它不能解决缓存名前缀重叠。用户提供 writer 时，其连接及清空策略由用户决定
 - Velo 默认 writer 的普通缓存写入、删除及清空采用同步行为；Boot 4 使用原生 `immediateWrites()` 保持与 Boot 2/3 一致。用户提供 writer 时保留其原生设置，包括同步或异步行为。事务感知开启时，事务内的相关操作仍按 Spring 原生规则延迟到提交后执行；显式异步缓存接口遵循其原生语义
 - Velo 不维护按业务 key 累积的本地缓存或定时清理任务；缓存存储和过期由 Spring Data Redis 与 Redis 提供，CacheManager 仍会按缓存名称持有 Cache 实例
-- Velo 创建默认缓存配置时，缓存值序列化器优先复用容器中的 `RedisSerializer<Object>`；没有候选时使用 `RedisSerializer.json()`，跟随当前 Spring Data Redis 版本的原生 JSON 实现。存在多个候选且 Spring 无法选出唯一主候选时，直接启动报错，避免悄然切换缓存读写格式。用户提供完整缓存配置时，序列化器由该配置明确指定，不再自动选取
-- 默认 Redis 值序列化使用独立的映射器，HTTP JSON 的数字格式、日期格式、`JsonEncode` 等配置不会自动应用到缓存；需要自定义缓存值格式时，可提供自己的 `RedisSerializer<Object>` Bean，Velo 默认缓存和默认 RedisTemplate 可以共同复用它。用户自定义 RedisTemplate 的序列化设置不会自动传递给 CacheManager
-- Boot 2 / 3 默认使用 Jackson 2 的 `GenericJackson2JsonRedisSerializer`（对应 Spring Data Redis 2.x / 3.x），写入 JSON 类型元数据，因此 `Object` / POJO 可以反序列化回原类型，而不是默认退化为 `LinkedHashMap`
-- Boot 4 默认使用 `RedisSerializer.json()`，由 Spring Data Redis 4.x 选择 Jackson 3 的 `GenericJacksonJsonRedisSerializer`；即使 Jackson 2 / 3 同时存在，也不会按类路径猜测切换，默认仍使用 Jackson 3
+- 未启用类型登记时，Velo 默认缓存配置优先复用容器中的 `RedisSerializer<Object>`；没有候选时由 `RedisJsonSerializerFactory` 提供带类型信息的原生通用 JSON 序列化器。存在多个候选且 Spring 无法选出唯一主候选时，直接启动报错，避免悄然切换缓存读写格式。用户提供完整缓存配置时，序列化器由该配置明确指定，不再自动选取
+- Redis JSON 使用独立映射器，HTTP 数字、脱敏、`JsonEncode` 等输出规则不会改变存储数据；关闭 `velo.jackson.enabled` 也不影响 Redis JSON 的日期支持。普通 RedisTemplate 默认是无自动类型信息的纯 JSON；Spring Cache 可使用下述按名称登记的定向纯 JSON。未启用登记时，通用缓存可复用用户 `RedisSerializer<Object>`；用户自定义 RedisTemplate 的设置不会自动传给 CacheManager
+- Boot 2 / 3 使用 Jackson 2：登记类型的缓存和普通 RedisTemplate 使用 `Jackson2JsonRedisSerializer`；未登记类型的通用缓存使用 `GenericJackson2JsonRedisSerializer`，保留类型信息
+- Boot 4 使用 Jackson 3：登记类型的缓存和普通 RedisTemplate 使用 `JacksonJsonRedisSerializer`；通用缓存使用 `GenericJacksonJsonRedisSerializer`。即使同时存在 Jackson 2，也不会自行切换默认实现
 - Boot 4 如需让 Redis 使用 Jackson 2，应引入官方 `spring-boot-jackson2` 及 Jackson 2 依赖，并显式注册一个 `RedisSerializer<Object>` Bean，例如 `GenericJackson2JsonRedisSerializer`；Spring Data Redis 4.x 仍保留该类用于兼容或迁移旧数据，但已标记为后续移除，不作为 Boot 4 默认实现
 - Jackson 2 与 Jackson 3 的 Redis JSON 输出可能存在差异；从 Boot 2 / 3 切换到 Boot 4 时，应先规划旧数据读取、迁移或 key 空间隔离，不要默认认为历史值可以无缝混读
-- **安全提示（多态反序列化）**：上述 JSON 序列化器为支持 `Object` / POJO 回读会写入并按类型元数据（`@class`）反序列化，且使用宽松的类型校验（与 Spring Data Redis 原生行为一致）。若 Redis 未鉴权或被写入恶意 `@class` 载荷，存在反序列化攻击面。建议 Redis 启用鉴权与网络隔离；如需收敛，可自行注册基于 `BasicPolymorphicTypeValidator` 白名单的 `RedisSerializer<Object>` Bean，Velo 会复用该 Bean
+- **安全提示（多态反序列化）**：未登记类型的通用缓存序列化器为支持 `Object` / POJO 回读会写入并按类型元数据（`@class`）反序列化，且使用宽松的类型校验（与 Spring Data Redis 原生行为一致）。若 Redis 未鉴权或被写入恶意 `@class` 载荷，存在反序列化攻击面。建议 Redis 启用鉴权与网络隔离；如需收敛，可自行注册基于 `BasicPolymorphicTypeValidator` 白名单的 `RedisSerializer<Object>` Bean，Velo 会复用该 Bean
+
+按缓存名称登记纯 JSON 的目标类型（推荐）：
+
+```java
+import io.github.luminion.velo.cache.RedisCacheTypeMapProvider;
+import org.springframework.core.ParameterizedTypeReference;
+import java.lang.reflect.Type;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+@Bean
+RedisCacheTypeMapProvider redisCacheTypes() {
+    Map<String, Type> types = new LinkedHashMap<>();
+    types.put("user", UserProfile.class);
+    types.put("users", new ParameterizedTypeReference<List<UserProfile>>() { }.getType());
+    return new RedisCacheTypeMapProvider(types);
+}
+```
+
+- 提供该 Bean 后，登记的缓存使用原生定向 JSON 序列化器，普通 DTO 不自动写入 `@class` 或 Java 类包装。用户类主动声明的 `JsonTypeInfo` 等协议仍按 Jackson 原生规则生效
+- 一个缓存名对应一种值类型；集合需登记完整泛型，不能只写 `List.class`。类型映射在管理器构建时读取，修改输入 Map 不会动态更新管理器
+- 已有 TTL、业务前缀、分隔符、空值设置和 writer 均保留；普通用户 builder customizer 仍可最后覆盖对应缓存配置
+- `spring.cache.cache-names` 和 `velo.cache.ttl` / 用户 TTL provider 中的名称也必须登记，否则启动报错。运行时未知名称由原生 CacheManager 拒绝，`@Cacheable` 会在执行业务前报错；无需自动扫描方法或线程上下文
+- 未提供类型映射 Bean 时保留通用缓存模式，仍包含类型信息。需要所有缓存都是纯 JSON 时，登记全部缓存名称即可；可提供空映射明确禁用所有未登记缓存
+- null 继续走 Spring 原生空值缓存机制，原始空值标记并非 JSON。非 null 业务值的纯 JSON 不受影响
+- 协议切换应更换业务 key 前缀，避免混读历史类型格式。手动使用 CacheManager 时，`getCache(未知名)` 返回 null；原生用户 customizer 可显式调整该机制
 
 扩展组件的接入方式：
 
@@ -319,6 +346,8 @@ public UserDTO getById(Long id) {
 | `RedisCacheManagerBuilderCustomizer` | Boot 按顺序调用，可设置按名称 TTL、writer、统计等 |
 | `CacheManagerCustomizer<RedisCacheManager>` | Boot 在构建后、初始化前调用，可调整事务感知等 |
 | `RedisCacheTimeMapProvider` | Velo 优先采用用户 Bean；按名称 TTL 在管理器创建时应用，运行时修改原 Map 不会刷新已有缓存配置 |
+| `RedisCacheTypeMapProvider` | 按缓存名登记目标 Class/完整泛型，启用定向纯 JSON；登记模式拒绝未知缓存名 |
+| `RedisJsonSerializerFactory` | Jackson 2/3 的原生序列化器适配，可通过用户同类型 Bean 覆盖；默认不注册竞争的 RedisSerializer Bean |
 | `RedisCacheWriter` | Velo 优先采用用户 Bean；默认 writer 退让 |
 | `RedisSerializer<Object>` | Velo 默认缓存配置选择唯一或主候选，也可以在完整缓存配置中显式指定 |
 | `CacheKeyPrefix` | 在缓存配置中显式传给 `computePrefixWith(...)`，单独注册 Bean 不会自动接入 |
@@ -613,6 +642,18 @@ JDK 锁和 Redis 锁的本地记录只保存活跃调用，不随历史业务 ke
 
 ### 7. 日志
 
+日志注解支持常用属性简写，`value` 与明确属性名通过 Spring `@AliasFor` 双向关联：
+
+| 注解 | `value` 对应属性 | 示例 |
+|---|---|---|
+| `SlowLog` | `thresholdMs` | `@SlowLog(1000)` |
+| `EntryArgs` / `ExitArgs` / `ExitResult` / `ErrorLog` | `level` | `@EntryArgs(LogLevel.DEBUG)` |
+| `RequestHeadersLog` / `ResponseHeadersLog` | `allowlist` | `@RequestHeadersLog({"X-Trace-Id"})` |
+
+`InvokeLog`、`LogIgnore` 保持标记注解。别名和明确属性同时设置不同的非默认值会报错；默认值和其他属性不变。
+
+实现包按职责整理：`log.annotation`（注解）、`log.aspect`（普通调用与任务适配）、`log.core`（调用生命周期与记录）、`log.config`（自动配置）、`log.support`（输出实现）。`InvocationLogWriter`、`LogValueFormatter` 扩展接口保留在 `log`；链路上下文独立放在 `io.github.luminion.velo.trace`。Controller / Feign 适配仍放在各自协议包。
+
 Controller、Feign、`@InvokeLog` 和任务入口共用一个同步 `InvocationLogEngine`。入口适配负责提供调用信息并管理独立的 trace 作用域；引擎解析日志策略、计时和记录方法返回/抛出异常，`LogValueFormatter` 转换内容，`InvocationLogWriter` 只拼接固定格式并输出。每个功能单独一行，功能决定 `==>` 或 `<==` 方向。
 
 ```text
@@ -895,7 +936,7 @@ public class OrderVO {
 - `@JsonEncode` / `@JsonDecode` 是注解驱动能力：只要 Jackson 扩展与 `JsonProcessorProvider` 生效，带注解字段就会转换；未使用注解的字段不会执行转换，因此不再提供额外的 `string-converter-enabled` 总开关
 - Jackson 的普通字符串 XSS 清洗由独立的 `velo.xss.jackson-enabled` 控制，默认关闭，避免把全局 Mapper 的所有字符串都意外改写
 - 日期时间格式依然复用 `velo.date-time-format.*`；未标注的 `Date` 默认兼容日期-only 和完整日期时间，字段上的 `@JsonFormat` 优先
-- `velo.date-time-format.time-zone` 默认 `GMT+8`，支持 `+08:00`、`GMT+08:00`、`Asia/Shanghai` 等 `ZoneId` 写法；日期增强启用时，非法时区使初始化失败，不会静默退回 GMT
+- `velo.date-time-format.time-zone` 默认 `Asia/Shanghai`（中国时间），支持 `+08:00`、`GMT+08:00` 等 `ZoneId` 写法；日期增强启用时，非法时区使初始化失败，不会静默退回 GMT。固定偏移量与地区时区对历史日期的处理遵循 JDK 原生规则
 - 字符串编码先执行 `@JsonEncode` 转换，再交给 Jackson 原生字符串序列化器写出，保留自然字符串的多态处理及空字符串包含规则
 - Boot 4 的模块自动发现由 `spring.jackson.find-and-add-modules` 控制，关闭后可通过 Module Bean 或显式注册提供扩展；Velo 不额外扫描模块
 
@@ -967,7 +1008,7 @@ velo:
 
 ### 10. Redis 自动配置
 
-Velo 会基于已有 `RedisConnectionFactory` 和 `RedisSerializer<Object>` 补齐常用 `RedisTemplate`。
+Velo 基于已有 `RedisConnectionFactory` 补齐常用 `RedisTemplate`，优先使用用户的 `RedisSerializer<Object>`，没有时由默认工厂创建纯 JSON 序列化器。
 
 额外依赖：
 
@@ -994,9 +1035,12 @@ velo:
 - starter 会尝试创建：
   - `redisTemplate`
   - `stringObjectRedisTemplate`
-- 序列化器优先复用容器中的 `RedisSerializer<Object>`，与 Velo 缓存共用该 Bean；默认 Redis 映射器独立于 HTTP JSON 映射器，Web 的全局 Jackson 增强不会自动影响 Redis 值格式
-- 若容器没有 `RedisSerializer<Object>`，starter 使用 `RedisSerializer.json()` 作为回退；Boot 2/3 跟随对应 Spring Data Redis 的 Jackson 2 实现，Boot 4 使用 Jackson 3 实现。RedisTemplate 的可选依赖在多个候选且无法确定主候选时仍会回退默认并打 WARN；Velo 默认缓存配置对序列化器歧义直接报错，详见缓存说明
-- Boot 4 项目若选择 Jackson 2，请自行提供 Jackson 2 的 `RedisSerializer<Object>` Bean，Velo 的缓存和 RedisTemplate 会共同复用该 Bean；Jackson 2/3 同时存在时不会仅依据类路径猜测用户意图，详细兼容边界见上面的缓存说明
+- 普通模板优先使用用户的 `RedisSerializer<Object>`；定向缓存通过类型映射单独配置。默认 Redis mapper 独立于 HTTP JSON，Web 全局增强不会自动影响 Redis 值格式
+- 默认 JSON 序列化器由 `RedisJsonSerializerFactory` 创建，不注册全局 `RedisSerializer` Bean；局部 `RedisSerializer<Dto>` / `RedisSerializer<String>` 不会关闭默认工厂，也不会作为通用 Object 值序列化器被选择
+- 用户提供一个 `RedisSerializer<Object>` 时直接采用，Bean 名无需固定；多个通用候选须使用 `@Primary` 明确选择，否则按 Spring 原生规则启动报错，不再静默回退另一套格式。`@Order` 不决定单个 Bean 的注入优先级
+- 默认普通 Redis 值是纯 JSON；通用 Object 模板读取 DTO 会得到 Map/List。固定类型模板需显式配置原生定向 serializer；不同值类型的手动读取可使用 StringRedisTemplate + Jackson `readValue(json, Dto.class)` / 完整 JavaType
+- HTTP Jackson mapper 不用于默认 Redis 存储；默认工厂保留日期支持，不增加业务 key 缓存、轮询或定时线程
+- Boot 4 项目若选择 Jackson 2，请自行提供 Jackson 2 的 `RedisSerializer<Object>` Bean，普通 RedisTemplate 和未登记类型的通用缓存会复用该 Bean；登记类型的缓存继续使用对应版本的定向工厂，可用用户 builder customizer 显式覆盖。Jackson 2/3 同时存在时不会仅依据类路径猜测用户意图，详细兼容边界见上面的缓存说明
 
 ---
 
@@ -1150,7 +1194,18 @@ Servlet MVC 使用 `io.github.luminion.velo.web.exception` 下的 `VeloWebExcept
 `VeloValidationWebExceptionHandler`。这些都是可复用的异常处理基类，
 不会自动注册为 Spring 组件。
 
-应用继承或实现具体异常处理类时，需要在具体类上显式添加 `@RestControllerAdvice`，并通过构造函数提供失败响应和系统异常响应的转换函数。这样可以避免用户扫描 `io.github.luminion` 等宽范围包时，Spring 误尝试实例化缺少构造函数依赖的泛型基类。
+通过 `@Bean` 注册并提供转换函数即可生效，无需另写子类或添加 `@RestControllerAdvice`：
+
+```java
+@Bean
+public VeloValidationWebExceptionHandler<Result<?>> exceptionHandler() {
+    return new VeloValidationWebExceptionHandler<>(Result::failed, error -> Result.error("系统异常"));
+}
+```
+
+Advice 元数据由抽象父类提供，具体处理器不会被宽范围组件扫描自动实例化。已有带 `@RestControllerAdvice` 的子类也可继续使用。每个应用选择一个兜底处理器，避免同时注册多个相同优先级的全局处理器。
+
+Boot 2 使用 `javax.validation`；Boot 3.2+、Boot 4 使用 `jakarta.validation`，并处理 Spring 6.1+ 的 `HandlerMethodValidationException`。参数校验失败使用失败响应转换函数；返回值校验失败使用系统异常转换函数。`VeloStatusWebExceptionHandler`（Jakarta）保留原生 400 / 500 状态码；`VeloValidationWebExceptionHandler` 保留已有的响应状态行为。
 
 ---
 

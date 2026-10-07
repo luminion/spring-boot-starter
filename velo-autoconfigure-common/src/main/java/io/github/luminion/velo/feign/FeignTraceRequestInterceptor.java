@@ -4,9 +4,9 @@ import feign.RequestInterceptor;
 import feign.RequestTemplate;
 import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.VeloProperties.TraceProperties;
-import io.github.luminion.velo.log.trace.TraceContext;
-import io.github.luminion.velo.log.trace.TraceContextResolver;
-import io.github.luminion.velo.log.trace.W3cTraceContextResolver;
+import io.github.luminion.velo.trace.TraceContext;
+import io.github.luminion.velo.trace.TraceContextResolver;
+import io.github.luminion.velo.trace.W3cTraceContextResolver;
 
 /**
  * 将当前 traceId 传播到 Feign 请求，替换同名请求头以避免重复。

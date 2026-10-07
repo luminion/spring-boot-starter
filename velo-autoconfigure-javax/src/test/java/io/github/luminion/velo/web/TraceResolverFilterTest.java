@@ -4,10 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.luminion.velo.VeloProperties;
-import io.github.luminion.velo.log.trace.HeaderTraceContextResolver;
-import io.github.luminion.velo.log.trace.TraceContext;
-import io.github.luminion.velo.log.trace.TraceContextResolver;
-import io.github.luminion.velo.log.trace.TraceData;
+import io.github.luminion.velo.trace.HeaderTraceContextResolver;
+import io.github.luminion.velo.trace.TraceContext;
+import io.github.luminion.velo.trace.TraceContextResolver;
+import io.github.luminion.velo.trace.TraceData;
 
 import java.util.Collections;
 import java.util.concurrent.atomic.AtomicInteger;

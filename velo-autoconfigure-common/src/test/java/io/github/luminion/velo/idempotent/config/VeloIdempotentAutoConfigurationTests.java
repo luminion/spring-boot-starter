@@ -31,7 +31,7 @@ class VeloIdempotentAutoConfigurationTests {
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
             .withConfiguration(AutoConfigurations.of(
                     VeloIdempotentRedissonAutoConfiguration.class,
-                    VeloIdempotentRedisAutoConfiguration.class,
+                    VeloIdempotentRedisConfiguration.class,
                     VeloIdempotentCaffeineAutoConfiguration.class,
                     VeloIdempotentAutoConfiguration.class
             ))
@@ -127,7 +127,7 @@ class VeloIdempotentAutoConfigurationTests {
         new ApplicationContextRunner()
                 .withConfiguration(AutoConfigurations.of(
                         VeloIdempotentRedissonAutoConfiguration.class,
-                        VeloIdempotentRedisAutoConfiguration.class,
+                        VeloIdempotentRedisConfiguration.class,
                         VeloIdempotentCaffeineAutoConfiguration.class,
                         VeloIdempotentAutoConfiguration.class
                 ))

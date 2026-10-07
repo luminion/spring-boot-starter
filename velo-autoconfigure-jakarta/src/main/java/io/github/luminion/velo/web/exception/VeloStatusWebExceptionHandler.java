@@ -8,7 +8,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.springframework.context.support.DefaultMessageSourceResolvable;
-import org.springframework.core.Ordered;
+import org.springframework.context.MessageSourceResolvable;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindException;
@@ -19,7 +20,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 /**
  * 使用 Spring 原生状态码的 MVC 异常处理器。
  */
-public class VeloStatusWebExceptionHandler<R> implements Ordered {
+public class VeloStatusWebExceptionHandler<R> extends AbstractVeloControllerAdvice {
     private final Function<String, R> failed;
     private final Function<Throwable, R> error;
 
@@ -37,6 +38,15 @@ public class VeloStatusWebExceptionHandler<R> implements Ordered {
     }
 
     private String knownFailure(Exception exception) {
+        if (exception instanceof HandlerMethodValidationException) {
+            HandlerMethodValidationException validation = (HandlerMethodValidationException) exception;
+            if (validation.isForReturnValue()) {
+                return null;
+            }
+            return validation.getAllErrors().stream()
+                    .map(MessageSourceResolvable::getDefaultMessage)
+                    .collect(Collectors.joining("; "));
+        }
         if (exception instanceof MethodArgumentNotValidException) {
             return ((MethodArgumentNotValidException) exception).getBindingResult().getAllErrors().stream()
                     .map(DefaultMessageSourceResolvable::getDefaultMessage)
@@ -54,8 +64,4 @@ public class VeloStatusWebExceptionHandler<R> implements Ordered {
         return null;
     }
 
-    @Override
-    public int getOrder() {
-        return Ordered.LOWEST_PRECEDENCE;
-    }
 }

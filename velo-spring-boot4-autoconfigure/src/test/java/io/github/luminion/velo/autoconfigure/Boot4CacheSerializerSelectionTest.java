@@ -1,6 +1,7 @@
 package io.github.luminion.velo.autoconfigure;
 
 import io.github.luminion.velo.cache.VeloCacheAutoConfiguration;
+import io.github.luminion.velo.jackson.VeloRedisJsonAutoConfiguration;
 import io.github.luminion.velo.core.VeloCoreAutoConfiguration;
 import io.github.luminion.velo.jackson.VeloJacksonAutoConfiguration;
 import org.junit.jupiter.api.Test;
@@ -34,7 +35,7 @@ class Boot4CacheSerializerSelectionTest {
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
             .withConfiguration(AutoConfigurations.of(
                     VeloCoreAutoConfiguration.class,
-                    VeloCacheAutoConfiguration.class,
+                    VeloCacheAutoConfiguration.class, VeloRedisJsonAutoConfiguration.class,
                     CacheAutoConfiguration.class
             ))
             .withUserConfiguration(CachingEnabled.class)
@@ -44,7 +45,7 @@ class Boot4CacheSerializerSelectionTest {
             .withConfiguration(AutoConfigurations.of(
                     Jackson2AutoConfiguration.class,
                     VeloCoreAutoConfiguration.class,
-                    VeloCacheAutoConfiguration.class,
+                    VeloCacheAutoConfiguration.class, VeloRedisJsonAutoConfiguration.class,
                     CacheAutoConfiguration.class,
                     VeloJacksonAutoConfiguration.class
             ))
@@ -74,7 +75,8 @@ class Boot4CacheSerializerSelectionTest {
     @Test
     void shouldPreferJackson3SerializerByDefaultWhenJackson2IsAlsoPresent() {
         jacksonAwareContextRunner.run(context -> {
-            RedisSerializer<Object> serializer = context.getBean(RedisSerializer.class);
+            RedisSerializer<Object> serializer = context.getBean(io.github.luminion.velo.redis.RedisJsonSerializerFactory.class)
+                    .genericCacheSerializer();
 
             assertThat(serializer).isInstanceOf(GenericJacksonJsonRedisSerializer.class);
             Object deserialized = serializer.deserialize(serializer.serialize(new RedisPayload("ok")));

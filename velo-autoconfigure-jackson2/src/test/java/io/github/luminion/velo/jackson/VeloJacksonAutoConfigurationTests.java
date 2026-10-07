@@ -31,7 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class VeloJacksonAutoConfigurationTests {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-            .withConfiguration(AutoConfigurations.of(VeloJacksonAutoConfiguration.class));
+            .withConfiguration(AutoConfigurations.of(VeloJacksonAutoConfiguration.class, VeloRedisJsonAutoConfiguration.class));
 
     @Test
     void shouldNotCreateDefaultRedisSerializerWhenRedisFeatureIsDisabled() {
@@ -90,7 +90,7 @@ class VeloJacksonAutoConfigurationTests {
                     assertThat(json).contains("\"score\":0.25");
                     assertThat(json).doesNotContain("\"score\":\"");
                     assertThat(json).contains("\"createdAt\":\"2026-03-30 12:34:56\"");
-                    assertThat(context).hasSingleBean(RedisSerializer.class);
+                    assertThat(context).doesNotHaveBean(RedisSerializer.class);
                 });
     }
 

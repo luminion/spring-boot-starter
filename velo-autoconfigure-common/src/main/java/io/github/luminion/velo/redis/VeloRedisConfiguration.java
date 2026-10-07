@@ -1,6 +1,5 @@
 package io.github.luminion.velo.redis;
 
-import io.github.luminion.velo.core.util.ObjectProviderSupport;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -33,9 +32,11 @@ public class VeloRedisConfiguration {
     @ConditionalOnBean(RedisConnectionFactory.class)
     @ConditionalOnSingleCandidate(RedisConnectionFactory.class)
     public RedisTemplate<String, Object> stringObjectRedisTemplate(RedisConnectionFactory redisConnectionFactory,
-            ObjectProvider<RedisSerializer<Object>> redisSerializerProvider) {
-        RedisSerializer<Object> redisSerializer = ObjectProviderSupport.resolveUnique(redisSerializerProvider,
-                "RedisSerializer for stringObjectRedisTemplate", RedisSerializer::json);
+            ObjectProvider<RedisSerializer<Object>> redisSerializerProvider,
+            ObjectProvider<RedisJsonSerializerFactory> jsonFactoryProvider) {
+        // 原生泛型注入仅选择通用 Object serializer；多个候选须用 @Primary / @Qualifier 消除歧义。
+        RedisSerializer<Object> redisSerializer = redisSerializerProvider.getIfAvailable(
+                () -> jsonFactoryProvider.getObject().create(Object.class));
         RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
         redisTemplate.setConnectionFactory(redisConnectionFactory);
         redisTemplate.setKeySerializer(new StringRedisSerializer());
@@ -52,9 +53,10 @@ public class VeloRedisConfiguration {
     @ConditionalOnBean(RedisConnectionFactory.class)
     @ConditionalOnSingleCandidate(RedisConnectionFactory.class)
     public RedisTemplate<Object, Object> redisTemplate(RedisConnectionFactory redisConnectionFactory,
-            ObjectProvider<RedisSerializer<Object>> redisSerializerProvider) {
-        RedisSerializer<Object> redisSerializer = ObjectProviderSupport.resolveUnique(redisSerializerProvider,
-                "RedisSerializer for redisTemplate", RedisSerializer::json);
+            ObjectProvider<RedisSerializer<Object>> redisSerializerProvider,
+            ObjectProvider<RedisJsonSerializerFactory> jsonFactoryProvider) {
+        RedisSerializer<Object> redisSerializer = redisSerializerProvider.getIfAvailable(
+                () -> jsonFactoryProvider.getObject().create(Object.class));
         RedisTemplate<Object, Object> redisTemplate = new RedisTemplate<>();
         redisTemplate.setConnectionFactory(redisConnectionFactory);
         redisTemplate.setDefaultSerializer(redisSerializer);

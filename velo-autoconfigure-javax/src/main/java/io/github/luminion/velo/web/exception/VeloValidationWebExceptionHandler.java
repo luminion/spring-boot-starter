@@ -11,8 +11,7 @@ import java.util.stream.Collectors;
 /**
  * 支持 Bean Validation 的 Web 异常处理器。
  *
- * <p>该类仅提供校验异常处理逻辑，不会自动注册为 Spring 组件。应用应在具体实现类上显式添加
- * {@code @RestControllerAdvice}。</p>
+ * <p>通过 {@code @Bean} 注册并提供响应转换函数即可生效；不会被组件扫描自动实例化。</p>
  *
  * @author luminion
  * @since 1.0.0

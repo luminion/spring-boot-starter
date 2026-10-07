@@ -1,4 +1,4 @@
 org.springframework.boot.env.EnvironmentPostProcessor=\
 io.github.luminion.velo.core.VeloModeEnvironmentPostProcessor,\
-io.github.luminion.velo.log.VeloLogEnvironmentPostProcessor,\
-io.github.luminion.velo.log.trace.VeloTraceEnvironmentPostProcessor
+io.github.luminion.velo.log.config.VeloLogEnvironmentPostProcessor,\
+io.github.luminion.velo.trace.VeloTraceEnvironmentPostProcessor

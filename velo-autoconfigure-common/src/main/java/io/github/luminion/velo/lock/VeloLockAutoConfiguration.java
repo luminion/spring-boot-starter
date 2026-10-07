@@ -4,7 +4,7 @@ import io.github.luminion.velo.ConcurrencyBackend;
 import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.core.VeloMessageResolver;
 import io.github.luminion.velo.lock.config.VeloLockJdkAutoConfiguration;
-import io.github.luminion.velo.lock.config.VeloLockRedisAutoConfiguration;
+import io.github.luminion.velo.lock.config.VeloLockRedisConfiguration;
 import io.github.luminion.velo.lock.config.VeloLockRedissonAutoConfiguration;
 import io.github.luminion.velo.spi.Fingerprinter;
 import io.github.luminion.velo.lock.aspect.LockAspect;
@@ -20,9 +20,9 @@ import org.springframework.context.annotation.Bean;
 /**
  * 锁自动配置实现。
  */
-@AutoConfiguration(after = {
+@AutoConfiguration(afterName = "io.github.luminion.velo.lock.config.VeloLockRedisAutoConfiguration", after = {
         VeloLockRedissonAutoConfiguration.class,
-        VeloLockRedisAutoConfiguration.class,
+        VeloLockRedisConfiguration.class,
         VeloLockJdkAutoConfiguration.class
 })
 @ConditionalOnClass(Advice.class)
@@ -55,9 +55,7 @@ public class VeloLockAutoConfiguration {
     @ConditionalOnBean({Fingerprinter.class, LockHandler.class})
     public LockAspect lockAspect(VeloProperties properties, Fingerprinter fingerprinter, LockHandler lockHandler,
             ObjectProvider<VeloMessageResolver> messageResolver) {
-        LockAspect aspect = new LockAspect(properties.getLock().getPrefix(), fingerprinter, lockHandler,
-                messageResolver.getIfAvailable());
-        aspect.setOrder(properties.getAspectOrder().getLock());
-        return aspect;
+        return new LockAspect(properties.getLock().getPrefix(), fingerprinter, lockHandler,
+                messageResolver.getIfAvailable(), properties.getAspectOrder().getLock());
     }
 }

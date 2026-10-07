@@ -1,11 +1,11 @@
 package io.github.luminion.velo.feign;
 
 import io.github.luminion.velo.VeloProperties;
-import io.github.luminion.velo.log.InvocationLogEngine;
-import io.github.luminion.velo.log.VeloLogAutoConfiguration;
+import io.github.luminion.velo.log.core.InvocationLogEngine;
+import io.github.luminion.velo.log.config.VeloLogAutoConfiguration;
 import io.github.luminion.velo.log.condition.ConditionalOnInvocationAdapter;
-import io.github.luminion.velo.log.trace.TraceScopeManager;
-import io.github.luminion.velo.log.trace.VeloTraceAutoConfiguration;
+import io.github.luminion.velo.trace.TraceScopeManager;
+import io.github.luminion.velo.trace.VeloTraceAutoConfiguration;
 import org.aspectj.weaver.Advice;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -32,9 +32,7 @@ public class VeloFeignAutoConfiguration {
     public FeignLogAspect feignLogAspect(VeloProperties properties,
                                          ObjectProvider<InvocationLogEngine> engine,
                                          ObjectProvider<TraceScopeManager> trace) {
-        FeignLogAspect aspect = new FeignLogAspect(engine.getIfAvailable(), trace.getIfAvailable());
-        aspect.setOrder(properties.getAspectOrder().getFeignLog());
-        return aspect;
+        return new FeignLogAspect(engine.getIfAvailable(), trace.getIfAvailable(), properties.getAspectOrder().getFeignLog());
     }
 
     @Bean

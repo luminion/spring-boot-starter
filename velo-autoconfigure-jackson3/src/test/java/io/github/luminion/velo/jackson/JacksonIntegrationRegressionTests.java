@@ -47,7 +47,7 @@ class JacksonIntegrationRegressionTests {
 
     private final ApplicationContextRunner runner = new ApplicationContextRunner()
             .withConfiguration(AutoConfigurations.of(VeloCoreAutoConfiguration.class,
-                    VeloJacksonAutoConfiguration.class, JacksonAutoConfiguration.class));
+                    VeloJacksonAutoConfiguration.class, VeloRedisJsonAutoConfiguration.class, JacksonAutoConfiguration.class));
 
     @Test
     void shouldRegisterEnumModuleThroughBoot() {
@@ -309,7 +309,8 @@ class JacksonIntegrationRegressionTests {
     @Test
     void shouldRoundTripFinalPojoAndJavaTimeThroughRedisSerializer() {
         runner.run(context -> {
-            RedisSerializer serializer = context.getBean(RedisSerializer.class);
+            RedisSerializer serializer = context.getBean(io.github.luminion.velo.redis.RedisJsonSerializerFactory.class)
+                    .genericCacheSerializer();
             CachedPayload payload = new CachedPayload(1L, LocalDate.of(2026, 10, 6),
                     LocalDateTime.of(2026, 10, 6, 12, 30));
             Object value = serializer.deserialize(serializer.serialize(payload));
@@ -325,7 +326,8 @@ class JacksonIntegrationRegressionTests {
     @Test
     void shouldReportMissingRedisTypeInformationInsteadOfReturningNull() {
         runner.run(context -> {
-            RedisSerializer serializer = context.getBean(RedisSerializer.class);
+            RedisSerializer serializer = context.getBean(io.github.luminion.velo.redis.RedisJsonSerializerFactory.class)
+                    .genericCacheSerializer();
             byte[] invalid = "{\"id\":1}".getBytes(StandardCharsets.UTF_8);
             assertThatThrownBy(() -> serializer.deserialize(invalid)).isInstanceOf(SerializationException.class);
         });

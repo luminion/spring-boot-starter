@@ -17,7 +17,7 @@ import org.springframework.context.annotation.Bean;
 /**
  * 限流自动配置实现。
  */
-@AutoConfiguration(after = {
+@AutoConfiguration(afterName = "io.github.luminion.velo.ratelimit.config.VeloRateLimitRedisAutoConfiguration", after = {
         io.github.luminion.velo.ratelimit.config.VeloRateLimitRedissonAutoConfiguration.class,
         io.github.luminion.velo.ratelimit.config.VeloRateLimitRedisConfiguration.class,
         io.github.luminion.velo.ratelimit.config.VeloRateLimitGuavaAutoConfiguration.class
@@ -45,9 +45,7 @@ public class VeloRateLimitAutoConfiguration {
     @ConditionalOnBean({Fingerprinter.class, RateLimitHandler.class})
     public RateLimitAspect rateLimitAspect(VeloProperties properties, Fingerprinter fingerprinter,
                                            RateLimitHandler rateLimitHandler, ObjectProvider<VeloMessageResolver> messageResolver) {
-        RateLimitAspect aspect = new RateLimitAspect(properties.getRateLimit().getPrefix(), fingerprinter,
-                rateLimitHandler, messageResolver.getIfAvailable());
-        aspect.setOrder(properties.getAspectOrder().getRateLimit());
-        return aspect;
+        return new RateLimitAspect(properties.getRateLimit().getPrefix(), fingerprinter,
+                rateLimitHandler, messageResolver.getIfAvailable(), properties.getAspectOrder().getRateLimit());
     }
 }

@@ -13,7 +13,7 @@ import org.springframework.context.annotation.Bean;
 /**
  * Guava 原生限流自动配置。
  */
-@AutoConfiguration(after = {
+@AutoConfiguration(afterName = "io.github.luminion.velo.ratelimit.config.VeloRateLimitRedisAutoConfiguration", after = {
         VeloRateLimitRedissonAutoConfiguration.class,
         VeloRateLimitRedisConfiguration.class,
 })

@@ -558,9 +558,9 @@ public class VeloProperties {
         private String dateTime = "yyyy-MM-dd HH:mm:ss";
 
         /**
-         * 日期转换器和序列化器使用的默认时区。
+         * 日期转换器和序列化器使用的默认时区，采用中国上海时区。
          */
-        private String timeZone = "GMT+8";
+        private String timeZone = "Asia/Shanghai";
     }
 
     @Data

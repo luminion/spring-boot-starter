@@ -1,10 +1,10 @@
 package io.github.luminion.velo.log.support;
 
-import io.github.luminion.velo.log.InvocationLogFeature;
-import io.github.luminion.velo.log.InvocationLogRecord;
-import io.github.luminion.velo.log.InvocationLogSupport;
+import io.github.luminion.velo.log.core.InvocationLogFeature;
+import io.github.luminion.velo.log.core.InvocationLogRecord;
+import io.github.luminion.velo.log.core.InvocationLogSupport;
 import io.github.luminion.velo.log.InvocationLogWriter;
-import io.github.luminion.velo.log.InvocationPhase;
+import io.github.luminion.velo.log.core.InvocationPhase;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

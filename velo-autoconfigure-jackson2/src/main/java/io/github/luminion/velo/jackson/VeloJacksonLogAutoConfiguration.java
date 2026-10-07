@@ -3,7 +3,7 @@ package io.github.luminion.velo.jackson;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.luminion.velo.log.LogValueFormatter;
-import io.github.luminion.velo.log.VeloLogAutoConfiguration;
+import io.github.luminion.velo.log.config.VeloLogAutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;

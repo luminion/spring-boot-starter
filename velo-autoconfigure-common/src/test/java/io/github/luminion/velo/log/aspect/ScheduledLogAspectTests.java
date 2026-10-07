@@ -1,9 +1,9 @@
 package io.github.luminion.velo.log.aspect;
 
 import io.github.luminion.velo.VeloProperties;
-import io.github.luminion.velo.log.InvocationLogEngine;
-import io.github.luminion.velo.log.InvocationLogRecord;
-import io.github.luminion.velo.log.InvocationLogSource;
+import io.github.luminion.velo.log.core.InvocationLogEngine;
+import io.github.luminion.velo.log.core.InvocationLogRecord;
+import io.github.luminion.velo.log.core.InvocationLogSource;
 import org.junit.jupiter.api.Test;
 import org.springframework.aop.aspectj.annotation.AspectJProxyFactory;
 import org.springframework.scheduling.annotation.Scheduled;

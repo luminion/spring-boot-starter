@@ -1,9 +1,9 @@
 package io.github.luminion.velo.web;
 
 import io.github.luminion.velo.VeloProperties.TraceProperties;
-import io.github.luminion.velo.log.trace.TraceContextResolver;
-import io.github.luminion.velo.log.trace.TraceEnabledCondition;
-import io.github.luminion.velo.log.trace.VeloTraceAutoConfiguration;
+import io.github.luminion.velo.trace.TraceContextResolver;
+import io.github.luminion.velo.trace.TraceEnabledCondition;
+import io.github.luminion.velo.trace.VeloTraceAutoConfiguration;
 
 import javax.servlet.DispatcherType;
 

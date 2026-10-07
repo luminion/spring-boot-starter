@@ -1,6 +1,7 @@
 package io.github.luminion.velo.cache;
 
 import io.github.luminion.velo.core.VeloCoreAutoConfiguration;
+import io.github.luminion.velo.jackson.VeloRedisJsonAutoConfiguration;
 import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -52,7 +53,7 @@ class Boot4CacheRedisIntegrationTest {
                 configurer -> configurer.immediateWrites().batchStrategy(BatchStrategies.keys()));
         new ApplicationContextRunner()
                 .withConfiguration(AutoConfigurations.of(VeloCoreAutoConfiguration.class,
-                        VeloCacheAutoConfiguration.class, CacheAutoConfiguration.class))
+                        VeloCacheAutoConfiguration.class, VeloRedisJsonAutoConfiguration.class, CacheAutoConfiguration.class))
                 .withUserConfiguration(CachingEnabled.class)
                 .withBean(LettuceConnectionFactory.class, () -> factory)
                 .withBean(RedisCacheConfiguration.class, () -> defaults)
@@ -107,7 +108,7 @@ class Boot4CacheRedisIntegrationTest {
         String prefix = "velo:audit:fixed:" + UUID.randomUUID() + ":";
         new ApplicationContextRunner()
                 .withConfiguration(AutoConfigurations.of(VeloCoreAutoConfiguration.class,
-                        VeloCacheAutoConfiguration.class, CacheAutoConfiguration.class))
+                        VeloCacheAutoConfiguration.class, VeloRedisJsonAutoConfiguration.class, CacheAutoConfiguration.class))
                 .withUserConfiguration(CachingEnabled.class)
                 .withBean(LettuceConnectionFactory.class, () -> new LettuceConnectionFactory(uri.getHost(), port))
                 .withPropertyValues("spring.cache.type=redis", "spring.cache.cache-names=normal,persistent",

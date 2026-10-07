@@ -5,7 +5,6 @@ import io.github.luminion.velo.lock.exception.LockException;
 import io.github.luminion.velo.ratelimit.exception.RateLimitException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
-import org.springframework.core.Ordered;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;
 import org.springframework.validation.BindingResult;
@@ -24,14 +23,13 @@ import java.util.stream.Collectors;
 /**
  * Web 异常处理器基类。
  *
- * <p>该类仅提供异常处理逻辑，不会自动注册为 Spring 组件。应用应在具体实现类上显式添加
- * {@code @RestControllerAdvice}，并通过构造函数提供响应转换函数。</p>
+ * <p>通过 {@code @Bean} 注册并提供响应转换函数即可生效；不会被组件扫描自动实例化。</p>
  *
  * @author luminion
  * @since 1.0.0
  */
 @Slf4j
-public class VeloWebExceptionHandler<R> implements Ordered {
+public class VeloWebExceptionHandler<R> extends AbstractVeloControllerAdvice {
 
     protected final Function<String, R> failed;
     protected final Function<Throwable, R> error;
@@ -179,8 +177,4 @@ public class VeloWebExceptionHandler<R> implements Ordered {
         return error.apply(e);
     }
 
-    @Override
-    public int getOrder() {
-        return Ordered.LOWEST_PRECEDENCE;
-    }
 }

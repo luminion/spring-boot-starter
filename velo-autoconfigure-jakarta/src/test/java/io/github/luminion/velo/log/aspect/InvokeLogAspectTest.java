@@ -4,9 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.luminion.velo.VeloProperties;
-import io.github.luminion.velo.log.InvocationLogEngine;
-import io.github.luminion.velo.log.InvocationLogFeature;
-import io.github.luminion.velo.log.InvocationLogRecord;
+import io.github.luminion.velo.log.core.InvocationLogEngine;
+import io.github.luminion.velo.log.core.InvocationLogFeature;
+import io.github.luminion.velo.log.core.InvocationLogRecord;
 import io.github.luminion.velo.log.InvocationLogWriter;
 import io.github.luminion.velo.log.LogValueFormatter;
 import io.github.luminion.velo.log.annotation.ExitArgs;

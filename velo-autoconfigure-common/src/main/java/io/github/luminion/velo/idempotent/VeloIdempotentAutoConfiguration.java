@@ -4,7 +4,7 @@ import io.github.luminion.velo.ConcurrencyBackend;
 import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.core.VeloMessageResolver;
 import io.github.luminion.velo.idempotent.config.VeloIdempotentCaffeineAutoConfiguration;
-import io.github.luminion.velo.idempotent.config.VeloIdempotentRedisAutoConfiguration;
+import io.github.luminion.velo.idempotent.config.VeloIdempotentRedisConfiguration;
 import io.github.luminion.velo.idempotent.config.VeloIdempotentRedissonAutoConfiguration;
 import io.github.luminion.velo.spi.Fingerprinter;
 import io.github.luminion.velo.idempotent.aspect.IdempotentAspect;
@@ -20,9 +20,9 @@ import org.springframework.context.annotation.Bean;
 /**
  * 幂等自动配置实现。
  */
-@AutoConfiguration(after = {
+@AutoConfiguration(afterName = "io.github.luminion.velo.idempotent.config.VeloIdempotentRedisAutoConfiguration", after = {
         VeloIdempotentRedissonAutoConfiguration.class,
-        VeloIdempotentRedisAutoConfiguration.class,
+        VeloIdempotentRedisConfiguration.class,
         VeloIdempotentCaffeineAutoConfiguration.class
 })
 @ConditionalOnClass(Advice.class)
@@ -48,9 +48,7 @@ public class VeloIdempotentAutoConfiguration {
     @ConditionalOnBean({Fingerprinter.class, IdempotentHandler.class})
     public IdempotentAspect idempotentAspect(VeloProperties properties, Fingerprinter fingerprinter,
                                              IdempotentHandler idempotentHandler, ObjectProvider<VeloMessageResolver> messageResolver) {
-        IdempotentAspect aspect = new IdempotentAspect(properties.getIdempotent().getPrefix(), fingerprinter,
-                idempotentHandler, messageResolver.getIfAvailable());
-        aspect.setOrder(properties.getAspectOrder().getIdempotent());
-        return aspect;
+        return new IdempotentAspect(properties.getIdempotent().getPrefix(), fingerprinter,
+                idempotentHandler, messageResolver.getIfAvailable(), properties.getAspectOrder().getIdempotent());
     }
 }

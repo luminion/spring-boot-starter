@@ -31,17 +31,23 @@ public class RedissonRateLimitHandler implements RateLimitHandler {
 
         RRateLimiter rateLimiter = redissonClient.getRateLimiter(key);
 
-        // trySetRate 只在 rate limiter 不存在时才设置成功，返回 true 表示本次创建了配置。
-        // 利用返回值避免额外的 isExists() 调用，减少 Redis 往返。
+        // 稳定配置只需读取、刷新 TTL 和申请额度，省去每次都尝试初始化的调用。
+        // 显式刷新保留对已有 keepAlive=0 配置的支持；读取后已过期则重新初始化。
+        RateLimiterConfig currentConfig = rateLimiter.getConfig();
+        if (matches(currentConfig, rateValue, interval.toMillis()) && rateLimiter.expire(keepAlive)) {
+            return rateLimiter.tryAcquire();
+        }
+
         boolean created = rateLimiter.trySetRate(RateType.OVERALL, rateValue, interval, keepAlive);
         if (!created) {
-            // 已存在，检查配置是否匹配，不匹配则更新
-            RateLimiterConfig currentConfig = rateLimiter.getConfig();
+            // 初始化可能输给并发请求，重新读取后再决定是否更新，避免重置相同配置的额度。
+            currentConfig = rateLimiter.getConfig();
             if (!matches(currentConfig, rateValue, interval.toMillis())) {
                 rateLimiter.setRate(RateType.OVERALL, rateValue, interval, keepAlive);
             }
         }
 
+        // 回退路径保留原有整体过期操作，兼容已有配置及原生派生 key。
         rateLimiter.expire(keepAlive);
         return rateLimiter.tryAcquire();
     }

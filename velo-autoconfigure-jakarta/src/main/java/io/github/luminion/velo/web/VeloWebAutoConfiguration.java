@@ -1,8 +1,8 @@
 package io.github.luminion.velo.web;
 
 import io.github.luminion.velo.VeloProperties;
-import io.github.luminion.velo.log.InvocationLogEngine;
-import io.github.luminion.velo.log.VeloLogAutoConfiguration;
+import io.github.luminion.velo.log.core.InvocationLogEngine;
+import io.github.luminion.velo.log.config.VeloLogAutoConfiguration;
 import io.github.luminion.velo.xss.converter.XssStringConverter;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -40,8 +40,6 @@ public class VeloWebAutoConfiguration {
             havingValue = "true",
             matchIfMissing = true)
     public ControllerLogAspect controllerLogAspect(VeloProperties properties, InvocationLogEngine engine) {
-        ControllerLogAspect aspect = new ControllerLogAspect(engine);
-        aspect.setOrder(properties.getAspectOrder().getControllerLog());
-        return aspect;
+        return new ControllerLogAspect(engine, properties.getAspectOrder().getControllerLog());
     }
 }

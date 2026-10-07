@@ -20,16 +20,13 @@ import java.util.concurrent.ConcurrentMap;
  * 基于 SpEL 的键解析器。
  */
 public class SpelFingerprinter implements Fingerprinter {
-    private static final ParameterNameDiscoverer PND = new DefaultParameterNameDiscoverer();
     private final ExpressionParser parser;
-    // 仅缓存注解声明的固定表达式，不缓存求值上下文或请求结果。
-    private final ConcurrentMap<String, Expression> expressions = new ConcurrentHashMap<>();
-    // 按实际用户类隔离方法标识；ClassValue 随类卸载回收，不持有全局强引用。
-    private final ClassValue<ConcurrentMap<Method, String>> methodFingerprints =
-            new ClassValue<ConcurrentMap<Method, String>>() {
+    // 参数发现器和表达式都可能缓存反射元数据，统一随实际用户类卸载回收。
+    private final ClassValue<ClassMetadata> metadata =
+            new ClassValue<ClassMetadata>() {
                 @Override
-                protected ConcurrentMap<Method, String> computeValue(Class<?> type) {
-                    return new ConcurrentHashMap<>();
+                protected ClassMetadata computeValue(Class<?> type) {
+                    return new ClassMetadata();
                 }
             };
 
@@ -46,11 +43,13 @@ public class SpelFingerprinter implements Fingerprinter {
         Class<?> targetClass = target == null ? method.getDeclaringClass()
                 : ClassUtils.getUserClass(AopUtils.getTargetClass(target));
         Method specificMethod = AopUtils.getMostSpecificMethod(method, targetClass);
-        String methodFingerprint = methodFingerprints.get(targetClass).computeIfAbsent(specificMethod,
+        ClassMetadata classMetadata = metadata.get(targetClass);
+        String methodFingerprint = classMetadata.methodFingerprints.computeIfAbsent(specificMethod,
                 resolvedMethod -> buildMethodFingerprint(targetClass, resolvedMethod));
         if (StringUtils.hasText(expression)) {
-            Expression parsedExp = expressions.computeIfAbsent(expression, parser::parseExpression);
-            MethodBasedEvaluationContext context = new MethodBasedEvaluationContext(target, specificMethod, args, PND);
+            Expression parsedExp = classMetadata.expressions.computeIfAbsent(expression, parser::parseExpression);
+            MethodBasedEvaluationContext context = new MethodBasedEvaluationContext(target, specificMethod, args,
+                    classMetadata.parameterNames);
             Object value = parsedExp.getValue(context);
             if (value == null) {
                 throw new IllegalArgumentException("SpEL key expression '" + expression + "' resolved to null.");
@@ -67,6 +66,13 @@ public class SpelFingerprinter implements Fingerprinter {
             return methodFingerprint + ':' + resolved;
         }
         return methodFingerprint;
+    }
+
+    private static final class ClassMetadata {
+        private final ParameterNameDiscoverer parameterNames = new DefaultParameterNameDiscoverer();
+        private final ConcurrentMap<Method, String> methodFingerprints = new ConcurrentHashMap<>();
+        // 仅缓存注解声明的表达式，不缓存求值上下文或请求结果。
+        private final ConcurrentMap<String, Expression> expressions = new ConcurrentHashMap<>();
     }
 
     private static String buildMethodFingerprint(Class<?> targetClass, Method method) {

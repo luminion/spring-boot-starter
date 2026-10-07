@@ -2,9 +2,9 @@ package io.github.luminion.velo.log.support;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.github.luminion.velo.log.InvocationLogFeature;
-import io.github.luminion.velo.log.InvocationLogRecord;
-import io.github.luminion.velo.log.InvocationLogSource;
+import io.github.luminion.velo.log.core.InvocationLogFeature;
+import io.github.luminion.velo.log.core.InvocationLogRecord;
+import io.github.luminion.velo.log.core.InvocationLogSource;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;

@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
 import io.github.luminion.velo.VeloProperties;
-import io.github.luminion.velo.log.trace.VeloTraceAutoConfiguration;
+import io.github.luminion.velo.trace.VeloTraceAutoConfiguration;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;

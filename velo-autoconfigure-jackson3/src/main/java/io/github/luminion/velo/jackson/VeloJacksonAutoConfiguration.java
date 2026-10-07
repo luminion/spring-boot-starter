@@ -20,8 +20,6 @@ import org.springframework.boot.jackson.autoconfigure.JsonMapperBuilderCustomize
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.serializer.RedisSerializer;
 import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.SerializationFeature;
@@ -136,15 +134,4 @@ public class VeloJacksonAutoConfiguration {
         }
     }
 
-    @Configuration(proxyBeanMethods = false)
-    @ConditionalOnClass(RedisTemplate.class)
-    @ConditionalOnProperty(prefix = "velo.redis", name = "enabled", havingValue = "true", matchIfMissing = true)
-    static class JacksonRedisConfiguration {
-
-        @Bean
-        @ConditionalOnMissingBean(RedisSerializer.class)
-        public RedisSerializer<Object> redisSerializer() {
-            return RedisSerializer.json();
-        }
-    }
 }

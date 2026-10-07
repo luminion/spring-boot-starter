@@ -32,7 +32,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class VeloJacksonAutoConfigurationTests {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-            .withConfiguration(AutoConfigurations.of(VeloJacksonAutoConfiguration.class));
+            .withConfiguration(AutoConfigurations.of(VeloJacksonAutoConfiguration.class, VeloRedisJsonAutoConfiguration.class));
 
     @Test
     void shouldNotCreateDefaultRedisSerializerWhenRedisFeatureIsDisabled() {
@@ -68,7 +68,7 @@ class VeloJacksonAutoConfigurationTests {
                     assertThat(json).contains("\"score\":0.25");
                     assertThat(json).doesNotContain("\"score\":\"");
                     assertThat(json).contains("\"createdAt\":\"2026-03-31 08:09:10\"");
-                    assertThat(context).hasSingleBean(RedisSerializer.class);
+                    assertThat(context).doesNotHaveBean(RedisSerializer.class);
                 });
     }
 
@@ -507,7 +507,8 @@ class VeloJacksonAutoConfigurationTests {
         contextRunner
                 .withBean(VeloProperties.class, VeloProperties::new)
                 .run(context -> {
-                    RedisSerializer<Object> serializer = context.getBean(RedisSerializer.class);
+                    RedisSerializer<Object> serializer = context.getBean(io.github.luminion.velo.redis.RedisJsonSerializerFactory.class)
+                            .create(RedisPayload.class);
                     Object value = serializer.deserialize(serializer.serialize(new RedisPayload("ok")));
 
                     assertThat(value).isInstanceOf(RedisPayload.class);

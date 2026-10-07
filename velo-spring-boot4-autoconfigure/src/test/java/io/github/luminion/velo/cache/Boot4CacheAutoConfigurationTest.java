@@ -1,6 +1,7 @@
 package io.github.luminion.velo.cache;
 
 import io.github.luminion.velo.core.VeloCoreAutoConfiguration;
+import io.github.luminion.velo.jackson.VeloRedisJsonAutoConfiguration;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -42,7 +43,7 @@ class Boot4CacheAutoConfigurationTest {
 
     private final ApplicationContextRunner runner = new ApplicationContextRunner()
             .withConfiguration(AutoConfigurations.of(VeloCoreAutoConfiguration.class,
-                    VeloCacheAutoConfiguration.class, CacheAutoConfiguration.class))
+                    VeloCacheAutoConfiguration.class, VeloRedisJsonAutoConfiguration.class, CacheAutoConfiguration.class))
             .withUserConfiguration(CachingEnabled.class)
             .withBean(RedisConnectionFactory.class, () -> mock(RedisConnectionFactory.class))
             .withPropertyValues("spring.cache.type=redis");

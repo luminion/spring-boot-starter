@@ -30,7 +30,7 @@ public class LockAspect implements Ordered {
     private final LockHandler lockHandler;
     private final VeloMessageResolver messageResolver;
 
-    private int order = VeloAdvisorOrder.CONCURRENCY_LOCK;
+    private final int order;
 
     public LockAspect(String prefix, Fingerprinter fingerprinter, LockHandler lockHandler) {
         this(prefix, fingerprinter, lockHandler, null);
@@ -38,13 +38,16 @@ public class LockAspect implements Ordered {
 
     public LockAspect(String prefix, Fingerprinter fingerprinter, LockHandler lockHandler,
                       VeloMessageResolver messageResolver) {
+        this(prefix, fingerprinter, lockHandler, messageResolver,
+                VeloAdvisorOrder.CONCURRENCY_LOCK);
+    }
+
+    public LockAspect(String prefix, Fingerprinter fingerprinter, LockHandler lockHandler,
+                      VeloMessageResolver messageResolver, int order) {
         this.prefix = prefix;
         this.fingerprinter = fingerprinter;
         this.lockHandler = lockHandler;
         this.messageResolver = messageResolver;
-    }
-
-    public void setOrder(int order) {
         this.order = order;
     }
 

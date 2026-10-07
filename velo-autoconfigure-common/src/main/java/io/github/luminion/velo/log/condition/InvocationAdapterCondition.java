@@ -1,6 +1,6 @@
 package io.github.luminion.velo.log.condition;
 
-import io.github.luminion.velo.log.trace.TraceEnabledCondition;
+import io.github.luminion.velo.trace.TraceEnabledCondition;
 
 import java.util.Map;
 

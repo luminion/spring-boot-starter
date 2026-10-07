@@ -3,7 +3,7 @@ package io.github.luminion.velo.jackson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import io.github.luminion.velo.log.InvocationLogSupport;
+import io.github.luminion.velo.log.core.InvocationLogSupport;
 import io.github.luminion.velo.log.LogValueFormatter;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +17,25 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 
 class VeloJacksonLogAutoConfigurationTests {
+    @Test
+    void springMapperAndApplicationModuleAreReadyBeforeLoggingFormatter() {
+        tools.jackson.databind.module.SimpleModule module = new tools.jackson.databind.module.SimpleModule();
+        module.setMixInAnnotation(Payload.class, PayloadMixin.class);
+        new ApplicationContextRunner()
+                .withConfiguration(AutoConfigurations.of(
+                        org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration.class,
+                        VeloJacksonLogAutoConfiguration.class,
+                        io.github.luminion.velo.core.VeloCoreAutoConfiguration.class,
+                        io.github.luminion.velo.log.config.VeloLogAutoConfiguration.class))
+                .withBean(tools.jackson.databind.module.SimpleModule.class, () -> module)
+                .run(context -> {
+                    assertThat(context).hasNotFailed().hasSingleBean(LogValueFormatter.class);
+                    String text = InvocationLogSupport.format(new Payload("visible", "secret"),
+                            context.getBean(LogValueFormatter.class));
+                    assertThat(text).isEqualTo("{\"value\":\"visible\"}");
+                });
+    }
+
     private final ApplicationContextRunner runner =
             new ApplicationContextRunner()
                     .withConfiguration(AutoConfigurations.of(VeloJacksonLogAutoConfiguration.class));
