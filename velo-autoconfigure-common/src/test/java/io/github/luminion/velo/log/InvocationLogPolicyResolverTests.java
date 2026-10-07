@@ -5,7 +5,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.log.annotation.EntryArgs;
 import io.github.luminion.velo.log.annotation.LogIgnore;
+
 import java.lang.reflect.Method;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.logging.LogLevel;
 

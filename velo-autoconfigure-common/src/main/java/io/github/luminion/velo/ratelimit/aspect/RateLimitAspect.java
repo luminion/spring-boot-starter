@@ -7,6 +7,7 @@ import io.github.luminion.velo.util.ConcurrencyAnnotationUtils;
 import io.github.luminion.velo.ratelimit.RateLimitHandler;
 import io.github.luminion.velo.ratelimit.annotation.RateLimit;
 import io.github.luminion.velo.ratelimit.exception.RateLimitException;
+import lombok.Setter;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -28,22 +29,23 @@ public class RateLimitAspect implements Ordered {
     private final RateLimitHandler rateLimitHandler;
     private final VeloMessageResolver messageResolver;
 
+    @Setter
     private int order = VeloAdvisorOrder.CONCURRENCY_RATE_LIMIT;
 
-    public RateLimitAspect(String prefix, Fingerprinter fingerprinter, RateLimitHandler rateLimitHandler) {
+    public RateLimitAspect(String prefix,
+                           Fingerprinter fingerprinter,
+                           RateLimitHandler rateLimitHandler) {
         this(prefix, fingerprinter, rateLimitHandler, null);
     }
 
-    public RateLimitAspect(String prefix, Fingerprinter fingerprinter, RateLimitHandler rateLimitHandler,
-            VeloMessageResolver messageResolver) {
+    public RateLimitAspect(String prefix,
+                           Fingerprinter fingerprinter,
+                           RateLimitHandler rateLimitHandler,
+                           VeloMessageResolver messageResolver) {
         this.prefix = prefix;
         this.fingerprinter = fingerprinter;
         this.rateLimitHandler = rateLimitHandler;
         this.messageResolver = messageResolver;
-    }
-
-    public void setOrder(int order) {
-        this.order = order;
     }
 
     @Override

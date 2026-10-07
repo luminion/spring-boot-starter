@@ -13,6 +13,6 @@ import org.springframework.context.annotation.Import;
         after = VeloLockRedissonAutoConfiguration.class,
         afterName = "org.springframework.boot.data.redis.autoconfigure.DataRedisAutoConfiguration"
 )
-@Import(VeloLockRedisConfiguration.class)
+@Import(VeloLockRedisAutoConfiguration.class)
 public class VeloLockRedisAutoConfiguration {
 }

@@ -14,37 +14,38 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 
-/** Feign 调试日志自动配置。 */
+/**
+ * Feign 调试日志自动配置。
+ */
 @AutoConfiguration(after = {VeloLogAutoConfiguration.class, VeloTraceAutoConfiguration.class})
 @ConditionalOnClass(value = Advice.class, name = "org.springframework.cloud.openfeign.FeignClient")
 @ConditionalOnProperty(
-    prefix = "velo.feign",
-    name = "enabled",
-    havingValue = "true",
-    matchIfMissing = true)
+        prefix = "velo.feign",
+        name = "enabled",
+        havingValue = "true",
+        matchIfMissing = true)
 public class VeloFeignAutoConfiguration {
 
-  @Bean
-  @ConditionalOnMissingBean
-  @ConditionalOnInvocationAdapter(source = "feign")
-  public FeignLogAspect feignLogAspect(
-      VeloProperties properties,
-      ObjectProvider<InvocationLogEngine> engine,
-      ObjectProvider<TraceScopeManager> trace) {
-    FeignLogAspect aspect = new FeignLogAspect(engine.getIfAvailable(), trace.getIfAvailable());
-    aspect.setOrder(properties.getAspectOrder().getFeignLog());
-    return aspect;
-  }
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnInvocationAdapter(source = "feign")
+    public FeignLogAspect feignLogAspect(VeloProperties properties,
+                                         ObjectProvider<InvocationLogEngine> engine,
+                                         ObjectProvider<TraceScopeManager> trace) {
+        FeignLogAspect aspect = new FeignLogAspect(engine.getIfAvailable(), trace.getIfAvailable());
+        aspect.setOrder(properties.getAspectOrder().getFeignLog());
+        return aspect;
+    }
 
-  @Bean
-  @ConditionalOnMissingBean
-  @ConditionalOnClass(name = "feign.Capability")
-  @ConditionalOnProperty(
-      prefix = "velo.log",
-      name = {"enabled", "sources.feign.enabled"},
-      havingValue = "true",
-      matchIfMissing = true)
-  public FeignInvocationCapability feignInvocationCapability() {
-    return new FeignInvocationCapability();
-  }
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnClass(name = "feign.Capability")
+    @ConditionalOnProperty(
+            prefix = "velo.log",
+            name = {"enabled", "sources.feign.enabled"},
+            havingValue = "true",
+            matchIfMissing = true)
+    public FeignInvocationCapability feignInvocationCapability() {
+        return new FeignInvocationCapability();
+    }
 }

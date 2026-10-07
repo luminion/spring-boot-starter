@@ -35,7 +35,7 @@ class VeloLockAutoConfigurationTests {
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
             .withConfiguration(AutoConfigurations.of(
                     VeloLockRedissonAutoConfiguration.class,
-                    VeloLockRedisConfiguration.class,
+                    VeloLockRedisAutoConfiguration.class,
                     VeloLockJdkAutoConfiguration.class,
                     VeloLockAutoConfiguration.class
             ))
@@ -176,7 +176,7 @@ class VeloLockAutoConfigurationTests {
         new ApplicationContextRunner()
                 .withConfiguration(AutoConfigurations.of(
                         VeloLockRedissonAutoConfiguration.class,
-                        VeloLockRedisConfiguration.class,
+                        VeloLockRedisAutoConfiguration.class,
                         VeloLockJdkAutoConfiguration.class,
                         VeloLockAutoConfiguration.class
                 ))

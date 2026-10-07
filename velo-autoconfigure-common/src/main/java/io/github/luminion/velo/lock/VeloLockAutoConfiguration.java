@@ -3,6 +3,9 @@ package io.github.luminion.velo.lock;
 import io.github.luminion.velo.ConcurrencyBackend;
 import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.core.VeloMessageResolver;
+import io.github.luminion.velo.lock.config.VeloLockJdkAutoConfiguration;
+import io.github.luminion.velo.lock.config.VeloLockRedisAutoConfiguration;
+import io.github.luminion.velo.lock.config.VeloLockRedissonAutoConfiguration;
 import io.github.luminion.velo.spi.Fingerprinter;
 import io.github.luminion.velo.lock.aspect.LockAspect;
 import org.aspectj.weaver.Advice;
@@ -18,9 +21,10 @@ import org.springframework.context.annotation.Bean;
  * 锁自动配置实现。
  */
 @AutoConfiguration(after = {
-        io.github.luminion.velo.lock.config.VeloLockRedissonAutoConfiguration.class,
-        io.github.luminion.velo.lock.config.VeloLockJdkAutoConfiguration.class
-}, afterName = "io.github.luminion.velo.lock.config.VeloLockRedisAutoConfiguration")
+        VeloLockRedissonAutoConfiguration.class,
+        VeloLockRedisAutoConfiguration.class,
+        VeloLockJdkAutoConfiguration.class
+})
 @ConditionalOnClass(Advice.class)
 @ConditionalOnProperty(prefix = "velo.lock", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloLockAutoConfiguration {

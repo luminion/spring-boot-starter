@@ -3,6 +3,9 @@ package io.github.luminion.velo.idempotent;
 import io.github.luminion.velo.ConcurrencyBackend;
 import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.core.VeloMessageResolver;
+import io.github.luminion.velo.idempotent.config.VeloIdempotentCaffeineAutoConfiguration;
+import io.github.luminion.velo.idempotent.config.VeloIdempotentRedisAutoConfiguration;
+import io.github.luminion.velo.idempotent.config.VeloIdempotentRedissonAutoConfiguration;
 import io.github.luminion.velo.spi.Fingerprinter;
 import io.github.luminion.velo.idempotent.aspect.IdempotentAspect;
 import org.aspectj.weaver.Advice;
@@ -18,9 +21,10 @@ import org.springframework.context.annotation.Bean;
  * 幂等自动配置实现。
  */
 @AutoConfiguration(after = {
-        io.github.luminion.velo.idempotent.config.VeloIdempotentRedissonAutoConfiguration.class,
-        io.github.luminion.velo.idempotent.config.VeloIdempotentCaffeineAutoConfiguration.class
-}, afterName = "io.github.luminion.velo.idempotent.config.VeloIdempotentRedisAutoConfiguration")
+        VeloIdempotentRedissonAutoConfiguration.class,
+        VeloIdempotentRedisAutoConfiguration.class,
+        VeloIdempotentCaffeineAutoConfiguration.class
+})
 @ConditionalOnClass(Advice.class)
 @ConditionalOnProperty(prefix = "velo.idempotent", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloIdempotentAutoConfiguration {
@@ -43,7 +47,7 @@ public class VeloIdempotentAutoConfiguration {
     @ConditionalOnMissingBean(IdempotentAspect.class)
     @ConditionalOnBean({Fingerprinter.class, IdempotentHandler.class})
     public IdempotentAspect idempotentAspect(VeloProperties properties, Fingerprinter fingerprinter,
-            IdempotentHandler idempotentHandler, ObjectProvider<VeloMessageResolver> messageResolver) {
+                                             IdempotentHandler idempotentHandler, ObjectProvider<VeloMessageResolver> messageResolver) {
         IdempotentAspect aspect = new IdempotentAspect(properties.getIdempotent().getPrefix(), fingerprinter,
                 idempotentHandler, messageResolver.getIfAvailable());
         aspect.setOrder(properties.getAspectOrder().getIdempotent());

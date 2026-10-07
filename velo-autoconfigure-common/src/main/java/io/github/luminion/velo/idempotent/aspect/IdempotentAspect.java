@@ -7,6 +7,7 @@ import io.github.luminion.velo.util.ConcurrencyAnnotationUtils;
 import io.github.luminion.velo.idempotent.IdempotentHandler;
 import io.github.luminion.velo.idempotent.annotation.Idempotent;
 import io.github.luminion.velo.idempotent.exception.IdempotentException;
+import lombok.Setter;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -22,7 +23,7 @@ import java.util.UUID;
 
 /**
  * 接口幂等性切面。
- *
+ * <p>
  * 语义是“TTL 窗口内拒绝重复提交”，而不是“方法结束后释放并发锁”。
  */
 @Aspect
@@ -35,6 +36,7 @@ public class IdempotentAspect implements Ordered {
     private final IdempotentHandler idempotentHandler;
     private final VeloMessageResolver messageResolver;
 
+    @Setter
     private int order = VeloAdvisorOrder.CONCURRENCY_IDEMPOTENT;
 
     public IdempotentAspect(String prefix, Fingerprinter fingerprinter, IdempotentHandler idempotentHandler) {
@@ -42,15 +44,11 @@ public class IdempotentAspect implements Ordered {
     }
 
     public IdempotentAspect(String prefix, Fingerprinter fingerprinter, IdempotentHandler idempotentHandler,
-            VeloMessageResolver messageResolver) {
+                            VeloMessageResolver messageResolver) {
         this.prefix = prefix;
         this.fingerprinter = fingerprinter;
         this.idempotentHandler = idempotentHandler;
         this.messageResolver = messageResolver;
-    }
-
-    public void setOrder(int order) {
-        this.order = order;
     }
 
     @Override

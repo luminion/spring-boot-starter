@@ -13,8 +13,7 @@ import java.util.regex.Pattern;
  */
 public final class W3cTraceContextResolver implements TraceContextResolver {
     private static final Pattern SIMPLE_KEY = Pattern.compile("[a-z][a-z0-9_*/-]{0,255}");
-    private static final Pattern MULTI_KEY =
-            Pattern.compile("[a-z0-9][a-z0-9_*/-]{0,240}@[a-z][a-z0-9_*/-]{0,13}");
+    private static final Pattern MULTI_KEY = Pattern.compile("[a-z0-9][a-z0-9_*/-]{0,240}@[a-z][a-z0-9_*/-]{0,13}");
 
     @Override
     public TraceData resolve() {

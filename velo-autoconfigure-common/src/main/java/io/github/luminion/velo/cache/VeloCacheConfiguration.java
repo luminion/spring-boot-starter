@@ -1,103 +1,91 @@
 package io.github.luminion.velo.cache;
 
 import io.github.luminion.velo.VeloProperties;
-import io.github.luminion.velo.core.util.ObjectProviderSupport;
+
+import java.time.Duration;
+import java.util.Map;
+
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.cache.CacheManager;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.cache.BatchStrategies;
+import org.springframework.data.redis.cache.BatchStrategy;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
-import org.springframework.data.redis.cache.RedisCacheManager;
+import org.springframework.data.redis.cache.RedisCacheManager.RedisCacheManagerBuilder;
 import org.springframework.data.redis.cache.RedisCacheWriter;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.RedisSerializer;
+import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
 
 /**
- * 缓存配置实现，由各 Spring Boot 版本适配模块的自动配置入口导入。
- *
- * @author luminion
- * @since 1.3.1
+ * 各 Boot 版本共用的缓存增强；管理器创建和用户自定义器执行由 Boot 原生流程负责。
  */
-@Configuration(proxyBeanMethods = false)
-@ConditionalOnClass(CacheManager.class)
-@ConditionalOnMissingBean(value = CacheManager.class, name = "cacheResolver")
-@ConditionalOnProperty(prefix = "velo.cache", name = "enabled", havingValue = "true", matchIfMissing = true)
-public class VeloCacheConfiguration {
+public final class VeloCacheConfiguration {
 
-    private static String buildCacheKeyPrefix(VeloProperties.CacheProperties cacheProperties, String cacheName) {
-        String separator = StringUtils.hasText(cacheProperties.getSeparator())
-                ? cacheProperties.getSeparator()
-                : ":";
-        if (StringUtils.hasText(cacheProperties.getPrefix())) {
-            return cacheProperties.getPrefix() + separator + cacheName + separator;
-        }
-        return cacheName + separator;
+    public static final Duration DEFAULT_TTL = Duration.ofMinutes(5);
+
+    private VeloCacheConfiguration() {
     }
 
-    @Configuration(proxyBeanMethods = false)
-    @ConditionalOnClass({RedisCacheManager.class, RedisConnectionFactory.class})
-    // 兼容 spring.cache.type 配置
-    @ConditionalOnProperty(name = "spring.cache.type", havingValue = "redis", matchIfMissing = true)
-    static class RedisCacheManagerConfiguration {
-
-        @Bean
-        @ConditionalOnMissingBean(RedisCacheTimeMapProvider.class)
-        public RedisCacheTimeMapProvider redisCacheTimeMapProvider(VeloProperties properties) {
-            // TTL 抖动统一由 JitterRedisCacheWriter 在写入时按 key 应用，
-            // 这里不再预计算抖动，避免双重抖动。
-            return new RedisCacheTimeMapProvider(properties.getCache().getTtl());
+    /**
+     * 在 Spring 通用设置之上应用默认 JSON 序列化和单冒号分隔格式。
+     * 用户提供完整 RedisCacheConfiguration Bean 时，各版本适配器会跳过此方法。
+     */
+    public static RedisCacheConfiguration customizeDefaults(RedisCacheConfiguration defaults,
+                                                            ObjectProvider<RedisSerializer<Object>> serializerProvider, String keyPrefix,
+                                                            VeloProperties properties) {
+        // 候选不明确时沿用 Spring 的异常，避免悄然切换缓存读写格式。
+        RedisSerializer<Object> serializer = serializerProvider.getIfAvailable(RedisSerializer::json);
+        RedisCacheConfiguration configuration = defaults.serializeValuesWith(
+                RedisSerializationContext.SerializationPair.fromSerializer(serializer));
+        if (configuration.usePrefix()) {
+            String configuredSeparator = properties.getCache().getSeparator();
+            String separator = StringUtils.hasText(configuredSeparator) ? configuredSeparator : ":";
+            String prefix = keyPrefix == null ? "" : keyPrefix;
+            configuration = configuration.computePrefixWith(cacheName -> prefix + cacheName + separator);
         }
+        return configuration;
+    }
 
-        @Bean
-        @ConditionalOnMissingBean(RedisCacheConfiguration.class)
-        public RedisCacheConfiguration redisCacheConfiguration(ObjectProvider<RedisSerializer<Object>> serializerProvider,
-                VeloProperties properties) {
-            RedisSerializer<Object> redisSerializer = ObjectProviderSupport.resolveUnique(serializerProvider,
-                    "RedisSerializer for Redis cache values", RedisSerializer::json);
-            VeloProperties.CacheProperties cacheProperties = properties.getCache();
-
-            RedisCacheConfiguration redisCacheConfiguration = RedisCacheConfiguration.defaultCacheConfig();
-            RedisSerializationContext.SerializationPair<Object> objectSerializationPair = RedisSerializationContext
-                    .SerializationPair
-                    .fromSerializer(redisSerializer);
-
-            RedisCacheConfiguration config = redisCacheConfiguration
-                    .serializeValuesWith(objectSerializationPair)
-                    .computePrefixWith(cacheName -> buildCacheKeyPrefix(cacheProperties, cacheName))
-                    .entryTtl(cacheProperties.getDefaultTtl());
-
-            if (!cacheProperties.isNullCachingEnabled()) {
-                config = config.disableCachingNullValues();
-            }
-
-            return config;
+    /**
+     * Lettuce 使用原生 SCAN 批处理，其他连接工厂保留原生 KEYS 策略。
+     */
+    public static BatchStrategy batchStrategy(RedisConnectionFactory connectionFactory) {
+        boolean lettuceAvailable = ClassUtils.isPresent("io.lettuce.core.RedisClient",
+                VeloCacheConfiguration.class.getClassLoader());
+        if (lettuceAvailable && connectionFactory instanceof LettuceConnectionFactory) {
+            return BatchStrategies.scan(1000);
         }
+        return BatchStrategies.keys();
+    }
 
-        @Bean
-        @ConditionalOnMissingBean(CacheManager.class)
-        @ConditionalOnBean({RedisConnectionFactory.class, RedisCacheConfiguration.class, RedisCacheTimeMapProvider.class})
-        public CacheManager cacheManager(RedisConnectionFactory redisConnectionFactory,
-                RedisCacheConfiguration redisCacheConfiguration,
-                RedisCacheTimeMapProvider redisCacheTimeMapProvider,
-                VeloProperties properties) {
-            // 每 key 独立抖动：包装 cache writer，在每次写入时对该条目的 TTL 叠加随机偏移，
-            // 使同一缓存名称下不同 key 也获得不同过期时间，缓解同类型缓存批量同时过期。
-            RedisCacheWriter cacheWriter = JitterRedisCacheWriter.wrap(
-                    RedisCacheWriter.nonLockingRedisCacheWriter(redisConnectionFactory),
-                    properties.getCache().getTtlJitterPercentage());
-            RedisCacheManager redisCacheManager = new RedisCacheManager(
-                    cacheWriter,
-                    redisCacheConfiguration,
-                    redisCacheTimeMapProvider.cacheConfigurationHashMap(redisCacheConfiguration)
-            );
-            redisCacheManager.setTransactionAware(true);
-            return redisCacheManager;
+    /**
+     * 只设置 Velo 默认增强；后续用户自定义器可以覆盖这些设置。
+     * 各版本适配器负责选用原生 writer 的同步写入设置。
+     */
+    public static void customizeBuilder(RedisCacheManagerBuilder builder, RedisCacheWriter delegate,
+                                        RedisCacheConfiguration defaults, RedisCacheTimeMapProvider timeMapProvider, VeloProperties properties) {
+        RedisCacheWriter writer = JitterRedisCacheWriter.wrap(delegate, properties.getCache().getTtlJitterPercentage());
+        Map<String, RedisCacheConfiguration> initialConfigurations = timeMapProvider.cacheConfigurationHashMap(defaults);
+        builder.cacheWriter(writer).withInitialCacheConfigurations(initialConfigurations);
+        if (properties.getCache().isTransactionAware()) {
+            builder.transactionAware();
         }
+    }
+
+    /**
+     * 仅零表示不过期；正 TTL 至少为一毫秒，且必须能表示为底层使用的 long 毫秒数。
+     */
+    public static Duration validateTtl(Duration ttl, String property) {
+        if (ttl == null || ttl.isNegative() || (!ttl.isZero() && ttl.compareTo(Duration.ofMillis(1)) < 0)) {
+            throw new IllegalArgumentException(property + " 必须为 0（不过期）或至少 1ms 的正值");
+        }
+        try {
+            ttl.toMillis();
+        } catch (ArithmeticException ex) {
+            throw new IllegalArgumentException(property + " 超出可支持的毫秒范围", ex);
+        }
+        return ttl;
     }
 }

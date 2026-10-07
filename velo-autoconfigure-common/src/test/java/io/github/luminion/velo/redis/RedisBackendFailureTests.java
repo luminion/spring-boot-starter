@@ -8,6 +8,7 @@ import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.RedisScript;
+
 import java.util.Collections;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

@@ -1,5 +1,7 @@
 package io.github.luminion.velo.jackson.support;
 
+import lombok.Getter;
+
 import java.util.Map;
 
 /**
@@ -8,7 +10,9 @@ import java.util.Map;
 public class JsonEnumMetadata {
 
     private final Map<Object, Object> mapping;
+    @Getter
     private final String codeFieldName;
+    @Getter
     private final String nameFieldName;
 
     public JsonEnumMetadata(Map<Object, Object> mapping, String codeFieldName, String nameFieldName) {
@@ -19,13 +23,5 @@ public class JsonEnumMetadata {
 
     public Object getName(Object code) {
         return mapping.get(code);
-    }
-
-    public String getCodeFieldName() {
-        return codeFieldName;
-    }
-
-    public String getNameFieldName() {
-        return nameFieldName;
     }
 }

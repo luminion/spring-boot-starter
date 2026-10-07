@@ -5,7 +5,7 @@
 [![GitHub stars](https://img.shields.io/github/stars/luminion/spring-boot-starter?style=social)](https://github.com/luminion/spring-boot-starter)
 
 Velo Spring Boot Starter 是一组低侵入的 Spring Boot 自动配置扩展。
-项目以 `velo.*` 作为统一配置入口，围绕并发控制、缓存、Jackson、Redis、MyBatis-Plus、Excel、日志、XSS 以及 Web MVC 常用增强提供开箱能力。
+项目通过 `velo.*` 管理扩展能力，原生缓存通用设置沿用 `spring.cache.*`，围绕并发控制、缓存、Jackson、Redis、MyBatis-Plus、Excel、日志、XSS 以及 Web MVC 常用增强提供开箱能力。
 
 
 首次接入可先查看 [版本与兼容性](#版本与兼容性) 和 [Maven 依赖](#maven-依赖)。
@@ -15,7 +15,7 @@ Velo Spring Boot Starter 是一组低侵入的 Spring Boot 自动配置扩展。
 - 统一的 `velo.*` 配置模型，集中管理各类自动配置开关
 - 提供 `@Idempotent`、`@RateLimit`、`@Lock` 三类并发控制能力
 - 按功能适配 Redis / Redisson / Guava / Caffeine / JDK，并在启动时按依赖和 Bean 条件自动选择
-- 提供 Spring Cache + Redis Cache 的统一 TTL 和 key 前缀配置
+- 复用 Spring Cache + Redis Cache 通用配置，补充分缓存 TTL、单冒号键格式和 TTL 抖动
 - 提供 Jackson 日期时间、超大整数、枚举派生字段、字符串转换增强
 - 提供 MyBatis-Plus 分页、乐观锁、防全表更新拦截器自动注册
 - 提供 RedisTemplate 序列化风格统一能力
@@ -226,7 +226,7 @@ Boot 3.5 / 4 在导入对应 BOM 后，添加 `org.redisson:redisson-spring-boot
 
 ### 1. 缓存自动配置
 
-Velo 会在满足 Redis Cache 条件时补齐 `CacheManager`、`RedisCacheConfiguration` 和分 cache TTL 配置。
+Velo 在 Spring Boot 原生 Redis Cache 创建流程中提供默认 JSON 序列化、单冒号键格式、分缓存 TTL 和 TTL 抖动；CacheManager 创建及用户自定义器执行由 Boot 负责。
 
 额外依赖：
 
@@ -244,12 +244,22 @@ Velo 会在满足 Redis Cache 条件时补齐 `CacheManager`、`RedisCacheConfig
 关键配置：
 
 ```yaml
+spring:
+  cache:
+    type: redis
+    cache-names: [user, order]
+    redis:
+      time-to-live: 5m
+      key-prefix: "app:"
+      cache-null-values: true
+      use-key-prefix: true
+      enable-statistics: false
+
 velo:
   cache:
     enabled: true
-    prefix: app
     separator: ":"
-    default-ttl: 5m
+    transaction-aware: false
     ttl-jitter-percentage: 0
     ttl:
       user: 10m
@@ -275,23 +285,77 @@ public UserDTO getById(Long id) {
 说明：
 
 - `velo.cache.enabled` 默认开启
-- 默认只在 `spring.cache.type=redis` 或未显式指定时接管 Redis Cache
-- `default-ttl` 默认 `5m`
-- `ttl.<cacheName>` 可按缓存名单独覆盖 TTL
-- key 前缀格式为 `prefix + separator + cacheName + separator`
+- 默认只在 `spring.cache.type=redis` 或未显式指定时增强 Redis Cache；缓存类型选择遵循 Boot 原生流程
+- 默认 TTL 为 `5m`，通过 `spring.cache.redis.time-to-live` 覆盖；`velo.cache.ttl.<cacheName>` 可按缓存名单独覆盖
+- 通用配置已统一到 Spring：原 `velo.cache.default-ttl`、`velo.cache.prefix`、`velo.cache.null-caching-enabled` 已移除，分别改用 `spring.cache.redis.time-to-live`、`key-prefix`、`cache-null-values`。原业务前缀 `app` 需改为 `key-prefix: "app:"`，新入口不会自动追加业务前缀分隔符
+- TTL 只允许 `0`（不过期）或至少 `1ms` 的正值；负值、非零但不足 `1ms` 的值，以及超出 long 毫秒范围的值会在缓存初始化时导致启动失败
+- 空值缓存、前缀开关及统计使用 `spring.cache.redis.cache-null-values`、`use-key-prefix`、`enable-statistics`；`spring.cache.cache-names` 用于预创建缓存，默认仍允许按名称动态创建
+- key 前缀格式为 `spring.cache.redis.key-prefix + cacheName + velo.cache.separator`。业务前缀原样拼接；例如 `key-prefix: "app:"` 和默认分隔符生成 `app:user:123`
+- 建议保留默认 `use-key-prefix=true`。关闭前缀后，原生整缓存清空会使用不带缓存名前缀的匹配模式，可能删除同库其他条目；只有独占 Redis 键空间时才适合关闭
+- `cacheNames` 应使用固定名称，例如 `user`、`order`；业务 ID 和动态查询条件放在 `key` 中，避免持续创建不同名称的 Cache 实例
+- 单冒号分隔便于 Redis 工具按层级展示。缓存名称末尾不带分隔符，由框架追加；名称内部可以用冒号分组，例如 `center-sys:shop-info:id`。避免同时定义 `user` 与 `user:detail` 这种存在键空间重叠的缓存名称；重叠时可能发生值覆盖，整缓存清空也可能一并删除另一缓存的条目。缓存前缀和缓存名还应避免 Redis 匹配通配符（`*`、`?`、`[`、`]`）
 - 业务侧仍然需要自己开启 `@EnableCaching`
-- 缓存值序列化器优先复用容器中的 `RedisSerializer<Object>`；没有显式 Bean 时使用 `RedisSerializer.json()`，跟随当前 Spring Data Redis 版本的原生 JSON 实现。容器中存在多个候选且未标 `@Primary` 时，同样回退 `RedisSerializer.json()` 并打 WARN（不会导致启动失败）
+- Velo 默认增强先于普通用户 `RedisCacheManagerBuilderCustomizer` 执行，用户回调可以覆盖默认设置；`CacheManagerCustomizer` 由 Boot 在管理器构建后执行。Boot 2/3 的接口位于 `org.springframework.boot.autoconfigure.cache`，Boot 4 位于 `org.springframework.boot.cache.autoconfigure`
+- 用户提供 `RedisCacheConfiguration` Bean 时，Velo 保留其默认 TTL、键格式和序列化设置；与 Boot 原生规则一致，`spring.cache.redis.time-to-live`、`key-prefix`、`cache-null-values`、`use-key-prefix` 等默认项和 `velo.cache.separator` 不再合并进该 Bean。按名称设置的 `velo.cache.ttl` 仍会基于该配置覆盖指定缓存的 TTL，用户自定义器可以继续覆盖它；用户提供 CacheManager 时，Velo 缓存增强退让
+- 事务感知默认关闭，跟随原生行为；需要时设置 `velo.cache.transaction-aware=true`，也可以通过标准自定义器调整
+- Velo 优先使用用户提供的 `RedisCacheWriter` Bean；没有时才创建默认 writer。多个候选建议通过 `@Primary` 明确选择，Spring 无法确定候选时直接启动报错。普通用户 `RedisCacheManagerBuilderCustomizer` 仍可以通过 `cacheWriter(...)` 设置最终 writer
+- Velo 默认 writer 在 Lettuce 连接工厂下使用原生 `BatchStrategies.scan(1000)` 清空缓存；其他连接工厂保留原生 KEYS 策略，避免对未知驱动或 Jedis 集群作兼容假设。SCAN 分批查找并删除，会增加命令往返，也不提供并发写入时的原子清空保证；它不能解决缓存名前缀重叠。用户提供 writer 时，其连接及清空策略由用户决定
+- Velo 默认 writer 的普通缓存写入、删除及清空采用同步行为；Boot 4 使用原生 `immediateWrites()` 保持与 Boot 2/3 一致。用户提供 writer 时保留其原生设置，包括同步或异步行为。事务感知开启时，事务内的相关操作仍按 Spring 原生规则延迟到提交后执行；显式异步缓存接口遵循其原生语义
+- Velo 不维护按业务 key 累积的本地缓存或定时清理任务；缓存存储和过期由 Spring Data Redis 与 Redis 提供，CacheManager 仍会按缓存名称持有 Cache 实例
+- Velo 创建默认缓存配置时，缓存值序列化器优先复用容器中的 `RedisSerializer<Object>`；没有候选时使用 `RedisSerializer.json()`，跟随当前 Spring Data Redis 版本的原生 JSON 实现。存在多个候选且 Spring 无法选出唯一主候选时，直接启动报错，避免悄然切换缓存读写格式。用户提供完整缓存配置时，序列化器由该配置明确指定，不再自动选取
+- 默认 Redis 值序列化使用独立的映射器，HTTP JSON 的数字格式、日期格式、`JsonEncode` 等配置不会自动应用到缓存；需要自定义缓存值格式时，可提供自己的 `RedisSerializer<Object>` Bean，Velo 默认缓存和默认 RedisTemplate 可以共同复用它。用户自定义 RedisTemplate 的序列化设置不会自动传递给 CacheManager
 - Boot 2 / 3 默认使用 Jackson 2 的 `GenericJackson2JsonRedisSerializer`（对应 Spring Data Redis 2.x / 3.x），写入 JSON 类型元数据，因此 `Object` / POJO 可以反序列化回原类型，而不是默认退化为 `LinkedHashMap`
 - Boot 4 默认使用 `RedisSerializer.json()`，由 Spring Data Redis 4.x 选择 Jackson 3 的 `GenericJacksonJsonRedisSerializer`；即使 Jackson 2 / 3 同时存在，也不会按类路径猜测切换，默认仍使用 Jackson 3
 - Boot 4 如需让 Redis 使用 Jackson 2，应引入官方 `spring-boot-jackson2` 及 Jackson 2 依赖，并显式注册一个 `RedisSerializer<Object>` Bean，例如 `GenericJackson2JsonRedisSerializer`；Spring Data Redis 4.x 仍保留该类用于兼容或迁移旧数据，但已标记为后续移除，不作为 Boot 4 默认实现
 - Jackson 2 与 Jackson 3 的 Redis JSON 输出可能存在差异；从 Boot 2 / 3 切换到 Boot 4 时，应先规划旧数据读取、迁移或 key 空间隔离，不要默认认为历史值可以无缝混读
 - **安全提示（多态反序列化）**：上述 JSON 序列化器为支持 `Object` / POJO 回读会写入并按类型元数据（`@class`）反序列化，且使用宽松的类型校验（与 Spring Data Redis 原生行为一致）。若 Redis 未鉴权或被写入恶意 `@class` 载荷，存在反序列化攻击面。建议 Redis 启用鉴权与网络隔离；如需收敛，可自行注册基于 `BasicPolymorphicTypeValidator` 白名单的 `RedisSerializer<Object>` Bean，Velo 会复用该 Bean
 
+扩展组件的接入方式：
+
+| 组件 | 接入方式 |
+|---|---|
+| `RedisConnectionFactory` | Boot 原生使用它创建缓存管理器；多个候选需明确主候选 |
+| `RedisCacheConfiguration` | Boot 原生采用其默认配置；Velo 的默认配置 Bean 退让 |
+| `RedisCacheManagerBuilderCustomizer` | Boot 按顺序调用，可设置按名称 TTL、writer、统计等 |
+| `CacheManagerCustomizer<RedisCacheManager>` | Boot 在构建后、初始化前调用，可调整事务感知等 |
+| `RedisCacheTimeMapProvider` | Velo 优先采用用户 Bean；按名称 TTL 在管理器创建时应用，运行时修改原 Map 不会刷新已有缓存配置 |
+| `RedisCacheWriter` | Velo 优先采用用户 Bean；默认 writer 退让 |
+| `RedisSerializer<Object>` | Velo 默认缓存配置选择唯一或主候选，也可以在完整缓存配置中显式指定 |
+| `CacheKeyPrefix` | 在缓存配置中显式传给 `computePrefixWith(...)`，单独注册 Bean 不会自动接入 |
+| `RedisCacheWriter.TtlFunction` | 在缓存配置中显式传给 `entryTtl(...)`；原生能力要求 Spring Data Redis 3.2+，适用于 Boot 3.2+ / 4，Boot 2 不支持 |
+| `BatchStrategy` | 创建 writer 时传入；单独注册 Bean 不会自动接入 |
+| `ObjectMapper` | 用它构造 Redis 序列化器，再通过缓存配置接入；单独注册 Bean 不会自动改变缓存格式 |
+| `RedisTemplate` / `StringRedisTemplate` | 与 CacheManager 独立，缓存直接通过连接工厂和 writer 操作 |
+
+需要只修改某个缓存的 TTL 时，使用现有默认配置派生，保留其键格式和序列化器。Boot 2/3 的 `RedisCacheManagerBuilderCustomizer` 导入路径为 `org.springframework.boot.autoconfigure.cache`，Boot 4 为 `org.springframework.boot.cache.autoconfigure`：
+
+```java
+@Bean
+RedisCacheManagerBuilderCustomizer orderCacheTtl(RedisCacheConfiguration defaults) {
+    return builder -> builder.withCacheConfiguration("order", defaults.entryTtl(Duration.ofMinutes(30)));
+}
+```
+
+需要完全控制默认键格式和序列化时，提供自己的配置 Bean；序列化器同时负责写入和读取：
+
+```java
+@Bean
+RedisCacheConfiguration cacheConfiguration(RedisSerializer<Object> valueSerializer) {
+    return RedisCacheConfiguration.defaultCacheConfig()
+            .computePrefixWith(name -> "app:" + name + ":")
+            .entryTtl(Duration.ofMinutes(5))
+            .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(valueSerializer));
+}
+```
+
+Boot 3.2+ / 4 如需根据每条数据动态计算 TTL，可在上述配置中把固定 `entryTtl(Duration...)` 替换为 `entryTtl(ttlFunction)`，并通过配置方法参数注入自己定义的 `RedisCacheWriter.TtlFunction`。同样，`CacheKeyPrefix` 可通过方法参数注入后传给 `computePrefixWith(...)`。用户原生 TTL 函数的返回值遵循 Spring Data Redis 规则，Velo 不拦截其结果。自定义 writer 可通过标准 `RedisCacheManagerBuilderCustomizer` 继续覆盖，连接与客户端参数沿用对应连接工厂的配置。
+
 缓存雪崩防护（TTL 抖动）：
 
 - `ttl-jitter-percentage` 默认 `0`（关闭），有效范围为 `0..100`。设为 `10` 表示每条缓存写入时 TTL 在原值 ±10% 内随机偏移；超出范围会导致应用启动失败
 - 抖动在**每次写入时按 key 独立计算**，因此同一缓存名称下不同 key 也会获得不同过期时间，可同时缓解「不同缓存类型同时过期」和「同一类型大量 key 同时过期」两类雪崩
-- 抖动只影响实际写入 Redis 的过期时间，不改变 `default-ttl` / `ttl.<cacheName>` 的配置语义
+- 抖动只影响实际写入 Redis 的过期时间，不改变 `spring.cache.redis.time-to-live` / `velo.cache.ttl.<cacheName>` 的配置语义；不过期的条目不会应用抖动，开启统计不会关闭抖动。显式开启抖动时也会包装用户提供的 writer；后续自定义器替换 writer 时，以最终 writer 的行为为准
+- TTL 抖动用于分散大量条目的过期时间，不能保证同一个热点 key 在并发缓存未命中时只回源一次；默认非锁定 RedisCacheWriter 不提供跨应用实例的防击穿保证
 
 ### 2. Excel 自动配置
 
@@ -930,8 +994,8 @@ velo:
 - starter 会尝试创建：
   - `redisTemplate`
   - `stringObjectRedisTemplate`
-- 序列化器优先复用容器中的 `RedisSerializer<Object>`，通常会跟随 Velo 的 Jackson 配置保持一致
-- 若容器没有 `RedisSerializer<Object>`，starter 使用 `RedisSerializer.json()` 作为回退；Boot 2/3 跟随对应 Spring Data Redis 的 Jackson 2 实现，Boot 4 使用 Jackson 3 实现。多个候选且未标 `@Primary` 时同样回退默认并打 WARN
+- 序列化器优先复用容器中的 `RedisSerializer<Object>`，与 Velo 缓存共用该 Bean；默认 Redis 映射器独立于 HTTP JSON 映射器，Web 的全局 Jackson 增强不会自动影响 Redis 值格式
+- 若容器没有 `RedisSerializer<Object>`，starter 使用 `RedisSerializer.json()` 作为回退；Boot 2/3 跟随对应 Spring Data Redis 的 Jackson 2 实现，Boot 4 使用 Jackson 3 实现。RedisTemplate 的可选依赖在多个候选且无法确定主候选时仍会回退默认并打 WARN；Velo 默认缓存配置对序列化器歧义直接报错，详见缓存说明
 - Boot 4 项目若选择 Jackson 2，请自行提供 Jackson 2 的 `RedisSerializer<Object>` Bean，Velo 的缓存和 RedisTemplate 会共同复用该 Bean；Jackson 2/3 同时存在时不会仅依据类路径猜测用户意图，详细兼容边界见上面的缓存说明
 
 ---

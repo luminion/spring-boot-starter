@@ -1,6 +1,7 @@
 package io.github.luminion.velo.lock.annotation;
 
 import org.springframework.core.annotation.AliasFor;
+
 import java.lang.annotation.*;
 
 /**
@@ -14,7 +15,9 @@ import java.lang.annotation.*;
 @Documented
 public @interface Lock {
 
-    /** key 的简写属性。 */
+    /**
+     * key 的简写属性。
+     */
     @AliasFor("key")
     String value() default "";
 

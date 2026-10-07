@@ -19,8 +19,9 @@ import org.springframework.context.annotation.Bean;
  */
 @AutoConfiguration(after = {
         io.github.luminion.velo.ratelimit.config.VeloRateLimitRedissonAutoConfiguration.class,
+        io.github.luminion.velo.ratelimit.config.VeloRateLimitRedisConfiguration.class,
         io.github.luminion.velo.ratelimit.config.VeloRateLimitGuavaAutoConfiguration.class
-}, afterName = "io.github.luminion.velo.ratelimit.config.VeloRateLimitRedisAutoConfiguration")
+})
 @ConditionalOnClass(Advice.class)
 @ConditionalOnProperty(prefix = "velo.rate-limit", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloRateLimitAutoConfiguration {
@@ -43,7 +44,7 @@ public class VeloRateLimitAutoConfiguration {
     @ConditionalOnMissingBean(RateLimitAspect.class)
     @ConditionalOnBean({Fingerprinter.class, RateLimitHandler.class})
     public RateLimitAspect rateLimitAspect(VeloProperties properties, Fingerprinter fingerprinter,
-            RateLimitHandler rateLimitHandler, ObjectProvider<VeloMessageResolver> messageResolver) {
+                                           RateLimitHandler rateLimitHandler, ObjectProvider<VeloMessageResolver> messageResolver) {
         RateLimitAspect aspect = new RateLimitAspect(properties.getRateLimit().getPrefix(), fingerprinter,
                 rateLimitHandler, messageResolver.getIfAvailable());
         aspect.setOrder(properties.getAspectOrder().getRateLimit());

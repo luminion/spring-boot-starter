@@ -3,6 +3,7 @@ package io.github.luminion.velo.core.util;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.function.Function;
 
 /**
  * Servlet 无关的 Web 工具方法，供 jakarta 和 javax 两套 {@code WebUtils} 复用。
@@ -29,7 +30,7 @@ public final class WebUtilsSupport {
      * @param remoteAddr     直连的远端地址
      * @return 解析后的客户端 IP
      */
-    public static String resolveClientIp(java.util.function.Function<String, String> headerResolver, String remoteAddr) {
+    public static String resolveClientIp(Function<String, String> headerResolver, String remoteAddr) {
         String ip = null;
         for (String header : IP_HEADERS) {
             ip = firstValidIp(headerResolver.apply(header));

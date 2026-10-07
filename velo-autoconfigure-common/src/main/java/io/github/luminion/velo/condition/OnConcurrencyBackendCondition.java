@@ -77,7 +77,7 @@ public class OnConcurrencyBackendCondition extends SpringBootCondition {
     }
 
     private boolean containsBeanOfType(ConfigurableListableBeanFactory beanFactory, ClassLoader classLoader,
-            String beanTypeName) {
+                                       String beanTypeName) {
         if (beanFactory == null) {
             return false;
         }

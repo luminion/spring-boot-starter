@@ -37,7 +37,7 @@ public class LockAspect implements Ordered {
     }
 
     public LockAspect(String prefix, Fingerprinter fingerprinter, LockHandler lockHandler,
-            VeloMessageResolver messageResolver) {
+                      VeloMessageResolver messageResolver) {
         this.prefix = prefix;
         this.fingerprinter = fingerprinter;
         this.lockHandler = lockHandler;

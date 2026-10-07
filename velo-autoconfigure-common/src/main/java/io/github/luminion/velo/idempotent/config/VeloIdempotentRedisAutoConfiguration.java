@@ -27,7 +27,7 @@ import org.springframework.data.redis.core.RedisTemplate;
         autoClassNames = {"org.aspectj.weaver.Advice", "org.springframework.data.redis.core.RedisTemplate"})
 @ConditionalOnMissingBean(IdempotentHandler.class)
 @ConditionalOnProperty(prefix = "velo.idempotent", name = "enabled", havingValue = "true", matchIfMissing = true)
-public class VeloIdempotentRedisConfiguration {
+public class VeloIdempotentRedisAutoConfiguration {
 
     @Bean
     @ConditionalOnConcurrencyBackend(prefix = "velo.idempotent", value = ConcurrencyBackend.REDIS,
@@ -36,7 +36,7 @@ public class VeloIdempotentRedisConfiguration {
             fallbackBeanName = "redisTemplate")
     @ConditionalOnMissingBean(IdempotentHandler.class)
     public IdempotentHandler idempotentHandler(ObjectProvider<RedisTemplate<Object, Object>> redisTemplateProvider,
-            ListableBeanFactory beanFactory) {
+                                               ListableBeanFactory beanFactory) {
         RedisTemplate<Object, Object> redisTemplate = VeloRedisTemplateResolver.resolve(redisTemplateProvider, beanFactory,
                 "org.springframework.data.redis.core.RedisTemplate", "redisTemplate");
         return new RedisIdempotentHandler(redisTemplate);

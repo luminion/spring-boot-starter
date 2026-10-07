@@ -2,7 +2,6 @@ package io.github.luminion.velo.core;
 
 import io.github.luminion.velo.VeloProperties;
 import java.time.DateTimeException;
-import java.time.Duration;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -80,21 +79,7 @@ public class VeloPropertiesWarningLogger implements InitializingBean {
     if (cache == null) {
       warnings.add("velo.cache 为空，缓存自动配置可能在运行时失败。当前仅告警。");
     } else if (cache.isEnabled()) {
-      warnPositiveDuration(
-          warnings, "velo.cache.default-ttl", cache.getDefaultTtl(), "缓存默认 TTL 必须大于 0");
       warnBlank(warnings, "velo.cache.separator", cache.getSeparator(), "缓存前缀分隔符为空时会回退为 :");
-      Map<String, Duration> ttl = cache.getTtl();
-      if (ttl == null) {
-        warnings.add("velo.cache.ttl 为空，单项缓存 TTL 配置可能在运行时失败。当前仅告警。");
-      } else {
-        for (Map.Entry<String, Duration> entry : ttl.entrySet()) {
-          String property = "velo.cache.ttl[" + String.valueOf(entry.getKey()) + "]";
-          if (!StringUtils.hasText(entry.getKey())) {
-            warnings.add(property + " 的缓存名称为空，可能无法按预期匹配缓存。当前仅告警。");
-          }
-          warnPositiveDuration(warnings, property, entry.getValue(), "单项缓存 TTL 必须大于 0");
-        }
-      }
     }
 
     VeloProperties.LogProperties logProperties = properties.getLog();
@@ -200,13 +185,6 @@ public class VeloPropertiesWarningLogger implements InitializingBean {
       List<String> warnings, String property, String value, String consequence) {
     if (!StringUtils.hasText(value)) {
       warnings.add(property + " 为空或仅包含空白，" + consequence + "。当前仅告警。");
-    }
-  }
-
-  private static void warnPositiveDuration(
-      List<String> warnings, String property, Duration value, String description) {
-    if (value == null || value.isZero() || value.isNegative()) {
-      warnings.add(property + " 当前值为 " + String.valueOf(value) + "，" + description + "。当前仅告警。");
     }
   }
 

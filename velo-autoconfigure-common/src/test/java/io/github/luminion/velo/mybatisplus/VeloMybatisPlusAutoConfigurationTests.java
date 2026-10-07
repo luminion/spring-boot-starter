@@ -36,7 +36,7 @@ class VeloMybatisPlusAutoConfigurationTests {
     @Test
     void shouldAllowDisablingAllDefaultInterceptors() {
         contextRunner.withPropertyValues("velo.mybatis-plus.pagination-enabled=false",
-                "velo.mybatis-plus.optimistic-locker-enabled=false", "velo.mybatis-plus.block-attack-enabled=false")
+                        "velo.mybatis-plus.optimistic-locker-enabled=false", "velo.mybatis-plus.block-attack-enabled=false")
                 .run(context -> {
                     assertThat(context).hasNotFailed();
                     assertThat(context.getBean(MybatisPlusInterceptor.class).getInterceptors()).isEmpty();

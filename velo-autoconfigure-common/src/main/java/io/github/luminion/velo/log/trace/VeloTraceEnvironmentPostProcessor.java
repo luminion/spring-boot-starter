@@ -24,11 +24,9 @@ public class VeloTraceEnvironmentPostProcessor implements EnvironmentPostProcess
     private final int order = Ordered.HIGHEST_PRECEDENCE + 20;
 
     @Override
-    public void postProcessEnvironment(
-            ConfigurableEnvironment environment, SpringApplication application) {
+    public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         boolean enabled = TraceEnabledCondition.isEnabled(environment);
-        boolean patternEnabled =
-                TraceEnabledCondition.property(environment, "logging-pattern-enabled", Boolean.class, true);
+        boolean patternEnabled = TraceEnabledCondition.property(environment, "logging-pattern-enabled", Boolean.class, true);
         if (!enabled
                 || !patternEnabled
                 || StringUtils.hasText(environment.getProperty(LOG_LEVEL_PATTERN_PROPERTY))) {

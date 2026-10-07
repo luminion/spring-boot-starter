@@ -82,7 +82,12 @@ public final class JitterRedisCacheWriter {
                 }
             }
             try {
-                return method.invoke(delegate, args);
+                Object result = method.invoke(delegate, args);
+                // 原生统计配置返回新的 writer；必须保留其外层抖动增强。
+                if (result instanceof RedisCacheWriter) {
+                    return wrap((RedisCacheWriter) result, jitterPercentage);
+                }
+                return result;
             } catch (java.lang.reflect.InvocationTargetException ex) {
                 throw ex.getCause();
             }

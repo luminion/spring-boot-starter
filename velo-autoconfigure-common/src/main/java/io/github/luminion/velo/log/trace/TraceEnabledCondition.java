@@ -13,8 +13,7 @@ import org.springframework.core.type.AnnotatedTypeMetadata;
  */
 public class TraceEnabledCondition extends SpringBootCondition {
     @Override
-    public ConditionOutcome getMatchOutcome(
-            ConditionContext context, AnnotatedTypeMetadata metadata) {
+    public ConditionOutcome getMatchOutcome(ConditionContext context, AnnotatedTypeMetadata metadata) {
         return new ConditionOutcome(isEnabled(context.getEnvironment()), "trace enabled configuration");
     }
 
@@ -22,8 +21,7 @@ public class TraceEnabledCondition extends SpringBootCondition {
         return property(environment, "enabled", Boolean.class, true);
     }
 
-    public static <T> T property(
-            Environment environment, String name, Class<T> type, T defaultValue) {
+    public static <T> T property(Environment environment, String name, Class<T> type, T defaultValue) {
         Binder binder = Binder.get(environment);
         T value = binder.bind("velo.trace." + name, Bindable.of(type)).orElse(null);
         return value != null

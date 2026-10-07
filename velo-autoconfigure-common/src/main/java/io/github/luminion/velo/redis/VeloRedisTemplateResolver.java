@@ -22,16 +22,18 @@ public final class VeloRedisTemplateResolver {
     /**
      * 解析 Redis 模板候选 Bean。
      *
-     * @param provider           按目标模板类型注入的候选提供器
-     * @param beanFactory        Bean 工厂，用于默认名称兜底
-     * @param beanTypeName       目标模板类型名称，仅用于异常信息
-     * @param fallbackBeanName   兼容旧版本的默认 Bean 名称
-     * @param <T>                模板类型
+     * @param provider         按目标模板类型注入的候选提供器
+     * @param beanFactory      Bean 工厂，用于默认名称兜底
+     * @param beanTypeName     目标模板类型名称，仅用于异常信息
+     * @param fallbackBeanName 兼容旧版本的默认 Bean 名称
+     * @param <T>              模板类型
      * @return 选中的模板 Bean
      */
     @SuppressWarnings("unchecked")
-    public static <T> T resolve(ObjectProvider<T> provider, ListableBeanFactory beanFactory,
-            String beanTypeName, String fallbackBeanName) {
+    public static <T> T resolve(ObjectProvider<T> provider,
+                                ListableBeanFactory beanFactory,
+                                String beanTypeName,
+                                String fallbackBeanName) {
         try {
             T candidate = provider.getIfUnique();
             if (candidate != null) {

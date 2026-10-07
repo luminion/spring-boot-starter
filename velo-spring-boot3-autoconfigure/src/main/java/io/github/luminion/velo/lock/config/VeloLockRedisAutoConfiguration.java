@@ -11,6 +11,6 @@ import org.springframework.context.annotation.Import;
  * @since 1.3.1
  */
 @AutoConfiguration(after = {RedisAutoConfiguration.class, VeloLockRedissonAutoConfiguration.class})
-@Import(VeloLockRedisConfiguration.class)
+@Import(VeloLockRedisAutoConfiguration.class)
 public class VeloLockRedisAutoConfiguration {
 }

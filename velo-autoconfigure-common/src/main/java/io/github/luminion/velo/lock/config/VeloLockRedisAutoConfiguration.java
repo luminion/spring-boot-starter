@@ -28,7 +28,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
         autoClassNames = {"org.aspectj.weaver.Advice", "org.springframework.data.redis.core.StringRedisTemplate"})
 @ConditionalOnMissingBean(LockHandler.class)
 @ConditionalOnProperty(prefix = "velo.lock", name = "enabled", havingValue = "true", matchIfMissing = true)
-public class VeloLockRedisConfiguration {
+public class VeloLockRedisAutoConfiguration {
 
     @Bean
     @ConditionalOnConcurrencyBackend(prefix = "velo.lock", value = ConcurrencyBackend.REDIS,

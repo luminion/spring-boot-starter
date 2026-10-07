@@ -26,10 +26,10 @@ public class RedisIdempotentHandler implements IdempotentHandler {
      */
     private static final RedisScript<Long> REMOVE_IF_MATCH_SCRIPT = new DefaultRedisScript<>(
             "if redis.call('get', KEYS[1]) == ARGV[1] then\n" +
-            "    return redis.call('del', KEYS[1])\n" +
-            "else\n" +
-            "    return 0\n" +
-            "end",
+                    "    return redis.call('del', KEYS[1])\n" +
+                    "else\n" +
+                    "    return 0\n" +
+                    "end",
             Long.class);
 
     @Override

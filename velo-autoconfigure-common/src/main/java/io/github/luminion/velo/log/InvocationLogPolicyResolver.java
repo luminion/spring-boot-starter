@@ -176,20 +176,20 @@ final class InvocationLogPolicyResolver {
         return new FeaturePolicy(enabled, level, threshold, allowlist);
     }
 
-	private boolean builtinEnabled(InvocationLogSource source, InvocationLogFeature feature) {
-		switch (feature) {
-			case ENTRY_ARGS:
-			case EXIT_RESULT:
-				return source == InvocationLogSource.CONTROLLER
-					|| source == InvocationLogSource.FEIGN
-					|| source == InvocationLogSource.INVOKE;
-			case SLOW_LOG:
-			case ERROR_LOG:
-				return true;
-			default:
-				return false;
-		}
-	}
+    private boolean builtinEnabled(InvocationLogSource source, InvocationLogFeature feature) {
+        switch (feature) {
+            case ENTRY_ARGS:
+            case EXIT_RESULT:
+                return source == InvocationLogSource.CONTROLLER
+                        || source == InvocationLogSource.FEIGN
+                        || source == InvocationLogSource.INVOKE;
+            case SLOW_LOG:
+            case ERROR_LOG:
+                return true;
+            default:
+                return false;
+        }
+    }
 
     private Class<? extends Annotation> annotationType(InvocationLogFeature feature) {
         switch (feature) {

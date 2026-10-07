@@ -15,10 +15,9 @@ import org.springframework.web.context.request.RequestContextHolder;
  * 延迟访问 Spring 请求上下文，避免 common 绑定 javax/jakarta Servlet 类型。
  */
 final class CurrentRequestHeaders {
-    private static final boolean SPRING_WEB_PRESENT =
-            ClassUtils.isPresent(
-                    "org.springframework.web.context.request.RequestContextHolder",
-                    CurrentRequestHeaders.class.getClassLoader());
+    private static final boolean SPRING_WEB_PRESENT = ClassUtils.isPresent(
+            "org.springframework.web.context.request.RequestContextHolder",
+            CurrentRequestHeaders.class.getClassLoader());
 
     private CurrentRequestHeaders() {
     }
@@ -38,10 +37,7 @@ final class CurrentRequestHeaders {
         @SuppressWarnings("unchecked")
         private static List<String> values(String name) {
             RequestAttributes attributes = RequestContextHolder.getRequestAttributes();
-            Object request =
-                    attributes == null
-                            ? null
-                            : attributes.resolveReference(RequestAttributes.REFERENCE_REQUEST);
+            Object request = attributes == null ? null : attributes.resolveReference(RequestAttributes.REFERENCE_REQUEST);
             if (request == null) {
                 return Collections.emptyList();
             }

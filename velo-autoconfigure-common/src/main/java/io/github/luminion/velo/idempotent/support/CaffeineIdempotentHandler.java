@@ -24,10 +24,12 @@ public class CaffeineIdempotentHandler implements IdempotentHandler {
                 public long expireAfterCreate(String key, Marker marker, long currentTime) {
                     return marker.ttlNanos();
                 }
+
                 @Override
                 public long expireAfterUpdate(String key, Marker marker, long currentTime, long currentDuration) {
                     return currentDuration;
                 }
+
                 @Override
                 public long expireAfterRead(String key, Marker marker, long currentTime, long currentDuration) {
                     return currentDuration;

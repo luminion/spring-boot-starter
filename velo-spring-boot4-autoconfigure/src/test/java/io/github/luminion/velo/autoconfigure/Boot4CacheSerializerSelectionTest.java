@@ -8,6 +8,9 @@ import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.jackson2.autoconfigure.Jackson2AutoConfiguration;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.boot.cache.autoconfigure.CacheAutoConfiguration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.serializer.GenericJacksonJsonRedisSerializer;
@@ -31,8 +34,10 @@ class Boot4CacheSerializerSelectionTest {
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
             .withConfiguration(AutoConfigurations.of(
                     VeloCoreAutoConfiguration.class,
-                    VeloCacheAutoConfiguration.class
+                    VeloCacheAutoConfiguration.class,
+                    CacheAutoConfiguration.class
             ))
+            .withUserConfiguration(CachingEnabled.class)
             .withBean(RedisConnectionFactory.class, () -> mock(RedisConnectionFactory.class));
 
     private final ApplicationContextRunner jacksonAwareContextRunner = new ApplicationContextRunner()
@@ -40,9 +45,16 @@ class Boot4CacheSerializerSelectionTest {
                     Jackson2AutoConfiguration.class,
                     VeloCoreAutoConfiguration.class,
                     VeloCacheAutoConfiguration.class,
+                    CacheAutoConfiguration.class,
                     VeloJacksonAutoConfiguration.class
             ))
+            .withUserConfiguration(CachingEnabled.class)
             .withBean(RedisConnectionFactory.class, () -> mock(RedisConnectionFactory.class));
+
+    @Configuration(proxyBeanMethods = false)
+    @EnableCaching
+    static class CachingEnabled {
+    }
 
     @Test
     void shouldUseSpringDataJsonSerializerWhenNoSerializerBeanExists() {

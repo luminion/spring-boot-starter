@@ -33,7 +33,7 @@ public class VeloRateLimitRedisConfiguration {
             fallbackBeanName = "stringRedisTemplate")
     @ConditionalOnMissingBean(RateLimitHandler.class)
     public RateLimitHandler rateLimitHandler(ObjectProvider<StringRedisTemplate> redisTemplateProvider,
-            ListableBeanFactory beanFactory) {
+                                             ListableBeanFactory beanFactory) {
         return new RedisRateLimitHandler(VeloRedisTemplateResolver.resolve(redisTemplateProvider, beanFactory,
                 "org.springframework.data.redis.core.StringRedisTemplate", "stringRedisTemplate"));
     }

@@ -1,6 +1,7 @@
 package io.github.luminion.velo.ratelimit.annotation;
 
 import org.springframework.core.annotation.AliasFor;
+
 import java.lang.annotation.*;
 
 /**
@@ -9,7 +10,7 @@ import java.lang.annotation.*;
  * @author luminion
  * @since 1.0.0
  */
-@Target({ ElementType.METHOD, ElementType.TYPE })
+@Target({ElementType.METHOD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface RateLimit {

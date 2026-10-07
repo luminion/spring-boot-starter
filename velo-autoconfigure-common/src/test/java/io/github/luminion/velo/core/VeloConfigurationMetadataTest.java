@@ -37,11 +37,12 @@ class VeloConfigurationMetadataTest {
       assertFalse(metadata.contains("velo.core.json-processor-provider-enabled"));
       assertFalse(metadata.contains("velo.core.enum-code-fields"));
       assertFalse(metadata.contains("velo.core.enum-desc-fields"));
-      assertTrue(metadata.contains("velo.cache.default-ttl"));
-      assertTrue(metadata.contains("velo.cache.prefix"));
+      assertFalse(metadata.contains("velo.cache.default-ttl"));
+      assertFalse(metadata.contains("velo.cache.prefix"));
       assertTrue(metadata.contains("velo.cache.separator"));
+      assertTrue(metadata.contains("velo.cache.transaction-aware"));
       assertTrue(metadata.contains("velo.cache.ttl"));
-      assertTrue(metadata.contains("velo.cache.null-caching-enabled"));
+      assertFalse(metadata.contains("velo.cache.null-caching-enabled"));
       assertTrue(metadata.contains("velo.cache.ttl-jitter-percentage"));
       assertFalse(metadata.contains("velo.cache.key-prefix"));
       assertFalse(metadata.contains("velo.cache.key-separator"));

@@ -32,10 +32,8 @@ public class VeloFeignTraceAutoConfiguration {
         @Override
         public ConditionOutcome getMatchOutcome(
                 ConditionContext context, AnnotatedTypeMetadata metadata) {
-            boolean enabled =
-                    TraceEnabledCondition.isEnabled(context.getEnvironment())
-                            && TraceEnabledCondition.property(
-                            context.getEnvironment(), "feign-propagation-enabled", Boolean.class, true);
+            Boolean property = TraceEnabledCondition.property(context.getEnvironment(), "feign-propagation-enabled", Boolean.class, true);
+            boolean enabled = TraceEnabledCondition.isEnabled(context.getEnvironment()) && property;
             return new ConditionOutcome(enabled, "trace Feign propagation enabled");
         }
     }

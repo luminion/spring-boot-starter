@@ -2,6 +2,10 @@ package io.github.luminion.velo.cache;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.data.redis.cache.RedisCacheWriter;
+import org.springframework.data.redis.cache.RedisCacheManager;
+import org.springframework.data.redis.cache.CacheStatisticsCollector;
+import java.util.ArrayList;
+import java.util.List;
 
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
@@ -12,8 +16,32 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class JitterRedisCacheWriterTest {
+
+    @Test
+    void shouldPreserveJitterWhenNativeBuilderEnablesStatistics() {
+        RedisCacheWriter delegate = mock(RedisCacheWriter.class);
+        RedisCacheWriter statisticsWriter = mock(RedisCacheWriter.class);
+        when(delegate.withStatisticsCollector(any(CacheStatisticsCollector.class))).thenReturn(statisticsWriter);
+        List<Duration> ttls = new ArrayList<>();
+        doAnswer(invocation -> {
+            ttls.add(invocation.getArgument(3));
+            return null;
+        }).when(statisticsWriter).put(any(), any(), any(), any());
+        RedisCacheManager manager = RedisCacheManager.builder(JitterRedisCacheWriter.wrap(delegate, 20))
+                .cacheDefaults(org.springframework.data.redis.cache.RedisCacheConfiguration.defaultCacheConfig()
+                        .entryTtl(Duration.ofSeconds(100)))
+                .enableStatistics().build();
+        manager.afterPropertiesSet();
+        for (int i = 0; i < 20; i++) {
+            manager.getCache("cache").put(i, "value");
+        }
+        assertThat(ttls).hasSize(20).allSatisfy(ttl -> assertThat(ttl.toMillis()).isBetween(80000L, 120000L));
+        assertThat(ttls.stream().distinct().count()).isGreaterThan(1);
+        assertThat(ttls.stream().anyMatch(ttl -> Math.abs(ttl.toMillis() - 100000L) > 2000L)).isTrue();
+    }
 
     @Test
     void shouldReturnSameInstanceWhenJitterDisabled() {

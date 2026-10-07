@@ -19,7 +19,7 @@ import java.util.List;
  * mybatis plus配置
  *
  * @author luminion
-// * @see com.baomidou.mybatisplus.autoconfigure.MybatisPlusAutoConfiguration
+ * // * @see com.baomidou.mybatisplus.autoconfigure.MybatisPlusAutoConfiguration
  */
 @AutoConfiguration
 @ConditionalOnClass(name = {
