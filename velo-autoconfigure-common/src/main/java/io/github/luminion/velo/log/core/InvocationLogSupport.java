@@ -22,6 +22,10 @@ import org.springframework.util.ReflectionUtils;
 
 /**
  * 调用适配、对象载荷和安全日志工具。
+ * <p>
+ * 载荷遵循业务 formatter 的序列化规则，有意不按 password、token 等名称识别或过滤隐私，
+ * 默认完整输出且不做字符截断。业务通过字段忽略、自定义 formatter 或关闭载荷日志控制输出。
+ * 本类的技术对象、循环引用处理及写入异常隔离不代表提供隐私过滤。
  */
 public final class InvocationLogSupport {
     private static final Logger LOGGER = LoggerFactory.getLogger(InvocationLogSupport.class);

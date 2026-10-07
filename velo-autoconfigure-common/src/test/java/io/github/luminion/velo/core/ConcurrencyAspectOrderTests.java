@@ -81,9 +81,9 @@ class ConcurrencyAspectOrderTests {
             this.events = events;
         }
 
-        @Idempotent(key = "#p0")
-        @Lock(key = "#p0")
-        @RateLimit(key = "#p0")
+        @Idempotent(value = "#p0")
+        @Lock(value = "#p0")
+        @RateLimit(value = "#p0")
         public void submit(String orderId) {
             events.add("business");
         }

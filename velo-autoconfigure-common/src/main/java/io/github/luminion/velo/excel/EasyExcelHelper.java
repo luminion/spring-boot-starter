@@ -29,6 +29,10 @@ import java.util.List;
 
 /**
  * 为Excel的转换器进行注册
+ * <p>
+ * 内置日期转换器用于全局替换库的默认转换器，导出有意直接使用全局格式，不合并字段上的
+ * Excel @DateTimeFormat。需保留字段格式时，由业务关闭 velo.excel.converters 对应日期开关
+ * 或 enabled 总开关；手工注册不受这些自动配置开关控制。
  *
  * @author luminion
  */

@@ -24,14 +24,14 @@ import org.springframework.data.redis.core.StringRedisTemplate;
  */
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnClass(name = "org.springframework.data.redis.core.StringRedisTemplate")
-@ConditionalOnConcurrencyBackend(prefix = "velo.lock", value = ConcurrencyBackend.REDIS,
+@ConditionalOnConcurrencyBackend(prefix = "velo.lock", backend = ConcurrencyBackend.REDIS,
         autoClassNames = {"org.aspectj.weaver.Advice", "org.springframework.data.redis.core.StringRedisTemplate"})
 @ConditionalOnMissingBean(LockHandler.class)
 @ConditionalOnProperty(prefix = "velo.lock", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloLockRedisConfiguration {
 
     @Bean
-    @ConditionalOnConcurrencyBackend(prefix = "velo.lock", value = ConcurrencyBackend.REDIS,
+    @ConditionalOnConcurrencyBackend(prefix = "velo.lock", backend = ConcurrencyBackend.REDIS,
             autoBeanTypeNames = "org.springframework.data.redis.core.StringRedisTemplate")
     @ConditionalOnVeloRedisTemplate(type = "org.springframework.data.redis.core.StringRedisTemplate",
             fallbackBeanName = "stringRedisTemplate")

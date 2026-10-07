@@ -2,13 +2,17 @@ package io.github.luminion.velo.idempotent;
 
 import io.github.luminion.velo.idempotent.annotation.Idempotent;
 import io.github.luminion.velo.idempotent.aspect.IdempotentAspect;
+import io.github.luminion.velo.idempotent.exception.IdempotentException;
+import io.github.luminion.velo.idempotent.support.CaffeineIdempotentHandler;
 import io.github.luminion.velo.spi.fingerprint.SpelFingerprinter;
 import org.junit.jupiter.api.Test;
 import org.springframework.aop.aspectj.annotation.AspectJProxyFactory;
 
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.CompletableFuture;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class IdempotentAspectTests {
 
@@ -93,20 +97,71 @@ class IdempotentAspectTests {
         }
     }
 
+    @Test
+    void sharedSubmissionWindowShouldRejectAnotherMethodAndAllowDifferentRequest() {
+        AspectJProxyFactory factory = new AspectJProxyFactory(new SharedSubmissionService());
+        factory.setProxyTargetClass(true);
+        factory.addAspect(new IdempotentAspect("idempotent:", new SpelFingerprinter(),
+                new CaffeineIdempotentHandler()));
+        SharedSubmissionService proxy = factory.getProxy();
+        proxy.submit("one", false);
+        assertThatThrownBy(() -> proxy.importSubmission("one")).isInstanceOf(IdempotentException.class);
+        proxy.importSubmission("two");
+        assertThatThrownBy(() -> proxy.submit("retry", true)).isInstanceOf(IllegalStateException.class);
+        proxy.importSubmission("retry");
+    }
+
+    @Test
+    void asynchronousFailureShouldKeepMarkerAfterNormalMethodReturn() {
+        AsyncSubmissionService target = new AsyncSubmissionService();
+        AspectJProxyFactory factory = new AspectJProxyFactory(target);
+        factory.setProxyTargetClass(true);
+        factory.addAspect(new IdempotentAspect("idempotent:", new SpelFingerprinter(),
+                new CaffeineIdempotentHandler()));
+        AsyncSubmissionService proxy = factory.getProxy();
+        CompletableFuture<Void> result = proxy.submit();
+        assertThat(result).isSameAs(target.pending);
+        assertThat(result.isDone()).isFalse();
+        result.completeExceptionally(new IllegalStateException("later failure"));
+        assertThatThrownBy(proxy::submit).isInstanceOf(IdempotentException.class);
+    }
+
+    static class SharedSubmissionService {
+        @Idempotent(prefix = "submit", value = "#p0", ttl = 60000)
+        public void submit(String id, boolean fail) {
+            if (fail) {
+                throw new IllegalStateException("business failed");
+            }
+        }
+
+        @Idempotent(prefix = "submit", value = "#p0", ttl = 60000)
+        public void importSubmission(String id) {
+        }
+    }
+
+    static class AsyncSubmissionService {
+        private final CompletableFuture<Void> pending = new CompletableFuture<>();
+
+        @Idempotent(prefix = "async", ttl = 60000)
+        public CompletableFuture<Void> submit() {
+            return pending;
+        }
+    }
+
     static class ExplicitKeyIdempotentService {
 
-        @Idempotent(key = "#p0")
+        @Idempotent(value = "#p0")
         public void submit(String orderId) {
         }
     }
 
     static class TwoMethodIdempotentService {
 
-        @Idempotent(key = "#p0")
+        @Idempotent(value = "#p0")
         public void methodA(String id) {
         }
 
-        @Idempotent(key = "#p0")
+        @Idempotent(value = "#p0")
         public void methodB(String id) {
         }
     }

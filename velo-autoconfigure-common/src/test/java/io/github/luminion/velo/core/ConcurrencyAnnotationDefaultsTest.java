@@ -22,9 +22,9 @@ class ConcurrencyAnnotationDefaultsTest {
     void shouldExposeSafeLockDefaults() throws NoSuchMethodException {
         Lock lock = annotation("lock", Lock.class);
 
-        assertThat(lock.key()).isEmpty();
+        assertThat(lock.value()).isEmpty();
         assertThat(Lock.class.getDeclaredMethods()).extracting(Method::getName)
-                .containsExactlyInAnyOrder("value", "key", "message");
+                .containsExactlyInAnyOrder("value", "prefix", "message");
     }
 
     @Test
@@ -32,7 +32,8 @@ class ConcurrencyAnnotationDefaultsTest {
         RateLimit rateLimit = annotation("rateLimit", RateLimit.class);
 
         assertThat(rateLimit.qps()).isEqualTo(50);
-        assertThat(rateLimit.value()).isEqualTo(50);
+        assertThat(rateLimit.value()).isEmpty();
+        assertThat(rateLimit.prefix()).isEmpty();
     }
 
     private static <A extends java.lang.annotation.Annotation> A annotation(String methodName, Class<A> type)

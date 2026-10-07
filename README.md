@@ -308,7 +308,7 @@ public UserDTO getById(Long id) {
 - Boot 4 使用 Jackson 3：登记类型的缓存和普通 RedisTemplate 使用 `JacksonJsonRedisSerializer`；通用缓存使用 `GenericJacksonJsonRedisSerializer`。即使同时存在 Jackson 2，也不会自行切换默认实现
 - Boot 4 如需让 Redis 使用 Jackson 2，应引入官方 `spring-boot-jackson2` 及 Jackson 2 依赖，并显式注册一个 `RedisSerializer<Object>` Bean，例如 `GenericJackson2JsonRedisSerializer`；Spring Data Redis 4.x 仍保留该类用于兼容或迁移旧数据，但已标记为后续移除，不作为 Boot 4 默认实现
 - Jackson 2 与 Jackson 3 的 Redis JSON 输出可能存在差异；从 Boot 2 / 3 切换到 Boot 4 时，应先规划旧数据读取、迁移或 key 空间隔离，不要默认认为历史值可以无缝混读
-- **安全提示（多态反序列化）**：未登记类型的通用缓存序列化器为支持 `Object` / POJO 回读会写入并按类型元数据（`@class`）反序列化，且使用宽松的类型校验（与 Spring Data Redis 原生行为一致）。若 Redis 未鉴权或被写入恶意 `@class` 载荷，存在反序列化攻击面。建议 Redis 启用鉴权与网络隔离；如需收敛，可自行注册基于 `BasicPolymorphicTypeValidator` 白名单的 `RedisSerializer<Object>` Bean，Velo 会复用该 Bean
+- **Redis 信任约定**：默认将 Redis 及其写入内容视为可信。未登记类型的通用缓存为支持 `Object` / POJO 回读，会写入并按类型元数据（`@class`）反序列化；Velo 不额外维护业务类型白名单。业务如需限制可读取的类型，可使用按缓存名称登记的定向 serializer，或自行注册基于 `BasicPolymorphicTypeValidator` 的 `RedisSerializer<Object>` Bean，Velo 会复用该 Bean
 
 按缓存名称登记纯 JSON 的目标类型（推荐）：
 
@@ -455,6 +455,7 @@ EasyExcelHelper.registerConverters(converters);
 - `velo.excel.converters.enabled` 默认开启；设为 `false` 时关闭 starter 的 converter 自动注册，不影响 helper 手工调用
 - Excel 自动配置本身没有重复的总开关；starter 会根据 classpath 自动尝试向 EasyExcel、FastExcel、Fesod 注册扩展 converters
 - 时间、日期、时区格式统一复用 `velo.date-time-format.*`
+- 内置日期转换器用于全局替换 Excel 库的默认转换器，导出时直接使用上述全局格式，不合并 Excel 字段上的 `@DateTimeFormat`。需要沿用 Excel 库的字段格式行为时，请自行关闭相应的 `velo.excel.converters.date-enabled`、`local-date-time-enabled`、`local-date-enabled`、`local-time-enabled`，或设置 `velo.excel.converters.enabled=false` 关闭全部自动注册；也可为业务 Reader/Writer 显式提供自定义 converter
 - `createExtraConverters(...)` 返回独立的可变列表；需要追加自定义 converter 时，可在调用 `registerConverters(...)` 前直接使用 `converters.add(...)`
 - 如果你只想手工控制注册时机，也可以直接使用 `EasyExcelHelper`、`FastExcelHelper`、`FesodExcelHelper`
 
@@ -483,7 +484,7 @@ velo:
 ```java
 import io.github.luminion.velo.idempotent.annotation.Idempotent;
 
-@Idempotent(key = "#userId", ttl = 3000)
+@Idempotent(value = "#userId", ttl = 3000)
 public void submitOrder(Long userId) {
     // ...
 }
@@ -495,26 +496,28 @@ public void submitOrder(Long userId) {
 - `AUTO` 模式下按自动配置顺序选择后端：`REDISSON -> REDIS -> CAFFEINE`
 - Caffeine 使用原生缓存过期；Redis 使用 `SET NX` + TTL 和失败时的 token 比对删除；Redisson 使用原生 `RBucket`，Velo 不额外维护本地幂等缓存或清理任务
 - 没有可用实现时，应用仍可启动，调用带注解的方法会在业务执行前报错；显式指定不可用或不支持的后端时启动报错。自定义 `IdempotentHandler` 优先
-- `prefix` 默认 `idempotent:`
+- 配置项 `velo.idempotent.prefix` 默认 `idempotent:`，是功能的全局键前缀；注解的 `prefix` 是资源范围，默认空，使用方法指纹
 - `ttl` 单位固定为毫秒，默认 `3000`（3 秒）
 - TTL 从首次进入时开始计算，成功结束不重置；默认 3 秒主要用于防连点，长任务应配置更长窗口。TTL 到期后同 key 可再次进入，不保证业务永久只执行一次
-- `value` 与 `key` 互为别名，`@Idempotent("#userId")` 等价于 `@Idempotent(key = "#userId")`；同时设置时必须一致
-- 业务失败（抛异常）时会清除本次幂等记录以允许重试；清除采用 token 比对，只删除本次请求写入的记录，不会误删并发请求在窗口内刚写入的新记录
-- 幂等 key 始终以方法（`全限定类名#方法名(参数类型...)`）为前缀，再拼接 SpEL 结果，与限流分桶语义一致：**不同方法或同名重载方法即使用相同的 SpEL key（如都用 `#orderId`）也不会互相碰撞、共享同一幂等窗口**
+- `value` 专门表示 SpEL 表达式，`@Idempotent("#userId")` 等价于 `@Idempotent(value = "#userId")`；不再提供 `key` 属性
+- 当前方法调用同步抛出异常时，会清除本次幂等记录以允许重试；清除采用 token 比对，只删除本次请求写入的记录，不会误删并发请求在窗口内刚写入的新记录
+- 幂等检查作用于注解调用点的 TTL 窗口，不管理异步任务生命周期。方法返回 `Future` / `CompletionStage`，或在方法内启动异步任务时，不等待、不监听后续完成或失败；返回异步对象视为当前方法正常返回，幂等记录仍保留至 TTL 到期。异步任务后续失败不会触发记录清理
+- 未指定注解 `prefix` 时，不同方法或重载方法按方法指纹隔离；显式指定相同 `prefix` 后，相同 SpEL 结果可在不同方法、不同类之间共享防重复窗口，例如 `@Idempotent(prefix = "order-submit", value = "#requestId")`
+- 共享防重复窗口适合多个入口代表同一次提交的场景，应使用相同 TTL、请求标识和业务含义。不同操作仅操作同一订单时，应使用不同防重复范围；需要互斥时使用共享资源锁。TTL 由首次成功写入记录的调用决定，后续重复调用不重置
 
-> ⚠️ `key` 必须显式指定。`key` 为空时会退化成 `全限定类名#方法名(参数类型...)`，意味着**该方法的所有调用（不分参数、不分调用者）共享同一个幂等窗口**，这通常不是期望行为。此时 starter 会打印一条 WARN 提醒。
+> `value` 为空时不拼接参数，所有调用者共享该范围的防重复窗口。`prefix` 也为空时使用方法指纹，starter 会打印 WARN 提醒；显式 `prefix` 已声明共享资源意图，不再告警。若要按用户或请求分别防重复，请指定 `value`。
 >
 > ```java
-> // ❌ 危险：userId=1 提交后，3 秒内 userId=2 也会被拦截
+> // 方法级窗口：userId=1 提交后，3 秒内 userId=2 也会被拦截
 > @Idempotent(ttl = 3000)
 > public void submitOrder(Long userId) { }
 >
-> // ✅ 正确：每个用户独立幂等
-> @Idempotent(key = "#userId", ttl = 3000)
+> // 每个用户独立防重复
+> @Idempotent(value = "#userId", ttl = 3000)
 > public void submitOrder(Long userId) { }
 > ```
 >
-> 若确实需要「全局同一时刻只能执行一次」的语义（如系统级初始化），更推荐用 `@Lock`。
+> 若需要「同一时刻只能执行一次」的互斥语义（如系统级初始化），使用 `@Lock`；防重复窗口限制的是一段时间内再次进入。
 
 ### 4. 限流
 
@@ -541,7 +544,7 @@ velo:
 ```java
 import io.github.luminion.velo.ratelimit.annotation.RateLimit;
 
-@RateLimit(qps = 10, key = "#userId")
+@RateLimit(qps = 10, value = "#userId")
 public Object query(Long userId) {
     return null;
 }
@@ -550,7 +553,7 @@ public Object query(Long userId) {
 说明：
 
 - `qps` 表示每秒请求速率，默认 `50`，必须为正整数
-- `value` 与 `qps` 互为别名，`@RateLimit(10)` 等价于 `@RateLimit(qps = 10)`；同时设置时必须一致，`key` 单独配置
+- `value` 专门表示 SpEL 表达式，不再与 `qps` 互为别名，也不再提供 `key` 属性；仅指定速率时使用 `@RateLimit(qps = 10)`
 - `backend` 支持 `AUTO/REDISSON/REDIS/GUAVA`，`AUTO` 默认顺序为 `REDISSON -> REDIS -> GUAVA`
 - Guava 使用原生 `RateLimiter`，同 key 共享限流器，空闲五分钟后由 Guava 原生缓存过期；额度补充和空闲突发遵循 Guava 行为，仅保证单 JVM 内有效
 - Redis 使用 Lua 原子计数，首次请求开始固定一秒窗口，后续请求不延长 TTL；过期由 Redis 处理，无本地缓存或清理任务
@@ -559,17 +562,21 @@ public Object query(Long userId) {
 - 多实例共享配额请使用 Redis 或 Redisson；Velo 不统一不同后端的额度归还节奏
 - 没有可用实现时，应用仍可启动，调用带注解的方法会在业务执行前报错；显式指定不可用或不支持的后端时启动报错。自定义 `RateLimitHandler` 优先
 
-关于 `key` 的分桶语义（重要）：
+关于分桶范围：
 
-- `key` 为空：方法级全局限流，该方法的**所有调用者共享同一个配额**
-- `key` 非空：按 SpEL 表达式结果分桶，**每个桶独立计算配额**
+- 注解 `prefix` 为空：按方法指纹隔离；显式 `prefix` 替代方法指纹，可在不同方法、不同类之间共享额度
+- `value` 为空：不拼接参数，范围内的所有调用者共享配额；`value` 非空：按 SpEL 结果进一步分桶，每桶独立计算配额
+- 共享桶必须使用相同 `qps`，避免不同入口交替改变 Guava / Redisson 的速率配置；这是业务声明约束，starter 不跨方法注册或校验配额配置
+- 配置项 `velo.rate-limit.prefix` 默认 `rateLimit:`，是功能的全局键前缀，仍保留在最终键中
 
 | 写法 | 实际行为 |
 | --- | --- |
-| `@RateLimit(10)` | 该方法所有调用共享每秒 10 次的速率 |
-| `@RateLimit(qps=10, key="#userId")` | 该方法每个 userId 独立按每秒 10 次限流 |
+| `@RateLimit(qps = 10)` | 该方法所有调用共享每秒 10 次的速率 |
+| `@RateLimit(value = "#userId", qps = 10)` | 该方法每个 userId 独立按每秒 10 次限流 |
+| `@RateLimit(prefix = "report", value = "#userId", qps = 10)` | 所有使用该范围的入口，每个 userId 共享每秒 10 次的速率 |
+| `@RateLimit(prefix = "report", qps = 10)` | 所有使用该范围的入口和调用者共享每秒 10 次的速率 |
 
-> ⚠️ 如果你期望「每个用户 / 每个资源独立限流」，必须显式指定 `key`，否则会退化为全局共享配额。
+> 如果期望每个用户 / 每个资源独立限流，请通过 `value` 指定对应业务标识。限流限制的是调用速率，不提供防重复提交或互斥。
 
 ### 5. 锁
 
@@ -596,7 +603,7 @@ velo:
 ```java
 import io.github.luminion.velo.lock.annotation.Lock;
 
-@Lock(key = "#orderId")
+@Lock(value = "#orderId")
 public void pay(Long orderId) {
     // ...
 }
@@ -607,8 +614,10 @@ public void pay(Long orderId) {
 - `backend` 支持 `AUTO`、`REDISSON`、`REDIS`、`JDK`
 - `AUTO` 默认顺序为 `REDISSON -> REDIS -> JDK`；JDK 无需额外依赖，自定义 `LockHandler` 优先
 - 三种后端均只尝试一次，拿不到锁立即失败；不提供等待参数或自动重试
-- `value` 与 `key` 互为别名，`@Lock("#orderId")` 等价于 `@Lock(key = "#orderId")`；同时设置时必须一致
+- `value` 专门表示 SpEL 表达式，`@Lock("#orderId")` 等价于 `@Lock(value = "#orderId")`；不再提供 `key` 属性
 - 自定义 `LockHandler` 实现 `tryLock(String key)` 和 `unlock(String key)`；成功获取后必须在原线程配对释放。Redis / Redisson 获取过程的连接异常向上抛出，与锁被占用返回 `false` 区分
+- 加锁范围是经过 AOP 代理的当前方法调用：方法正常返回或同步抛出异常时，释放本次获取的锁。返回 `Future` / `CompletionStage`、方法内启动的异步任务均不等待、不监听，不延长持锁时间，也不转移锁的线程归属
+- 当前调用已经参与外层事务时，仍在当前方法返回时释放锁，不额外等待外层事务提交或回滚。需要互斥覆盖完整业务过程时，应将锁放在实际包围该过程的代理调用点，并安排好事务边界
 - 注解和 `LockHandler` 不提供租期参数；锁的生命周期由后端管理
 - Redis 简单锁的固定 TTL 由构造函数指定秒数，自动配置使用 `velo.lock.redis-ttl-seconds`，默认 `60`，必须为正数；重入不重置 TTL，不启动任何自写续期线程
 - Redis TTL 到期后自动释放，不中断正在执行的业务，也不保证到期后的互斥；业务必须在 TTL 内完成。耗时不确定的调用优先使用 Redisson
@@ -617,8 +626,9 @@ public void pay(Long orderId) {
 - JDK 只登记正在获取或持有的锁，获取失败撤销引用，最后一个使用者离开后立即删除；不能每次创建独立锁，也不能按缓存 TTL 淘汰活跃锁，否则会破坏互斥
 - `REDIS` 后端支持同线程可重入（同一线程重复加同一把锁不会自锁死），最外层释放时才真正删除 Redis 锁
 - Redis 锁只在当前线程持有期间记录 token 和重入次数，最外层释放后立即清理；Redis 幂等和 Redisson 三种后端都不额外维护本地键缓存
-- `key` 为空时降级为方法级锁（基于 `全限定类名#方法名(参数类型...)`），表示「该方法全局串行执行」，是一个有意义的语义，因此安静降级、不打告警；需要按业务维度加锁时请显式指定，例如 `@Lock(key = "#orderId")`
-- 显式 `key` 也带完整方法标识，因此不同方法即使使用相同业务值，也会使用不同的锁
+- 注解 `prefix` 与 `value` 都为空时使用方法级锁（`全限定类名#方法名(参数类型...)`），所有参数、调用者共享一把锁，不告警；只指定 `value` 时仍按方法隔离，再按表达式结果区分资源
+- 显式注解 `prefix` 替代方法指纹：支付与取消等不同方法使用 `@Lock(prefix = "order", value = "#orderId")` 时，相同订单共享 `lock:order:123` 这把锁；`@Lock(prefix = "order")` 则使所有这些调用共享 `lock:order`，不拼接参数
+- 配置项 `velo.lock.prefix` 默认 `lock:`，是功能的全局键前缀，注解的资源前缀不替代它。跨应用共享需要使用相同键配置与同一分布式后端；JDK 后端的共享范围仅限同一处理器所在 JVM
 
 ### 6. 并发控制组合顺序
 
@@ -626,9 +636,25 @@ public void pay(Long orderId) {
 
 JDK 锁和 Redis 锁的本地记录只保存活跃调用，不随历史业务 key 累积；切面在业务成功或抛出异常时均释放锁。Guava 限流与 Caffeine 幂等缓存依赖原生过期机制，过期记录不再生效，但物理清理不保证发生在到期瞬间。两者未设置容量淘汰上限，避免淘汰仍有效的记录而放过限流或重复提交；大量不同 key 在有效期内仍会占用相应内存，需要按业务控制 key 数量和 TTL。
 
-注解请标在具体实现方法上；`@RateLimit` 也可以标在具体实现类上，作用于该类声明的方法，方法上的注解优先。Starter 不额外搜索父接口或父类上的注解；继承方法是否被拦截沿用 Spring AOP 原生行为，不作为额外继承能力承诺。同类内部直接调用绕过代理时，切面不会生效。
+注解请标在具体实现方法上；`@RateLimit` 也可以标在具体实现类上，作用于该类声明的方法。方法上的注解整份覆盖类上声明，包括 `prefix`、`value` 和 `qps`，不逐项合并；方法注解未指定 `prefix` 时恢复方法指纹范围。Starter 不额外搜索父接口或父类上的注解；继承方法是否被拦截沿用 Spring AOP 原生行为，不作为额外继承能力承诺。同类内部直接调用绕过代理时，切面不会生效。
 
-三种注解使用同一套键规则：`功能前缀 + 实际用户类全名#方法名(完整参数类型...) + 可选的 :SpEL结果`。保留完整类名和重载签名，避免简称或同名方法碰撞。表达式结果支持字符串、数字、布尔值、字符、UUID 和枚举（使用 `name()`）；空值、空白或数组、集合、对象等复杂结果会报错，请明确取业务 ID。字符串原样保留，不裁剪首尾空格。解析器只缓存固定声明的表达式和方法标识，每次调用创建独立求值上下文。
+三种注解统一使用 `prefix`（固定资源前缀）与 `value`（SpEL 后缀），两者不互为别名，也不保留 `key` 属性。选择 `prefix` 这个名称，是因为它只指定键的固定部分，最终键仍包含功能前缀和可选的动态后缀。
+
+| 属性 | 统一含义 |
+| --- | --- |
+| `prefix` | 固定资源范围，不解析 SpEL；默认空，使用实际用户类全名及完整方法签名 |
+| `value` | SpEL 表达式；默认空，不拼接参数；非空时追加 `:表达式结果` |
+| `message` | 被拒绝时的提示信息 |
+| `ttl`（仅 Idempotent） | 防重复窗口，单位毫秒，默认 3000 |
+| `qps`（仅 RateLimit） | 每秒请求速率，默认 50 |
+
+最终键规则为：`功能全局前缀:资源前缀或方法指纹[:SpEL结果]`。默认保留完整类名和重载签名，避免不同方法碰撞；显式资源前缀用于主动共享，需由业务统一命名。各功能仍按默认 `lock:`、`idempotent:`、`rateLimit:` 前缀隔离，跨功能的相同注解 prefix 不会共用记录或额度。资源范围命名应体现用途：锁可用 `order` 覆盖支付和取消，防重复可用 `order-submit` 标识同一次提交，限流可用 `order-api` 统一多个入口的预算。
+
+注解资源前缀裁剪首尾空白和末尾冒号，例如 `" order: "` 规范为 `"order"`；空白前缀等同未指定，只有冒号的非空前缀会报错。`value` 总是 SpEL，固定字符串写成 `value = "'all'"`，固定资源范围直接写 `prefix = "order"`。表达式结果支持字符串、数字、布尔值、字符、UUID 和枚举（使用 `name()`）；空值、空白或数组、集合、对象等复杂结果会报错，请明确取业务 ID。表达式结果字符串原样保留，不裁剪首尾空格。解析器只缓存固定声明的表达式和方法标识，每次调用创建独立求值上下文。
+
+升级迁移：旧 `@Lock(key = "#id")` / `@Idempotent(key = "#id")` 改为 `value = "#id"`；旧 `@RateLimit(10)` 改为 `@RateLimit(qps = 10)`，旧 `@RateLimit(value = 10, key = "#id")` 改为 `@RateLimit(qps = 10, value = "#id")`。这是注解属性的不兼容调整，应重新编译业务代码。未指定注解 `prefix` 时，迁移后的默认键格式保持不变。
+
+自定义 `Fingerprinter` 的实现方法增加了资源前缀参数：`resolveMethodFingerprint(target, method, args, prefix, expression)`，须遵守相同范围规则。原四参数调用仍可使用，等价于空资源前缀；原四参数 lambda 实现需迁移为五参数。
 
 当 `@Idempotent`、`@RateLimit`、`@Lock` 同时作用于同一个方法时，starter 内置顺序为：
 
@@ -642,15 +668,20 @@ JDK 锁和 Redis 锁的本地记录只保存活跃调用，不随历史业务 ke
 
 ### 7. 日志
 
-日志注解支持常用属性简写，`value` 与明确属性名通过 Spring `@AliasFor` 双向关联：
+日志功能注解只保留具名属性，不提供 `value` 或属性别名：
 
-| 注解 | `value` 对应属性 | 示例 |
+| 注解 | 属性及默认值 | 示例 |
 |---|---|---|
-| `SlowLog` | `thresholdMs` | `@SlowLog(1000)` |
-| `EntryArgs` / `ExitArgs` / `ExitResult` / `ErrorLog` | `level` | `@EntryArgs(LogLevel.DEBUG)` |
-| `RequestHeadersLog` / `ResponseHeadersLog` | `allowlist` | `@RequestHeadersLog({"X-Trace-Id"})` |
+| `SlowLog` | `enabled=true`、`level=WARN`、`threshold=1000`（毫秒） | `@SlowLog(threshold = 1000)` |
+| `EntryArgs` / `ExitArgs` / `ExitResult` | `enabled=true`、`level=INFO` | `@EntryArgs(level = LogLevel.DEBUG)` |
+| `ErrorLog` | `enabled=true`、`level=WARN` | `@ErrorLog(level = LogLevel.ERROR)` |
+| `RequestHeadersLog` / `ResponseHeadersLog` | `enabled=true`、`level=INFO`、`allowlist={}` | `@RequestHeadersLog(allowlist = {"X-Trace-Id"})` |
 
-`InvokeLog`、`LogIgnore` 保持标记注解。别名和明确属性同时设置不同的非默认值会报错；默认值和其他属性不变。
+`InvokeLog`、`LogIgnore` 保持无属性的标记注解。头部 `allowlist` 为空时表示不限制头名称，非空时仅记录指定头，匹配忽略大小写。
+
+注解属性统一约定：稳定的主输入可使用 `value`，配置选项使用具名属性，同一语义只保留一个入口。并发控制的 `value` 表示 SpEL，`JsonEnum` / `JsonEncode` / `JsonDecode` 的 `value` 表示目标类型，`ConditionalOnListProperty.value` 表示列表配置路径且必须显式指定；`ConditionalOnConcurrencyBackend` 使用具名的 `backend`，不再提供 `value`。现有自定义注解不再声明 `@AliasFor`。
+
+升级迁移：旧日志注解的 `value` 简写分别改为 `level`、`threshold`、`allowlist`；`SlowLog.thresholdMs` 改为 `threshold`，配置 `slow-log.threshold-ms` 同步改为 `slow-log.threshold`，单位仍为毫秒。`ConditionalOnConcurrencyBackend.value` 改为 `backend`。这些属性调整不保留兼容别名，应迁移用法并重新编译。
 
 实现包按职责整理：`log.annotation`（注解）、`log.aspect`（普通调用与任务适配）、`log.core`（调用生命周期与记录）、`log.config`（自动配置）、`log.support`（输出实现）。`InvocationLogWriter`、`LogValueFormatter` 扩展接口保留在 `log`；链路上下文独立放在 `io.github.luminion.velo.trace`。Controller / Feign 适配仍放在各自协议包。
 
@@ -662,14 +693,14 @@ Controller、Feign、`@InvokeLog` 和任务入口共用一个同步 `InvocationL
 [controller] [127.0.0.1 GET /users/{id}] <== exitArgs={"id":1}
 [controller] [127.0.0.1 GET /users/{id}] <== exitResult={"name":"Tom"}
 [controller] [127.0.0.1 GET /users/{id}] <== responseHeaders={"X-Result":["ok"]}
-[controller] [127.0.0.1 GET /users/{id}] <== slow={"costMs":1200,"thresholdMs":1000}
+[controller] [127.0.0.1 GET /users/{id}] <== slow={cost=1200ms, threshold=1000ms}
 [invoke] [find()] <== error={"type":"java.lang.IllegalArgumentException","message":"参数无效"}
 [feign] [remote() GET /log/remote] <== exitResult={"message":"hello"}
-[scheduled] [run()] <== slow={"costMs":5,"thresholdMs":0}
-[xxl-job] [run()] <== slow={"costMs":5,"thresholdMs":0}
+[scheduled] [run()] <== slow={cost=5ms, threshold=0ms}
+[xxl-job] [run()] <== slow={cost=5ms, threshold=0ms}
 ```
 
-固定结构为 `[入口类型] [调用目标] 箭头 功能名=内容`，各块之间保留一个空格，等号两侧不留空格。入口类型为 `controller/invoke/feign/scheduled/xxl-job`；功能名为 `entryArgs/exitArgs/exitResult/requestHeaders/responseHeaders/slow/error`，慢调用和异常分别使用独立对象，异常摘要不附带堆栈。类名由日志框架输出，Invoke、Scheduled 和 XXL-Job 的调用目标只显示方法名。
+固定结构为 `[入口类型] [调用目标] 箭头 功能名=内容`，各块之间保留一个空格，等号两侧不留空格。入口类型为 `controller/invoke/feign/scheduled/xxl-job`；功能名为 `entryArgs/exitArgs/exitResult/requestHeaders/responseHeaders/slow/error`。慢调用摘要固定为 `{cost=实际耗时ms, threshold=阈值ms}`，单位跟在数值后，由引擎直接生成，不调用对象 formatter；异常摘要使用独立对象且不附带堆栈。类名由日志框架输出，Invoke、Scheduled 和 XXL-Job 的调用目标只显示方法名。
 
 正文不重复打印 `traceId`、`source`、`event`、`invocationId`。默认日志格式通过 MDC 在级别位置显示 traceId。`InvocationLogRecord` 只包含 `source/target/feature/loggerName/level/content` 六个字段，`content` 为已经转换的字符串；不再生成 invocationId，也不复制 traceId。自定义输出器在 `write` 时可读取 MDC；延迟或异步输出时应自行捕获上下文快照。
 
@@ -696,7 +727,7 @@ Controller、Feign、`@InvokeLog` 和任务入口共用一个同步 `InvocationL
 public class UserService {
     @EntryArgs
     @ExitResult
-    @SlowLog(thresholdMs = 200, level = LogLevel.WARN)
+    @SlowLog(threshold = 200, level = LogLevel.WARN)
     public User find(Long id) { /* 业务实现 */ }
 
     @LogIgnore
@@ -718,7 +749,7 @@ velo:
         enabled: false
       slow-log:
         enabled: true
-        threshold-ms: 1000
+        threshold: 1000
         level: WARN
       error-log:
         enabled: true
@@ -737,7 +768,7 @@ velo:
           allowlist: [X-Trace-Id, Content-Type]
       invoke:
         slow-log:
-          threshold-ms: 0
+          threshold: 0
           level: INFO
   trace:
     enabled: true
@@ -762,6 +793,8 @@ public LogValueFormatter logValueFormatter() {
 参数、结果、慢日志及异常摘要都使用同一个 formatter；慢日志中的 Long 数值也沿用应用的序列化规则，例如将耗时和阈值输出为字符串。
 
 `max-payload-length` 默认 `-1`，完整输出，不做字符截断。仅支持 `-1` 和 `0`，其他值会在日志引擎启动时报错；`0` 关闭参数、结果及协议头载荷日志的输出和序列化，慢调用/异常摘要仍可完整输出。
+
+默认启用的 Controller / Feign 参数和返回值日志会按应用的序列化规则完整输出。Velo 不按 `password`、`token` 等字段或参数名称自动识别隐私信息，不额外提供隐私过滤；是否输出这些内容由业务决定，需要时自行配置字段忽略、自定义 formatter 或关闭对应载荷日志。
 
 对于预期的超大字符串、大集合或大对象，应在应用中忽略对应载荷日志，避免无用的序列化和日志输出成本。可通过方法或类上的注解关闭参数、返回值日志，保留慢调用和异常摘要：
 
@@ -832,7 +865,7 @@ logging:
 
 本次将 `InvokeArgs`、`ReturnResult` 统一更名为 `EntryArgs`、`ExitResult`，配置 `invoke-args`、`return-result` 同步更名为 `entry-args`、`exit-result`；`ExitArgs` 不变，不保留旧命名别名。
 
-此前移除的旧 `InvokeEntryArgs/InvokeExitArgs/InvokeExitResult/InvokeLogIgnore`、旧请求/响应头注解、`RuntimeJsonSerializer`、异常分类规则、`slow-threshold-ms` 和统一日志级别配置仍不支持。旧枚举值配置（例如 `entry-args: ALWAYS`、`exit-result: ON_SLOW`）需迁移为带 `enabled/level` 的功能配置对象，慢调用阈值使用 `slow-log.threshold-ms`。
+此前移除的旧 `InvokeEntryArgs/InvokeExitArgs/InvokeExitResult/InvokeLogIgnore`、旧请求/响应头注解、`RuntimeJsonSerializer`、异常分类规则、`slow-threshold-ms` 和统一日志级别配置仍不支持。旧枚举值配置（例如 `entry-args: ALWAYS`、`exit-result: ON_SLOW`）需迁移为带 `enabled/level` 的功能配置对象，慢调用阈值使用 `slow-log.threshold`（毫秒）。
 
 ### 7. XSS
 
@@ -932,6 +965,7 @@ public class OrderVO {
 - 这些 `serialize-*` 开关**只影响序列化方向**；反序列化（前端传入）时数字和字符串都能正常绑定，无需前端特殊处理
 - `serialize-big-decimal-as-string=true` 默认开启，`BigDecimal[]` 与单值使用同样的字符串输出及尾零处理规则；开启 `serialize-floating-as-string` 后，`float[]` / `double[]` 与包装类型数组同样生效
 - `enum-desc-enabled=true` 时，`@JsonEnum` 可为数值字段派生出描述字段，例如 `statusName`；派生字段遵循原字段的包含策略和视图，并支持类级命名策略及数组输出形态
+- 派生字段按自身名称独立参与 Jackson 动态属性过滤：通过 `@JsonFilter` 排除 `status` 时，`statusName` 仍可输出，支持只返回枚举描述的用法；需要同时隐藏时应同时过滤这两个名称。通过 `@JsonIgnore` 等方式从序列化属性中移除源字段时，不会生成对应派生字段
 - `enum-mappings` 为空时只关闭按全局约定进行的隐式匹配；`@JsonEnum` 同时指定 `codeField` 和 `nameField` 时仍独立生效
 - `@JsonEncode` / `@JsonDecode` 是注解驱动能力：只要 Jackson 扩展与 `JsonProcessorProvider` 生效，带注解字段就会转换；未使用注解的字段不会执行转换，因此不再提供额外的 `string-converter-enabled` 总开关
 - Jackson 的普通字符串 XSS 清洗由独立的 `velo.xss.jackson-enabled` 控制，默认关闭，避免把全局 Mapper 的所有字符串都意外改写
@@ -1073,6 +1107,7 @@ public Object list(LocalDate date, LocalDateTime createTime, Date paidAt) {
 未显式指定格式时，`Date` 会先按 `velo.date-time-format.date-time` 解析，失败后再按
 `velo.date-time-format.date` 解析；日期-only 输入会按配置时区转换为当天 `00:00:00`。
 字段或参数上的 Spring `@DateTimeFormat`、Jackson `@JsonFormat` 等显式格式优先于 Starter 默认格式。
+上述显式格式优先规则适用于 Spring / Jackson；Excel 全局转换器的行为与禁用方式见 Excel 章节。
 配置了非法日期模式、空日期模式或非法时区时，启动告警会提前提示，但对应转换器仍会在启动阶段失败；Starter 不会静默替换用户配置。
 
 如果开启 `velo.banner.enabled=true`，横幅仅用于诊断，不应成为启动失败原因。配置对象被显式置空时，横幅会跳过自身输出或将对应能力显示为 `unavailable (config missing)`。
@@ -1285,7 +1320,7 @@ logging:
 
 生产环境建议显式指定分布式后端，并配合健康检查确保 Redis 可用；业务侧应决定连接故障时如何处理请求。
 
-### Q3：如何调试 SpEL `key` 表达式？
+### Q3：如何调试 SpEL `value` 表达式？
 
 - 确认已开启编译参数 `-parameters`，否则 `#userId` 这类按参数名引用无法解析，只能用 `#p0`、`#p1`
 - 表达式解析为空值、空白字符串或复杂对象会抛出异常；三种注解行为一致

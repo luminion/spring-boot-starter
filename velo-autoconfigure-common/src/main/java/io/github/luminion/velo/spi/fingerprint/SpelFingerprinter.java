@@ -39,13 +39,20 @@ public class SpelFingerprinter implements Fingerprinter {
     }
 
     @Override
-    public String resolveMethodFingerprint(Object target, Method method, Object[] args, String expression) {
+    public String resolveMethodFingerprint(Object target, Method method, Object[] args, String prefix,
+                                           String expression) {
         Class<?> targetClass = target == null ? method.getDeclaringClass()
                 : ClassUtils.getUserClass(AopUtils.getTargetClass(target));
         Method specificMethod = AopUtils.getMostSpecificMethod(method, targetClass);
         ClassMetadata classMetadata = metadata.get(targetClass);
-        String methodFingerprint = classMetadata.methodFingerprints.computeIfAbsent(specificMethod,
-                resolvedMethod -> buildMethodFingerprint(targetClass, resolvedMethod));
+        String baseKey;
+        if (StringUtils.hasText(prefix)) {
+            // 显式资源范围替代方法维度；不通过截取方法指纹来拼装跨方法共享键。
+            baseKey = normalizeResourcePrefix(prefix);
+        } else {
+            baseKey = classMetadata.methodFingerprints.computeIfAbsent(specificMethod,
+                    resolvedMethod -> buildMethodFingerprint(targetClass, resolvedMethod));
+        }
         if (StringUtils.hasText(expression)) {
             Expression parsedExp = classMetadata.expressions.computeIfAbsent(expression, parser::parseExpression);
             MethodBasedEvaluationContext context = new MethodBasedEvaluationContext(target, specificMethod, args,
@@ -63,9 +70,20 @@ public class SpelFingerprinter implements Fingerprinter {
             if (!StringUtils.hasText(resolved)) {
                 throw new IllegalArgumentException("SpEL key expression '" + expression + "' resolved to a blank value.");
             }
-            return methodFingerprint + ':' + resolved;
+            return baseKey + ':' + resolved;
         }
-        return methodFingerprint;
+        return baseKey;
+    }
+
+    private static String normalizeResourcePrefix(String prefix) {
+        String normalized = prefix.trim();
+        while (normalized.endsWith(":")) {
+            normalized = normalized.substring(0, normalized.length() - 1);
+        }
+        if (!StringUtils.hasText(normalized)) {
+            throw new IllegalArgumentException("Resource prefix must contain a non-colon character.");
+        }
+        return normalized;
     }
 
     private static final class ClassMetadata {

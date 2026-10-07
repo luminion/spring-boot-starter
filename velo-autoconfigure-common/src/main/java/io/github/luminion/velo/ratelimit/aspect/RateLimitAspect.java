@@ -79,7 +79,7 @@ public class RateLimitAspect implements Ordered {
             throw new IllegalArgumentException("Rate limit qps must be greater than zero.");
         }
         String keyFingerprint = fingerprinter.resolveMethodFingerprint(
-                joinPoint.getTarget(), method, joinPoint.getArgs(), rateLimit.key());
+                joinPoint.getTarget(), method, joinPoint.getArgs(), rateLimit.prefix(), rateLimit.value());
 
         // 1. 生成基础 Key
         String key = ConcurrencyAnnotationUtils.buildPrefixedKey(prefix, keyFingerprint);

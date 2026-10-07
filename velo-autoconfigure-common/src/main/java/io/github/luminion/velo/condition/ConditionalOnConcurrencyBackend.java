@@ -9,7 +9,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Matches a concurrency backend in either explicit or auto-selection mode.
+ * 匹配显式选择或自动选择的并发控制后端。
  */
 @Target({ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
@@ -17,32 +17,32 @@ import java.lang.annotation.Target;
 public @interface ConditionalOnConcurrencyBackend {
 
     /**
-     * Feature property prefix, for example {@code velo.lock}.
+     * 功能配置属性的前缀，例如 {@code velo.lock}，不是业务资源键前缀。
      */
     String prefix();
 
     /**
-     * Backend represented by the annotated configuration or bean.
+     * 当前配置或 Bean 所代表的后端。
      */
-    ConcurrencyBackend value();
+    ConcurrencyBackend backend();
 
     /**
-     * Whether AUTO backend selection can match this condition.
+     * 是否参与 AUTO 模式的后端匹配。
      */
     boolean matchAuto() default true;
 
     /**
-     * Classes that must be present only when backend selection is AUTO.
+     * AUTO 模式下必须存在的类名称。
      */
     String[] autoClassNames() default {};
 
     /**
-     * Bean names that must be present only when backend selection is AUTO.
+     * AUTO 模式下必须存在的 Bean 名称。
      */
     String[] autoBeanNames() default {};
 
     /**
-     * Bean types that must be present only when backend selection is AUTO.
+     * AUTO 模式下必须存在的 Bean 类型名称。
      */
     String[] autoBeanTypeNames() default {};
 }

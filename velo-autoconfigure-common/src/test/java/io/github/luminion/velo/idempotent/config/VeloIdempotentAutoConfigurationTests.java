@@ -36,7 +36,7 @@ class VeloIdempotentAutoConfigurationTests {
                     VeloIdempotentAutoConfiguration.class
             ))
             .withUserConfiguration(PropertiesConfiguration.class)
-            .withBean(Fingerprinter.class, () -> (target, method, args, expression) -> "fingerprint");
+            .withBean(Fingerprinter.class, () -> (target, method, args, prefix, expression) -> "fingerprint");
 
     @Test
     void shouldCreateDefaultIdempotentHandler() {
@@ -132,7 +132,7 @@ class VeloIdempotentAutoConfigurationTests {
                         VeloIdempotentAutoConfiguration.class
                 ))
                 .withBean(VeloProperties.class, VeloProperties::new)
-                .withBean(Fingerprinter.class, () -> (target, method, args, expression) -> "fingerprint")
+                .withBean(Fingerprinter.class, () -> (target, method, args, prefix, expression) -> "fingerprint")
                 .run(context -> assertThat(context).hasSingleBean(IdempotentAspect.class));
     }
 

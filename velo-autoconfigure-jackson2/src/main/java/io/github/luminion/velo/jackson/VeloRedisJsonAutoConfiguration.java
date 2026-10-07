@@ -36,6 +36,8 @@ public class VeloRedisJsonAutoConfiguration {
         mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         mapper.registerModule(new JavaTimeModule());
         ObjectMapper genericMapper = mapper.copy();
+        // 默认信任 Redis 及其内容；通用缓存有意按类型元数据回读 POJO，不额外限定业务类型白名单。
+        // 需要限制类型时由业务提供定向 serializer 或自定义 RedisSerializer<Object> Bean。
         genericMapper.activateDefaultTyping(LaissezFaireSubTypeValidator.instance,
                 ObjectMapper.DefaultTyping.EVERYTHING, JsonTypeInfo.As.PROPERTY);
         GenericJackson2JsonRedisSerializer.registerNullValueSerializer(genericMapper, null);

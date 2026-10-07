@@ -69,7 +69,7 @@ class MissingConcurrencyBackendTests {
             invocations++;
         }
 
-        @RateLimit(1)
+        @RateLimit(qps = 1)
         public void query() {
             invocations++;
         }

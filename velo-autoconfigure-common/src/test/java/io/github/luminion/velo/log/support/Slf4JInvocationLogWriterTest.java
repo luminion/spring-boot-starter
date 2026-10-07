@@ -21,7 +21,7 @@ class Slf4JInvocationLogWriterTest {
         for (InvocationLogFeature feature : InvocationLogFeature.values()) {
             InvocationLogRecord record = record(feature);
             if (feature == InvocationLogFeature.SLOW_LOG) {
-                record.setContent("{\"costMs\":5,\"thresholdMs\":0}");
+                record.setContent("{cost=5ms, threshold=0ms}");
             } else if (feature == InvocationLogFeature.ERROR_LOG) {
                 record.setContent("{\"type\":\"example.BusinessException\",\"message\":\"bad\"}");
             } else {
@@ -34,7 +34,7 @@ class Slf4JInvocationLogWriterTest {
                         "[invoke] [work()] ==> entryArgs={\"id\":1}",
                         "[invoke] [work()] <== exitArgs={\"id\":1}",
                         "[invoke] [work()] <== exitResult={\"id\":1}",
-                        "[invoke] [work()] <== slow={\"costMs\":5,\"thresholdMs\":0}",
+                        "[invoke] [work()] <== slow={cost=5ms, threshold=0ms}",
                         "[invoke] [work()] ==> requestHeaders=",
                         "[invoke] [work()] <== responseHeaders=",
                         "[invoke] [work()] <=="

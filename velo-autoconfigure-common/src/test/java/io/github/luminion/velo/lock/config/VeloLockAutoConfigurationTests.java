@@ -181,7 +181,7 @@ class VeloLockAutoConfigurationTests {
                         VeloLockAutoConfiguration.class
                 ))
                 .withBean(VeloProperties.class, VeloProperties::new)
-                .withBean(Fingerprinter.class, () -> (target, method, args, expression) -> "fingerprint")
+                .withBean(Fingerprinter.class, () -> (target, method, args, prefix, expression) -> "fingerprint")
                 .run(context -> assertThat(context).hasSingleBean(LockAspect.class));
     }
 

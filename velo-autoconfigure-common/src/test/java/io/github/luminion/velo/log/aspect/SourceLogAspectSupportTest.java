@@ -37,7 +37,7 @@ class SourceLogAspectSupportTest {
         VeloProperties p = new VeloProperties();
         List<InvocationLogRecord> records = new ArrayList<>();
         List<String> traces = new ArrayList<>();
-        p.getLog().getSources().getScheduled().getSlowLog().setThresholdMs(0L);
+        p.getLog().getSources().getScheduled().getSlowLog().setThreshold(0L);
         ScheduledLogAspect aspect =
                 new ScheduledLogAspect(
                         p,

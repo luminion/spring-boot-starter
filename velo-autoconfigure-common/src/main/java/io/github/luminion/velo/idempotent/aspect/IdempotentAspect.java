@@ -24,6 +24,8 @@ import java.util.UUID;
  * 接口幂等性切面。
  * <p>
  * 语义是“TTL 窗口内拒绝重复提交”，而不是“方法结束后释放并发锁”。
+ * 仅管理当前 AOP 调用点的同步异常；返回 Future / CompletionStage 或启动内部异步任务后，
+ * 不等待、不监听其结果。异步对象正常返回即保留记录至 TTL 到期，后续异步失败不清理记录。
  */
 @Aspect
 public class IdempotentAspect implements Ordered {
@@ -71,20 +73,18 @@ public class IdempotentAspect implements Ordered {
             throw new IllegalArgumentException("Idempotent ttl must be greater than zero.");
         }
 
-        // 空 key 会降级为方法级幂等（类名#方法名(参数类型...)），同一方法的所有调用共享一个幂等窗口，
-        // 不区分参数与调用者。这通常不是期望行为，因此打 WARN 提醒业务显式指定 key。
-        if (!StringUtils.hasText(idempotent.key())) {
-            log.warn("[Velo Starter] @Idempotent on {}#{} has no 'key' expression. " +
+        // 默认方法范围且没有表达式时，所有调用者共享窗口；显式 prefix 已声明资源共享意图，不告警。
+        if (!StringUtils.hasText(idempotent.prefix()) && !StringUtils.hasText(idempotent.value())) {
+            log.warn("[Velo Starter] @Idempotent on {}#{} has no 'value' expression. " +
                             "It will fall back to method-level idempotency, meaning all invocations of this method " +
                             "(regardless of arguments or caller) share a single idempotency window. " +
-                            "Specify a SpEL key (e.g. key=\"#userId\") unless this is intended.",
+                            "Specify a SpEL value (e.g. value=\"#userId\") unless this is intended.",
                     method.getDeclaringClass().getName(), method.getName());
         }
 
-        // key 始终以方法指纹（类名#方法名(参数类型...)）为前缀，再拼接 SpEL 结果，与限流分桶语义保持一致。
-        // 这样不同方法即便用相同的 SpEL key（如都用 #orderId）也不会互相碰撞、共享同一幂等窗口。
+        // 默认隔离不同方法；显式资源 prefix 使不同方法可共享同一业务防重复窗口。
         String keyFingerprint = fingerprinter.resolveMethodFingerprint(
-                joinPoint.getTarget(), method, joinPoint.getArgs(), idempotent.key());
+                joinPoint.getTarget(), method, joinPoint.getArgs(), idempotent.prefix(), idempotent.value());
         String key = ConcurrencyAnnotationUtils.buildPrefixedKey(prefix, keyFingerprint);
 
         // 为本次请求生成唯一 token，失败回滚时只清除自己写入的记录，避免误删并发请求的新记录。
@@ -98,7 +98,8 @@ public class IdempotentAspect implements Ordered {
         try {
             return joinPoint.proceed();
         } catch (Throwable ex) {
-            // 任何下游失败时清除幂等记录，允许重试（包括限流拒绝、锁获取失败、业务异常等）。
+            // 当前调用同步抛出异常时清除记录，允许重试（包括限流拒绝、锁获取失败、业务异常等）。
+            // 不挂接异步完成回调：后续异步失败不属于这里的失败清理范围，这是调用点约定。
             // removeIfMatch 只删除与本次 token 一致的记录，避免误删并发请求刚写入的记录。
             try {
                 idempotentHandler.removeIfMatch(key, token);

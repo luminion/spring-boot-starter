@@ -22,14 +22,14 @@ import org.springframework.context.annotation.Bean;
         "org.redisson.spring.starter.RedissonAutoConfigurationV2",
         "org.redisson.spring.starter.RedissonAutoConfigurationV4"})
 @ConditionalOnClass(name = "org.redisson.api.RedissonClient")
-@ConditionalOnConcurrencyBackend(prefix = "velo.idempotent", value = ConcurrencyBackend.REDISSON,
+@ConditionalOnConcurrencyBackend(prefix = "velo.idempotent", backend = ConcurrencyBackend.REDISSON,
         autoClassNames = {"org.aspectj.weaver.Advice", "org.redisson.api.RedissonClient"})
 @ConditionalOnMissingBean(IdempotentHandler.class)
 @ConditionalOnProperty(prefix = "velo.idempotent", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloIdempotentRedissonAutoConfiguration {
 
     @Bean
-    @ConditionalOnConcurrencyBackend(prefix = "velo.idempotent", value = ConcurrencyBackend.REDISSON,
+    @ConditionalOnConcurrencyBackend(prefix = "velo.idempotent", backend = ConcurrencyBackend.REDISSON,
             autoBeanTypeNames = "org.redisson.api.RedissonClient")
     @ConditionalOnMissingBean(IdempotentHandler.class)
     public IdempotentHandler idempotentHandler(RedissonClient redissonClient) {

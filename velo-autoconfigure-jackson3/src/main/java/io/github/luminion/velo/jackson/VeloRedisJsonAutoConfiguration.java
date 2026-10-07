@@ -32,6 +32,8 @@ public class VeloRedisJsonAutoConfiguration {
                 .disable(SerializationFeature.FAIL_ON_EMPTY_BEANS)
                 .disable(DateTimeFeature.WRITE_DATES_AS_TIMESTAMPS)
                 .build();
+        // 默认信任 Redis 及其内容，沿用库的通用类型元数据回读，不额外维护业务类型白名单。
+        // 需要限制类型时由业务提供定向 serializer 或自定义 RedisSerializer<Object> Bean。
         RedisSerializer<Object> generic = RedisSerializer.json();
         return new RedisJsonSerializerFactory() {
             @Override

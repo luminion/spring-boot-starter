@@ -55,8 +55,8 @@ public class VeloLogAutoConfiguration {
     }
 
     private void validateThreshold(VeloProperties.SlowLogProperties value) {
-        if (value.getThresholdMs() != null && value.getThresholdMs() < 0) {
-            throw new IllegalArgumentException("SlowLog threshold-ms must be zero or greater");
+        if (value.getThreshold() != null && value.getThreshold() < 0) {
+            throw new IllegalArgumentException("SlowLog threshold must be zero or greater");
         }
     }
 }

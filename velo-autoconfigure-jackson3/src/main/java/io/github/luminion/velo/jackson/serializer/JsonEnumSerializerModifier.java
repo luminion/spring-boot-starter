@@ -35,6 +35,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * 枚举描述作为独立属性参与动态过滤，故意允许过滤 status 后仍输出 statusName。
+ * 两者分别按自身名称匹配 JsonFilter；源属性已被 JsonIgnore 等移除时，不生成派生属性。
+ * 派生属性仍继承源属性的包含策略与视图，此约定与动态属性过滤的独立名称匹配并存。
+ */
 @Slf4j
 public class JsonEnumSerializerModifier extends ValueSerializerModifier {
 

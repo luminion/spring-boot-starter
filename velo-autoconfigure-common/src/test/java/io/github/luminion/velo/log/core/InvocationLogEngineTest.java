@@ -73,7 +73,7 @@ class InvocationLogEngineTest {
 
     @Test
     void ignoredMethodsDoNotCreateOrModifyTraceContext() throws Throwable {
-        properties.getLog().getDefaults().getSlowLog().setThresholdMs(0L);
+        properties.getLog().getDefaults().getSlowLog().setThreshold(0L);
         for (Class<?> type : new Class<?>[]{Ignored.class, Service.class}) {
             String method = type == Ignored.class ? "call" : "ignored";
             engine.invoke(
@@ -91,14 +91,14 @@ class InvocationLogEngineTest {
     void slowDoesNotEnablePayloadOrPromoteOtherLevels() throws Throwable {
         properties.getLog().getSources().getController().getEntryArgs().setEnabled(false);
         properties.getLog().getSources().getController().getExitResult().setEnabled(false);
-        properties.getLog().getDefaults().getSlowLog().setThresholdMs(0L);
+        properties.getLog().getDefaults().getSlowLog().setThreshold(0L);
         engine.invoke(
                 call(Service.class, "call", InvocationLogSource.CONTROLLER, "input"), () -> "result");
         assertThat(records)
                 .extracting(InvocationLogRecord::getFeature)
                 .containsExactly(InvocationLogFeature.SLOW_LOG);
         assertThat(records.get(0).getLevel()).isEqualTo(LogLevel.WARN);
-        assertThat(records.get(0).getContent()).contains("thresholdMs=0");
+        assertThat(records.get(0).getContent()).matches("\\{cost=\\d+ms, threshold=0ms\\}");
         records.clear();
         properties.getLog().getSources().getController().getEntryArgs().setEnabled(true);
         engine.invoke(
@@ -109,11 +109,11 @@ class InvocationLogEngineTest {
 
     @Test
     void slowAnnotationOverridesGlobalThresholdAndLevel() throws Throwable {
-        properties.getLog().getDefaults().getSlowLog().setThresholdMs(600000L);
+        properties.getLog().getDefaults().getSlowLog().setThreshold(600000L);
         engine.invoke(
                 call(Service.class, "slow", InvocationLogSource.CONTROLLER, "input"), () -> "result");
         assertThat(records.get(2).getFeature()).isEqualTo(InvocationLogFeature.SLOW_LOG);
-        assertThat(records.get(2).getContent()).contains("thresholdMs=0");
+        assertThat(records.get(2).getContent()).matches("\\{cost=\\d+ms, threshold=0ms\\}");
         assertThat(records.get(2).getLevel()).isEqualTo(LogLevel.INFO);
     }
 
@@ -134,6 +134,21 @@ class InvocationLogEngineTest {
         assertThat(records.get(1).getLevel()).isEqualTo(LogLevel.WARN);
         assertThat(records.get(1).getContent())
                 .contains(IllegalStateException.class.getName(), "failed\\nmessage");
+    }
+
+    @Test
+    void slowSummaryKeepsUnitsWhenPayloadIsDisabledAndFormatterCannotRun() throws Throwable {
+        properties.getLog().getDefaults().setMaxPayloadLength(0);
+        properties.getLog().getDefaults().getSlowLog().setThreshold(0L);
+        InvocationLogEngine logging = new InvocationLogEngine(properties, value -> {
+            throw new AssertionError("slow summary must not serialize an object payload");
+        }, records::add);
+        assertThat(logging.invoke(
+                call(Service.class, "call", InvocationLogSource.INVOKE, "input"), () -> "result"))
+                .isEqualTo("result");
+        assertThat(records).hasSize(1);
+        assertThat(records.get(0).getFeature()).isEqualTo(InvocationLogFeature.SLOW_LOG);
+        assertThat(records.get(0).getContent()).matches("\\{cost=\\d+ms, threshold=0ms\\}");
     }
 
     @Test
@@ -419,7 +434,7 @@ class InvocationLogEngineTest {
             return value;
         }
 
-        @SlowLog(thresholdMs = 0, level = LogLevel.INFO)
+        @SlowLog(threshold = 0, level = LogLevel.INFO)
         public String slow(String value) {
             return value;
         }

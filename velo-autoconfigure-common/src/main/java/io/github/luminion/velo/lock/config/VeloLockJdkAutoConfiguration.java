@@ -19,7 +19,7 @@ import org.springframework.context.annotation.Bean;
         VeloLockRedissonAutoConfiguration.class,
         VeloLockRedisConfiguration.class
 })
-@ConditionalOnConcurrencyBackend(prefix = "velo.lock", value = ConcurrencyBackend.JDK,
+@ConditionalOnConcurrencyBackend(prefix = "velo.lock", backend = ConcurrencyBackend.JDK,
         autoClassNames = "org.aspectj.weaver.Advice")
 @ConditionalOnMissingBean(LockHandler.class)
 @ConditionalOnProperty(prefix = "velo.lock", name = "enabled", havingValue = "true", matchIfMissing = true)

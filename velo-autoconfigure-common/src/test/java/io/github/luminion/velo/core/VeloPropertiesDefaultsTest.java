@@ -52,7 +52,7 @@ class VeloPropertiesDefaultsTest {
         assertThat(properties.getLog().getSources().getController().isEnabled()).isTrue();
         assertThat(properties.getLog().getSources().getFeign().isEnabled()).isTrue();
         assertThat(properties.getLog().getDefaults().getMaxPayloadLength()).isEqualTo(-1);
-        assertThat(properties.getLog().getDefaults().getSlowLog().getThresholdMs()).isEqualTo(1000L);
+        assertThat(properties.getLog().getDefaults().getSlowLog().getThreshold()).isEqualTo(1000L);
         assertThat(properties.getAspectOrder().getIdempotent())
                 .isLessThan(properties.getAspectOrder().getRateLimit());
         assertThat(properties.getAspectOrder().getRateLimit())

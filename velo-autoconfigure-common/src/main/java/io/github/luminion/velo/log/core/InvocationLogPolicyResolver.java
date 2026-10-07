@@ -115,7 +115,7 @@ final class InvocationLogPolicyResolver {
             Class<? extends Annotation> type = value.annotationType();
             boolean enabled = (Boolean) type.getMethod("enabled").invoke(value);
             LogLevel level = (LogLevel) type.getMethod("level").invoke(value);
-            long threshold = value instanceof SlowLog ? ((SlowLog) value).thresholdMs() : 0;
+            long threshold = value instanceof SlowLog ? ((SlowLog) value).threshold() : 0;
             List<String> allowlist = Collections.emptyList();
             if (value instanceof RequestHeadersLog) {
                 allowlist = Arrays.asList(((RequestHeadersLog) value).allowlist());
@@ -155,8 +155,8 @@ final class InvocationLogPolicyResolver {
         long threshold = 1000;
         List<String> allowlist = Collections.emptyList();
         if (feature == InvocationLogFeature.SLOW_LOG) {
-            Long inherited = ((VeloProperties.SlowLogProperties) global).getThresholdMs();
-            Long explicit = ((VeloProperties.SlowLogProperties) local).getThresholdMs();
+            Long inherited = ((VeloProperties.SlowLogProperties) global).getThreshold();
+            Long explicit = ((VeloProperties.SlowLogProperties) local).getThreshold();
             if (inherited != null) {
                 threshold = inherited;
             }

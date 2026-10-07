@@ -29,7 +29,7 @@ public class OnConcurrencyBackendCondition extends SpringBootCondition {
             return ConditionOutcome.noMatch("@ConditionalOnConcurrencyBackend 'prefix' must not be empty");
         }
 
-        ConcurrencyBackend backend = attrs.getEnum("value");
+        ConcurrencyBackend backend = attrs.getEnum("backend");
         ConditionMessage.Builder message = ConditionMessage.forCondition(
                 ConditionalOnConcurrencyBackend.class, prefix + ".backend", backend.name()
         );

@@ -21,7 +21,7 @@ import org.springframework.context.annotation.Bean;
         VeloIdempotentRedisConfiguration.class
 })
 @ConditionalOnClass(name = "com.github.benmanes.caffeine.cache.Cache")
-@ConditionalOnConcurrencyBackend(prefix = "velo.idempotent", value = ConcurrencyBackend.CAFFEINE,
+@ConditionalOnConcurrencyBackend(prefix = "velo.idempotent", backend = ConcurrencyBackend.CAFFEINE,
         autoClassNames = {"org.aspectj.weaver.Advice", "com.github.benmanes.caffeine.cache.Cache"})
 @ConditionalOnMissingBean(IdempotentHandler.class)
 @ConditionalOnProperty(prefix = "velo.idempotent", name = "enabled", havingValue = "true", matchIfMissing = true)

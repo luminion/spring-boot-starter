@@ -20,14 +20,14 @@ import org.springframework.data.redis.core.StringRedisTemplate;
  */
 @AutoConfiguration(after = VeloRateLimitRedissonAutoConfiguration.class)
 @ConditionalOnClass(name = "org.springframework.data.redis.core.StringRedisTemplate")
-@ConditionalOnConcurrencyBackend(prefix = "velo.rate-limit", value = ConcurrencyBackend.REDIS,
+@ConditionalOnConcurrencyBackend(prefix = "velo.rate-limit", backend = ConcurrencyBackend.REDIS,
         autoClassNames = {"org.aspectj.weaver.Advice", "org.springframework.data.redis.core.StringRedisTemplate"})
 @ConditionalOnMissingBean(RateLimitHandler.class)
 @ConditionalOnProperty(prefix = "velo.rate-limit", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloRateLimitRedisConfiguration {
 
     @Bean
-    @ConditionalOnConcurrencyBackend(prefix = "velo.rate-limit", value = ConcurrencyBackend.REDIS,
+    @ConditionalOnConcurrencyBackend(prefix = "velo.rate-limit", backend = ConcurrencyBackend.REDIS,
             autoBeanTypeNames = "org.springframework.data.redis.core.StringRedisTemplate")
     @ConditionalOnVeloRedisTemplate(type = "org.springframework.data.redis.core.StringRedisTemplate",
             fallbackBeanName = "stringRedisTemplate")

@@ -379,7 +379,7 @@ public class VeloProperties {
         /**
          * 慢调用阈值，单位毫秒；0 表示记录全部耗时。
          */
-        private Long thresholdMs;
+        private Long threshold;
     }
 
     @Data
@@ -411,7 +411,7 @@ public class VeloProperties {
             SlowLogProperties value = new SlowLogProperties();
             value.setEnabled(true);
             value.setLevel(LogLevel.WARN);
-            value.setThresholdMs(1000L);
+            value.setThreshold(1000L);
             return value;
         }
     }

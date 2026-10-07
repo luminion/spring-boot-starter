@@ -15,7 +15,7 @@ class ScheduledLogAspectTests {
     @Test
     void shouldLogSingleAndRepeatedSchedulesThroughActualProxy() {
         VeloProperties properties = new VeloProperties();
-        properties.getLog().getSources().getScheduled().getSlowLog().setThresholdMs(0L);
+        properties.getLog().getSources().getScheduled().getSlowLog().setThreshold(0L);
         List<InvocationLogRecord> records = new ArrayList<>();
         InvocationLogEngine engine = new InvocationLogEngine(properties, String::valueOf, records::add);
         AspectJProxyFactory factory = new AspectJProxyFactory(new Tasks());

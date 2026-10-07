@@ -12,8 +12,6 @@ import io.github.luminion.velo.log.annotation.SlowLog;
 import io.github.luminion.velo.log.annotation.RequestHeadersLog;
 import io.github.luminion.velo.log.annotation.ResponseHeadersLog;
 import io.github.luminion.velo.log.annotation.LogIgnore;
-import org.springframework.core.annotation.AnnotationConfigurationException;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.lang.reflect.Method;
 
@@ -62,44 +60,38 @@ class InvocationLogPolicyResolverTests {
     }
 
     @Test
-    void shorthandAndExplicitAttributesResolveToTheSamePolicies() throws Exception {
-        InvocationLogPolicyResolver.Selection shorthand = resolver.resolve(
-                invocation(AliasedService.class.getMethod("shortform"), AliasedService.class));
+    void explicitAttributesResolveToExpectedPolicies() throws Exception {
         InvocationLogPolicyResolver.Selection explicit = resolver.resolve(
-                invocation(AliasedService.class.getMethod("explicit"), AliasedService.class));
-        assertThat(shorthand.policies.get(InvocationLogFeature.SLOW_LOG).threshold).isEqualTo(17L);
-        assertThat(shorthand.policies.get(InvocationLogFeature.ENTRY_ARGS).level).isEqualTo(LogLevel.DEBUG);
-        assertThat(shorthand.policies.get(InvocationLogFeature.REQUEST_HEADERS).allowlist)
+                invocation(NamedService.class.getMethod("explicit"), NamedService.class));
+        assertThat(explicit.policies.get(InvocationLogFeature.SLOW_LOG).threshold).isEqualTo(17L);
+        assertThat(explicit.policies.get(InvocationLogFeature.ENTRY_ARGS).level).isEqualTo(LogLevel.DEBUG);
+        assertThat(explicit.policies.get(InvocationLogFeature.EXIT_ARGS).level).isEqualTo(LogLevel.TRACE);
+        assertThat(explicit.policies.get(InvocationLogFeature.EXIT_RESULT).level).isEqualTo(LogLevel.WARN);
+        assertThat(explicit.policies.get(InvocationLogFeature.ERROR_LOG).level).isEqualTo(LogLevel.ERROR);
+        assertThat(explicit.policies.get(InvocationLogFeature.REQUEST_HEADERS).allowlist)
                 .containsExactly("X-Trace-Id");
-        assertThat(shorthand.policies.get(InvocationLogFeature.RESPONSE_HEADERS).allowlist)
+        assertThat(explicit.policies.get(InvocationLogFeature.RESPONSE_HEADERS).allowlist)
                 .containsExactly("X-Request-Id");
-        for (InvocationLogFeature feature : shorthand.policies.keySet()) {
-            InvocationLogPolicyResolver.FeaturePolicy actual = shorthand.policies.get(feature);
-            InvocationLogPolicyResolver.FeaturePolicy expected = explicit.policies.get(feature);
-            assertThat(actual.level).isEqualTo(expected.level);
-            assertThat(actual.threshold).isEqualTo(expected.threshold);
-            assertThat(actual.allowlist).isEqualTo(expected.allowlist);
-        }
     }
 
     @Test
-    void conflictingAliasesFailDuringPolicyResolution() throws Exception {
-        LogInvocation invocation = invocation(AliasedService.class.getMethod("conflict"), AliasedService.class);
-        assertThatThrownBy(() -> resolver.resolve(invocation))
-                .isInstanceOf(AnnotationConfigurationException.class);
+    void annotationDefaultsOverrideConflictingGlobalAndSourceSettings() throws Exception {
+        properties.getLog().getDefaults().getSlowLog().setThreshold(0L);
+        properties.getLog().getSources().getInvoke().getEntryArgs().setEnabled(false);
+        properties.getLog().getSources().getInvoke().getEntryArgs().setLevel(LogLevel.ERROR);
+        properties.getLog().getSources().getInvoke().getRequestHeaders().setAllowlist(
+                java.util.Collections.singletonList("X-Global"));
+        InvocationLogPolicyResolver.Selection selection = resolver.resolve(
+                invocation(NamedService.class.getMethod("defaults"), NamedService.class));
+        assertThat(selection.policies.get(InvocationLogFeature.SLOW_LOG).threshold).isEqualTo(1000L);
+        assertThat(selection.policies.get(InvocationLogFeature.SLOW_LOG).level).isEqualTo(LogLevel.WARN);
+        assertThat(selection.policies.get(InvocationLogFeature.ENTRY_ARGS).enabled).isTrue();
+        assertThat(selection.policies.get(InvocationLogFeature.ENTRY_ARGS).level).isEqualTo(LogLevel.INFO);
+        assertThat(selection.policies.get(InvocationLogFeature.REQUEST_HEADERS).allowlist).isEmpty();
     }
 
-    public static class AliasedService {
-        @SlowLog(17)
-        @EntryArgs(LogLevel.DEBUG)
-        @ExitArgs(LogLevel.TRACE)
-        @ExitResult(LogLevel.WARN)
-        @ErrorLog(LogLevel.ERROR)
-        @RequestHeadersLog("X-Trace-Id")
-        @ResponseHeadersLog("X-Request-Id")
-        public String shortform() { return "ok"; }
-
-        @SlowLog(thresholdMs = 17)
+    public static class NamedService {
+        @SlowLog(threshold = 17)
         @EntryArgs(level = LogLevel.DEBUG)
         @ExitArgs(level = LogLevel.TRACE)
         @ExitResult(level = LogLevel.WARN)
@@ -108,8 +100,14 @@ class InvocationLogPolicyResolverTests {
         @ResponseHeadersLog(allowlist = "X-Request-Id")
         public String explicit() { return "ok"; }
 
-        @SlowLog(value = 17, thresholdMs = 20)
-        public String conflict() { return "ok"; }
+        @SlowLog
+        @EntryArgs
+        @ExitArgs
+        @ExitResult
+        @ErrorLog
+        @RequestHeadersLog
+        @ResponseHeadersLog
+        public String defaults() { return "ok"; }
     }
 
     private LogInvocation invocation(Method method, Class<?> targetClass) {

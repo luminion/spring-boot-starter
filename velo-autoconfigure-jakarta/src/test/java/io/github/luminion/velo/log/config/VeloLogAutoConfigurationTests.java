@@ -136,7 +136,7 @@ class VeloLogAutoConfigurationTests {
                 .withPropertyValues(
                         "velo.log.sources.controller.entry-args.level=WARN",
                         "velo.log.sources.invoke.exit-result.enabled=false",
-                        "velo.log.defaults.slow-log.threshold-ms=0")
+                        "velo.log.defaults.slow-log.threshold=0")
                 .run(
                         context -> {
                             assertThat(context).hasSingleBean(InvocationLogEngine.class);
@@ -145,14 +145,14 @@ class VeloLogAutoConfigurationTests {
                                     .isEqualTo(LogLevel.WARN);
                             assertThat(properties.getLog().getSources().getInvoke().getExitResult().getEnabled())
                                     .isFalse();
-                            assertThat(properties.getLog().getDefaults().getSlowLog().getThresholdMs()).isZero();
+                            assertThat(properties.getLog().getDefaults().getSlowLog().getThreshold()).isZero();
                         });
     }
 
     @Test
     void rejectsNegativeSlowThresholdAtStartup() {
         contextRunner
-                .withPropertyValues("velo.log.sources.feign.slow-log.threshold-ms=-1")
+                .withPropertyValues("velo.log.sources.feign.slow-log.threshold=-1")
                 .run(context -> assertThat(context).hasFailed());
     }
 

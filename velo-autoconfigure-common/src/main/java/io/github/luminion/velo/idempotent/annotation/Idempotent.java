@@ -1,13 +1,11 @@
 package io.github.luminion.velo.idempotent.annotation;
 
-import org.springframework.core.annotation.AliasFor;
-
 import java.lang.annotation.*;
 
 /**
  * 接口幂等性注解
  * <p>
- * 用于防止重复提交或处理幂等请求
+ * 用于在 TTL 窗口内防止重复提交，不保证业务永久幂等，也不管理异步任务的完成与失败。
  *
  * @author luminion
  */
@@ -17,18 +15,18 @@ import java.lang.annotation.*;
 public @interface Idempotent {
 
     /**
-     * key 的简写属性。
+     * 用于生成防重复键后缀的 SpEL 表达式，例如 {@code "#userId"}。
+     * 为空时不拼接任何参数；常量字符串需使用 SpEL 字面量，例如 {@code "'all'"}。
      */
-    @AliasFor("key")
     String value() default "";
 
     /**
-     * 用于生成幂等 Key 的 SpEL 表达式。
-     * <p>
-     * 为空时使用类名和方法名生成固定 Key。
+     * 固定资源前缀，不解析 SpEL。为空时使用实际用户类全名、方法名和参数类型生成方法指纹。
+     * 显式指定后替代方法指纹，不同方法或类可通过相同 prefix 和 value 结果共享防重复窗口。
+     * 最终键为配置的功能前缀 + ':' + 资源前缀或方法指纹 + 可选的 ':SpEL结果'。
+     * value 为空时所有调用者共享该范围的窗口；共享范围应统一 TTL 与业务含义。
      */
-    @AliasFor("value")
-    String key() default "";
+    String prefix() default "";
 
     /**
      * 幂等窗口 TTL，单位为毫秒。

@@ -22,7 +22,7 @@ class RateLimitAspectTests {
         AtomicReference<Method> resolvedMethod = new AtomicReference<>();
         AtomicReference<String> resolvedKey = new AtomicReference<>();
 
-        Fingerprinter fingerprinter = (target, method, args, expression) -> {
+        Fingerprinter fingerprinter = (target, method, args, prefix, expression) -> {
             resolvedMethod.set(method);
             if (!StringUtils.hasText(expression)) {
                 return method.getDeclaringClass().getName() + "#" + method.getName();
@@ -75,7 +75,7 @@ class RateLimitAspectTests {
         void execute(String userId);
     }
 
-    @RateLimit(key = "#p0", qps = 5)
+    @RateLimit(value = "#p0", qps = 5)
     static class ClassLevelRateLimitedService implements SampleService {
         @Override
         public void execute(String userId) {
@@ -84,11 +84,11 @@ class RateLimitAspectTests {
 
     static class MultiMethodRateLimitedService {
 
-        @RateLimit(key = "#p0")
+        @RateLimit(value = "#p0")
         public void query(String userId) {
         }
 
-        @RateLimit(key = "#p0")
+        @RateLimit(value = "#p0")
         public void detail(String userId) {
         }
     }

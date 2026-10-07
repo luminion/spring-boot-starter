@@ -6,7 +6,6 @@ import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import org.springframework.core.annotation.AliasFor;
 
 import org.springframework.boot.logging.LogLevel;
 
@@ -18,12 +17,9 @@ import org.springframework.boot.logging.LogLevel;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface EntryArgs {
-    /** 常用属性 level 的简写。 */
-    @AliasFor("level")
-    LogLevel value() default LogLevel.INFO;
-
+    /** 是否记录调用开始时的参数。 */
     boolean enabled() default true;
 
-    @AliasFor("value")
+    /** 日志级别。 */
     LogLevel level() default LogLevel.INFO;
 }

@@ -1,11 +1,11 @@
 package io.github.luminion.velo.lock.annotation;
 
-import org.springframework.core.annotation.AliasFor;
-
 import java.lang.annotation.*;
 
 /**
- * 分布式锁注解
+ * 分布式锁注解。
+ * 只锁住经过 AOP 代理的当前调用，正常返回或同步抛出异常即释放；不延长至异步任务完成
+ * 或外层事务提交。需要覆盖完整业务过程时，由业务安排代理调用点及事务边界。
  *
  * @author luminion
  * @since 1.0.0
@@ -16,21 +16,18 @@ import java.lang.annotation.*;
 public @interface Lock {
 
     /**
-     * key 的简写属性。
+     * 用于生成锁键后缀的 SpEL 表达式，例如 {@code "#orderId"}。
+     * 为空时不拼接任何参数；常量字符串需使用 SpEL 字面量，例如 {@code "'all'"}。
      */
-    @AliasFor("key")
     String value() default "";
 
     /**
-     * 锁的 Key（支持 SpEL 表达式）。
-     * <p>
-     * 为空时降级为方法级锁（基于 类名#方法名(参数类型...)），表示"该方法全局串行执行"，
-     * 适用于无需按参数区分的全局互斥场景。
-     * <p>
-     * 需要按业务维度加锁时请显式指定，例如 {@code key = "#orderId"}。
+     * 固定资源前缀，不解析 SpEL。为空时使用实际用户类全名、方法名和参数类型生成方法指纹。
+     * 显式指定后替代方法指纹，不同方法或类可通过相同 prefix 和 value 结果共享锁。
+     * 最终键为配置的功能前缀 + ':' + 资源前缀或方法指纹 + 可选的 ':SpEL结果'。
+     * prefix 和 value 都为空时，该方法所有调用共享一把锁。
      */
-    @AliasFor("value")
-    String key() default "";
+    String prefix() default "";
 
     /**
      * 失败提示信息

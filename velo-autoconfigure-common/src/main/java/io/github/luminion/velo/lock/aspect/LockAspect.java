@@ -17,7 +17,10 @@ import org.springframework.core.annotation.AnnotationUtils;
 import java.lang.reflect.Method;
 
 /**
- * 分布式锁切面
+ * 分布式锁切面。
+ * <p>
+ * 有意只保护当前 AOP 调用点：同步返回或抛异常即释放，不等待返回对象或方法内部的异步任务，
+ * 也不等待已存在的外层事务提交。需要覆盖完整业务过程时，应由业务安排调用点与事务边界。
  *
  * @author luminion
  * @since 1.0.0
@@ -61,16 +64,10 @@ public class LockAspect implements Ordered {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         Method method = ConcurrencyAnnotationUtils.resolveSpecificMethod(joinPoint.getTarget(), signature.getMethod());
         lock = AnnotationUtils.synthesizeAnnotation(lock, method);
-        // 1. 生成锁 Key
-        // 空 key 会降级为方法级锁（类名#方法名(参数类型...)），表示"该方法全局串行"，这是一个有意义的语义，
-        // 因此与 @Idempotent 不同，这里安静降级、不打告警。
-        String key = ConcurrencyAnnotationUtils.buildPrefixedKey(
-                prefix,
-                fingerprinter.resolveMethodFingerprint(
-                        joinPoint.getTarget(),
-                        method,
-                        joinPoint.getArgs(),
-                        lock.key()));
+        // 资源 prefix 显式替代方法指纹；value 为空不拼接参数，两个都为空即为默认方法锁。
+        String keyFingerprint = fingerprinter.resolveMethodFingerprint(
+                joinPoint.getTarget(), method, joinPoint.getArgs(), lock.prefix(), lock.value());
+        String key = ConcurrencyAnnotationUtils.buildPrefixedKey(prefix, keyFingerprint);
 
         // 2. 尝试获取锁
         boolean lockSuccess = lockHandler.tryLock(key);
@@ -82,7 +79,7 @@ public class LockAspect implements Ordered {
             // 3. 执行业务方法
             return joinPoint.proceed();
         } finally {
-            // 4. 释放锁
+            // 在获取锁的原线程释放；Future / CompletionStage 的后续完成不属于本切面的持锁范围。
             lockHandler.unlock(key);
         }
     }

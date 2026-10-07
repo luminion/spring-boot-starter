@@ -6,7 +6,6 @@ import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import org.springframework.core.annotation.AliasFor;
 
 import org.springframework.boot.logging.LogLevel;
 
@@ -18,14 +17,12 @@ import org.springframework.boot.logging.LogLevel;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface ResponseHeadersLog {
-    /** 常用属性 allowlist 的简写。 */
-    @AliasFor("allowlist")
-    String[] value() default {};
-
+    /** 是否记录 HTTP 响应头。 */
     boolean enabled() default true;
 
+    /** 日志级别。 */
     LogLevel level() default LogLevel.INFO;
 
-    @AliasFor("value")
+    /** 允许记录的头名称，忽略大小写匹配；空数组表示全部头。 */
     String[] allowlist() default {};
 }

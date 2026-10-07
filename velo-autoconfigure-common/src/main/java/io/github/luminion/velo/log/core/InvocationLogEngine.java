@@ -154,10 +154,9 @@ public class InvocationLogEngine {
             }
             InvocationLogRecord record = record(InvocationLogFeature.SLOW_LOG);
             if (record != null) {
-                Map<String, Object> content = new LinkedHashMap<>();
-                content.put("costMs", TimeUnit.NANOSECONDS.toMillis(elapsed));
-                content.put("thresholdMs", policy.threshold);
-                record.setContent(InvocationLogSupport.format(content, formatter));
+                // 耗时摘要使用固定格式，毫秒单位跟在数值后，不作为字段名或对象载荷序列化。
+                long cost = TimeUnit.NANOSECONDS.toMillis(elapsed);
+                record.setContent("{cost=" + cost + "ms, threshold=" + policy.threshold + "ms}");
                 write(record);
             }
         }

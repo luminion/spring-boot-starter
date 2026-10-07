@@ -100,7 +100,8 @@ class VeloConfigurationMetadataTest {
       assertTrue(metadata.contains("velo.log.defaults.entry-args.enabled"));
       assertTrue(metadata.contains("velo.log.defaults.exit-args.enabled"));
       assertTrue(metadata.contains("velo.log.defaults.exit-result.enabled"));
-      assertTrue(metadata.contains("velo.log.defaults.slow-log.threshold-ms"));
+      assertTrue(metadata.contains("velo.log.defaults.slow-log.threshold"));
+      assertFalse(metadata.contains("velo.log.defaults.slow-log.threshold-ms"));
       assertFalse(metadata.contains("velo.log.invocation.sensitive-pattern"));
       assertFalse(metadata.contains("velo.log.invocation.sensitive-fields"));
       assertTrue(metadata.contains("velo.log.sources.controller.enabled"));

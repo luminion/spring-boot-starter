@@ -141,6 +141,41 @@ class SpelFingerprinterTests {
         return fingerprinter.resolveMethodFingerprint(new SampleService(), method, new Object[]{value}, expression);
     }
 
+    @Test
+    void explicitResourcePrefixShouldReplaceClassAndOverloadDimensions() throws NoSuchMethodException {
+        Method stringMethod = OverloadedService.class.getDeclaredMethod("execute", String.class);
+        Method longMethod = OverloadedService.class.getDeclaredMethod("execute", Long.class);
+        assertThat(fingerprinter.resolveMethodFingerprint(new OverloadedService(), stringMethod,
+                new Object[]{"1"}, "order", "#p0")).isEqualTo("order:1");
+        assertThat(fingerprinter.resolveMethodFingerprint(new OverloadedService(), longMethod,
+                new Object[]{1L}, "order", "#p0")).isEqualTo("order:1");
+        assertThat(fingerprinter.resolveMethodFingerprint(new FirstService(), method,
+                new Object[]{"1"}, "order", "#p0")).isEqualTo("order:1");
+        assertThat(fingerprinter.resolveMethodFingerprint(new SecondService(), method,
+                new Object[]{"1"}, "order", "#p0")).isEqualTo("order:1");
+    }
+
+    @Test
+    void resourcePrefixShouldBeLiteralAndEmptyExpressionShouldOmitArguments() {
+        assertThat(fingerprinter.resolveMethodFingerprint(new SampleService(), method,
+                new Object[]{"id"}, "#p0", "")).isEqualTo("#p0");
+        assertThat(fingerprinter.resolveMethodFingerprint(new SampleService(), method,
+                new Object[]{"other"}, "order", "")).isEqualTo("order");
+        assertThat(fingerprinter.resolveMethodFingerprint(new SampleService(), method,
+                new Object[]{"id"}, "order", "'all'")).isEqualTo("order:all");
+    }
+
+    @Test
+    void resourcePrefixShouldNormalizeSeparatorsAndRejectColonOnlyPrefix() {
+        assertThat(fingerprinter.resolveMethodFingerprint(new SampleService(), method,
+                new Object[]{"id"}, " order:: ", "#p0")).isEqualTo("order:id");
+        assertThat(fingerprinter.resolveMethodFingerprint(new SampleService(), method,
+                new Object[]{"id"}, "  ", "#p0")).isEqualTo(methodKey + ":id");
+        assertThatThrownBy(() -> fingerprinter.resolveMethodFingerprint(new SampleService(), method,
+                new Object[]{"id"}, "::", "#p0"))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("prefix");
+    }
+
     private static final class CountingParser implements ExpressionParser {
         private final AtomicInteger parses = new AtomicInteger();
         private final ExpressionParser delegate = new SpelExpressionParser();

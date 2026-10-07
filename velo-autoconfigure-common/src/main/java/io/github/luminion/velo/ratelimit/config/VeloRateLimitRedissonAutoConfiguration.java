@@ -21,14 +21,14 @@ import org.springframework.context.annotation.Bean;
         "org.redisson.spring.starter.RedissonAutoConfigurationV2",
         "org.redisson.spring.starter.RedissonAutoConfigurationV4"})
 @ConditionalOnClass(name = "org.redisson.api.RedissonClient")
-@ConditionalOnConcurrencyBackend(prefix = "velo.rate-limit", value = ConcurrencyBackend.REDISSON,
+@ConditionalOnConcurrencyBackend(prefix = "velo.rate-limit", backend = ConcurrencyBackend.REDISSON,
         autoClassNames = {"org.aspectj.weaver.Advice", "org.redisson.api.RedissonClient"})
 @ConditionalOnMissingBean(RateLimitHandler.class)
 @ConditionalOnProperty(prefix = "velo.rate-limit", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloRateLimitRedissonAutoConfiguration {
 
     @Bean
-    @ConditionalOnConcurrencyBackend(prefix = "velo.rate-limit", value = ConcurrencyBackend.REDISSON,
+    @ConditionalOnConcurrencyBackend(prefix = "velo.rate-limit", backend = ConcurrencyBackend.REDISSON,
             autoBeanTypeNames = "org.redisson.api.RedissonClient")
     @ConditionalOnMissingBean(RateLimitHandler.class)
     public RateLimitHandler rateLimitHandler(RedissonClient redissonClient) {
