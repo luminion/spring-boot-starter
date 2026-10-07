@@ -35,10 +35,13 @@ class VeloPropertiesDefaultsTest {
                 .containsEntry("key", "value");
         assertThat(properties.getIdempotent().getBackend()).isEqualTo(ConcurrencyBackend.AUTO);
         assertThat(properties.getIdempotent().getPrefix()).isEqualTo("idempotent:");
+        assertThat(properties.getIdempotent().getMessage()).isEqualTo("您的请求已提交，请勿重复操作");
         assertThat(properties.getRateLimit().getBackend()).isEqualTo(ConcurrencyBackend.AUTO);
         assertThat(properties.getRateLimit().getPrefix()).isEqualTo("rateLimit:");
+        assertThat(properties.getRateLimit().getMessage()).isEqualTo("当前访问人数较多，请稍后再试");
         assertThat(properties.getLock().getBackend()).isEqualTo(ConcurrencyBackend.AUTO);
         assertThat(properties.getLock().getPrefix()).isEqualTo("lock:");
+        assertThat(properties.getLock().getMessage()).isEqualTo("系统繁忙，请稍后再试");
         assertThat(properties.getLock().getRedisTtlSeconds()).isEqualTo(60);
         assertThat(properties.getCache().isEnabled()).isTrue();
         assertThat(properties.getCache().getSeparator()).isEqualTo(":");

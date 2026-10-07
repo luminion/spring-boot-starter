@@ -122,6 +122,12 @@ public class VeloProperties {
          * 幂等相关键的前缀。
          */
         private String prefix = "idempotent:";
+
+        /**
+         * 防重复提交被拒绝时的默认提示，支持普通文本或 {@code {i18n.key}}。
+         * 注解 message 为空或仅含空白时使用此配置；显式配置的空串或纯空白原样保留。
+         */
+        private String message = "您的请求已提交，请勿重复操作";
     }
 
     @Data
@@ -141,6 +147,12 @@ public class VeloProperties {
          * 限流相关键的前缀。
          */
         private String prefix = "rateLimit:";
+
+        /**
+         * 限流被拒绝时的默认提示，支持普通文本或 {@code {i18n.key}}。
+         * 注解 message 为空或仅含空白时使用此配置；显式配置的空串或纯空白原样保留。
+         */
+        private String message = "当前访问人数较多，请稍后再试";
     }
 
     @Data
@@ -160,6 +172,12 @@ public class VeloProperties {
          * 锁相关键的前缀。
          */
         private String prefix = "lock:";
+
+        /**
+         * 获取锁失败时的默认提示，支持普通文本或 {@code {i18n.key}}。
+         * 注解 message 为空或仅含空白时使用此配置；显式配置的空串或纯空白原样保留。
+         */
+        private String message = "系统繁忙，请稍后再试";
 
         /**
          * 简单 Redis 锁的固定 TTL，单位为秒；到期自动释放，不续期。

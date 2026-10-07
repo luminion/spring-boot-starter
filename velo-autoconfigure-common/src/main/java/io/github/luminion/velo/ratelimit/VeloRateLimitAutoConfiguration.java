@@ -46,6 +46,7 @@ public class VeloRateLimitAutoConfiguration {
     public RateLimitAspect rateLimitAspect(VeloProperties properties, Fingerprinter fingerprinter,
                                            RateLimitHandler rateLimitHandler, ObjectProvider<VeloMessageResolver> messageResolver) {
         return new RateLimitAspect(properties.getRateLimit().getPrefix(), fingerprinter,
-                rateLimitHandler, messageResolver.getIfAvailable(), properties.getAspectOrder().getRateLimit());
+                rateLimitHandler, messageResolver.getIfAvailable(), properties.getAspectOrder().getRateLimit(),
+                properties.getRateLimit().getMessage());
     }
 }

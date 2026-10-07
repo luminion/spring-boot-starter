@@ -34,8 +34,9 @@ public @interface Idempotent {
     long ttl() default 3000;
 
     /**
-     * 提示信息
+     * 防重复提交被拒绝时的提示信息，支持普通文本或 {@code {i18n.key}}。
+     * 为空或仅含空白时，使用全局配置 {@code velo.idempotent.message}。
      */
-    String message() default "您的请求已提交，请勿重复操作";
+    String message() default "";
 
 }

@@ -56,6 +56,7 @@ public class VeloLockAutoConfiguration {
     public LockAspect lockAspect(VeloProperties properties, Fingerprinter fingerprinter, LockHandler lockHandler,
             ObjectProvider<VeloMessageResolver> messageResolver) {
         return new LockAspect(properties.getLock().getPrefix(), fingerprinter, lockHandler,
-                messageResolver.getIfAvailable(), properties.getAspectOrder().getLock());
+                messageResolver.getIfAvailable(), properties.getAspectOrder().getLock(),
+                properties.getLock().getMessage());
     }
 }

@@ -1,5 +1,6 @@
 package io.github.luminion.velo.lock.aspect;
 
+import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.core.VeloAdvisorOrder;
 import io.github.luminion.velo.core.VeloMessageResolver;
 import io.github.luminion.velo.spi.Fingerprinter;
@@ -13,6 +14,7 @@ import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.AnnotationUtils;
+import org.springframework.util.StringUtils;
 
 import java.lang.reflect.Method;
 
@@ -32,6 +34,7 @@ public class LockAspect implements Ordered {
     private final Fingerprinter fingerprinter;
     private final LockHandler lockHandler;
     private final VeloMessageResolver messageResolver;
+    private final String defaultMessage;
 
     private final int order;
 
@@ -47,10 +50,20 @@ public class LockAspect implements Ordered {
 
     public LockAspect(String prefix, Fingerprinter fingerprinter, LockHandler lockHandler,
                       VeloMessageResolver messageResolver, int order) {
+        this(prefix, fingerprinter, lockHandler, messageResolver, order,
+                new VeloProperties.LockProperties().getMessage());
+    }
+
+    /**
+     * 指定默认提示信息；仅在获取锁被拒绝时选择文案并按当前语言解析。
+     */
+    public LockAspect(String prefix, Fingerprinter fingerprinter, LockHandler lockHandler,
+                      VeloMessageResolver messageResolver, int order, String defaultMessage) {
         this.prefix = prefix;
         this.fingerprinter = fingerprinter;
         this.lockHandler = lockHandler;
         this.messageResolver = messageResolver;
+        this.defaultMessage = defaultMessage;
         this.order = order;
     }
 
@@ -85,6 +98,8 @@ public class LockAspect implements Ordered {
     }
 
     private String resolveMessage(String message) {
-        return messageResolver != null ? messageResolver.resolve(message) : message;
+        // 非空白注解文案覆盖全局配置；两种来源都沿用统一的国际化解析。
+        String selectedMessage = StringUtils.hasText(message) ? message : defaultMessage;
+        return messageResolver != null ? messageResolver.resolve(selectedMessage) : selectedMessage;
     }
 }

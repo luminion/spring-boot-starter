@@ -49,6 +49,7 @@ public class VeloIdempotentAutoConfiguration {
     public IdempotentAspect idempotentAspect(VeloProperties properties, Fingerprinter fingerprinter,
                                              IdempotentHandler idempotentHandler, ObjectProvider<VeloMessageResolver> messageResolver) {
         return new IdempotentAspect(properties.getIdempotent().getPrefix(), fingerprinter,
-                idempotentHandler, messageResolver.getIfAvailable(), properties.getAspectOrder().getIdempotent());
+                idempotentHandler, messageResolver.getIfAvailable(), properties.getAspectOrder().getIdempotent(),
+                properties.getIdempotent().getMessage());
     }
 }

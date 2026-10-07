@@ -30,8 +30,9 @@ public @interface Lock {
     String prefix() default "";
 
     /**
-     * 失败提示信息
+     * 获取锁失败时的提示信息，支持普通文本或 {@code {i18n.key}}。
+     * 为空或仅含空白时，使用全局配置 {@code velo.lock.message}。
      */
-    String message() default "系统繁忙，请稍后再试";
+    String message() default "";
 
 }

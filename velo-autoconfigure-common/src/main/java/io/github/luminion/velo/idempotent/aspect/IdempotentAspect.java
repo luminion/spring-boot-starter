@@ -1,5 +1,6 @@
 package io.github.luminion.velo.idempotent.aspect;
 
+import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.core.VeloAdvisorOrder;
 import io.github.luminion.velo.core.VeloMessageResolver;
 import io.github.luminion.velo.spi.Fingerprinter;
@@ -36,6 +37,7 @@ public class IdempotentAspect implements Ordered {
     private final Fingerprinter fingerprinter;
     private final IdempotentHandler idempotentHandler;
     private final VeloMessageResolver messageResolver;
+    private final String defaultMessage;
 
     private final int order;
 
@@ -51,10 +53,20 @@ public class IdempotentAspect implements Ordered {
 
     public IdempotentAspect(String prefix, Fingerprinter fingerprinter, IdempotentHandler idempotentHandler,
                             VeloMessageResolver messageResolver, int order) {
+        this(prefix, fingerprinter, idempotentHandler, messageResolver, order,
+                new VeloProperties.IdempotentProperties().getMessage());
+    }
+
+    /**
+     * 指定默认提示信息；仅在重复提交被拒绝时选择文案并按当前语言解析。
+     */
+    public IdempotentAspect(String prefix, Fingerprinter fingerprinter, IdempotentHandler idempotentHandler,
+                            VeloMessageResolver messageResolver, int order, String defaultMessage) {
         this.prefix = prefix;
         this.fingerprinter = fingerprinter;
         this.idempotentHandler = idempotentHandler;
         this.messageResolver = messageResolver;
+        this.defaultMessage = defaultMessage;
         this.order = order;
     }
 
@@ -112,6 +124,8 @@ public class IdempotentAspect implements Ordered {
     }
 
     private String resolveMessage(String message) {
-        return messageResolver != null ? messageResolver.resolve(message) : message;
+        // 非空白注解文案覆盖全局配置；两种来源都沿用统一的国际化解析。
+        String selectedMessage = StringUtils.hasText(message) ? message : defaultMessage;
+        return messageResolver != null ? messageResolver.resolve(selectedMessage) : selectedMessage;
     }
 }

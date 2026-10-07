@@ -157,12 +157,15 @@ class VeloConfigurationMetadataTest {
       assertFalse(metadata.contains("velo.redis.redis-template-enabled"));
       assertTrue(metadata.contains("velo.idempotent.backend"));
       assertTrue(metadata.contains("velo.idempotent.prefix"));
+      assertTrue(metadata.contains("velo.idempotent.message"));
       assertFalse(metadata.contains("velo.idempotent.key-prefix"));
       assertTrue(metadata.contains("velo.rate-limit.backend"));
       assertTrue(metadata.contains("velo.rate-limit.prefix"));
+      assertTrue(metadata.contains("velo.rate-limit.message"));
       assertFalse(metadata.contains("velo.rate-limit.key-prefix"));
       assertTrue(metadata.contains("velo.lock.backend"));
       assertTrue(metadata.contains("velo.lock.prefix"));
+      assertTrue(metadata.contains("velo.lock.message"));
       assertTrue(metadata.contains("velo.lock.redis-ttl-seconds"));
       assertFalse(metadata.contains("velo.lock.key-prefix"));
     }

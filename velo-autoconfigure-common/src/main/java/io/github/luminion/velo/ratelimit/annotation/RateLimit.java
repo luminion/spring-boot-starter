@@ -34,7 +34,8 @@ public @interface RateLimit {
     int qps() default 50;
 
     /**
-     * 提示信息
+     * 限流被拒绝时的提示信息，支持普通文本或 {@code {i18n.key}}。
+     * 为空或仅含空白时，使用全局配置 {@code velo.rate-limit.message}。
      */
-    String message() default "当前访问人数较多，请稍后再试";
+    String message() default "";
 }

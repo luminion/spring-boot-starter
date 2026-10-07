@@ -477,6 +477,7 @@ velo:
     enabled: true
     backend: AUTO
     prefix: "idempotent:"
+    message: "您的请求已提交，请勿重复操作"
 ```
 
 使用示例：
@@ -537,6 +538,7 @@ velo:
     enabled: true
     backend: AUTO
     prefix: "rateLimit:"
+    message: "当前访问人数较多，请稍后再试"
 ```
 
 使用示例：
@@ -595,6 +597,7 @@ velo:
     enabled: true
     backend: AUTO
     prefix: "lock:"
+    message: "系统繁忙，请稍后再试"
     redis-ttl-seconds: 60
 ```
 
@@ -644,11 +647,17 @@ JDK 锁和 Redis 锁的本地记录只保存活跃调用，不随历史业务 ke
 | --- | --- |
 | `prefix` | 固定资源范围，不解析 SpEL；默认空，使用实际用户类全名及完整方法签名 |
 | `value` | SpEL 表达式；默认空，不拼接参数；非空时追加 `:表达式结果` |
-| `message` | 被拒绝时的提示信息 |
+| `message` | 被拒绝时的提示信息；默认空，继承对应功能的全局消息配置；非空白时覆盖配置 |
 | `ttl`（仅 Idempotent） | 防重复窗口，单位毫秒，默认 3000 |
 | `qps`（仅 RateLimit） | 每秒请求速率，默认 50 |
 
 最终键规则为：`功能全局前缀:资源前缀或方法指纹[:SpEL结果]`。默认保留完整类名和重载签名，避免不同方法碰撞；显式资源前缀用于主动共享，需由业务统一命名。各功能仍按默认 `lock:`、`idempotent:`、`rateLimit:` 前缀隔离，跨功能的相同注解 prefix 不会共用记录或额度。资源范围命名应体现用途：锁可用 `order` 覆盖支付和取消，防重复可用 `order-submit` 标识同一次提交，限流可用 `order-api` 统一多个入口的预算。
+
+三个注解的 `message` 默认都是空串；空串或纯空白表示继承 `velo.lock.message`、`velo.idempotent.message`、`velo.rate-limit.message`，非空白文案覆盖相应全局配置。配置未指定时沿用上方 YAML 中的中文默认文案；配置显式写成空串或纯空白时原样保留，不校验、不再回退到框架默认文案。
+
+默认文案仅在配置属性中维护，不在注解或切面中重复定义。普通文本原样保留，注解与全局配置都支持 `{i18n.key}`，只在请求被拒绝时按当前语言解析。
+
+旧代码中显式填写的中文文案仍作为局部覆盖；读取注解默认值的自定义切面需同步处理空串继承规则。手动构造切面时，原构造函数沿用框架默认文案，新增构造函数可传入自定义默认文案。
 
 注解资源前缀裁剪首尾空白和末尾冒号，例如 `" order: "` 规范为 `"order"`；空白前缀等同未指定，只有冒号的非空前缀会报错。`value` 总是 SpEL，固定字符串写成 `value = "'all'"`，固定资源范围直接写 `prefix = "order"`。表达式结果支持字符串、数字、布尔值、字符、UUID 和枚举（使用 `name()`）；空值、空白或数组、集合、对象等复杂结果会报错，请明确取业务 ID。表达式结果字符串原样保留，不裁剪首尾空格。解析器只缓存固定声明的表达式和方法标识，每次调用创建独立求值上下文。
 
@@ -1332,7 +1341,7 @@ logging:
 
 ### Q5：异常信息能否做国际化？
 
-可以。国际化是可选能力，不会改变注解默认的中文提示。注解的 `message` 写成 `{i18n.key}` 形式时，Velo 会通过 Spring 应用上下文的主 `MessageSource` 解析；普通文本则原样输出。
+可以。国际化是可选能力，不会改变未配置时的中文提示。注解的 `message` 默认空，继承对应功能的全局消息配置；注解或配置文案写成 `{i18n.key}` 形式时，Velo 会通过 Spring 应用上下文的主 `MessageSource` 按当前语言解析；普通文本则原样输出。
 
 Starter 内置了 `velo/messages.properties` 和 `velo/messages_en.properties`。如需使用内置资源，需要显式配置消息资源路径：
 
@@ -1342,10 +1351,16 @@ spring:
     basename: velo/messages
 ```
 
-然后在注解中引用消息 key：
+然后在注解或全局配置中引用消息 key：
 
 ```java
 @Idempotent(message = "{velo.idempotent.rejected}")
+```
+
+```yaml
+velo:
+  idempotent:
+    message: "{velo.idempotent.rejected}"
 ```
 
 如果应用自定义了消息源，应将其作为名为 `messageSource` 的主消息源；存在多个不同名称的 `MessageSource` 时，Starter 不会自动选择其中一个。未配置消息资源或找不到 key 时，会回退为 key 文本，不会抛出异常。未使用 `{key}` 形式的项目不受影响。

@@ -6,7 +6,8 @@ import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.context.NoSuchMessageException;
 
 /**
- * 解析注解上的提示信息，支持可选的国际化。
+ * 解析注解或全局配置中的提示信息，支持可选的国际化。
+ * 文案来源由调用方选择，本解析器只处理选定文案，不负责功能默认值的回退。
  * <p>
  * 约定：当 message 形如 <code>{some.key}</code> 时，按 i18n key 从 {@link MessageSource} 解析；
  * 否则原样返回。这样未配置国际化的项目（message 为普通文本）行为完全不变，向后兼容。
@@ -28,7 +29,7 @@ public class VeloMessageResolver implements MessageSourceAware {
     /**
      * 解析提示信息。
      *
-     * @param message 注解上配置的原始信息（普通文本或 {@code {i18n.key}}）
+     * @param message 已选定的原始信息（普通文本或 {@code {i18n.key}}）
      * @return 解析后的最终文本
      */
     public String resolve(String message) {
