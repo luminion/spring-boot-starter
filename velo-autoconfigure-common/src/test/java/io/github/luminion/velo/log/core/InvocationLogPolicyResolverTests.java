@@ -4,6 +4,7 @@ package io.github.luminion.velo.log.core;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.github.luminion.velo.VeloProperties;
+import io.github.luminion.velo.log.annotation.CostLog;
 import io.github.luminion.velo.log.annotation.EntryArgs;
 import io.github.luminion.velo.log.annotation.ExitArgs;
 import io.github.luminion.velo.log.annotation.ExitResult;
@@ -64,6 +65,7 @@ class InvocationLogPolicyResolverTests {
         InvocationLogPolicyResolver.Selection explicit = resolver.resolve(
                 invocation(NamedService.class.getMethod("explicit"), NamedService.class));
         assertThat(explicit.policies.get(InvocationLogFeature.SLOW_LOG).threshold).isEqualTo(17L);
+        assertThat(explicit.policies.get(InvocationLogFeature.COST_LOG).level).isEqualTo(LogLevel.TRACE);
         assertThat(explicit.policies.get(InvocationLogFeature.ENTRY_ARGS).level).isEqualTo(LogLevel.DEBUG);
         assertThat(explicit.policies.get(InvocationLogFeature.EXIT_ARGS).level).isEqualTo(LogLevel.TRACE);
         assertThat(explicit.policies.get(InvocationLogFeature.EXIT_RESULT).level).isEqualTo(LogLevel.WARN);
@@ -77,6 +79,8 @@ class InvocationLogPolicyResolverTests {
     @Test
     void annotationDefaultsOverrideConflictingGlobalAndSourceSettings() throws Exception {
         properties.getLog().getDefaults().getSlowLog().setThreshold(0L);
+        properties.getLog().getDefaults().getCostLog().setEnabled(false);
+        properties.getLog().getSources().getInvoke().getCostLog().setLevel(LogLevel.ERROR);
         properties.getLog().getSources().getInvoke().getEntryArgs().setEnabled(false);
         properties.getLog().getSources().getInvoke().getEntryArgs().setLevel(LogLevel.ERROR);
         properties.getLog().getSources().getInvoke().getRequestHeaders().setAllowlist(
@@ -85,12 +89,15 @@ class InvocationLogPolicyResolverTests {
                 invocation(NamedService.class.getMethod("defaults"), NamedService.class));
         assertThat(selection.policies.get(InvocationLogFeature.SLOW_LOG).threshold).isEqualTo(1000L);
         assertThat(selection.policies.get(InvocationLogFeature.SLOW_LOG).level).isEqualTo(LogLevel.WARN);
+        assertThat(selection.policies.get(InvocationLogFeature.COST_LOG).enabled).isTrue();
+        assertThat(selection.policies.get(InvocationLogFeature.COST_LOG).level).isEqualTo(LogLevel.INFO);
         assertThat(selection.policies.get(InvocationLogFeature.ENTRY_ARGS).enabled).isTrue();
         assertThat(selection.policies.get(InvocationLogFeature.ENTRY_ARGS).level).isEqualTo(LogLevel.INFO);
         assertThat(selection.policies.get(InvocationLogFeature.REQUEST_HEADERS).allowlist).isEmpty();
     }
 
     public static class NamedService {
+        @CostLog(level = LogLevel.TRACE)
         @SlowLog(threshold = 17)
         @EntryArgs(level = LogLevel.DEBUG)
         @ExitArgs(level = LogLevel.TRACE)
@@ -100,6 +107,7 @@ class InvocationLogPolicyResolverTests {
         @ResponseHeadersLog(allowlist = "X-Request-Id")
         public String explicit() { return "ok"; }
 
+        @CostLog
         @SlowLog
         @EntryArgs
         @ExitArgs
@@ -108,6 +116,26 @@ class InvocationLogPolicyResolverTests {
         @RequestHeadersLog
         @ResponseHeadersLog
         public String defaults() { return "ok"; }
+    }
+
+    @Test
+    void costMethodOverridesClassAndClassOverridesSource() throws Exception {
+        properties.getLog().getSources().getInvoke().getCostLog().setEnabled(true);
+        InvocationLogPolicyResolver.Selection inherited = resolver.resolve(
+                invocation(CostService.class.getMethod("inherited"), CostService.class));
+        assertThat(inherited.policies.get(InvocationLogFeature.COST_LOG).enabled).isFalse();
+        InvocationLogPolicyResolver.Selection explicit = resolver.resolve(
+                invocation(CostService.class.getMethod("explicit"), CostService.class));
+        assertThat(explicit.policies.get(InvocationLogFeature.COST_LOG).enabled).isTrue();
+        assertThat(explicit.policies.get(InvocationLogFeature.COST_LOG).level).isEqualTo(LogLevel.DEBUG);
+    }
+
+    @CostLog(enabled = false)
+    public static class CostService {
+        public String inherited() { return "ok"; }
+
+        @CostLog(level = LogLevel.DEBUG)
+        public String explicit() { return "ok"; }
     }
 
     private LogInvocation invocation(Method method, Class<?> targetClass) {

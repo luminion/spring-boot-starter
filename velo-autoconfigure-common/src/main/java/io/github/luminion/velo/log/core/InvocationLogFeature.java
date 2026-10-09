@@ -13,6 +13,7 @@ public enum InvocationLogFeature {
     ENTRY_ARGS("entryArgs", InvocationPhase.ENTRY),
     EXIT_ARGS("exitArgs", InvocationPhase.EXIT),
     EXIT_RESULT("exitResult", InvocationPhase.EXIT),
+    COST_LOG("cost", InvocationPhase.EXIT),
     SLOW_LOG("slow", InvocationPhase.EXIT),
     REQUEST_HEADERS("requestHeaders", InvocationPhase.ENTRY),
     RESPONSE_HEADERS("responseHeaders", InvocationPhase.EXIT),

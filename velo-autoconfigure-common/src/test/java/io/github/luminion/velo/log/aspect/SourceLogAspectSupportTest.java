@@ -53,14 +53,15 @@ class SourceLogAspectSupportTest {
         aspect.around(point());
         aspect.around(point());
         assertThat(records)
-                .hasSize(2)
+                .hasSize(4)
                 .allSatisfy(
                         r -> {
-                            assertThat(r.getFeature()).isEqualTo(InvocationLogFeature.SLOW_LOG);
+                            assertThat(r.getFeature()).isIn(InvocationLogFeature.COST_LOG, InvocationLogFeature.SLOW_LOG);
                             assertThat(r.getSource()).isEqualTo(InvocationLogSource.SCHEDULED);
                         });
-        assertThat(traces).hasSize(2).allMatch(id -> id.matches("[0-9a-f]{32}"));
-        assertThat(traces.get(0)).isNotEqualTo(traces.get(1));
+        assertThat(traces).hasSize(4).allMatch(id -> id.matches("[0-9a-f]{32}"));
+        assertThat(traces.get(0)).isEqualTo(traces.get(1)).isNotEqualTo(traces.get(2));
+        assertThat(traces.get(2)).isEqualTo(traces.get(3));
         assertThat(MDC.get("traceId")).isEqualTo("caller");
         assertThat(MDC.get("user")).isEqualTo("alice");
     }
@@ -85,8 +86,9 @@ class SourceLogAspectSupportTest {
         when(point.proceed()).thenThrow(error);
         MDC.put("traceId", "caller");
         assertThatThrownBy(() -> aspect.around(point)).isSameAs(error);
-        assertThat(records).hasSize(1);
+        assertThat(records).hasSize(2);
         assertThat(records.get(0).getFeature()).isEqualTo(InvocationLogFeature.ERROR_LOG);
+        assertThat(records.get(1).getFeature()).isEqualTo(InvocationLogFeature.COST_LOG);
         assertThat(traces.get(0)).matches("[0-9a-f]{32}").isNotEqualTo("caller");
         assertThat(MDC.get("traceId")).isEqualTo("caller");
     }

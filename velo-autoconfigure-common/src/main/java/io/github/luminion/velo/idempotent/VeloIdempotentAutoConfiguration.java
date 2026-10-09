@@ -8,7 +8,6 @@ import io.github.luminion.velo.idempotent.config.VeloIdempotentRedisConfiguratio
 import io.github.luminion.velo.idempotent.config.VeloIdempotentRedissonAutoConfiguration;
 import io.github.luminion.velo.spi.Fingerprinter;
 import io.github.luminion.velo.idempotent.aspect.IdempotentAspect;
-import org.aspectj.weaver.Advice;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -25,7 +24,7 @@ import org.springframework.context.annotation.Bean;
         VeloIdempotentRedisConfiguration.class,
         VeloIdempotentCaffeineAutoConfiguration.class
 })
-@ConditionalOnClass(Advice.class)
+@ConditionalOnClass(name = "org.aspectj.weaver.Advice")
 @ConditionalOnProperty(prefix = "velo.idempotent", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloIdempotentAutoConfiguration {
 

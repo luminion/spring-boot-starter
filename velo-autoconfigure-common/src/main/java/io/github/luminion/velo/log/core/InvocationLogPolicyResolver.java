@@ -2,6 +2,7 @@ package io.github.luminion.velo.log.core;
 
 
 import io.github.luminion.velo.VeloProperties;
+import io.github.luminion.velo.log.annotation.CostLog;
 import io.github.luminion.velo.log.annotation.EntryArgs;
 import io.github.luminion.velo.log.annotation.ErrorLog;
 import io.github.luminion.velo.log.annotation.ExitArgs;
@@ -184,6 +185,7 @@ final class InvocationLogPolicyResolver {
                 return source == InvocationLogSource.CONTROLLER
                         || source == InvocationLogSource.FEIGN
                         || source == InvocationLogSource.INVOKE;
+            case COST_LOG:
             case SLOW_LOG:
             case ERROR_LOG:
                 return true;
@@ -200,6 +202,8 @@ final class InvocationLogPolicyResolver {
                 return ExitArgs.class;
             case EXIT_RESULT:
                 return ExitResult.class;
+            case COST_LOG:
+                return CostLog.class;
             case SLOW_LOG:
                 return SlowLog.class;
             case REQUEST_HEADERS:
@@ -220,6 +224,8 @@ final class InvocationLogPolicyResolver {
                 return p.getExitArgs();
             case EXIT_RESULT:
                 return p.getExitResult();
+            case COST_LOG:
+                return p.getCostLog();
             case SLOW_LOG:
                 return p.getSlowLog();
             case REQUEST_HEADERS:
@@ -240,6 +246,8 @@ final class InvocationLogPolicyResolver {
                 return p.getExitArgs();
             case EXIT_RESULT:
                 return p.getExitResult();
+            case COST_LOG:
+                return p.getCostLog();
             case SLOW_LOG:
                 return p.getSlowLog();
             case REQUEST_HEADERS:

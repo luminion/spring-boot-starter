@@ -2,6 +2,7 @@ package io.github.luminion.velo.log.aspect;
 
 import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.log.core.InvocationLogEngine;
+import io.github.luminion.velo.log.core.InvocationLogFeature;
 import io.github.luminion.velo.log.core.InvocationLogRecord;
 import io.github.luminion.velo.log.core.InvocationLogSource;
 import org.junit.jupiter.api.Test;
@@ -23,8 +24,11 @@ class ScheduledLogAspectTests {
         Tasks tasks = factory.getProxy();
         tasks.single();
         tasks.repeated();
-        assertThat(records).hasSize(2).allSatisfy(record ->
+        assertThat(records).hasSize(4).allSatisfy(record ->
                 assertThat(record.getSource()).isEqualTo(InvocationLogSource.SCHEDULED));
+        assertThat(records).extracting(InvocationLogRecord::getFeature)
+                .containsExactly(InvocationLogFeature.COST_LOG, InvocationLogFeature.SLOW_LOG,
+                        InvocationLogFeature.COST_LOG, InvocationLogFeature.SLOW_LOG);
     }
 
     static class Tasks {

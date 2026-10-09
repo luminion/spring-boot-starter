@@ -220,7 +220,9 @@ class VeloWebAutoConfigurationTests {
         when(point.getArgs()).thenReturn(new Object[]{1L});
         when(point.proceed()).thenReturn("done");
         assertThat(aspect.logControllerInvocation(point)).isEqualTo("done");
-        assertThat(records).hasSize(2);
+        assertThat(records).hasSize(3);
+        assertThat(records.get(2).getFeature()).isEqualTo(InvocationLogFeature.COST_LOG);
+        assertThat(records.get(2).getContent()).matches("\\d+ms");
         assertThat(records.get(0).getFeature()).isEqualTo(InvocationLogFeature.ENTRY_ARGS);
         assertThat(records.get(1).getFeature()).isEqualTo(InvocationLogFeature.EXIT_RESULT);
         assertThat(records.get(1).getTarget()).isEqualTo(records.get(0).getTarget());

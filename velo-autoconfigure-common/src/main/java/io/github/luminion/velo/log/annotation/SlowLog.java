@@ -8,7 +8,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import org.springframework.boot.logging.LogLevel;
 
-/** 达到阈值时的耗时日志；不联动采集参数或结果。 */
+/** 达到阈值时的慢调用日志；独立于 {@link CostLog}，不联动采集参数或结果。 */
 @Inherited
 @Target({ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)

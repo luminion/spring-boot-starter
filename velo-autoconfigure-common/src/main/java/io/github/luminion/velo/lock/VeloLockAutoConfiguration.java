@@ -8,7 +8,6 @@ import io.github.luminion.velo.lock.config.VeloLockRedisConfiguration;
 import io.github.luminion.velo.lock.config.VeloLockRedissonAutoConfiguration;
 import io.github.luminion.velo.spi.Fingerprinter;
 import io.github.luminion.velo.lock.aspect.LockAspect;
-import org.aspectj.weaver.Advice;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -25,7 +24,7 @@ import org.springframework.context.annotation.Bean;
         VeloLockRedisConfiguration.class,
         VeloLockJdkAutoConfiguration.class
 })
-@ConditionalOnClass(Advice.class)
+@ConditionalOnClass(name = "org.aspectj.weaver.Advice")
 @ConditionalOnProperty(prefix = "velo.lock", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloLockAutoConfiguration {
 

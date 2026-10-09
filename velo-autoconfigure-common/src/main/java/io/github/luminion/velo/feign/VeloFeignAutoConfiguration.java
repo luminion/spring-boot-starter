@@ -6,7 +6,6 @@ import io.github.luminion.velo.log.config.VeloLogAutoConfiguration;
 import io.github.luminion.velo.log.condition.ConditionalOnInvocationAdapter;
 import io.github.luminion.velo.trace.TraceScopeManager;
 import io.github.luminion.velo.trace.VeloTraceAutoConfiguration;
-import org.aspectj.weaver.Advice;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -18,7 +17,7 @@ import org.springframework.context.annotation.Bean;
  * Feign 调试日志自动配置。
  */
 @AutoConfiguration(after = {VeloLogAutoConfiguration.class, VeloTraceAutoConfiguration.class})
-@ConditionalOnClass(value = Advice.class, name = "org.springframework.cloud.openfeign.FeignClient")
+@ConditionalOnClass(name = {"org.aspectj.weaver.Advice", "org.springframework.cloud.openfeign.FeignClient"})
 @ConditionalOnProperty(
         prefix = "velo.feign",
         name = "enabled",

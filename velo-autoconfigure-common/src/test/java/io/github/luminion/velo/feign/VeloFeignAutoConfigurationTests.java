@@ -121,7 +121,9 @@ class VeloFeignAutoConfigurationTests {
               return "done";
             });
     assertThat(aspect.logFeignInvocation(point)).isEqualTo("done");
-		assertThat(records).hasSize(2);
+    assertThat(records).hasSize(3);
+    assertThat(records.get(2).getFeature()).isEqualTo(InvocationLogFeature.COST_LOG);
+    assertThat(records.get(2).getContent()).matches("\\d+ms");
     InvocationLogRecord entry = records.get(0);
     assertThat(entry.getFeature()).isEqualTo(InvocationLogFeature.ENTRY_ARGS);
     assertThat(entry.getTarget()).isEqualTo("find() GET /users/{id}");
@@ -179,7 +181,8 @@ class VeloFeignAutoConfigurationTests {
               InvocationLogFeature.ENTRY_ARGS,
               InvocationLogFeature.ERROR_LOG,
               InvocationLogFeature.REQUEST_HEADERS,
-              InvocationLogFeature.RESPONSE_HEADERS);
+              InvocationLogFeature.RESPONSE_HEADERS,
+              InvocationLogFeature.COST_LOG);
       assertThat(records.get(2).getContent()).contains("X-Request", "yes");
       assertThat(records.get(3).getContent()).contains("X-Response", "ok");
       assertThat(records)

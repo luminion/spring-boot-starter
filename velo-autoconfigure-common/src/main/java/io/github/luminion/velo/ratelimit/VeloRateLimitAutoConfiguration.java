@@ -5,7 +5,6 @@ import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.core.VeloMessageResolver;
 import io.github.luminion.velo.spi.Fingerprinter;
 import io.github.luminion.velo.ratelimit.aspect.RateLimitAspect;
-import org.aspectj.weaver.Advice;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -22,7 +21,7 @@ import org.springframework.context.annotation.Bean;
         io.github.luminion.velo.ratelimit.config.VeloRateLimitRedisConfiguration.class,
         io.github.luminion.velo.ratelimit.config.VeloRateLimitGuavaAutoConfiguration.class
 })
-@ConditionalOnClass(Advice.class)
+@ConditionalOnClass(name = "org.aspectj.weaver.Advice")
 @ConditionalOnProperty(prefix = "velo.rate-limit", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloRateLimitAutoConfiguration {
 

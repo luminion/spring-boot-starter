@@ -420,10 +420,19 @@ public class VeloProperties {
         private LogFeatureProperties entryArgs = new LogFeatureProperties();
         private LogFeatureProperties exitArgs = new LogFeatureProperties();
         private LogFeatureProperties exitResult = new LogFeatureProperties();
+        /** 当前调用结束时的耗时日志，默认开启且使用 INFO；不受慢调用阈值影响。 */
+        private LogFeatureProperties costLog = defaultCostLog();
         private SlowLogProperties slowLog = defaultSlowLog();
         private HeaderCaptureProperties requestHeaders = new HeaderCaptureProperties();
         private HeaderCaptureProperties responseHeaders = new HeaderCaptureProperties();
         private LogFeatureProperties errorLog = new LogFeatureProperties();
+
+        private static LogFeatureProperties defaultCostLog() {
+            LogFeatureProperties value = new LogFeatureProperties();
+            value.setEnabled(true);
+            value.setLevel(LogLevel.INFO);
+            return value;
+        }
 
         private static SlowLogProperties defaultSlowLog() {
             SlowLogProperties value = new SlowLogProperties();
@@ -477,6 +486,8 @@ public class VeloProperties {
         private LogFeatureProperties entryArgs = new LogFeatureProperties();
         private LogFeatureProperties exitArgs = new LogFeatureProperties();
         private LogFeatureProperties exitResult = new LogFeatureProperties();
+        /** 当前来源的耗时日志设置；未配置时继承全局默认值。 */
+        private LogFeatureProperties costLog = new LogFeatureProperties();
         private SlowLogProperties slowLog = new SlowLogProperties();
         private HeaderCaptureProperties requestHeaders = new HeaderCaptureProperties();
         private HeaderCaptureProperties responseHeaders = new HeaderCaptureProperties();

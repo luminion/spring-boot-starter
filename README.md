@@ -681,6 +681,7 @@ JDK 锁和 Redis 锁的本地记录只保存活跃调用，不随历史业务 ke
 
 | 注解 | 属性及默认值 | 示例 |
 |---|---|---|
+| `CostLog` | `enabled=true`、`level=INFO` | `@CostLog(level = LogLevel.DEBUG)` |
 | `SlowLog` | `enabled=true`、`level=WARN`、`threshold=1000`（毫秒） | `@SlowLog(threshold = 1000)` |
 | `EntryArgs` / `ExitArgs` / `ExitResult` | `enabled=true`、`level=INFO` | `@EntryArgs(level = LogLevel.DEBUG)` |
 | `ErrorLog` | `enabled=true`、`level=WARN` | `@ErrorLog(level = LogLevel.ERROR)` |
@@ -702,28 +703,34 @@ Controller、Feign、`@InvokeLog` 和任务入口共用一个同步 `InvocationL
 [controller] [127.0.0.1 GET /users/{id}] <== exitArgs={"id":1}
 [controller] [127.0.0.1 GET /users/{id}] <== exitResult={"name":"Tom"}
 [controller] [127.0.0.1 GET /users/{id}] <== responseHeaders={"X-Result":["ok"]}
+[controller] [127.0.0.1 GET /users/{id}] <== cost=1200ms
 [controller] [127.0.0.1 GET /users/{id}] <== slow={cost=1200ms, threshold=1000ms}
 [invoke] [find()] <== error={"type":"java.lang.IllegalArgumentException","message":"参数无效"}
+[invoke] [find()] <== cost=24ms
 [feign] [remote() GET /log/remote] <== exitResult={"message":"hello"}
-[scheduled] [run()] <== slow={cost=5ms, threshold=0ms}
-[xxl-job] [run()] <== slow={cost=5ms, threshold=0ms}
+[feign] [remote() GET /log/remote] <== cost=24ms
+[scheduled] [run()] <== cost=5ms
+[xxl-job] [run()] <== cost=5ms
 ```
 
-固定结构为 `[入口类型] [调用目标] 箭头 功能名=内容`，各块之间保留一个空格，等号两侧不留空格。入口类型为 `controller/invoke/feign/scheduled/xxl-job`；功能名为 `entryArgs/exitArgs/exitResult/requestHeaders/responseHeaders/slow/error`。慢调用摘要固定为 `{cost=实际耗时ms, threshold=阈值ms}`，单位跟在数值后，由引擎直接生成，不调用对象 formatter；异常摘要使用独立对象且不附带堆栈。类名由日志框架输出，Invoke、Scheduled 和 XXL-Job 的调用目标只显示方法名。
+固定结构为 `[入口类型] [调用目标] 箭头 功能名=内容`，各块之间保留一个空格，等号两侧不留空格。入口类型为 `controller/invoke/feign/scheduled/xxl-job`；功能名为 `entryArgs/exitArgs/exitResult/requestHeaders/responseHeaders/cost/slow/error`。常规耗时固定为 `cost=实际耗时ms`，慢调用摘要固定为 `slow={cost=实际耗时ms, threshold=阈值ms}`；两者使用同一次计时，单位跟在数值后，由引擎直接生成，不调用对象 formatter。异常摘要使用独立对象且不附带堆栈。类名由日志框架输出，Invoke、Scheduled 和 XXL-Job 的调用目标只显示方法名。
 
 正文不重复打印 `traceId`、`source`、`event`、`invocationId`。默认日志格式通过 MDC 在级别位置显示 traceId。`InvocationLogRecord` 只包含 `source/target/feature/loggerName/level/content` 六个字段，`content` 为已经转换的字符串；不再生成 invocationId，也不复制 traceId。自定义输出器在 `write` 时可读取 MDC；延迟或异步输出时应自行捕获上下文快照。
 
-| 功能注解 | Controller 默认 | Feign 默认 | Invoke 默认 | 默认级别 |
-| --- | --- | --- | --- | --- |
-| `EntryArgs` | 开 | 开 | 开 | INFO |
-| `ExitArgs` | 关 | 关 | 关 | INFO |
-| `ExitResult` | 开 | 开 | 开 | INFO |
-| `SlowLog` | 开，1000ms | 开，1000ms | 开，1000ms | WARN |
-| `RequestHeadersLog` | 关 | 关 | 不适用 | INFO |
-| `ResponseHeadersLog` | 关 | 关 | 不适用 | INFO |
-| `ErrorLog` | 开 | 开 | 开 | WARN |
+| 功能注解 | Controller 默认 | Feign 默认 | Invoke 默认 | Scheduled 默认 | XXL-Job 默认 | 默认级别 |
+| --- | --- | --- | --- | --- | --- | --- |
+| `EntryArgs` | 开 | 开 | 开 | 关 | 关 | INFO |
+| `ExitArgs` | 关 | 关 | 关 | 关 | 关 | INFO |
+| `ExitResult` | 开 | 开 | 开 | 关 | 关 | INFO |
+| `CostLog` | 开 | 开 | 开 | 开 | 开 | INFO |
+| `SlowLog` | 开 | 开 | 开 | 开 | 开 | WARN |
+| `RequestHeadersLog` | 关 | 关 | 不适用 | 不适用 | 不适用 | INFO |
+| `ResponseHeadersLog` | 关 | 关 | 不适用 | 不适用 | 不适用 | INFO |
+| `ErrorLog` | 开 | 开 | 开 | 开 | 开 | WARN |
 
-任务入口包括 `@Scheduled` 和 XXL-Job，默认只开慢调用、异常摘要；参数和返回值默认关闭。普通方法需要 `@InvokeLog` 作为切入点；Controller、Feign、任务入口由自己的切面自动接入，重复标注 `@InvokeLog` 不会重复输出。只有功能注解的普通方法不会自动切入。切面基于 Spring AOP，同类内部直接调用、未经过代理的对象、private/final 方法不保证被拦截。
+表中“开”表示启用该功能，其输出仍取决于条件和日志框架的级别过滤：`ExitResult` 只在正常返回时输出，`ErrorLog` 只在同步抛出异常时输出，`SlowLog` 默认只在耗时达到 1000ms 时输出。`CostLog` 不设阈值，当前调用正常返回或抛出异常时均记录；慢调用会同时产生 INFO 耗时记录与独立 WARN 告警，不重复采集返回值。各功能开关和级别互不联动，关闭 CostLog 不影响 SlowLog，关闭 SlowLog 不影响 CostLog。
+
+任务入口包括 `@Scheduled` 和 XXL-Job，默认开启常规耗时、慢调用和异常摘要，参数和返回值默认关闭。普通方法需要 `@InvokeLog` 作为切入点；Controller、Feign、任务入口由自己的切面自动接入，重复标注 `@InvokeLog` 不会重复输出。单独标注 `@CostLog` 等功能注解的普通方法不会自动切入。以上默认值以相应适配依赖存在、总开关和来源开关开启为前提。切面基于 Spring AOP，同类内部直接调用、未经过代理的对象、private/final 方法不保证被拦截。
 
 配置优先级：**方法注解 > 类注解 > 来源配置 > 全局配置 > 内置默认值**。注解为完整配置，例如 `@EntryArgs` 自带 `enabled=true, level=INFO`，会覆盖类或 properties 对该功能的配置。没有方法注解才继承类配置。所有注解只支持类和方法，不支持参数、字段、返回类型；不再提供 `CONFIGURED` 或按慢调用/失败联动打印参数的触发策略。
 
@@ -736,6 +743,7 @@ Controller、Feign、`@InvokeLog` 和任务入口共用一个同步 `InvocationL
 public class UserService {
     @EntryArgs
     @ExitResult
+    @CostLog(level = LogLevel.INFO)
     @SlowLog(threshold = 200, level = LogLevel.WARN)
     public User find(Long id) { /* 业务实现 */ }
 
@@ -744,7 +752,9 @@ public class UserService {
 }
 ```
 
-每个功能都有独立 `enabled` 和 `level`，支持 Spring Boot `LogLevel`，`OFF` 关闭该功能。没有普通耗时 `CostLog`；将 SlowLog 阈值设为 `0`、级别设为 `INFO` 即可记录所有耗时。阈值单位毫秒，应大于等于 0。耗时从入口日志输出后计到当前方法返回或抛出异常，结束日志本身不计入耗时。返回 `CompletionStage/Future` 也立即记录退出，不等待、不监听完成，不改变原返回对象或取消行为。ExitResult 表示返回对象而非异步最终结果；此类方法可关闭 ExitResult，或在自定义 formatter 中输出类型摘要。ErrorLog 只记录当前方法抛出的异常，不记录返回 Future 的后续失败。
+每个功能都有独立 `enabled` 和 `level`，支持 Spring Boot `LogLevel`，`OFF` 关闭该功能。常规耗时使用 `CostLog`，慢调用告警使用 `SlowLog`；阈值单位毫秒，应大于等于 0，阈值为 0 时所有调用都满足慢调用条件。此前使用 `SlowLog(threshold = 0, level = INFO)` 记录全部耗时的用法，可改用默认开启的 CostLog，并将 SlowLog 恢复为业务需要的告警阈值；否则两项功能都会全量记录。
+
+耗时从入口日志输出后计到当前方法返回或抛出异常，结束日志本身不计入耗时。返回 `CompletionStage/Future` 也立即记录退出与耗时，不等待、不监听完成，不改变原返回对象或取消行为。ExitResult 表示返回对象而非异步最终结果；此类方法可关闭 ExitResult，或在自定义 formatter 中输出类型摘要。ErrorLog 只记录当前方法抛出的异常，不记录返回 Future 的后续失败。
 
 ```yaml
 velo:
@@ -756,6 +766,9 @@ velo:
         level: INFO
       exit-args:
         enabled: false
+      cost-log:
+        enabled: true
+        level: INFO
       slow-log:
         enabled: true
         threshold: 1000
@@ -776,8 +789,7 @@ velo:
           enabled: true
           allowlist: [X-Trace-Id, Content-Type]
       invoke:
-        slow-log:
-          threshold: 0
+        cost-log:
           level: INFO
   trace:
     enabled: true
@@ -799,13 +811,13 @@ public LogValueFormatter logValueFormatter() {
 
 默认使用应用已有的 Jackson 2/3 Mapper 生成完整字符串，复用字段忽略、日期格式、命名规则和自定义模块，非 Web 应用也可用；没有 Mapper 时使用 `String.valueOf`。可使用 `@JsonIgnore` 或 MixIn 隐藏 DTO 字段，这些规则也会影响使用同一 Mapper 的业务序列化。Jackson 转换失败输出 `serialization-failed`，不会回退到可能暴露敏感字段的 toString。HttpEntity/ResponseEntity 返回值只转换 body，原响应对象保持不变。流、Servlet 等技术对象省略内容；容器保留循环和深度保护，不限制元素数量。DTO 原样交给 Mapper，不自行反射拆解。自定义 formatter 返回完整文本，框架统一转义换行和控制字符。
 
-参数、结果、慢日志及异常摘要都使用同一个 formatter；慢日志中的 Long 数值也沿用应用的序列化规则，例如将耗时和阈值输出为字符串。
+参数、结果、协议头及异常摘要使用同一个 formatter；常规耗时与慢调用摘要使用固定格式，不受应用数值序列化规则影响。
 
-`max-payload-length` 默认 `-1`，完整输出，不做字符截断。仅支持 `-1` 和 `0`，其他值会在日志引擎启动时报错；`0` 关闭参数、结果及协议头载荷日志的输出和序列化，慢调用/异常摘要仍可完整输出。
+`max-payload-length` 默认 `-1`，完整输出，不做字符截断。仅支持 `-1` 和 `0`，其他值会在日志引擎启动时报错；`0` 关闭参数、结果及协议头载荷日志的输出和序列化，常规耗时、慢调用和异常摘要仍可完整输出。
 
 默认启用的 Controller / Feign 参数和返回值日志会按应用的序列化规则完整输出。Velo 不按 `password`、`token` 等字段或参数名称自动识别隐私信息，不额外提供隐私过滤；是否输出这些内容由业务决定，需要时自行配置字段忽略、自定义 formatter 或关闭对应载荷日志。
 
-对于预期的超大字符串、大集合或大对象，应在应用中忽略对应载荷日志，避免无用的序列化和日志输出成本。可通过方法或类上的注解关闭参数、返回值日志，保留慢调用和异常摘要：
+对于预期的超大字符串、大集合或大对象，应在应用中忽略对应载荷日志，避免无用的序列化和日志输出成本。可通过方法或类上的注解关闭参数、返回值日志，保留常规耗时、慢调用和异常摘要：
 
 ```java
 @EntryArgs(enabled = false)
@@ -1159,7 +1171,7 @@ velo:
 说明：
 
 - 默认开启
-- 默认打印 Spring 绑定后的入参和返回结果；达到阈值打印独立慢调用日志，异常时打印独立 WARN 摘要
+- 默认打印 Spring 绑定后的入参、返回结果和独立 INFO 耗时；达到阈值打印独立慢调用日志，异常时打印独立 WARN 摘要
 - 会过滤掉原始 query string，避免把敏感查询串直接打到日志中
 - 默认 `max-payload-length=-1`，完整输出；`0` 不序列化或输出载荷日志，其他值启动时报错
 - 预期的超大对象应通过注解或配置关闭对应载荷日志
@@ -1191,7 +1203,7 @@ velo:
 - 默认开启
 - 前缀为 `[feign] [方法名() HTTP方法 接口路径]`，例如 `[feign] [remote() GET /log/remote]`；类名由日志框架输出，不重复打印 client 名或 contextId
 - 接口路径取 Spring MVC 映射模板，例如 `/users/{id}`，不展开路径变量或拼接查询参数；无法解析映射时省略缺失部分，保留方法名
-- 默认打印入参和返回结果，慢调用和异常各输出独立日志
+- 默认打印入参、返回结果和独立 INFO 耗时，慢调用和异常各输出独立日志
 - 日志格式和 Controller、`@InvokeLog` 保持一致，便于联调排查
 - 请求头和响应头默认不采集，可通过独立配置或注解启用
 - 默认 `max-payload-length=-1`，完整输出；`0` 不序列化或输出载荷日志，其他值启动时报错

@@ -100,6 +100,12 @@ class VeloConfigurationMetadataTest {
       assertTrue(metadata.contains("velo.log.defaults.entry-args.enabled"));
       assertTrue(metadata.contains("velo.log.defaults.exit-args.enabled"));
       assertTrue(metadata.contains("velo.log.defaults.exit-result.enabled"));
+      assertTrue(metadata.contains("velo.log.defaults.cost-log.enabled"));
+      assertTrue(metadata.contains("velo.log.defaults.cost-log.level"));
+      for (String source : new String[]{"controller", "feign", "invoke", "scheduled", "xxl-job"}) {
+        assertTrue(metadata.contains("velo.log.sources." + source + ".cost-log.enabled"));
+        assertTrue(metadata.contains("velo.log.sources." + source + ".cost-log.level"));
+      }
       assertTrue(metadata.contains("velo.log.defaults.slow-log.threshold"));
       assertFalse(metadata.contains("velo.log.defaults.slow-log.threshold-ms"));
       assertFalse(metadata.contains("velo.log.invocation.sensitive-pattern"));

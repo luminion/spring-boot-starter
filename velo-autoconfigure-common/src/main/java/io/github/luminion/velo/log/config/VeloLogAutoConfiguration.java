@@ -6,7 +6,6 @@ import io.github.luminion.velo.log.LogValueFormatter;
 
 import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.log.support.Slf4JInvocationLogWriter;
-import org.aspectj.weaver.Advice;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -21,7 +20,7 @@ import org.springframework.context.annotation.Bean;
         "org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration",
         "io.github.luminion.velo.jackson.VeloJacksonLogAutoConfiguration"
 })
-@ConditionalOnClass(Advice.class)
+@ConditionalOnClass(name = "org.aspectj.weaver.Advice")
 @ConditionalOnProperty(prefix = "velo.log", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloLogAutoConfiguration {
     @Bean

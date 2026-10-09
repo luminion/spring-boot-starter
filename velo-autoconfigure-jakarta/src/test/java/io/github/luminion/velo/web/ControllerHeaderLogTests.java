@@ -61,7 +61,8 @@ class ControllerHeaderLogTests {
                         InvocationLogFeature.ENTRY_ARGS,
                         InvocationLogFeature.REQUEST_HEADERS,
                         InvocationLogFeature.EXIT_RESULT,
-                        InvocationLogFeature.RESPONSE_HEADERS);
+                        InvocationLogFeature.RESPONSE_HEADERS,
+                        InvocationLogFeature.COST_LOG);
         assertThat(records.get(1).getContent())
                 .contains("x-debug", "yes")
                 .doesNotContain("Authorization", "secret");

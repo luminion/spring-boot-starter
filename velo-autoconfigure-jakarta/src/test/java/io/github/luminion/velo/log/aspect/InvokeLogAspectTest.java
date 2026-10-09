@@ -49,7 +49,8 @@ class InvokeLogAspectTest {
         .containsExactly(
             InvocationLogFeature.ENTRY_ARGS,
             InvocationLogFeature.EXIT_ARGS,
-            InvocationLogFeature.EXIT_RESULT);
+            InvocationLogFeature.EXIT_RESULT,
+            InvocationLogFeature.COST_LOG);
     assertThat(writer.records.get(0).getContent()).isEqualTo("before");
     assertThat(writer.records.get(1).getContent()).isEqualTo("complete");
     assertThat(writer.records.get(2).getContent()).isEqualTo("void");
@@ -59,15 +60,16 @@ class InvokeLogAspectTest {
         .isInstanceOf(IllegalStateException.class)
         .hasMessage("boom");
 
-    assertThat(writer.records).hasSize(6);
-    assertThat(writer.records.get(4).getFeature()).isEqualTo(InvocationLogFeature.EXIT_ARGS);
-    assertThat(writer.records.get(4).getContent()).isEqualTo("failed");
-    assertThat(writer.records.get(5).getContent()).contains(IllegalStateException.class.getName());
+    assertThat(writer.records).hasSize(8);
+    assertThat(writer.records.get(5).getFeature()).isEqualTo(InvocationLogFeature.EXIT_ARGS);
+    assertThat(writer.records.get(5).getContent()).isEqualTo("failed");
+    assertThat(writer.records.get(6).getContent()).contains(IllegalStateException.class.getName());
+    assertThat(writer.records.get(7).getFeature()).isEqualTo(InvocationLogFeature.COST_LOG);
 
     MutableArgument ignoredArgument = new MutableArgument("secret");
     assertThat(proxy.ignore(ignoredArgument)).isSameAs(ignoredArgument);
 
-    assertThat(writer.records).hasSize(6);
+    assertThat(writer.records).hasSize(8);
   }
 
   interface DemoOperations {

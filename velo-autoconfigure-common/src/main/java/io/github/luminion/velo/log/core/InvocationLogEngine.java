@@ -94,6 +94,7 @@ public class InvocationLogEngine {
                 headers(InvocationLogFeature.REQUEST_HEADERS, invocation.getRequestHeaders());
             }
             headers(InvocationLogFeature.RESPONSE_HEADERS, invocation.getResponseHeaders());
+            cost(elapsed);
             slow(elapsed);
         }
 
@@ -142,6 +143,15 @@ public class InvocationLogEngine {
                 content.put("type", error.getClass().getName());
                 content.put("message", error.getMessage());
                 record.setContent(InvocationLogSupport.format(content, formatter));
+                write(record);
+            }
+        }
+
+        private void cost(long elapsed) {
+            InvocationLogRecord record = record(InvocationLogFeature.COST_LOG);
+            if (record != null) {
+                // 与慢调用共享同一次计时，正常和异常结束均记录；不受对象载荷开关或 formatter 影响。
+                record.setContent(TimeUnit.NANOSECONDS.toMillis(elapsed) + "ms");
                 write(record);
             }
         }

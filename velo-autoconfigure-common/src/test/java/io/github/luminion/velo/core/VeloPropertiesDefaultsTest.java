@@ -20,6 +20,8 @@ class VeloPropertiesDefaultsTest {
 
         assertThat(properties.isOpinionated()).isTrue();
         assertThat(properties.getLog().getDefaults().getEntryArgs().getLevel()).isNull();
+        assertThat(properties.getLog().getDefaults().getCostLog().getEnabled()).isTrue();
+        assertThat(properties.getLog().getDefaults().getCostLog().getLevel()).isEqualTo(LogLevel.INFO);
         assertThat(properties.getLog().getDefaults().getSlowLog().getLevel()).isEqualTo(LogLevel.WARN);
         assertThat(properties.getSpringConverter().isDateTimeEnabled()).isTrue();
         assertThat(properties.getExcel().getConverters().isEnabled()).isTrue();
@@ -74,6 +76,29 @@ class VeloPropertiesDefaultsTest {
         assertThat(properties.getXss().isWebEnabled()).isTrue();
         assertThat(properties.getXss().isJacksonEnabled()).isFalse();
         assertThat(properties.getFeign().isEnabled()).isTrue();
+    }
+
+    @Test
+    void shouldBindCostLogAtGlobalAndEachSource() {
+        contextRunner.withPropertyValues(
+                        "velo.log.defaults.cost-log.enabled=false",
+                        "velo.log.defaults.cost-log.level=DEBUG",
+                        "velo.log.sources.controller.cost-log.enabled=true",
+                        "velo.log.sources.feign.cost-log.level=TRACE",
+                        "velo.log.sources.invoke.cost-log.enabled=false",
+                        "velo.log.sources.scheduled.cost-log.level=WARN",
+                        "velo.log.sources.xxl-job.cost-log.enabled=false")
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    VeloProperties.LogProperties log = context.getBean(VeloProperties.class).getLog();
+                    assertThat(log.getDefaults().getCostLog().getEnabled()).isFalse();
+                    assertThat(log.getDefaults().getCostLog().getLevel()).isEqualTo(LogLevel.DEBUG);
+                    assertThat(log.getSources().getController().getCostLog().getEnabled()).isTrue();
+                    assertThat(log.getSources().getFeign().getCostLog().getLevel()).isEqualTo(LogLevel.TRACE);
+                    assertThat(log.getSources().getInvoke().getCostLog().getEnabled()).isFalse();
+                    assertThat(log.getSources().getScheduled().getCostLog().getLevel()).isEqualTo(LogLevel.WARN);
+                    assertThat(log.getSources().getXxlJob().getCostLog().getEnabled()).isFalse();
+                });
     }
 
     @Test
