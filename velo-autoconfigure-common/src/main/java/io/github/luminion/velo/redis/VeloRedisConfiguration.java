@@ -32,11 +32,11 @@ public class VeloRedisConfiguration {
     @ConditionalOnBean(RedisConnectionFactory.class)
     @ConditionalOnSingleCandidate(RedisConnectionFactory.class)
     public RedisTemplate<String, Object> stringObjectRedisTemplate(RedisConnectionFactory redisConnectionFactory,
-            ObjectProvider<RedisSerializer<Object>> redisSerializerProvider,
-            ObjectProvider<RedisJsonSerializerFactory> jsonFactoryProvider) {
-        // 原生泛型注入仅选择通用 Object serializer；多个候选须用 @Primary / @Qualifier 消除歧义。
-        RedisSerializer<Object> redisSerializer = redisSerializerProvider.getIfAvailable(
-                () -> jsonFactoryProvider.getObject().create(Object.class));
+            ObjectProvider<RedisSerializer<Object>> redisSerializerProvider) {
+        // 默认与 Spring Cache 共用带类型信息的 JSON，可自动恢复 DTO；用户通用 Object serializer 优先。
+        // 原生泛型注入不选择局部 DTO / String serializer；多个通用候选须明确 @Primary。
+        // getObject 使用唯一的主候选；缺失或歧义直接报错，不允许空值触发模板的 JDK 默认序列化。
+        RedisSerializer<Object> redisSerializer = redisSerializerProvider.getObject();
         RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
         redisTemplate.setConnectionFactory(redisConnectionFactory);
         redisTemplate.setKeySerializer(new StringRedisSerializer());
@@ -53,10 +53,8 @@ public class VeloRedisConfiguration {
     @ConditionalOnBean(RedisConnectionFactory.class)
     @ConditionalOnSingleCandidate(RedisConnectionFactory.class)
     public RedisTemplate<Object, Object> redisTemplate(RedisConnectionFactory redisConnectionFactory,
-            ObjectProvider<RedisSerializer<Object>> redisSerializerProvider,
-            ObjectProvider<RedisJsonSerializerFactory> jsonFactoryProvider) {
-        RedisSerializer<Object> redisSerializer = redisSerializerProvider.getIfAvailable(
-                () -> jsonFactoryProvider.getObject().create(Object.class));
+            ObjectProvider<RedisSerializer<Object>> redisSerializerProvider) {
+        RedisSerializer<Object> redisSerializer = redisSerializerProvider.getObject();
         RedisTemplate<Object, Object> redisTemplate = new RedisTemplate<>();
         redisTemplate.setConnectionFactory(redisConnectionFactory);
         redisTemplate.setDefaultSerializer(redisSerializer);

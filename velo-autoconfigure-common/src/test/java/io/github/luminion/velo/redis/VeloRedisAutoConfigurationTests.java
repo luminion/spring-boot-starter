@@ -1,6 +1,9 @@
 package io.github.luminion.velo.redis;
 
+import io.github.luminion.velo.condition.OnMissingRedisObjectSerializerCondition;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.NoSuchBeanDefinitionException;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration;
@@ -9,10 +12,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
-import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
-import com.fasterxml.jackson.databind.type.TypeFactory;
-import java.lang.reflect.Type;
-import java.util.Map;
 import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.serializer.SerializationException;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
@@ -23,16 +22,8 @@ import static org.mockito.Mockito.mock;
 class VeloRedisAutoConfigurationTests {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-            .withConfiguration(AutoConfigurations.of(VeloRedisConfiguration.class))
-            .withBean(RedisConnectionFactory.class, () -> mock(RedisConnectionFactory.class))
-            .withBean(RedisJsonSerializerFactory.class, () -> new RedisJsonSerializerFactory() {
-                public RedisSerializer<Object> create(Type type) {
-                    return new Jackson2JsonRedisSerializer<>(TypeFactory.defaultInstance().constructType(type));
-                }
-                public RedisSerializer<Object> genericCacheSerializer() {
-                    return RedisSerializer.json();
-                }
-            });
+            .withConfiguration(AutoConfigurations.of(DefaultSerializerAutoConfiguration.class, VeloRedisConfiguration.class))
+            .withBean(RedisConnectionFactory.class, () -> mock(RedisConnectionFactory.class));
 
     @Test
     void shouldCreateRedisTemplatesWithJsonValueSerializer() {
@@ -55,8 +46,8 @@ class VeloRedisAutoConfigurationTests {
     }
 
     @Test
-    void shouldCreateRedisTemplatesWithJsonFallbackWhenRedisSerializerMissing() {
-        // 没有通用用户 serializer 时，使用工厂的纯 JSON；通用 Object 目标读取为 Map。
+    void shouldUseTheDefaultSerializerBeanWhenNoUserSerializerExists() {
+        // 模拟版本模块注册的默认 Bean；模板与缓存通过标准 RedisSerializer<Object> 注入复用。
         contextRunner.run(context -> {
             assertThat(context).hasBean("redisTemplate");
             assertThat(context).hasBean("stringObjectRedisTemplate");
@@ -65,21 +56,21 @@ class VeloRedisAutoConfigurationTests {
             RedisTemplate<String, Object> stringObjectRedisTemplate = context.getBean("stringObjectRedisTemplate",
                     RedisTemplate.class);
 
-            assertThat(redisTemplate.getValueSerializer()).isInstanceOf(Jackson2JsonRedisSerializer.class);
+            assertThat(redisTemplate.getValueSerializer()).isInstanceOf(GenericJackson2JsonRedisSerializer.class);
             assertThat(stringObjectRedisTemplate.getValueSerializer())
-                    .isInstanceOf(Jackson2JsonRedisSerializer.class);
+                    .isInstanceOf(GenericJackson2JsonRedisSerializer.class);
         });
     }
 
     @Test
-    void shouldRoundTripJsonFallbackSerializerForPojo() {
+    void shouldRoundTripTheDefaultSerializerForPojo() {
         contextRunner.run(context -> {
             RedisSerializer<Object> serializer = context.getBean("redisTemplate", RedisTemplate.class)
                     .getValueSerializer();
             Object value = serializer.deserialize(serializer.serialize(new JsonPayload("ok")));
 
-            assertThat(value).isInstanceOf(Map.class);
-            assertThat(((Map<?, ?>) value).get("name")).isEqualTo("ok");
+            assertThat(value).isInstanceOf(JsonPayload.class);
+            assertThat(((JsonPayload) value).getName()).isEqualTo("ok");
         });
     }
 
@@ -158,6 +149,26 @@ class VeloRedisAutoConfigurationTests {
                     assertThat(stringObjectRedisTemplate.getValueSerializer())
                             .isInstanceOf(GenericJackson2JsonRedisSerializer.class);
                 });
+    }
+
+    @Test
+    void shouldFailInsteadOfSilentlyUsingJdkWhenNoObjectSerializerExists() {
+        new ApplicationContextRunner()
+                .withConfiguration(AutoConfigurations.of(VeloRedisConfiguration.class))
+                .withBean(RedisConnectionFactory.class, () -> mock(RedisConnectionFactory.class))
+                .run(context -> {
+                    assertThat(context).hasFailed();
+                    assertThat(context.getStartupFailure()).hasRootCauseInstanceOf(NoSuchBeanDefinitionException.class);
+                });
+    }
+
+    @AutoConfiguration(before = VeloRedisConfiguration.class)
+    static class DefaultSerializerAutoConfiguration {
+        @Bean
+        @Conditional(OnMissingRedisObjectSerializerCondition.class)
+        RedisSerializer<Object> veloRedisSerializer() {
+            return RedisSerializer.json();
+        }
     }
 
     @AutoConfiguration(after = VeloRedisConfiguration.class)

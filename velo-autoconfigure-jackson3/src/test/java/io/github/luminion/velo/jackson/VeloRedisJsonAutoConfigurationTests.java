@@ -1,6 +1,7 @@
 package io.github.luminion.velo.jackson;
 
-import io.github.luminion.velo.redis.RedisJsonSerializerFactory;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.github.luminion.velo.redis.VeloRedisConfiguration;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.NoUniqueBeanDefinitionException;
@@ -9,16 +10,19 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.boot.test.context.FilteredClassLoader;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.serializer.JacksonJsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -31,44 +35,71 @@ class VeloRedisJsonAutoConfigurationTests {
             .withBean(RedisConnectionFactory.class, () -> mock(RedisConnectionFactory.class));
 
     @Test
-    void shouldSkipTheFactoryWhenTheOptionalRedisLibraryIsMissing() {
+    void shouldSkipTheSerializerWhenTheOptionalRedisLibraryIsMissing() {
         new ApplicationContextRunner()
                 .withClassLoader(new FilteredClassLoader("org.springframework.data.redis"))
                 .withConfiguration(AutoConfigurations.of(VeloRedisJsonAutoConfiguration.class))
-                .run(context -> assertThat(context).hasNotFailed().doesNotHaveBean("redisJsonSerializerFactory"));
+                .run(context -> assertThat(context).hasNotFailed().doesNotHaveBean("veloRedisSerializer"));
     }
 
     @Test
-    void shouldUsePlainJsonAndRetainDatesNumbersAndGenericElementsForDeclaredTypes() {
+    void shouldRegisterOneDefaultSerializerWithoutMakingItPrimary() {
         runner.run(context -> {
-            assertThat(context).hasNotFailed().doesNotHaveBean(RedisSerializer.class);
-            RedisJsonSerializerFactory factory = context.getBean(RedisJsonSerializerFactory.class);
+            assertThat(context).hasNotFailed().hasSingleBean(RedisSerializer.class);
+            assertThat(context.getBeanFactory().getBeanDefinition("veloRedisSerializer").isPrimary()).isFalse();
+            RedisSerializer<Object> serializer = context.getBean(RedisSerializer.class);
             Payload payload = new Payload();
-            RedisSerializer<Object> typed = factory.create(Payload.class);
-            byte[] bytes = typed.serialize(payload);
+            byte[] bytes = serializer.serialize(payload);
             String json = new String(bytes, StandardCharsets.UTF_8);
-            assertThat(json).startsWith("{").contains("\"id\":9007199254740993").doesNotContain("@class", Payload.class.getName());
-            Payload copy = (Payload) typed.deserialize(bytes);
+            assertThat(json).startsWith("{").contains("@class", "\"id\":9007199254740993", "\"title\":\"example\"")
+                    .doesNotContain("ignored");
+            Payload copy = (Payload) serializer.deserialize(bytes);
             assertThat(copy.id).isEqualTo(payload.id);
             assertThat(copy.amount).isEqualTo(payload.amount);
             assertThat(copy.createdAt).isEqualTo(payload.createdAt);
-            RedisSerializer<Object> list = factory.create(new ParameterizedTypeReference<List<Payload>>() { }.getType());
-            assertThat((List<?>) list.deserialize(list.serialize(Arrays.asList(payload))))
-                    .hasSize(1).first().isInstanceOf(Payload.class);
-            RedisSerializer<Object> untyped = (RedisSerializer<Object>) context.getBean("stringObjectRedisTemplate", RedisTemplate.class).getValueSerializer();
-            assertThat(untyped.deserialize(untyped.serialize(payload))).isInstanceOf(Map.class);
         });
     }
 
     @Test
-    void shouldKeepTheFactoryWithDtoAndKeySerializersAndNotSelectThemForObjectValues() {
+    void shouldRestoreDtoCollectionsAndHashValuesWithTheSharedDefaultJsonSerializer() {
+        runner.run(context -> {
+            RedisSerializer<Object> defaults = context.getBean(RedisSerializer.class);
+            for (String name : Arrays.asList("redisTemplate", "stringObjectRedisTemplate")) {
+                RedisTemplate<?, ?> template = context.getBean(name, RedisTemplate.class);
+                assertThat(template.getValueSerializer()).isSameAs(defaults);
+                assertThat(template.getHashValueSerializer()).isSameAs(defaults);
+                assertThat(template.getKeySerializer()).isInstanceOf(StringRedisSerializer.class);
+                assertThat(template.getHashKeySerializer()).isInstanceOf(StringRedisSerializer.class);
+                Payload source = new Payload();
+                byte[] bytes = defaults.serialize(source);
+                assertThat(new String(bytes, StandardCharsets.UTF_8)).startsWith("{")
+                        .contains("@class", Payload.class.getName());
+                Payload copy = (Payload) defaults.deserialize(bytes);
+                assertThat(copy.id).isEqualTo(source.id);
+                assertThat(copy.amount).isEqualTo(source.amount);
+                assertThat(copy.createdAt).isEqualTo(source.createdAt);
+                Object list = defaults.deserialize(defaults.serialize(new ArrayList<>(Arrays.asList(source))));
+                assertThat((List<?>) list).hasSize(1).first().isInstanceOf(Payload.class);
+                Map<String, Payload> map = new LinkedHashMap<>();
+                map.put("one", source);
+                Object restoredMap = defaults.deserialize(defaults.serialize(map));
+                assertThat(restoredMap).isInstanceOf(Map.class);
+                assertThat(((Map<?, ?>) restoredMap).get("one")).isInstanceOf(Payload.class);
+                assertThat(defaults.deserialize(defaults.serialize("hello"))).isEqualTo("hello");
+                assertThat(defaults.deserialize(defaults.serialize(null))).isNull();
+            }
+        });
+    }
+
+    @Test
+    void shouldKeepTheDefaultWithDtoAndKeySerializersAndNotSelectThemForObjectValues() {
         runner.withUserConfiguration(LocalSerializers.class).run(context -> {
-            assertThat(context).hasNotFailed().hasSingleBean(RedisJsonSerializerFactory.class);
+            assertThat(context).hasNotFailed().hasBean("veloRedisSerializer");
             RedisTemplate<?, ?> template = context.getBean("stringObjectRedisTemplate", RedisTemplate.class);
             assertThat(template.getValueSerializer()).isNotSameAs(context.getBean("dtoSerializer"))
                     .isNotSameAs(context.getBean("keySerializer"));
             RedisSerializer<Object> serializer = (RedisSerializer<Object>) template.getValueSerializer();
-            assertThat(serializer.deserialize(serializer.serialize(new Payload()))).isInstanceOf(Map.class);
+            assertThat(serializer.deserialize(serializer.serialize(new Payload()))).isInstanceOf(Payload.class);
         });
     }
 
@@ -76,9 +107,19 @@ class VeloRedisJsonAutoConfigurationTests {
     void shouldUseTheUsersObjectSerializerRegardlessOfItsBeanName() {
         RedisSerializer<Object> user = RedisSerializer.json();
         runner.withBean("applicationValues", RedisSerializer.class, () -> user).run(context -> {
-            assertThat(context).hasNotFailed().hasSingleBean(RedisSerializer.class);
+            assertThat(context).hasNotFailed().hasSingleBean(RedisSerializer.class).doesNotHaveBean("veloRedisSerializer");
             assertThat(context.getBean("stringObjectRedisTemplate", RedisTemplate.class).getValueSerializer()).isSameAs(user);
             assertThat(context.getBean("redisTemplate", RedisTemplate.class).getValueSerializer()).isSameAs(user);
+        });
+    }
+
+    @Test
+    void shouldBackOffForAnObjectSerializerDeclaredByAUserBeanMethod() {
+        runner.withUserConfiguration(UserObjectSerializer.class).run(context -> {
+            assertThat(context).hasNotFailed().hasSingleBean(RedisSerializer.class)
+                    .doesNotHaveBean("veloRedisSerializer");
+            assertThat(context.getBean("redisTemplate", RedisTemplate.class).getValueSerializer())
+                    .isSameAs(context.getBean("applicationValues"));
         });
     }
 
@@ -90,8 +131,18 @@ class VeloRedisJsonAutoConfigurationTests {
                     assertThat(context).hasNotFailed();
                     assertThat(context.getBean("redisTemplate", RedisTemplate.class).getValueSerializer()).isSameAs(primary);
                 });
-        runner.withBean("first", RedisSerializer.class, RedisSerializer::json)
+        runner.withBean("redisSerializer", RedisSerializer.class, RedisSerializer::json)
                 .withBean("second", RedisSerializer.class, RedisSerializer::json).run(context -> {
+                    assertThat(context).hasFailed();
+                    assertThat(context.getStartupFailure()).hasRootCauseInstanceOf(NoUniqueBeanDefinitionException.class);
+                });
+    }
+
+    @Test
+    void shouldFailWhenMoreThanOnePrimaryObjectSerializerExists() {
+        runner.withBean("first", RedisSerializer.class, RedisSerializer::json, bean -> bean.setPrimary(true))
+                .withBean("second", RedisSerializer.class, RedisSerializer::json, bean -> bean.setPrimary(true))
+                .run(context -> {
                     assertThat(context).hasFailed();
                     assertThat(context.getStartupFailure()).hasRootCauseInstanceOf(NoUniqueBeanDefinitionException.class);
                 });
@@ -101,17 +152,26 @@ class VeloRedisJsonAutoConfigurationTests {
     void shouldRetainRedisDateSupportWhenHttpEnhancementsAreDisabled() {
         runner.withPropertyValues("velo.jackson.enabled=false").run(context -> {
             assertThat(context).hasNotFailed();
-            RedisSerializer<Object> serializer = context.getBean(RedisJsonSerializerFactory.class).create(Payload.class);
+            RedisSerializer<Object> serializer = context.getBean(RedisSerializer.class);
             Payload copy = (Payload) serializer.deserialize(serializer.serialize(new Payload()));
             assertThat(copy.createdAt).isEqualTo(new Payload().createdAt);
         });
     }
 
     @Configuration(proxyBeanMethods = false)
+    static class UserObjectSerializer {
+        @Bean
+        RedisSerializer<Object> applicationValues() {
+            return RedisSerializer.json();
+        }
+    }
+
+    @Configuration(proxyBeanMethods = false)
     static class LocalSerializers {
         @Bean
-        RedisSerializer<Payload> dtoSerializer(RedisJsonSerializerFactory factory) {
-            return (RedisSerializer<Payload>) (RedisSerializer<?>) factory.create(Payload.class);
+        @Primary
+        RedisSerializer<Payload> dtoSerializer() {
+            return new JacksonJsonRedisSerializer<>(Payload.class);
         }
         @Bean
         RedisSerializer<String> keySerializer() {
@@ -120,6 +180,10 @@ class VeloRedisJsonAutoConfigurationTests {
     }
 
     public static final class Payload {
+        @JsonProperty("title")
+        public String name = "example";
+        @JsonIgnore
+        public String ignored = "ignored";
         public long id = 9007199254740993L;
         public BigDecimal amount = new BigDecimal("12.3400");
         public LocalDateTime createdAt = LocalDateTime.of(2026, 10, 7, 10, 20, 30);

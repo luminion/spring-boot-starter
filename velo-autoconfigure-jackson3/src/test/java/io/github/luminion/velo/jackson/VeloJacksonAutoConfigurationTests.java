@@ -35,11 +35,11 @@ class VeloJacksonAutoConfigurationTests {
             .withConfiguration(AutoConfigurations.of(VeloJacksonAutoConfiguration.class, VeloRedisJsonAutoConfiguration.class));
 
     @Test
-    void shouldNotCreateDefaultRedisSerializerWhenRedisFeatureIsDisabled() {
+    void shouldKeepTheSharedCacheSerializerWhenRedisTemplatesAreDisabled() {
         contextRunner
                 .withBean(VeloProperties.class, VeloProperties::new)
                 .withPropertyValues("velo.redis.enabled=false")
-                .run(context -> assertThat(context).doesNotHaveBean(RedisSerializer.class));
+                .run(context -> assertThat(context).hasSingleBean(RedisSerializer.class));
     }
 
     @Test
@@ -68,7 +68,7 @@ class VeloJacksonAutoConfigurationTests {
                     assertThat(json).contains("\"score\":0.25");
                     assertThat(json).doesNotContain("\"score\":\"");
                     assertThat(json).contains("\"createdAt\":\"2026-03-31 08:09:10\"");
-                    assertThat(context).doesNotHaveBean(RedisSerializer.class);
+                    assertThat(context).hasSingleBean(RedisSerializer.class);
                 });
     }
 
@@ -507,8 +507,7 @@ class VeloJacksonAutoConfigurationTests {
         contextRunner
                 .withBean(VeloProperties.class, VeloProperties::new)
                 .run(context -> {
-                    RedisSerializer<Object> serializer = context.getBean(io.github.luminion.velo.redis.RedisJsonSerializerFactory.class)
-                            .create(RedisPayload.class);
+                    RedisSerializer<Object> serializer = context.getBean(RedisSerializer.class);
                     Object value = serializer.deserialize(serializer.serialize(new RedisPayload("ok")));
 
                     assertThat(value).isInstanceOf(RedisPayload.class);

@@ -1,7 +1,6 @@
 package io.github.luminion.velo.cache;
 
 import io.github.luminion.velo.VeloProperties;
-import io.github.luminion.velo.redis.RedisJsonSerializerFactory;
 import java.time.Duration;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.cache.autoconfigure.CacheProperties;
@@ -53,8 +52,7 @@ public class VeloCacheAutoConfiguration {
         @Bean
         @ConditionalOnMissingBean(RedisCacheConfiguration.class)
         RedisCacheConfiguration redisCacheConfiguration(CacheProperties springProperties, VeloProperties properties,
-                ObjectProvider<RedisSerializer<Object>> serializerProvider,
-                ObjectProvider<RedisJsonSerializerFactory> jsonFactoryProvider) {
+                ObjectProvider<RedisSerializer<Object>> serializerProvider) {
             CacheProperties.Redis redis = springProperties.getRedis();
             Duration ttl = redis.getTimeToLive() == null ? VeloCacheConfiguration.DEFAULT_TTL : redis.getTimeToLive();
             VeloCacheConfiguration.validateTtl(ttl, "spring.cache.redis.time-to-live");
@@ -65,7 +63,7 @@ public class VeloCacheAutoConfiguration {
             if (!redis.isUseKeyPrefix()) {
                 defaults = defaults.disableKeyPrefix();
             }
-            return VeloCacheConfiguration.customizeDefaults(defaults, serializerProvider, jsonFactoryProvider, redis.getKeyPrefix(), properties);
+            return VeloCacheConfiguration.customizeDefaults(defaults, serializerProvider, redis.getKeyPrefix(), properties);
         }
 
         @Bean
@@ -86,14 +84,8 @@ public class VeloCacheAutoConfiguration {
         @Bean
         @Order(Ordered.HIGHEST_PRECEDENCE)
         RedisCacheManagerBuilderCustomizer veloRedisCacheManagerBuilderCustomizer(RedisCacheWriter writer,
-                RedisCacheConfiguration defaults, RedisCacheTimeMapProvider timeMapProvider, VeloProperties properties,
-                ObjectProvider<RedisCacheTypeMapProvider> typeMapProvider,
-                ObjectProvider<RedisJsonSerializerFactory> jsonFactoryProvider) {
-            return builder -> {
-                VeloCacheConfiguration.customizeBuilder(builder, writer, defaults, timeMapProvider, properties);
-                typeMapProvider.ifAvailable(types -> VeloCacheConfiguration.customizeTypes(
-                        builder, defaults, types, jsonFactoryProvider.getObject()));
-            };
+                RedisCacheConfiguration defaults, RedisCacheTimeMapProvider timeMapProvider, VeloProperties properties) {
+            return builder -> VeloCacheConfiguration.customizeBuilder(builder, writer, defaults, timeMapProvider, properties);
         }
     }
 }

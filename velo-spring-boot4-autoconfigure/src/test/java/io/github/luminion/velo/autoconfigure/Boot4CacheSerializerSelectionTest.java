@@ -76,8 +76,7 @@ class Boot4CacheSerializerSelectionTest {
     @Test
     void shouldPreferJackson3SerializerByDefaultWhenJackson2IsAlsoPresent() {
         jacksonAwareContextRunner.run(context -> {
-            RedisSerializer<Object> serializer = context.getBean(io.github.luminion.velo.redis.RedisJsonSerializerFactory.class)
-                    .genericCacheSerializer();
+            RedisSerializer<Object> serializer = context.getBean(RedisSerializer.class);
 
             assertThat(serializer).isInstanceOf(GenericJacksonJsonRedisSerializer.class);
             Object deserialized = serializer.deserialize(serializer.serialize(new RedisPayload("ok")));

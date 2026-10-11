@@ -34,11 +34,11 @@ class VeloJacksonAutoConfigurationTests {
             .withConfiguration(AutoConfigurations.of(VeloJacksonAutoConfiguration.class, VeloRedisJsonAutoConfiguration.class));
 
     @Test
-    void shouldNotCreateDefaultRedisSerializerWhenRedisFeatureIsDisabled() {
+    void shouldKeepTheSharedCacheSerializerWhenRedisTemplatesAreDisabled() {
         contextRunner
                 .withBean(VeloProperties.class, VeloProperties::new)
                 .withPropertyValues("velo.redis.enabled=false")
-                .run(context -> assertThat(context).doesNotHaveBean(RedisSerializer.class));
+                .run(context -> assertThat(context).hasSingleBean(RedisSerializer.class));
     }
 
     @Test
@@ -90,7 +90,7 @@ class VeloJacksonAutoConfigurationTests {
                     assertThat(json).contains("\"score\":0.25");
                     assertThat(json).doesNotContain("\"score\":\"");
                     assertThat(json).contains("\"createdAt\":\"2026-03-30 12:34:56\"");
-                    assertThat(context).doesNotHaveBean(RedisSerializer.class);
+                    assertThat(context).hasSingleBean(RedisSerializer.class);
                 });
     }
 

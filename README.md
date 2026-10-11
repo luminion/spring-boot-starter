@@ -289,7 +289,7 @@ public UserDTO getById(Long id) {
 - 默认 TTL 为 `5m`，通过 `spring.cache.redis.time-to-live` 覆盖；`velo.cache.ttl.<cacheName>` 可按缓存名单独覆盖
 - 通用配置已统一到 Spring：原 `velo.cache.default-ttl`、`velo.cache.prefix`、`velo.cache.null-caching-enabled` 已移除，分别改用 `spring.cache.redis.time-to-live`、`key-prefix`、`cache-null-values`。原业务前缀 `app` 需改为 `key-prefix: "app:"`，新入口不会自动追加业务前缀分隔符
 - TTL 只允许 `0`（不过期）或至少 `1ms` 的正值；负值、非零但不足 `1ms` 的值，以及超出 long 毫秒范围的值会在缓存初始化时导致启动失败
-- 空值缓存、前缀开关及统计使用 `spring.cache.redis.cache-null-values`、`use-key-prefix`、`enable-statistics`；`spring.cache.cache-names` 用于预创建缓存；未登记类型的通用模式允许动态创建，登记类型后只允许已登记名称
+- 空值缓存、前缀开关及统计使用 `spring.cache.redis.cache-null-values`、`use-key-prefix`、`enable-statistics`；`spring.cache.cache-names` 用于预创建缓存；默认允许按 Spring 原生规则动态创建缓存
 - key 前缀格式为 `spring.cache.redis.key-prefix + cacheName + velo.cache.separator`。业务前缀原样拼接；例如 `key-prefix: "app:"` 和默认分隔符生成 `app:user:123`
 - 建议保留默认 `use-key-prefix=true`。关闭前缀后，原生整缓存清空会使用不带缓存名前缀的匹配模式，可能删除同库其他条目；只有独占 Redis 键空间时才适合关闭
 - `cacheNames` 应使用固定名称，例如 `user`、`order`；业务 ID 和动态查询条件放在 `key` 中，避免持续创建不同名称的 Cache 实例
@@ -302,40 +302,22 @@ public UserDTO getById(Long id) {
 - Velo 默认 writer 在 Lettuce 连接工厂下使用原生 `BatchStrategies.scan(1000)` 清空缓存；其他连接工厂保留原生 KEYS 策略，避免对未知驱动或 Jedis 集群作兼容假设。SCAN 分批查找并删除，会增加命令往返，也不提供并发写入时的原子清空保证；它不能解决缓存名前缀重叠。用户提供 writer 时，其连接及清空策略由用户决定
 - Velo 默认 writer 的普通缓存写入、删除及清空采用同步行为；Boot 4 使用原生 `immediateWrites()` 保持与 Boot 2/3 一致。用户提供 writer 时保留其原生设置，包括同步或异步行为。事务感知开启时，事务内的相关操作仍按 Spring 原生规则延迟到提交后执行；显式异步缓存接口遵循其原生语义
 - Velo 不维护按业务 key 累积的本地缓存或定时清理任务；缓存存储和过期由 Spring Data Redis 与 Redis 提供，CacheManager 仍会按缓存名称持有 Cache 实例
-- 未启用类型登记时，Velo 默认缓存配置优先复用容器中的 `RedisSerializer<Object>`；没有候选时由 `RedisJsonSerializerFactory` 提供带类型信息的原生通用 JSON 序列化器。存在多个候选且 Spring 无法选出唯一主候选时，直接启动报错，避免悄然切换缓存读写格式。用户提供完整缓存配置时，序列化器由该配置明确指定，不再自动选取
-- Redis JSON 使用独立映射器，HTTP 数字、脱敏、`JsonEncode` 等输出规则不会改变存储数据；关闭 `velo.jackson.enabled` 也不影响 Redis JSON 的日期支持。普通 RedisTemplate 默认是无自动类型信息的纯 JSON；Spring Cache 可使用下述按名称登记的定向纯 JSON。未启用登记时，通用缓存可复用用户 `RedisSerializer<Object>`；用户自定义 RedisTemplate 的设置不会自动传给 CacheManager
-- Boot 2 / 3 使用 Jackson 2：登记类型的缓存和普通 RedisTemplate 使用 `Jackson2JsonRedisSerializer`；未登记类型的通用缓存使用 `GenericJackson2JsonRedisSerializer`，保留类型信息
-- Boot 4 使用 Jackson 3：登记类型的缓存和普通 RedisTemplate 使用 `JacksonJsonRedisSerializer`；通用缓存使用 `GenericJacksonJsonRedisSerializer`。即使同时存在 Jackson 2，也不会自行切换默认实现
+- Velo 默认缓存配置优先复用容器中的 `RedisSerializer<Object>`；没有用户候选时自动注册 `veloRedisSerializer`（`RedisSerializer<Object>`）Bean，提供带类型信息的原生通用 JSON 序列化器。存在多个候选且 Spring 无法选出唯一主候选时，直接启动报错，避免悄然切换缓存读写格式。用户提供完整缓存配置时，序列化器由该配置明确指定，不再自动选取
+- Redis JSON 使用独立映射器，HTTP 数字、脱敏、`JsonEncode` 等输出规则不会改变存储数据；关闭 `velo.jackson.enabled` 也不影响 Redis JSON 的日期支持。普通 RedisTemplate 与 Spring Cache 默认共用带类型信息的 Generic Jackson JSON，支持 DTO 和集合自动恢复。两者都可复用用户 `RedisSerializer<Object>`；用户自定义 RedisTemplate 的设置不会自动传给 CacheManager
+- Boot 2 / 3 使用 Jackson 2：普通 RedisTemplate 与 Spring Cache 默认均使用 `GenericJackson2JsonRedisSerializer`，保留类型信息
+- Boot 4 使用 Jackson 3：普通 RedisTemplate 与 Spring Cache 默认均使用 `GenericJacksonJsonRedisSerializer`。即使同时存在 Jackson 2，也不会自行切换默认实现
 - Boot 4 如需让 Redis 使用 Jackson 2，应引入官方 `spring-boot-jackson2` 及 Jackson 2 依赖，并显式注册一个 `RedisSerializer<Object>` Bean，例如 `GenericJackson2JsonRedisSerializer`；Spring Data Redis 4.x 仍保留该类用于兼容或迁移旧数据，但已标记为后续移除，不作为 Boot 4 默认实现
 - Jackson 2 与 Jackson 3 的 Redis JSON 输出可能存在差异；从 Boot 2 / 3 切换到 Boot 4 时，应先规划旧数据读取、迁移或 key 空间隔离，不要默认认为历史值可以无缝混读
-- **Redis 信任约定**：默认将 Redis 及其写入内容视为可信。未登记类型的通用缓存为支持 `Object` / POJO 回读，会写入并按类型元数据（`@class`）反序列化；Velo 不额外维护业务类型白名单。业务如需限制可读取的类型，可使用按缓存名称登记的定向 serializer，或自行注册基于 `BasicPolymorphicTypeValidator` 的 `RedisSerializer<Object>` Bean，Velo 会复用该 Bean
+- **Redis 信任约定**：默认将 Redis 及其写入内容视为可信。普通 RedisTemplate 与 Spring Cache 为支持 `Object` / POJO 回读，会写入并按类型元数据（`@class`）反序列化；Velo 不额外维护业务类型白名单。业务如需限制可读取的类型，可通过原生缓存配置提供定向 serializer，或自行注册基于 `BasicPolymorphicTypeValidator` 的 `RedisSerializer<Object>` Bean，Velo 会复用该 Bean
 
-按缓存名称登记纯 JSON 的目标类型（推荐）：
+默认缓存格式与类型恢复：
 
-```java
-import io.github.luminion.velo.cache.RedisCacheTypeMapProvider;
-import org.springframework.core.ParameterizedTypeReference;
-import java.lang.reflect.Type;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-
-@Bean
-RedisCacheTypeMapProvider redisCacheTypes() {
-    Map<String, Type> types = new LinkedHashMap<>();
-    types.put("user", UserProfile.class);
-    types.put("users", new ParameterizedTypeReference<List<UserProfile>>() { }.getType());
-    return new RedisCacheTypeMapProvider(types);
-}
-```
-
-- 提供该 Bean 后，登记的缓存使用原生定向 JSON 序列化器，普通 DTO 不自动写入 `@class` 或 Java 类包装。用户类主动声明的 `JsonTypeInfo` 等协议仍按 Jackson 原生规则生效
-- 一个缓存名对应一种值类型；集合需登记完整泛型，不能只写 `List.class`。类型映射在管理器构建时读取，修改输入 Map 不会动态更新管理器
-- 已有 TTL、业务前缀、分隔符、空值设置和 writer 均保留；普通用户 builder customizer 仍可最后覆盖对应缓存配置
-- `spring.cache.cache-names` 和 `velo.cache.ttl` / 用户 TTL provider 中的名称也必须登记，否则启动报错。运行时未知名称由原生 CacheManager 拒绝，`@Cacheable` 会在执行业务前报错；无需自动扫描方法或线程上下文
-- 未提供类型映射 Bean 时保留通用缓存模式，仍包含类型信息。需要所有缓存都是纯 JSON 时，登记全部缓存名称即可；可提供空映射明确禁用所有未登记缓存
-- null 继续走 Spring 原生空值缓存机制，原始空值标记并非 JSON。非 null 业务值的纯 JSON 不受影响
-- 协议切换应更换业务 key 前缀，避免混读历史类型格式。手动使用 CacheManager 时，`getCache(未知名)` 返回 null；原生用户 customizer 可显式调整该机制
+- 开启 Spring Cache 并满足 Redis 自动配置条件后，无需按缓存名称登记 Class 或泛型；DTO、集合等常见值通过 Generic Jackson 的类型元数据自动恢复
+- 默认缓存值使用 JSON，允许包含 `@class` 或类型包装；不会扫描方法返回类型，也不会对缓存名称建立业务类型白名单
+- `spring.cache.cache-names`、`velo.cache.ttl` 和运行时新缓存名称均遵循 Spring 原生流程，不要求附加类型配置
+- null 继续走 Spring 原生空值缓存机制，原始空值标记并非 JSON
+- 用户提供 `RedisSerializer<Object>`、完整 `RedisCacheConfiguration` 或原生 customizer 时，沿用用户指定的序列化协议
+- 升级自原定向 JSON 缓存时，应清理对应旧条目或更换缓存业务前缀，再由应用回填；没有类型元数据的旧 DTO JSON 不能直接按新的通用格式还原
 
 扩展组件的接入方式：
 
@@ -346,8 +328,7 @@ RedisCacheTypeMapProvider redisCacheTypes() {
 | `RedisCacheManagerBuilderCustomizer` | Boot 按顺序调用，可设置按名称 TTL、writer、统计等 |
 | `CacheManagerCustomizer<RedisCacheManager>` | Boot 在构建后、初始化前调用，可调整事务感知等 |
 | `RedisCacheTimeMapProvider` | Velo 优先采用用户 Bean；按名称 TTL 在管理器创建时应用，运行时修改原 Map 不会刷新已有缓存配置 |
-| `RedisCacheTypeMapProvider` | 按缓存名登记目标 Class/完整泛型，启用定向纯 JSON；登记模式拒绝未知缓存名 |
-| `RedisJsonSerializerFactory` | Jackson 2/3 的原生序列化器适配，可通过用户同类型 Bean 覆盖；默认不注册竞争的 RedisSerializer Bean |
+| `RedisSerializer<Object>` | 默认注册 `veloRedisSerializer` Bean，供 RedisTemplate 和 Spring Cache 共用；用户通用 Bean 存在时退让，多个候选须指定唯一 `@Primary` |
 | `RedisCacheWriter` | Velo 优先采用用户 Bean；默认 writer 退让 |
 | `RedisSerializer<Object>` | Velo 默认缓存配置选择唯一或主候选，也可以在完整缓存配置中显式指定 |
 | `CacheKeyPrefix` | 在缓存配置中显式传给 `computePrefixWith(...)`，单独注册 Bean 不会自动接入 |
@@ -1063,7 +1044,7 @@ velo:
 
 ### 10. Redis 自动配置
 
-Velo 基于已有 `RedisConnectionFactory` 补齐常用 `RedisTemplate`，优先使用用户的 `RedisSerializer<Object>`，没有时由默认工厂创建纯 JSON 序列化器。
+Velo 基于已有 `RedisConnectionFactory` 补齐常用 `RedisTemplate`，优先使用用户的 `RedisSerializer<Object>`，没有时使用自动注册的 Generic Jackson JSON 序列化器 Bean，通过类型元数据自动恢复常见业务对象。
 
 额外依赖：
 
@@ -1084,18 +1065,20 @@ velo:
 
 说明：
 
-- `velo.redis.enabled` 默认开启
+- `velo.redis.enabled` 默认开启，只控制 RedisTemplate 增强；共用的 JSON 序列化器 Bean 仍可供 Spring Cache 使用
 - 未引入 Spring Data Redis 时，Redis 自动配置会安全跳过，不会触发 Redis 连接配置或导致应用启动失败
 - Boot 2 的 Redis 连接地址、密码、数据库使用 `spring.redis.*`；Boot 3 / 4 使用 `spring.data.redis.*`
 - starter 会尝试创建：
   - `redisTemplate`
   - `stringObjectRedisTemplate`
-- 普通模板优先使用用户的 `RedisSerializer<Object>`；定向缓存通过类型映射单独配置。默认 Redis mapper 独立于 HTTP JSON，Web 全局增强不会自动影响 Redis 值格式
-- 默认 JSON 序列化器由 `RedisJsonSerializerFactory` 创建，不注册全局 `RedisSerializer` Bean；局部 `RedisSerializer<Dto>` / `RedisSerializer<String>` 不会关闭默认工厂，也不会作为通用 Object 值序列化器被选择
-- 用户提供一个 `RedisSerializer<Object>` 时直接采用，Bean 名无需固定；多个通用候选须使用 `@Primary` 明确选择，否则按 Spring 原生规则启动报错，不再静默回退另一套格式。`@Order` 不决定单个 Bean 的注入优先级
-- 默认普通 Redis 值是纯 JSON；通用 Object 模板读取 DTO 会得到 Map/List。固定类型模板需显式配置原生定向 serializer；不同值类型的手动读取可使用 StringRedisTemplate + Jackson `readValue(json, Dto.class)` / 完整 JavaType
-- HTTP Jackson mapper 不用于默认 Redis 存储；默认工厂保留日期支持，不增加业务 key 缓存、轮询或定时线程
-- Boot 4 项目若选择 Jackson 2，请自行提供 Jackson 2 的 `RedisSerializer<Object>` Bean，普通 RedisTemplate 和未登记类型的通用缓存会复用该 Bean；登记类型的缓存继续使用对应版本的定向工厂，可用用户 builder customizer 显式覆盖。Jackson 2/3 同时存在时不会仅依据类路径猜测用户意图，详细兼容边界见上面的缓存说明
+- 普通模板与 Spring Cache 均优先使用用户的 `RedisSerializer<Object>`；没有用户候选时共用自动注册的通用 JSON 序列化器 Bean。默认 Redis mapper 独立于 HTTP JSON，Web 全局增强不会自动影响 Redis 值格式
+- 默认注册标准 `RedisSerializer<Object>` Bean（名称为 `veloRedisSerializer`，不标记 `@Primary`），无需通过工厂获取；局部 `RedisSerializer<Dto>` / `RedisSerializer<String>` 不会关闭默认 Bean，也不会作为通用 Object 值序列化器被选择
+- 用户提供一个 `RedisSerializer<Object>` 时直接采用，Bean 名无需固定；多个通用候选须使用 `@Primary` 明确选择，否则按 Spring 原生规则启动报错，不再静默回退另一套格式；也不会以空序列化器触发 RedisTemplate 的 JDK 默认序列化。`@Order` 不决定单个 Bean 的注入优先级
+- 默认普通 Redis 值以 JSON 储存，允许包含 `@class` 或类型包装；通用 Object 模板读回 DTO 时恢复实际类型，集合元素也恢复类型，业务本身写入的 Map 仍读为 Map。无需登记目标类型，遵循 1.3.0 的通用 JSON 使用方式；若明确需要无类型信息的 JSON，可自行提供定向 serializer 或使用 StringRedisTemplate 写入 JSON 字符串
+- 通用 JSON 的集合兼容性遵循当前 Jackson / Spring Data Redis 版本。已验证普通 DTO、record、List 和 LinkedHashMap；当前 Jackson 2 下 `Map.of(...)` 的不可变 Map 读回时可能把 `@class` 留作 Map 项。需要稳定恢复 Map 内容时，建议写入 `LinkedHashMap`，或自行提供适合业务协议的 serializer；Velo 不在写入前转换业务集合，也不在读取后过滤业务字段
+- HTTP Jackson mapper 不用于默认 Redis 存储；默认序列化器保留日期支持，不增加业务 key 缓存、轮询或定时线程
+- 从此前无类型信息的 Object JSON 切换到默认通用 JSON 时，应清理对应旧条目或更换业务 key 前缀；默认序列化器不会猜测旧 JSON 的 DTO 类型。用户自己注册的模板、局部定向 serializer 和 StringRedisTemplate 保持原有协议
+- Boot 4 项目若选择 Jackson 2，请自行提供 Jackson 2 的 `RedisSerializer<Object>` Bean，普通 RedisTemplate 和 Spring Cache 默认配置会复用该 Bean；也可用用户 builder customizer 显式覆盖。Jackson 2/3 同时存在时不会仅依据类路径猜测用户意图，详细兼容边界见上面的缓存说明
 
 ---
 
