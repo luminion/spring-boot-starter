@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/** 验证邮箱脱敏对本地部分和域名格式的处理。 */
 class EmailMaskerTests {
     @Test
     void shouldMaskCompleteLocalPartRegardlessOfDomainOrLocalPartPunctuation() {

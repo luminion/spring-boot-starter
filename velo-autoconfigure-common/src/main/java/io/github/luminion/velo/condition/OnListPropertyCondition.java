@@ -1,5 +1,8 @@
 package io.github.luminion.velo.condition;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.springframework.boot.autoconfigure.condition.ConditionMessage;
 import org.springframework.boot.autoconfigure.condition.ConditionOutcome;
 import org.springframework.boot.autoconfigure.condition.SpringBootCondition;
@@ -11,16 +14,23 @@ import org.springframework.core.annotation.AnnotationAttributes;
 import org.springframework.core.type.AnnotatedTypeMetadata;
 import org.springframework.util.StringUtils;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
+/**
+ * 根据指定属性的列表绑定结果判断条件是否匹配。
+ */
 public class OnListPropertyCondition extends SpringBootCondition {
 
+    /**
+     * 检查属性是否缺失、为空或包含有效元素，并据此返回匹配结果。
+     *
+     * @param context 条件评估上下文
+     * @param metadata 被评估元素的注解元数据
+     * @return 列表属性条件的匹配结果
+     */
     @Override
     public ConditionOutcome getMatchOutcome(ConditionContext context, AnnotatedTypeMetadata metadata) {
-        AnnotationAttributes attrs = AnnotationAttributes.fromMap(
-                metadata.getAnnotationAttributes(ConditionalOnListProperty.class.getName())
-        );
+        AnnotationAttributes attrs =
+                AnnotationAttributes.fromMap(
+                        metadata.getAnnotationAttributes(ConditionalOnListProperty.class.getName()));
         if (attrs == null) {
             return ConditionOutcome.noMatch("No @ConditionalOnListProperty found");
         }
@@ -57,8 +67,12 @@ public class OnListPropertyCondition extends SpringBootCondition {
         if (ignoreEmptyElements) {
             list = list.stream()
                     .filter(e -> {
-                        if (e == null) return false;
-                        if (e instanceof CharSequence) return StringUtils.hasText(e.toString());
+                        if (e == null) {
+                            return false;
+                        }
+                        if (e instanceof CharSequence) {
+                            return StringUtils.hasText(e.toString());
+                        }
                         return true;
                     })
                     .collect(Collectors.toList());

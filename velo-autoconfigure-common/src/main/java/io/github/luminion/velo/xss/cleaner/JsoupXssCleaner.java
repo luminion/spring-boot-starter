@@ -33,20 +33,21 @@ public class JsoupXssCleaner implements XssCleaner {
             this.outputSettings = null;
         } else {
             // 2. 预热 Jsoup 配置
-            if (strategy == XssStrategy.SIMPLE_TEXT){
+            if (strategy == XssStrategy.SIMPLE_TEXT) {
                 this.safelist = Safelist.simpleText();
-            }else if (strategy == XssStrategy.BASIC){
+            } else if (strategy == XssStrategy.BASIC) {
                 this.safelist = Safelist.basic();
-            }else if (strategy == XssStrategy.BASIC_WITH_IMAGES){
+            } else if (strategy == XssStrategy.BASIC_WITH_IMAGES) {
                 this.safelist = Safelist.basicWithImages();
-            }else {
+            } else {
                 this.safelist = Safelist.relaxed();
             }
             // 保留相对链接的 href/src；javascript: 等伪协议仍被协议白名单拦截
             this.safelist.preserveRelativeLinks(true);
-            this.outputSettings = new Document.OutputSettings()
-                    .prettyPrint(false)
-                    .escapeMode(Entities.EscapeMode.xhtml);
+            this.outputSettings =
+                    new Document.OutputSettings()
+                            .prettyPrint(false)
+                            .escapeMode(Entities.EscapeMode.xhtml);
         }
     }
 

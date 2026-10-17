@@ -30,6 +30,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 
+/** 验证锁处理器的默认选择及后端优先级。 */
 class VeloLockAutoConfigurationTests {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()

@@ -83,12 +83,11 @@ public final class WebUtilsSupport {
     }
 
     /**
-     * Builds a Content-Disposition header value for file download, handling
-     * URL encoding and RFC 5987 format.
+     * 构造文件下载的 Content-Disposition 响应头值，并使用 URL 编码和 RFC 5987 格式。
      *
-     * @param fileName the full file name (with or without suffix)
-     * @param suffix   the file suffix (e.g. {@code .xlsx}), or empty/null if none
-     * @return the Content-Disposition header value
+     * @param fileName 完整文件名，可以包含后缀
+     * @param suffix 文件后缀，例如 {@code .xlsx}；无后缀时可为空
+     * @return Content-Disposition 响应头值
      */
     public static String buildContentDisposition(String fileName, String suffix) {
         if (fileName == null || fileName.isEmpty()) {
@@ -104,7 +103,9 @@ public final class WebUtilsSupport {
             throw new IllegalStateException("UTF-8 编码不受支持", ex);
         }
         encodedFileName = encodedFileName.replaceAll("\\+", "%20");
-        return String.format("attachment; filename=\"%s\"; filename*=utf-8''%s",
-                encodedFileName, encodedFileName);
+        return String.format(
+                "attachment; filename=\"%s\"; filename*=utf-8''%s",
+                encodedFileName,
+                encodedFileName);
     }
 }

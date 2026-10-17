@@ -4,6 +4,8 @@ import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.xss.cleaner.JsoupXssCleaner;
 import io.github.luminion.velo.xss.cleaner.SpringHtmlEscapeXssCleaner;
 import io.github.luminion.velo.xss.converter.XssStringConverter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -14,8 +16,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplicat
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * XSS 自动配置。
@@ -33,6 +33,12 @@ public class VeloXssAutoConfiguration {
     @Conditional(XssStrategyEnabledCondition.class)
     static class JsoupXssConfiguration {
 
+        /**
+         * 使用配置中的清洗策略创建 Jsoup 清洗器。
+         *
+         * @param properties Starter 配置
+         * @return Jsoup XSS 清洗器
+         */
         @Bean
         @ConditionalOnMissingBean
         public XssCleaner xssCleaner(VeloProperties properties) {
@@ -45,6 +51,11 @@ public class VeloXssAutoConfiguration {
     @Conditional(XssStrategyEnabledCondition.class)
     static class SpringXssConfiguration {
 
+        /**
+         * 检查缺少 Jsoup 依赖时所选清洗策略是否需要提示。
+         *
+         * @param properties Starter 配置
+         */
         SpringXssConfiguration(VeloProperties properties) {
             XssStrategy strategy = properties.getXss().getStrategy();
             if (strategy != XssStrategy.NONE && strategy != XssStrategy.ESCAPE) {
@@ -53,6 +64,11 @@ public class VeloXssAutoConfiguration {
             }
         }
 
+        /**
+         * 创建基于 Spring HTML 转义的清洗器。
+         *
+         * @return HTML 转义 XSS 清洗器
+         */
         @Bean
         @ConditionalOnMissingBean
         @ConditionalOnProperty(prefix = "velo.xss", name = "strategy", havingValue = "ESCAPE")
@@ -61,6 +77,12 @@ public class VeloXssAutoConfiguration {
         }
     }
 
+    /**
+     * 创建 Web MVC 使用的 XSS 字符串转换器。
+     *
+     * @param xssCleaner 已注册的 XSS 清洗器
+     * @return XSS 字符串转换器
+     */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnBean(XssCleaner.class)

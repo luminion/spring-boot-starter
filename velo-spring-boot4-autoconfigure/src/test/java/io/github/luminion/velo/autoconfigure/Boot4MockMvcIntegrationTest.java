@@ -1,5 +1,9 @@
 package io.github.luminion.velo.autoconfigure;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.Date;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.SpringBootConfiguration;
@@ -14,11 +18,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.WebApplicationContext;
-
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.util.Date;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -74,12 +73,14 @@ class Boot4MockMvcIntegrationTest {
         }
     }
 
+    /** 提供启用自动配置并注册测试控制器的应用入口。 */
     @SpringBootConfiguration
     @EnableAutoConfiguration(excludeName = "org.redisson.spring.starter.RedissonAutoConfigurationV4")
     @Import(TestController.class)
     static class TestApplication {
     }
 
+    /** 声明用于验证日期参数绑定的 MVC 端点。 */
     @RestController
     static class TestController {
 

@@ -10,6 +10,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
 
+/** 验证核心配置属性的元数据生成。 */
 class VeloConfigurationMetadataTest {
 
   @Test

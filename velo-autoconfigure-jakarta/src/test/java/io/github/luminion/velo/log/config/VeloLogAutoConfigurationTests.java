@@ -27,6 +27,7 @@ import org.springframework.boot.logging.LogLevel;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.core.task.TaskDecorator;
 
+/** 验证调用日志自动配置、属性绑定及自定义扩展点。 */
 class VeloLogAutoConfigurationTests {
 
     private final ApplicationContextRunner contextRunner =

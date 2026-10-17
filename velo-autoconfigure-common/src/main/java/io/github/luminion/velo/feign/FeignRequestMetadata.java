@@ -5,8 +5,10 @@ package io.github.luminion.velo.feign;
  */
 final class FeignRequestMetadata {
 
+    /** Feign 请求使用的 HTTP 方法。 */
     private final String httpMethod;
 
+    /** Feign 请求映射的路径。 */
     private final String path;
 
     FeignRequestMetadata(String httpMethod, String path) {

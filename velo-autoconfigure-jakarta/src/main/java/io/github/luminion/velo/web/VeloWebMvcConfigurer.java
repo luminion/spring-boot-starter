@@ -2,6 +2,9 @@ package io.github.luminion.velo.web;
 
 import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.xss.converter.XssStringConverter;
+import java.time.ZoneId;
+import java.util.Arrays;
+import java.util.TimeZone;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,17 +14,13 @@ import org.springframework.core.annotation.Order;
 import org.springframework.format.FormatterRegistry;
 import org.springframework.format.datetime.DateFormatter;
 import org.springframework.format.datetime.DateFormatterRegistrar;
+import org.springframework.format.datetime.standard.DateTimeFormatterFactory;
 import org.springframework.format.datetime.standard.DateTimeFormatterRegistrar;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-import org.springframework.format.datetime.standard.DateTimeFormatterFactory;
-import java.time.ZoneId;
-import java.util.Arrays;
-import java.util.TimeZone;
-
 /**
- * Web MVC 增强配置。
+ * 注册 Web MVC 使用的 XSS 转换器、日期格式和跨域规则。
  */
 @RequiredArgsConstructor
 @Order(Ordered.LOWEST_PRECEDENCE)
@@ -32,6 +31,11 @@ public class VeloWebMvcConfigurer implements WebMvcConfigurer {
     private final ObjectProvider<XssStringConverter> xssStringConverterProvider;
     private final VeloProperties properties;
 
+    /**
+     * 按配置注册 XSS 字符串转换器和日期时间格式化器。
+     *
+     * @param registry MVC 格式化器注册表
+     */
     @Override
     public void addFormatters(FormatterRegistry registry) {
         if (properties.getXss().isWebEnabled()) {
@@ -62,6 +66,11 @@ public class VeloWebMvcConfigurer implements WebMvcConfigurer {
         }
     }
 
+    /**
+     * 在跨域功能启用时注册允许的来源、方法和凭证配置。
+     *
+     * @param registry MVC 跨域映射注册表
+     */
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         VeloProperties.WebProperties web = properties.getWeb();

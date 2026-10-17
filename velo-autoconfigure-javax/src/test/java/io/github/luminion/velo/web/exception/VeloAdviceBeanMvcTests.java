@@ -1,8 +1,9 @@
 package io.github.luminion.velo.web.exception;
 
-import org.junit.jupiter.api.Test;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+
+import org.junit.jupiter.api.Test;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -20,6 +21,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/** 验证通过 {@code @Bean} 显式注册的 Advice 能处理 MVC 异常。 */
 class VeloAdviceBeanMvcTests {
     @Test
     void explicitlyCreatedBeanHandlesMvcExceptionsWithoutSubclassAnnotation() throws Exception {
@@ -27,12 +29,15 @@ class VeloAdviceBeanMvcTests {
             context.setServletContext(new MockServletContext());
             context.register(WebConfig.class);
             context.refresh();
-            MockMvcBuilders.webAppContextSetup(context).build().perform(get("/missing"))
+            MockMvcBuilders.webAppContextSetup(context)
+                    .build()
+                    .perform(get("/missing"))
                     .andExpect(status().isOk())
                     .andExpect(content().string("failed:缺少必要参数: name"));
         }
     }
 
+    /** 为 MVC 异常处理测试提供最小 Web 配置。 */
     @Configuration(proxyBeanMethods = false)
     @EnableWebMvc
     static class WebConfig implements WebMvcConfigurer {
@@ -47,7 +52,8 @@ class VeloAdviceBeanMvcTests {
 
         @Bean
         VeloValidationWebExceptionHandler<String> advice() {
-            return new VeloValidationWebExceptionHandler<>(message -> "failed:" + message,
+            return new VeloValidationWebExceptionHandler<>(
+                    message -> "failed:" + message,
                     error -> "error:" + error.getClass().getSimpleName());
         }
 
@@ -57,6 +63,7 @@ class VeloAdviceBeanMvcTests {
         }
     }
 
+    /** 提供一个缺少请求参数时触发异常的测试端点。 */
     @RestController
     static class Controller {
         @GetMapping("/missing")

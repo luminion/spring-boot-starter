@@ -11,5 +11,5 @@ import org.springframework.context.annotation.Conditional;
 @Target({ElementType.TYPE, ElementType.METHOD})
 @Conditional(InvocationAdapterCondition.class)
 public @interface ConditionalOnInvocationAdapter {
-  String source();
+    String source();
 }

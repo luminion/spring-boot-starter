@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+/** 验证并发控制注解的键前缀归一化与指纹回退。 */
 class ConcurrencyAnnotationUtilsTest {
 
     @Test

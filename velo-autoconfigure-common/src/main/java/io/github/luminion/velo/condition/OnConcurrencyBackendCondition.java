@@ -13,13 +13,24 @@ import org.springframework.core.type.AnnotatedTypeMetadata;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
 
+/**
+ * 根据配置的并发后端及其自动探测条件判断配置类是否生效。
+ */
 public class OnConcurrencyBackendCondition extends SpringBootCondition {
 
+    /**
+     * 解析注解参数和配置属性，并检查所需类或 Bean 是否可用。
+     *
+     * @param context 条件评估上下文
+     * @param metadata 被评估元素的注解元数据
+     * @return 后端条件的匹配结果
+     */
     @Override
     public ConditionOutcome getMatchOutcome(ConditionContext context, AnnotatedTypeMetadata metadata) {
-        AnnotationAttributes attrs = AnnotationAttributes.fromMap(
-                metadata.getAnnotationAttributes(ConditionalOnConcurrencyBackend.class.getName())
-        );
+        AnnotationAttributes attrs =
+                AnnotationAttributes.fromMap(
+                        metadata.getAnnotationAttributes(
+                                ConditionalOnConcurrencyBackend.class.getName()));
         if (attrs == null) {
             return ConditionOutcome.noMatch("No @ConditionalOnConcurrencyBackend found");
         }
@@ -30,9 +41,11 @@ public class OnConcurrencyBackendCondition extends SpringBootCondition {
         }
 
         ConcurrencyBackend backend = attrs.getEnum("backend");
-        ConditionMessage.Builder message = ConditionMessage.forCondition(
-                ConditionalOnConcurrencyBackend.class, prefix + ".backend", backend.name()
-        );
+        ConditionMessage.Builder message =
+                ConditionMessage.forCondition(
+                        ConditionalOnConcurrencyBackend.class,
+                        prefix + ".backend",
+                        backend.name());
 
         Binder binder = Binder.get(context.getEnvironment());
         ConcurrencyBackend configured = binder.bind(prefix + ".backend", ConcurrencyBackend.class)
@@ -73,11 +86,15 @@ public class OnConcurrencyBackendCondition extends SpringBootCondition {
     }
 
     private boolean containsBean(ConfigurableListableBeanFactory beanFactory, String beanName) {
-        return beanFactory != null && (beanFactory.containsBeanDefinition(beanName) || beanFactory.containsBean(beanName));
+        return beanFactory != null
+                && (beanFactory.containsBeanDefinition(beanName)
+                        || beanFactory.containsBean(beanName));
     }
 
-    private boolean containsBeanOfType(ConfigurableListableBeanFactory beanFactory, ClassLoader classLoader,
-                                       String beanTypeName) {
+    private boolean containsBeanOfType(
+            ConfigurableListableBeanFactory beanFactory,
+            ClassLoader classLoader,
+            String beanTypeName) {
         if (beanFactory == null) {
             return false;
         }
@@ -87,7 +104,9 @@ public class OnConcurrencyBackendCondition extends SpringBootCondition {
         } catch (IllegalArgumentException ex) {
             return false;
         }
-        String[] beanNames = BeanFactoryUtils.beanNamesForTypeIncludingAncestors(beanFactory, beanType, true, false);
+        String[] beanNames =
+                BeanFactoryUtils.beanNamesForTypeIncludingAncestors(
+                        beanFactory, beanType, true, false);
         return beanNames.length > 0;
     }
 }

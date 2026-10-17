@@ -30,6 +30,7 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+/** 验证控制器日志收集请求头及注解声明时的日志来源控制。 */
 class ControllerHeaderLogTests {
     @Test
     void capturesAllowlistedHeadersCaseInsensitively() throws Throwable {

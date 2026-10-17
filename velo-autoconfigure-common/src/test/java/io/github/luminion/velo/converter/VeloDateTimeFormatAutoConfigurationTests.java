@@ -15,6 +15,7 @@ import java.util.Date;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/** 验证日期时间转换器按配置注册并处理边界日期。 */
 class VeloDateTimeFormatAutoConfigurationTests {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()

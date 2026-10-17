@@ -1,17 +1,22 @@
 package io.github.luminion.velo.jackson.support;
 
-import lombok.Getter;
-
 import java.util.Map;
 
+import lombok.Getter;
+
 /**
- * Runtime mapping from enum code values to enum display names.
+ * 枚举编码值到显示名称的运行时映射。
  */
 public class JsonEnumMetadata {
 
+    /** 枚举编码值到显示名称的映射。 */
     private final Map<Object, Object> mapping;
+
+    /** 编码字段的名称。 */
     @Getter
     private final String codeFieldName;
+
+    /** 显示名称字段的名称。 */
     @Getter
     private final String nameFieldName;
 

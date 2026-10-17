@@ -13,7 +13,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplicat
 import org.springframework.context.annotation.Bean;
 
 /**
- * Web MVC 自动配置。
+ * 注册 Web MVC 增强配置和控制器调用日志切面。
  */
 @AutoConfiguration(after = VeloLogAutoConfiguration.class)
 @ConditionalOnClass(name = "org.springframework.web.servlet.DispatcherServlet")
@@ -27,10 +27,19 @@ public class VeloWebAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public VeloWebMvcConfigurer veloWebMvcConfigurer(ObjectProvider<XssStringConverter> xssStringConverterProvider, VeloProperties properties) {
+    public VeloWebMvcConfigurer veloWebMvcConfigurer(
+            ObjectProvider<XssStringConverter> xssStringConverterProvider,
+            VeloProperties properties) {
         return new VeloWebMvcConfigurer(xssStringConverterProvider, properties);
     }
 
+    /**
+     * 根据日志配置注册控制器调用日志切面。
+     *
+     * @param properties Starter 配置
+     * @param engine 调用日志引擎
+     * @return 控制器调用日志切面
+     */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnClass(ControllerLogAspect.class)

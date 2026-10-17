@@ -32,6 +32,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.slf4j.MDC;
 import org.springframework.boot.logging.LogLevel;
 
+/** 验证调用日志引擎对默认功能、注解覆盖和日志输出的处理。 */
 class InvocationLogEngineTest {
     private final VeloProperties properties = new VeloProperties();
     private final List<InvocationLogRecord> records = Collections.synchronizedList(new ArrayList<>());

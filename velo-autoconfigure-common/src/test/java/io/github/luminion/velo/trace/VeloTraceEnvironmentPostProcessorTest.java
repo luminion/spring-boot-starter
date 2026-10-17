@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.SpringApplication;
 import org.springframework.mock.env.MockEnvironment;
 
+/** 验证链路追踪环境后处理器对日志格式和 MDC 键的配置。 */
 class VeloTraceEnvironmentPostProcessorTest {
 
     @Test

@@ -18,6 +18,11 @@ import tools.jackson.databind.json.JsonMapper;
 @ConditionalOnClass({JsonMapper.class, RedisSerializer.class})
 public class VeloRedisJsonAutoConfiguration {
 
+    /**
+     * 提供 Jackson 3 Redis JSON 序列化器。
+     *
+     * @return Redis JSON 序列化器
+     */
     @Bean
     @Conditional(OnMissingRedisObjectSerializerCondition.class)
     public RedisSerializer<Object> veloRedisSerializer() {

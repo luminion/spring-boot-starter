@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
+/** 验证定时任务单次及重复调度时的调用日志行为。 */
 class ScheduledLogAspectTests {
     @Test
     void shouldLogSingleAndRepeatedSchedulesThroughActualProxy() {

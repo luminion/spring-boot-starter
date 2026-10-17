@@ -14,6 +14,7 @@ import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 
 @ExtendWith(OutputCaptureExtension.class)
+/** 验证日志输出器的功能记录格式、异常摘要和来源标识。 */
 class Slf4JInvocationLogWriterTest {
     @Test
     void writesOneLinePerFeatureWithoutRepeatedMetadata(CapturedOutput output) {

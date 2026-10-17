@@ -3,7 +3,7 @@ package io.github.luminion.velo.core;
 import org.springframework.core.Ordered;
 
 /**
- * Starter managed advisor order values.
+ * Starter 管理的切面执行顺序常量。
  */
 public final class VeloAdvisorOrder {
 
@@ -16,18 +16,17 @@ public final class VeloAdvisorOrder {
     public static final int CONCURRENCY_LOCK = CONCURRENCY_BASE + 20_000;
 
     /**
-     * Invocation log aspect order. Positioned inside concurrency control aspects so that
-     * rejected requests (idempotent/rate-limit/lock) are not logged as method invocations.
+     * 调用日志切面的执行顺序。位于并发控制切面内侧，使被幂等、限流或锁拒绝的请求不会作为方法调用记录。
      */
     public static final int LOG_INVOKE = CONCURRENCY_BASE + 25_000;
 
     /**
-     * Controller log aspect order.
+     * Controller 日志切面的执行顺序。
      */
     public static final int LOG_CONTROLLER = CONCURRENCY_BASE + 35_000;
 
     /**
-     * Feign log aspect order.
+     * Feign 日志切面的执行顺序。
      */
     public static final int LOG_FEIGN = CONCURRENCY_BASE + 40_000;
 

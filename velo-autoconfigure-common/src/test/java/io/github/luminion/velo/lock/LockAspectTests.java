@@ -19,6 +19,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/** 验证锁切面的键回退、业务异常和锁释放行为。 */
 class LockAspectTests {
 
     @Test

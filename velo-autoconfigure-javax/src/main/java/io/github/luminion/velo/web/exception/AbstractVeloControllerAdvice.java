@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
  */
 @RestControllerAdvice
 public abstract class AbstractVeloControllerAdvice implements Ordered {
+
+    /** 返回低优先级，使应用中显式配置的 Advice 可以优先处理异常。 */
     @Override
     public int getOrder() {
         return Ordered.LOWEST_PRECEDENCE;

@@ -18,15 +18,25 @@ import java.util.function.Function;
  */
 public class JacksonStringSerializer extends StdSerializer<String> {
 
+    /** 负责保留 Jackson 原生字符串输出和类型信息的序列化器。 */
     private static final StringSerializer STRING_SERIALIZER = StringSerializer.instance;
 
+    /** JSON 字符串处理器提供者。 */
     private final JsonProcessorProvider jsonProcessorProvider;
+
+    /** 当前属性对应的转换函数；未配置时为 {@code null}。 */
     private final Function<String, String> function;
 
+    /**
+     * 创建尚未绑定到具体属性的字符串序列化器。
+     *
+     * @param jsonProcessorProvider JSON 字符串处理器提供者
+     */
     public JacksonStringSerializer(JsonProcessorProvider jsonProcessorProvider) {
         this(jsonProcessorProvider, null);
     }
 
+    /** 创建绑定到属性转换函数的字符串序列化器。 */
     private JacksonStringSerializer(JsonProcessorProvider jsonProcessorProvider, Function<String, String> function) {
         super(String.class);
         this.jsonProcessorProvider = jsonProcessorProvider;

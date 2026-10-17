@@ -38,6 +38,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 
+/** 验证 Feign 日志适配器、共享引擎及链路传播配置。 */
 class VeloFeignAutoConfigurationTests {
   private final ApplicationContextRunner runner =
       new ApplicationContextRunner()

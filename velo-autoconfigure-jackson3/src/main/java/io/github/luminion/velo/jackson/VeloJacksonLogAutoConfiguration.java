@@ -20,6 +20,13 @@ import tools.jackson.databind.ObjectMapper;
         before = VeloLogAutoConfiguration.class)
 @ConditionalOnClass(ObjectMapper.class)
 public class VeloJacksonLogAutoConfiguration {
+
+    /**
+     * 以应用的 Jackson Mapper 格式化调用日志值。
+     *
+     * @param mapper 应用使用的 JSON Mapper
+     * @return 日志值格式化器
+     */
     @Bean
     @ConditionalOnBean(ObjectMapper.class)
     @ConditionalOnMissingBean(LogValueFormatter.class)

@@ -375,6 +375,9 @@ public class VeloProperties {
          */
         private InvocationDefaults defaults = new InvocationDefaults();
 
+        /**
+         * 各调用入口的日志配置。
+         */
         private InvocationSources sources = new InvocationSources();
     }
 
@@ -417,14 +420,44 @@ public class VeloProperties {
          */
         private int maxPayloadLength = -1;
 
+        /**
+         * 调用开始时记录方法入参的默认策略。
+         */
         private LogFeatureProperties entryArgs = new LogFeatureProperties();
+
+        /**
+         * 方法调用完成时记录方法出参的默认策略。
+         */
         private LogFeatureProperties exitArgs = new LogFeatureProperties();
+
+        /**
+         * 方法正常返回时记录返回值的默认策略。
+         */
         private LogFeatureProperties exitResult = new LogFeatureProperties();
-        /** 当前调用结束时的耗时日志，默认开启且使用 INFO；不受慢调用阈值影响。 */
+
+        /**
+         * 当前调用结束时的耗时日志，默认开启且使用 INFO；不受慢调用阈值影响。
+         */
         private LogFeatureProperties costLog = defaultCostLog();
+
+        /**
+         * 超过阈值时记录慢调用的默认策略。
+         */
         private SlowLogProperties slowLog = defaultSlowLog();
+
+        /**
+         * 调用入口提供请求头时，记录请求头的默认策略。
+         */
         private HeaderCaptureProperties requestHeaders = new HeaderCaptureProperties();
+
+        /**
+         * 调用入口提供响应头时，记录响应头的默认策略。
+         */
         private HeaderCaptureProperties responseHeaders = new HeaderCaptureProperties();
+
+        /**
+         * 方法抛出异常时记录异常摘要的默认策略。
+         */
         private LogFeatureProperties errorLog = new LogFeatureProperties();
 
         private static LogFeatureProperties defaultCostLog() {
@@ -445,10 +478,30 @@ public class VeloProperties {
 
     @Data
     public static class InvocationSources {
+
+        /**
+         * Controller 调用日志配置。
+         */
         private InvocationSourceProperties controller = new InvocationSourceProperties();
+
+        /**
+         * Feign 调用日志配置。
+         */
         private InvocationSourceProperties feign = new InvocationSourceProperties();
+
+        /**
+         * 普通方法注解调用日志配置。
+         */
         private InvocationSourceProperties annotation = new InvocationSourceProperties();
+
+        /**
+         * XXL-Job 调用日志配置。
+         */
         private InvocationSourceProperties xxlJob = new InvocationSourceProperties();
+
+        /**
+         * Spring 定时任务调用日志配置。
+         */
         private InvocationSourceProperties scheduled = new InvocationSourceProperties();
     }
 
@@ -493,14 +546,44 @@ public class VeloProperties {
          */
         private boolean enabled = true;
 
+        /**
+         * 当前来源调用开始时记录方法入参的策略。
+         */
         private LogFeatureProperties entryArgs = new LogFeatureProperties();
+
+        /**
+         * 当前来源方法调用完成时记录方法出参的策略。
+         */
         private LogFeatureProperties exitArgs = new LogFeatureProperties();
+
+        /**
+         * 当前来源方法正常返回时记录返回值的策略。
+         */
         private LogFeatureProperties exitResult = new LogFeatureProperties();
-        /** 当前来源的耗时日志设置；未配置时继承全局默认值。 */
+
+        /**
+         * 当前来源的耗时日志设置；未配置时继承全局默认值。
+         */
         private LogFeatureProperties costLog = new LogFeatureProperties();
+
+        /**
+         * 当前来源超过阈值时记录慢调用的策略。
+         */
         private SlowLogProperties slowLog = new SlowLogProperties();
+
+        /**
+         * 当前来源具备请求头时记录请求头的策略。
+         */
         private HeaderCaptureProperties requestHeaders = new HeaderCaptureProperties();
+
+        /**
+         * 当前来源具备响应头时记录响应头的策略。
+         */
         private HeaderCaptureProperties responseHeaders = new HeaderCaptureProperties();
+
+        /**
+         * 当前来源方法抛出异常时记录异常摘要的策略。
+         */
         private LogFeatureProperties errorLog = new LogFeatureProperties();
     }
 

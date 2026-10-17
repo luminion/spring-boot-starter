@@ -8,6 +8,7 @@ import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.logging.LogLevel;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
+/** 验证核心配置属性的默认值与绑定。 */
 class VeloPropertiesDefaultsTest {
 
     private final ApplicationContextRunner contextRunner =

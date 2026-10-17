@@ -29,9 +29,13 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
+/** 验证 Jackson 3 Redis JSON 序列化器的自动配置及用户 Bean 回退行为。 */
 class VeloRedisJsonAutoConfigurationTests {
+
+    /** 提供包含 Redis 配置的轻量应用上下文。 */
     private final ApplicationContextRunner runner = new ApplicationContextRunner()
-            .withConfiguration(AutoConfigurations.of(VeloRedisJsonAutoConfiguration.class, VeloRedisConfiguration.class))
+            .withConfiguration(AutoConfigurations.of(
+                    VeloRedisJsonAutoConfiguration.class, VeloRedisConfiguration.class))
             .withBean(RedisConnectionFactory.class, () -> mock(RedisConnectionFactory.class));
 
     @Test
@@ -107,8 +111,10 @@ class VeloRedisJsonAutoConfigurationTests {
     void shouldUseTheUsersObjectSerializerRegardlessOfItsBeanName() {
         RedisSerializer<Object> user = RedisSerializer.json();
         runner.withBean("applicationValues", RedisSerializer.class, () -> user).run(context -> {
-            assertThat(context).hasNotFailed().hasSingleBean(RedisSerializer.class).doesNotHaveBean("veloRedisSerializer");
-            assertThat(context.getBean("stringObjectRedisTemplate", RedisTemplate.class).getValueSerializer()).isSameAs(user);
+            assertThat(context).hasNotFailed().hasSingleBean(RedisSerializer.class)
+                    .doesNotHaveBean("veloRedisSerializer");
+            assertThat(context.getBean("stringObjectRedisTemplate", RedisTemplate.class).getValueSerializer())
+                    .isSameAs(user);
             assertThat(context.getBean("redisTemplate", RedisTemplate.class).getValueSerializer()).isSameAs(user);
         });
     }
@@ -129,12 +135,14 @@ class VeloRedisJsonAutoConfigurationTests {
         runner.withBean("primary", RedisSerializer.class, () -> primary, definition -> definition.setPrimary(true))
                 .withBean("other", RedisSerializer.class, RedisSerializer::json).run(context -> {
                     assertThat(context).hasNotFailed();
-                    assertThat(context.getBean("redisTemplate", RedisTemplate.class).getValueSerializer()).isSameAs(primary);
+                    assertThat(context.getBean("redisTemplate", RedisTemplate.class).getValueSerializer())
+                            .isSameAs(primary);
                 });
         runner.withBean("redisSerializer", RedisSerializer.class, RedisSerializer::json)
                 .withBean("second", RedisSerializer.class, RedisSerializer::json).run(context -> {
                     assertThat(context).hasFailed();
-                    assertThat(context.getStartupFailure()).hasRootCauseInstanceOf(NoUniqueBeanDefinitionException.class);
+                    assertThat(context.getStartupFailure())
+                            .hasRootCauseInstanceOf(NoUniqueBeanDefinitionException.class);
                 });
     }
 
@@ -144,7 +152,8 @@ class VeloRedisJsonAutoConfigurationTests {
                 .withBean("second", RedisSerializer.class, RedisSerializer::json, bean -> bean.setPrimary(true))
                 .run(context -> {
                     assertThat(context).hasFailed();
-                    assertThat(context.getStartupFailure()).hasRootCauseInstanceOf(NoUniqueBeanDefinitionException.class);
+                    assertThat(context.getStartupFailure())
+                            .hasRootCauseInstanceOf(NoUniqueBeanDefinitionException.class);
                 });
     }
 
@@ -171,7 +180,10 @@ class VeloRedisJsonAutoConfigurationTests {
         });
     }
 
+    /** 用于验证 Object 字段的多态类型信息能够恢复。 */
     public static final class ObjectPayload {
+
+        /** 以运行时类型承载的嵌套负载。 */
         public Object value = new Payload();
     }
 
@@ -196,13 +208,24 @@ class VeloRedisJsonAutoConfigurationTests {
         }
     }
 
+    /** Redis JSON 序列化行为测试使用的负载对象。 */
     public static final class Payload {
+
+        /** 序列化时映射为 JSON 的 {@code title} 属性。 */
         @JsonProperty("title")
         public String name = "example";
+
+        /** 标记为忽略、不会写入 JSON 的属性。 */
         @JsonIgnore
         public String ignored = "ignored";
+
+        /** 超出 JavaScript 安全整数范围的标识值。 */
         public long id = 9007199254740993L;
+
+        /** 用于验证精确小数值往返的金额。 */
         public BigDecimal amount = new BigDecimal("12.3400");
+
+        /** 用于验证日期时间值往返的创建时间。 */
         public LocalDateTime createdAt = LocalDateTime.of(2026, 10, 7, 10, 20, 30, 123456789);
     }
 }

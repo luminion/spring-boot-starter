@@ -29,8 +29,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -43,14 +43,19 @@ import java.util.Set;
 @Slf4j
 public class JsonEnumSerializerModifier extends BeanSerializerModifier {
 
+    /** 负责解析枚举编码与描述字段的映射关系。 */
     private final JsonEnumMetadataResolver metadataResolver;
+
+    /** 提供枚举描述属性的全局后缀等配置。 */
     private final VeloProperties.JacksonProperties jacksonProperties;
 
+    /** 创建使用指定 Jackson 配置解析枚举描述的属性修改器。 */
     public JsonEnumSerializerModifier(VeloProperties.JacksonProperties jacksonProperties) {
         this.jacksonProperties = jacksonProperties;
         this.metadataResolver = new JsonEnumMetadataResolver(jacksonProperties);
     }
 
+    /** 为带枚举描述注解的属性添加对应的描述属性。 */
     @Override
     public List<BeanPropertyWriter> changeProperties(SerializationConfig config, BeanDescription beanDesc,
                                                      List<BeanPropertyWriter> beanProperties) {
@@ -132,7 +137,10 @@ public class JsonEnumSerializerModifier extends BeanSerializerModifier {
     }
 
     private static class JsonEnumPropertyWriter extends VirtualBeanPropertyWriter {
+        /** 保存源属性已解析的序列化规则。 */
         private final SourcePropertyWriter source;
+
+        /** 提供枚举编码到描述值的映射。 */
         private final JsonEnumMetadata metadata;
 
         JsonEnumPropertyWriter(SerializationConfig config, BeanDescription beanDesc, BeanPropertyWriter base,

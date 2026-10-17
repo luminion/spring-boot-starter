@@ -10,29 +10,35 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
-import org.springframework.boot.autoconfigure.cache.CacheAutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.autoconfigure.cache.CacheAutoConfiguration;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.cache.Cache;
-import org.springframework.cache.transaction.TransactionAwareCacheDecorator;
 import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.cache.transaction.TransactionAwareCacheDecorator;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.redis.cache.RedisCache;
-import org.springframework.data.redis.cache.RedisCacheManager;
-import org.springframework.data.redis.cache.RedisCacheConfiguration;
-import org.springframework.data.redis.cache.RedisCacheWriter;
 import org.springframework.data.redis.cache.BatchStrategies;
+import org.springframework.data.redis.cache.RedisCache;
+import org.springframework.data.redis.cache.RedisCacheConfiguration;
+import org.springframework.data.redis.cache.RedisCacheManager;
+import org.springframework.data.redis.cache.RedisCacheWriter;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.serializer.JdkSerializationRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.RedisSerializer;
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** 用真实 Redis 验证原生自动配置、统计、抖动、永久条目及批量清空的组合。 */
+/**
+ * 用真实 Redis 验证原生自动配置、统计、抖动、永久条目及批量清空的组合。
+ *
+ * @author luminion
+ */
 @EnabledIfEnvironmentVariable(named = "VELO_TEST_REDIS_URL", matches = "redis://.+")
 class Boot3CacheRedisIntegrationTest {
+
+    /** 启用缓存拦截器以创建真实 Redis 缓存管理器。 */
     @Configuration(proxyBeanMethods = false)
     @EnableCaching
     static class CachingEnabled {
@@ -52,7 +58,8 @@ class Boot3CacheRedisIntegrationTest {
         RedisCacheWriter writer = RedisCacheWriter.nonLockingRedisCacheWriter(factory, BatchStrategies.keys());
         new ApplicationContextRunner()
                 .withConfiguration(AutoConfigurations.of(VeloCoreAutoConfiguration.class,
-                        VeloCacheAutoConfiguration.class, VeloRedisJsonAutoConfiguration.class, CacheAutoConfiguration.class))
+                        VeloCacheAutoConfiguration.class, VeloRedisJsonAutoConfiguration.class,
+                        CacheAutoConfiguration.class))
                 .withUserConfiguration(CachingEnabled.class)
                 .withBean(LettuceConnectionFactory.class, () -> factory)
                 .withBean(RedisCacheConfiguration.class, () -> defaults)
@@ -107,7 +114,8 @@ class Boot3CacheRedisIntegrationTest {
         String prefix = "velo:audit:fixed:" + UUID.randomUUID() + ":";
         new ApplicationContextRunner()
                 .withConfiguration(AutoConfigurations.of(VeloCoreAutoConfiguration.class,
-                        VeloCacheAutoConfiguration.class, VeloRedisJsonAutoConfiguration.class, CacheAutoConfiguration.class))
+                        VeloCacheAutoConfiguration.class, VeloRedisJsonAutoConfiguration.class,
+                        CacheAutoConfiguration.class))
                 .withUserConfiguration(CachingEnabled.class)
                 .withBean(LettuceConnectionFactory.class, () -> new LettuceConnectionFactory(uri.getHost(), port))
                 .withPropertyValues("spring.cache.type=redis", "spring.cache.cache-names=normal,persistent",
@@ -116,7 +124,8 @@ class Boot3CacheRedisIntegrationTest {
                         "velo.cache.ttl.persistent=0").run(context -> {
                     assertThat(context).hasNotFailed();
                     RedisCacheManager manager = context.getBean(RedisCacheManager.class);
-                    StringRedisTemplate redis = new StringRedisTemplate(context.getBean(LettuceConnectionFactory.class));
+                    StringRedisTemplate redis = new StringRedisTemplate(
+                            context.getBean(LettuceConnectionFactory.class));
                     Cache normal = manager.getCache("normal");
                     Cache persistent = manager.getCache("persistent");
                     Cache separate = manager.getCache("separate");

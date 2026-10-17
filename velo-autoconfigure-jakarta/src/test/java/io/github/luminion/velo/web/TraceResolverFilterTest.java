@@ -22,6 +22,7 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+/** 验证请求过滤器解析入站链路上下文并在派发间复用快照。 */
 class TraceResolverFilterTest {
     private static final String ID = "4bf92f3577b34da6a3ce929d0e0e4736";
     private static final String PARENT = "00-" + ID + "-00f067aa0ba902b7-01";

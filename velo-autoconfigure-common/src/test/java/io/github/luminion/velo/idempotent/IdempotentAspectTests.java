@@ -14,6 +14,7 @@ import java.util.concurrent.CompletableFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/** 验证幂等切面对键表达式、方法隔离和重复请求的处理。 */
 class IdempotentAspectTests {
 
     @Test

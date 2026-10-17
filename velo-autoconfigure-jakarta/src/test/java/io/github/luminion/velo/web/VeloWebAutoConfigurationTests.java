@@ -34,6 +34,7 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.servlet.HandlerMapping;
 
+/** 验证 Web 自动配置开关、过滤器注册和链路上下文生命周期。 */
 class VeloWebAutoConfigurationTests {
     private final WebApplicationContextRunner runner =
             new WebApplicationContextRunner()

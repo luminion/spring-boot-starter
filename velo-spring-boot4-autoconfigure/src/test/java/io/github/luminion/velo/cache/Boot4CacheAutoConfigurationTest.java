@@ -11,16 +11,16 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.NoUniqueBeanDefinitionException;
+import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.cache.autoconfigure.CacheAutoConfiguration;
 import org.springframework.boot.cache.autoconfigure.CacheManagerCustomizer;
 import org.springframework.boot.cache.autoconfigure.RedisCacheManagerBuilderCustomizer;
-import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.FilteredClassLoader;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
-import org.springframework.cache.CacheManager;
 import org.springframework.cache.Cache;
-import org.springframework.cache.transaction.TransactionAwareCacheDecorator;
+import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.cache.transaction.TransactionAwareCacheDecorator;
 import org.springframework.cache.support.SimpleCacheManager;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCache;
@@ -43,7 +43,8 @@ class Boot4CacheAutoConfigurationTest {
 
     private final ApplicationContextRunner runner = new ApplicationContextRunner()
             .withConfiguration(AutoConfigurations.of(VeloCoreAutoConfiguration.class,
-                    VeloCacheAutoConfiguration.class, VeloRedisJsonAutoConfiguration.class, CacheAutoConfiguration.class))
+                    VeloCacheAutoConfiguration.class, VeloRedisJsonAutoConfiguration.class,
+                    CacheAutoConfiguration.class))
             .withUserConfiguration(CachingEnabled.class)
             .withBean(RedisConnectionFactory.class, () -> mock(RedisConnectionFactory.class))
             .withPropertyValues("spring.cache.type=redis");
@@ -83,7 +84,8 @@ class Boot4CacheAutoConfigurationTest {
                 assertThat(config.getAllowCacheNullValues()).isFalse();
                 assertThat(config.getKeyPrefixFor(name)).isEqualTo("app:" + name + ":");
             }
-            assertThat(redisCache(manager.getCache("orders")).getCacheConfiguration().getTtlFunction().getTimeToLive("test", null))
+            assertThat(redisCache(manager.getCache("orders")).getCacheConfiguration().getTtlFunction()
+                    .getTimeToLive("test", null))
                     .isEqualTo(Duration.ofSeconds(9));
         });
     }
@@ -122,7 +124,8 @@ class Boot4CacheAutoConfigurationTest {
                     assertThat(managerCalled).isTrue();
                     RedisCacheManager manager = context.getBean(RedisCacheManager.class);
                     assertThat(manager.isTransactionAware()).isFalse();
-                    assertThat(redisCache(manager.getCache("orders")).getCacheConfiguration().getTtlFunction().getTimeToLive("test", null))
+                    assertThat(redisCache(manager.getCache("orders")).getCacheConfiguration().getTtlFunction()
+                            .getTimeToLive("test", null))
                             .isEqualTo(Duration.ofSeconds(17));
                 });
     }
@@ -152,7 +155,8 @@ class Boot4CacheAutoConfigurationTest {
                 });
         runner.withBean("userSerializer", RedisSerializer.class, () -> serializer).run(context -> {
             RedisCacheConfiguration config = context.getBean(RedisCacheConfiguration.class);
-            assertThat(config.getValueSerializationPair().write("value")).isEqualTo(ByteBuffer.wrap(serializer.serialize("value")));
+            assertThat(config.getValueSerializationPair().write("value"))
+                    .isEqualTo(ByteBuffer.wrap(serializer.serialize("value")));
         });
     }
 
@@ -172,7 +176,8 @@ class Boot4CacheAutoConfigurationTest {
     void shouldSelectPrimaryWriter() {
         RedisCacheWriter primary = mock(RedisCacheWriter.class);
         RedisCacheWriter other = mock(RedisCacheWriter.class);
-        runner.withBean("primaryWriter", RedisCacheWriter.class, () -> primary, definition -> definition.setPrimary(true))
+        runner.withBean("primaryWriter", RedisCacheWriter.class, () -> primary,
+                        definition -> definition.setPrimary(true))
                 .withBean("otherWriter", RedisCacheWriter.class, () -> other).run(context -> {
                     assertThat(context).hasNotFailed();
                     context.getBean(CacheManager.class).getCache("users").put("one", "value");
@@ -186,7 +191,8 @@ class Boot4CacheAutoConfigurationTest {
         runner.withBean("firstWriter", RedisCacheWriter.class, () -> mock(RedisCacheWriter.class))
                 .withBean("secondWriter", RedisCacheWriter.class, () -> mock(RedisCacheWriter.class)).run(context -> {
                     assertThat(context).hasFailed();
-                    assertThat(context.getStartupFailure()).hasRootCauseInstanceOf(NoUniqueBeanDefinitionException.class);
+                    assertThat(context.getStartupFailure())
+                            .hasRootCauseInstanceOf(NoUniqueBeanDefinitionException.class);
                 });
     }
 
@@ -208,7 +214,8 @@ class Boot4CacheAutoConfigurationTest {
         runner.withBean("firstSerializer", RedisSerializer.class, RedisSerializer::json)
                 .withBean("secondSerializer", RedisSerializer.class, RedisSerializer::json).run(context -> {
                     assertThat(context).hasFailed();
-                    assertThat(context.getStartupFailure()).hasRootCauseInstanceOf(NoUniqueBeanDefinitionException.class);
+                    assertThat(context.getStartupFailure())
+                            .hasRootCauseInstanceOf(NoUniqueBeanDefinitionException.class);
                 });
     }
 
@@ -237,12 +244,14 @@ class Boot4CacheAutoConfigurationTest {
     void shouldUseUserTtlMapProvider() {
         runner.withPropertyValues("velo.cache.ttl.orders=99s")
                 .withBean(RedisCacheTimeMapProvider.class,
-                        () -> new RedisCacheTimeMapProvider(Collections.singletonMap("orders", Duration.ofSeconds(11))))
+                        () -> new RedisCacheTimeMapProvider(
+                                Collections.singletonMap("orders", Duration.ofSeconds(11))))
                 .run(context -> {
                     assertThat(context).hasNotFailed();
                     RedisCacheConfiguration config = redisCache(context.getBean(CacheManager.class)
                             .getCache("orders")).getCacheConfiguration();
-                    assertThat(config.getTtlFunction().getTimeToLive("test", null)).isEqualTo(Duration.ofSeconds(11));
+                    assertThat(config.getTtlFunction().getTimeToLive("test", null))
+                            .isEqualTo(Duration.ofSeconds(11));
                 });
     }
 
@@ -253,9 +262,11 @@ class Boot4CacheAutoConfigurationTest {
                     .run(context -> {
                         assertThat(context).hasNotFailed();
                         Duration expected = ttl.equals("1ms") ? Duration.ofMillis(1) : Duration.ZERO;
-                        assertThat(context.getBean(RedisCacheConfiguration.class).getTtlFunction().getTimeToLive("test", null)).isEqualTo(expected);
+                        assertThat(context.getBean(RedisCacheConfiguration.class).getTtlFunction()
+                                .getTimeToLive("test", null)).isEqualTo(expected);
                         assertThat(redisCache(context.getBean(CacheManager.class).getCache("orders"))
-                                .getCacheConfiguration().getTtlFunction().getTimeToLive("test", null)).isEqualTo(expected);
+                                .getCacheConfiguration().getTtlFunction().getTimeToLive("test", null))
+                                .isEqualTo(expected);
                     });
         }
     }
@@ -302,16 +313,20 @@ class Boot4CacheAutoConfigurationTest {
     void shouldSkipEnhancementWhenBootCacheModuleAbsent() {
         new ApplicationContextRunner().withClassLoader(new FilteredClassLoader("org.springframework.boot.cache"))
                 .withBean(RedisConnectionFactory.class, () -> mock(RedisConnectionFactory.class))
-                .withConfiguration(AutoConfigurations.of(VeloCoreAutoConfiguration.class, VeloCacheAutoConfiguration.class))
+                .withConfiguration(AutoConfigurations.of(
+                        VeloCoreAutoConfiguration.class, VeloCacheAutoConfiguration.class))
                 .run(context -> assertThat(context).hasNotFailed().doesNotHaveBean(RedisCacheTimeMapProvider.class));
     }
 
     @Test
     void shouldSkipEnhancementWhenRedisAbsent() {
         new ApplicationContextRunner().withClassLoader(new FilteredClassLoader("org.springframework.data.redis"))
-                .withConfiguration(AutoConfigurations.of(VeloCoreAutoConfiguration.class, VeloCacheAutoConfiguration.class))
+                .withConfiguration(AutoConfigurations.of(
+                        VeloCoreAutoConfiguration.class, VeloCacheAutoConfiguration.class))
                 .run(context -> assertThat(context).hasNotFailed());
     }
+
+    /** 解包事务感知装饰器，返回底层 Redis 缓存以便检查配置。 */
     private RedisCache redisCache(Cache cache) {
         if (cache instanceof TransactionAwareCacheDecorator) {
             cache = ((TransactionAwareCacheDecorator) cache).getTargetCache();

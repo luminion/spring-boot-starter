@@ -18,6 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class Boot2AutoConfigurationStartupTest {
 
+    /** 确认版本专属自动配置能随真实应用启动并提供 Redis 模板。 */
     @Test
     void shouldStartWithVersionSpecificAutoConfigurations() {
         SpringApplication application = new SpringApplication(TestApplication.class);
@@ -44,6 +45,7 @@ class Boot2AutoConfigurationStartupTest {
         }
     }
 
+    /** 提供启动集成测试使用的最小应用配置。 */
     @SpringBootConfiguration
     @EnableAutoConfiguration(excludeName = "org.redisson.spring.starter.RedissonAutoConfigurationV2")
     static class TestApplication {

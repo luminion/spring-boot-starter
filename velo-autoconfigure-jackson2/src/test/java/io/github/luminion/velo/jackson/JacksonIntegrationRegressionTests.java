@@ -303,13 +303,17 @@ class JacksonIntegrationRegressionTests {
     }
 
     public static class EncodedStringPayload {
+        /** 同时验证属性级编码和多态字符串类型处理。 */
         @JsonEncode(UppercaseProcessor.class)
         @JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.WRAPPER_ARRAY)
         public Object encoded = "abc";
+
+        /** 用于确认没有编码注解的字符串保持原值。 */
         public String plain = "abc";
     }
 
     public static class NullEncodedStringPayload {
+        /** 转换结果为 null 的多态字符串属性。 */
         @JsonEncode(NullProcessor.class)
         @JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.WRAPPER_ARRAY)
         public Object encoded = "abc";
@@ -317,8 +321,11 @@ class JacksonIntegrationRegressionTests {
 
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public static class EmptyStringPayload {
+        /** 用于验证编码后空字符串仍遵循 Jackson 的非空包含规则。 */
         @JsonEncode(UppercaseProcessor.class)
         public String encoded = "";
+
+        /** 用于对照未编码的空字符串包含行为。 */
         public String plain = "";
     }
 
@@ -338,12 +345,14 @@ class JacksonIntegrationRegressionTests {
     }
 
     public static class EnumPayload {
+        /** 用于生成枚举描述属性的状态编码。 */
         @JsonEnum(Status.class)
         public int status = 1;
     }
 
     @JsonInclude(JsonInclude.Include.NON_DEFAULT)
     public static class DefaultEnumPayload {
+        /** 默认值状态，用于验证派生描述属性的包含策略。 */
         @JsonEnum(Status.class)
         public int status;
     }
@@ -354,8 +363,11 @@ class JacksonIntegrationRegressionTests {
 
     @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
     public static class NamedEnumPayload {
+        /** 验证派生属性遵循蛇形命名策略的状态编码。 */
         @JsonEnum(Status.class)
         public int orderStatus = 1;
+
+        /** 验证显式属性名与枚举描述后缀的状态编码。 */
         @JsonProperty("state_code")
         @JsonEnum(value = Status.class, nameSuffix = "label")
         public int status = 1;
@@ -363,6 +375,7 @@ class JacksonIntegrationRegressionTests {
 
     @JsonNaming(MemberNamingStrategy.class)
     public static class CustomNamedEnumPayload {
+        /** 使用自定义命名策略输出的状态编码。 */
         @JsonEnum(Status.class)
         private final int status = 1;
 
@@ -386,37 +399,57 @@ class JacksonIntegrationRegressionTests {
     }
 
     public static class NumericFormatPayload {
+        /** 显式指定为数值形态的长整数。 */
         @JsonFormat(shape = JsonFormat.Shape.NUMBER)
         public Long id = 1L;
+
+        /** 显式指定为数值形态的大整数。 */
         @JsonFormat(shape = JsonFormat.Shape.NUMBER)
         public BigInteger bigInteger = BigInteger.ONE;
+
+        /** 显式指定为数值形态的 BigDecimal。 */
         @JsonFormat(shape = JsonFormat.Shape.NUMBER)
         public BigDecimal amount = new BigDecimal("12.30");
+
+        /** 使用自然形态的 BigDecimal。 */
         @JsonFormat(shape = JsonFormat.Shape.NATURAL)
         public BigDecimal naturalAmount = new BigDecimal("12.30");
+
+        /** 显式指定为数值形态的浮点数。 */
         @JsonFormat(shape = JsonFormat.Shape.NUMBER)
         public double ratio = 0.5;
+
+        /** 显式指定为数值形态的长整数数组。 */
         @JsonFormat(shape = JsonFormat.Shape.NUMBER)
         public long[] longs = {1L};
+
+        /** 显式指定为数值形态的 BigDecimal 数组。 */
         @JsonFormat(shape = JsonFormat.Shape.NUMBER)
         public BigDecimal[] amounts = {new BigDecimal("12.30")};
+
+        /** 显式指定为数值形态的浮点数组。 */
         @JsonFormat(shape = JsonFormat.Shape.NUMBER)
         public double[] ratios = {0.5};
     }
 
     public static class ExplicitStringPayload {
+        /** 显式指定为字符串形态的长整数。 */
         @JsonFormat(shape = JsonFormat.Shape.STRING)
         public Long id = 1L;
+
+        /** 显式指定为字符串形态的 BigDecimal。 */
         @JsonFormat(shape = JsonFormat.Shape.STRING)
         public BigDecimal amount = new BigDecimal("12.30");
     }
 
     public static class UnwrappedArrayPayload {
+        /** 用于验证单元素数组可按 Jackson 配置展开写出。 */
         @JsonFormat(with = JsonFormat.Feature.WRITE_SINGLE_ELEM_ARRAYS_UNWRAPPED)
         public long[] values = {1L};
     }
 
     public static class CustomContentPayload {
+        /** 使用自定义内容序列化器的数字数组。 */
         @JsonSerialize(contentUsing = PrefixNumberSerializer.class)
         public long[] values = {1L};
     }
@@ -433,6 +466,7 @@ class JacksonIntegrationRegressionTests {
     }
 
     public static class ViewedEnumPayload {
+        /** 仅在指定视图中输出的状态编码。 */
         @JsonView(Visible.class)
         @JsonEnum(Status.class)
         public int status = 1;
@@ -445,6 +479,7 @@ class JacksonIntegrationRegressionTests {
     }
 
     public static class PolymorphicPayload {
+        /** 使用包装数组携带类型信息的多态值。 */
         @JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.WRAPPER_ARRAY)
         public Object value;
 
@@ -457,8 +492,13 @@ class JacksonIntegrationRegressionTests {
     }
 
     public static final class CachedPayload {
+        /** 缓存对象的标识。 */
         public final Long id;
+
+        /** 缓存对象的日期。 */
         public final LocalDate date;
+
+        /** 缓存对象的时间戳。 */
         public final LocalDateTime timestamp;
 
         @JsonCreator
@@ -473,7 +513,10 @@ class JacksonIntegrationRegressionTests {
     public enum Status {
         ZERO(0, "Zero"), ONE(1, "One");
 
+        /** 用于匹配属性中状态值的枚举编码。 */
         private final int code;
+
+        /** 与枚举编码对应的展示名称。 */
         private final String name;
 
         Status(int code, String name) {

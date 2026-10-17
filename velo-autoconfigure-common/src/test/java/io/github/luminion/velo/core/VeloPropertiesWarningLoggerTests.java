@@ -14,6 +14,7 @@ import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 
 @ExtendWith(OutputCaptureExtension.class)
+/** 验证配置告警对默认值、禁用功能和无效值的处理。 */
 class VeloPropertiesWarningLoggerTests {
 
     private final ApplicationContextRunner contextRunner =

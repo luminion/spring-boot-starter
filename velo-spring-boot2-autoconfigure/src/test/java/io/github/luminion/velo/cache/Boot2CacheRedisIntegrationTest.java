@@ -2,37 +2,42 @@ package io.github.luminion.velo.cache;
 
 import io.github.luminion.velo.core.VeloCoreAutoConfiguration;
 import io.github.luminion.velo.jackson.VeloRedisJsonAutoConfiguration;
+
 import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
-import org.springframework.boot.autoconfigure.cache.CacheAutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.autoconfigure.cache.CacheAutoConfiguration;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.cache.Cache;
-import org.springframework.cache.transaction.TransactionAwareCacheDecorator;
 import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.cache.transaction.TransactionAwareCacheDecorator;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.redis.cache.RedisCache;
-import org.springframework.data.redis.cache.RedisCacheManager;
-import org.springframework.data.redis.cache.RedisCacheConfiguration;
-import org.springframework.data.redis.cache.RedisCacheWriter;
 import org.springframework.data.redis.cache.BatchStrategies;
+import org.springframework.data.redis.cache.RedisCache;
+import org.springframework.data.redis.cache.RedisCacheConfiguration;
+import org.springframework.data.redis.cache.RedisCacheManager;
+import org.springframework.data.redis.cache.RedisCacheWriter;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.serializer.JdkSerializationRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.RedisSerializer;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 /** 用真实 Redis 验证原生自动配置、统计、抖动、永久条目及批量清空的组合。 */
 @EnabledIfEnvironmentVariable(named = "VELO_TEST_REDIS_URL", matches = "redis://.+")
 class Boot2CacheRedisIntegrationTest {
+
+    /** 为 Redis 缓存集成用例启用缓存注解。 */
     @Configuration(proxyBeanMethods = false)
     @EnableCaching
     static class CachingEnabled {
@@ -51,14 +56,20 @@ class Boot2CacheRedisIntegrationTest {
                 .entryTtl(Duration.ofSeconds(30));
         RedisCacheWriter writer = RedisCacheWriter.nonLockingRedisCacheWriter(factory, BatchStrategies.keys());
         new ApplicationContextRunner()
-                .withConfiguration(AutoConfigurations.of(VeloCoreAutoConfiguration.class,
-                        VeloCacheAutoConfiguration.class, VeloRedisJsonAutoConfiguration.class, CacheAutoConfiguration.class))
+                .withConfiguration(AutoConfigurations.of(
+                        VeloCoreAutoConfiguration.class,
+                        VeloCacheAutoConfiguration.class,
+                        VeloRedisJsonAutoConfiguration.class,
+                        CacheAutoConfiguration.class))
                 .withUserConfiguration(CachingEnabled.class)
                 .withBean(LettuceConnectionFactory.class, () -> factory)
                 .withBean(RedisCacheConfiguration.class, () -> defaults)
                 .withBean(RedisCacheWriter.class, () -> writer)
-                .withPropertyValues("spring.cache.type=redis", "spring.cache.redis.time-to-live=1s",
-                        "spring.cache.redis.key-prefix=ignored:", "velo.cache.separator=ignored",
+                .withPropertyValues(
+                        "spring.cache.type=redis",
+                        "spring.cache.redis.time-to-live=1s",
+                        "spring.cache.redis.key-prefix=ignored:",
+                        "velo.cache.separator=ignored",
                         "velo.cache.ttl.mapped=8s").run(context -> {
                     assertThat(context).hasNotFailed();
                     assertThat(context).doesNotHaveBean("veloRedisCacheWriter");
@@ -106,8 +117,11 @@ class Boot2CacheRedisIntegrationTest {
         int port = uri.getPort() < 0 ? 6379 : uri.getPort();
         String prefix = "velo:audit:fixed:" + UUID.randomUUID() + ":";
         new ApplicationContextRunner()
-                .withConfiguration(AutoConfigurations.of(VeloCoreAutoConfiguration.class,
-                        VeloCacheAutoConfiguration.class, VeloRedisJsonAutoConfiguration.class, CacheAutoConfiguration.class))
+                .withConfiguration(AutoConfigurations.of(
+                        VeloCoreAutoConfiguration.class,
+                        VeloCacheAutoConfiguration.class,
+                        VeloRedisJsonAutoConfiguration.class,
+                        CacheAutoConfiguration.class))
                 .withUserConfiguration(CachingEnabled.class)
                 .withBean(LettuceConnectionFactory.class, () -> new LettuceConnectionFactory(uri.getHost(), port))
                 .withPropertyValues("spring.cache.type=redis", "spring.cache.cache-names=normal,persistent",
@@ -116,7 +130,8 @@ class Boot2CacheRedisIntegrationTest {
                         "velo.cache.ttl.persistent=0").run(context -> {
                     assertThat(context).hasNotFailed();
                     RedisCacheManager manager = context.getBean(RedisCacheManager.class);
-                    StringRedisTemplate redis = new StringRedisTemplate(context.getBean(LettuceConnectionFactory.class));
+                    StringRedisTemplate redis = new StringRedisTemplate(
+                            context.getBean(LettuceConnectionFactory.class));
                     Cache normal = manager.getCache("normal");
                     Cache persistent = manager.getCache("persistent");
                     Cache separate = manager.getCache("separate");

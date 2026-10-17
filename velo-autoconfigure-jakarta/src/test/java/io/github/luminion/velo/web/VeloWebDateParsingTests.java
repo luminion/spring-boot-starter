@@ -17,6 +17,7 @@ import java.util.Date;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/** 验证 MVC 日期时间解析的默认值、时区和格式校验。 */
 class VeloWebDateParsingTests {
     @Test
     void shouldUseShanghaiTimeByDefault() {

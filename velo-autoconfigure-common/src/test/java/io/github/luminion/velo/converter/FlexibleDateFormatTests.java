@@ -7,6 +7,7 @@ import java.util.TimeZone;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/** 验证灵活日期格式在严格和宽松解析模式下的行为。 */
 class FlexibleDateFormatTests {
     @Test
     void shouldRejectInvalidDateByDefaultAndRespectExplicitLeniency() throws Exception {

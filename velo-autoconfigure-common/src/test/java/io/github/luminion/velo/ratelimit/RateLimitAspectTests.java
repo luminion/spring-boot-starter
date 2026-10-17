@@ -15,6 +15,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/** 验证限流切面对注解继承、键维度和请求限制的处理。 */
 class RateLimitAspectTests {
 
     @Test

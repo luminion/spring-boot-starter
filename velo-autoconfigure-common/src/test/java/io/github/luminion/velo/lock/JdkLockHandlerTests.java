@@ -17,6 +17,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/** 验证 JDK 锁的线程所有权、重入行为和空闲状态回收。 */
 class JdkLockHandlerTests {
     @Test
     void foreignUnlockAndFailedAcquisitionDoNotReleaseOwner() throws Exception {

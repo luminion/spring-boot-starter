@@ -543,11 +543,22 @@ class VeloJacksonAutoConfigurationTests {
     }
 
     static class SamplePayload {
+        /** 普通业务标识，用于验证长整数默认编码。 */
         private final Long id;
+
+        /** 超出 JavaScript 安全范围的标识，用于验证精度保护。 */
         private final Long unsafeId;
+
+        /** 金额字段，用于验证 BigDecimal 默认编码。 */
         private final BigDecimal amount;
+
+        /** 比例字段，用于验证浮点数保持数值形态。 */
         private final Double ratio;
+
+        /** 得分字段，用于验证 Float 保持数值形态。 */
         private final Float score;
+
+        /** 创建时间，用于验证日期时间格式化。 */
         private final LocalDateTime createdAt;
 
         SamplePayload(Long id, Long unsafeId, BigDecimal amount, Double ratio, Float score, LocalDateTime createdAt) {
@@ -585,10 +596,17 @@ class VeloJacksonAutoConfigurationTests {
     }
 
     static class DatePayload {
+        /** 按默认日期格式处理的日期。 */
         private Date dateOnly;
+
+        /** 按默认日期时间格式处理的日期。 */
         private Date dateTime;
+
+        /** 按属性注解格式处理的日期。 */
         @JsonFormat(pattern = "yyyy/MM/dd", timezone = "UTC")
         private Date annotatedDate;
+
+        /** 按属性注解格式处理的本地日期时间。 */
         @JsonFormat(pattern = "yyyy/MM/dd HH:mm")
         private LocalDateTime annotatedDateTime;
 
@@ -629,6 +647,7 @@ class VeloJacksonAutoConfigurationTests {
     }
 
     static class ScientificAmountPayload {
+        /** 使用科学计数法构造、用于验证普通十进制输出的金额。 */
         private final BigDecimal amount;
 
         ScientificAmountPayload(BigDecimal amount) {
@@ -641,6 +660,7 @@ class VeloJacksonAutoConfigurationTests {
     }
 
     static class BigIntegerPayload {
+        /** 用于验证大整数的字符串序列化行为。 */
         private final java.math.BigInteger value;
 
         BigIntegerPayload(java.math.BigInteger value) {
@@ -653,6 +673,7 @@ class VeloJacksonAutoConfigurationTests {
     }
 
     static class EnumPayload {
+        /** 用于根据枚举编码生成描述属性的状态值。 */
         @JsonEnum(StatusEnum.class)
         private final Integer status;
 
@@ -666,6 +687,7 @@ class VeloJacksonAutoConfigurationTests {
     }
 
     static class LegacyEnumPayload {
+        /** 使用旧版键和值字段约定的状态值。 */
         @JsonEnum(LegacyStatusEnum.class)
         private final Integer status;
 
@@ -679,6 +701,7 @@ class VeloJacksonAutoConfigurationTests {
     }
 
     static class ExplicitEnumPayload {
+        /** 使用显式编码字段、描述字段和属性后缀的状态值。 */
         @JsonEnum(value = ExplicitStatusEnum.class, codeField = "id", nameField = "label", nameSuffix = "label")
         private final Integer status;
 
@@ -702,6 +725,7 @@ class VeloJacksonAutoConfigurationTests {
     }
 
     static class CodeOnlyEnumPayload {
+        /** 仅配置编码字段映射的状态值。 */
         @JsonEnum(CodeOnlyStatusEnum.class)
         private final Integer status;
 
@@ -715,6 +739,7 @@ class VeloJacksonAutoConfigurationTests {
     }
 
     static class StringPayload {
+        /** 标记为忽略 XSS 清洗的字符串属性。 */
         @XssIgnore
         private String name;
 
@@ -728,11 +753,18 @@ class VeloJacksonAutoConfigurationTests {
     }
 
     static class StringTransformPayload {
+        /** 通过编码处理器转换的字符串。 */
         @JsonEncode(UppercaseProcessor.class)
         private String encoded;
+
+        /** 通过解码处理器转换的字符串。 */
         @JsonDecode(LowercaseProcessor.class)
         private String decoded;
+
+        /** 根据全局配置清洗的字符串。 */
         private String cleaned;
+
+        /** 标记为跳过 XSS 清洗的字符串。 */
         @XssIgnore
         private String ignored;
 
@@ -786,7 +818,10 @@ class VeloJacksonAutoConfigurationTests {
     enum StatusEnum {
         ENABLED(1, "Enabled");
 
+        /** 枚举的稳定业务编码。 */
         private final int code;
+
+        /** 面向展示的枚举描述。 */
         private final String name;
 
         StatusEnum(int code, String name) {
@@ -798,7 +833,10 @@ class VeloJacksonAutoConfigurationTests {
     enum LegacyStatusEnum {
         ENABLED(1, "Enabled");
 
+        /** 旧版枚举约定中的编码字段。 */
         private final int key;
+
+        /** 旧版枚举约定中的描述字段。 */
         private final String value;
 
         LegacyStatusEnum(int key, String value) {
@@ -810,7 +848,10 @@ class VeloJacksonAutoConfigurationTests {
     enum ExplicitStatusEnum {
         ENABLED(1, "Enabled");
 
+        /** 显式指定的业务编码。 */
         private final int id;
+
+        /** 显式指定的展示名称。 */
         private final String label;
 
         ExplicitStatusEnum(int id, String label) {
@@ -822,6 +863,7 @@ class VeloJacksonAutoConfigurationTests {
     enum CodeOnlyStatusEnum {
         ENABLED(1);
 
+        /** 仅提供业务编码的枚举值。 */
         private final int code;
 
         CodeOnlyStatusEnum(int code) {

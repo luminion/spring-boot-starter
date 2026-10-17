@@ -26,6 +26,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.MDC;
 
+/** 验证任务日志入口的独立链路根作用域和上下文恢复。 */
 class SourceLogAspectSupportTest {
     @AfterEach
     void clear() {

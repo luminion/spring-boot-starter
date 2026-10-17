@@ -9,6 +9,7 @@ import java.io.InputStream;
 import java.lang.reflect.Field;
 import org.junit.jupiter.api.Test;
 
+/** 验证枚举元数据缓存对类加载器和字段映射的隔离。 */
 class JsonEnumMetadataResolverTests {
     private final JsonEnumMetadataResolver resolver =
             new JsonEnumMetadataResolver(new VeloProperties.JacksonProperties());

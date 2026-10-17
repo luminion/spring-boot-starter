@@ -1,22 +1,25 @@
 package io.github.luminion.velo.autoconfigure;
 
-import io.github.luminion.velo.lock.LockHandler;
-import io.github.luminion.velo.lock.support.RedissonLockHandler;
 import io.github.luminion.velo.idempotent.IdempotentHandler;
 import io.github.luminion.velo.idempotent.support.RedissonIdempotentHandler;
+import io.github.luminion.velo.lock.LockHandler;
+import io.github.luminion.velo.lock.support.RedissonLockHandler;
 import io.github.luminion.velo.ratelimit.RateLimitHandler;
 import io.github.luminion.velo.ratelimit.support.RedissonRateLimitHandler;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
-import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
-import org.springframework.boot.builder.SpringApplicationBuilder;
-import org.springframework.boot.WebApplicationType;
-import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.data.redis.core.StringRedisTemplate;
+
 import java.net.URI;
 import java.time.Duration;
 import java.util.UUID;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.springframework.boot.WebApplicationType;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.core.StringRedisTemplate;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -24,6 +27,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @EnabledIfEnvironmentVariable(named = "VELO_TEST_REDIS_URL", matches = "redis://.+")
 class Boot2RedissonIntegrationTest {
+
+    /** 验证 Spring Boot 2 上 Redisson 各功能后端的选择及实际 Redis 行为。 */
     @Test
     void shouldStartMatchingRedissonAndSelectItsBackends() throws InterruptedException {
         URI uri = URI.create(System.getenv("VELO_TEST_REDIS_URL"));
@@ -89,12 +94,17 @@ class Boot2RedissonIntegrationTest {
                 template.delete(key);
                 // Redisson 原生限流器有多个派生 key，由其原生 delete 清理本测试命名空间。
                 context.getBean(org.redisson.api.RedissonClient.class).getRateLimiter(key + ":rate").delete();
-                context.getBean(org.redisson.api.RedissonClient.class).getRateLimiter(key + ":preexisting-rate").delete();
-                context.getBean(org.redisson.api.RedissonClient.class).getRateLimiter(key + ":per-client-rate").delete();
+                context.getBean(org.redisson.api.RedissonClient.class)
+                        .getRateLimiter(key + ":preexisting-rate")
+                        .delete();
+                context.getBean(org.redisson.api.RedissonClient.class)
+                        .getRateLimiter(key + ":per-client-rate")
+                        .delete();
             }
         }
     }
 
+    /** 提供 Redisson 集成测试使用的自动配置应用。 */
     @Configuration(proxyBeanMethods = false)
     @EnableAutoConfiguration
     static class Application {

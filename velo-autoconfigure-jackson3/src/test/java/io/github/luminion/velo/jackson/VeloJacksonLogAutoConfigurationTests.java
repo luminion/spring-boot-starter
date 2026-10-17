@@ -1,22 +1,25 @@
 package io.github.luminion.velo.jackson;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import io.github.luminion.velo.log.core.InvocationLogSupport;
 import io.github.luminion.velo.log.LogValueFormatter;
+import io.github.luminion.velo.log.core.InvocationLogSupport;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+/** 验证 Jackson 3 日志格式化器使用应用 Mapper 的行为。 */
 class VeloJacksonLogAutoConfigurationTests {
+
     @Test
     void springMapperAndApplicationModuleAreReadyBeforeLoggingFormatter() {
         tools.jackson.databind.module.SimpleModule module = new tools.jackson.databind.module.SimpleModule();
@@ -91,7 +94,10 @@ class VeloJacksonLogAutoConfigurationTests {
         assertThat(mapper.writeValueAsString(value)).hasSize(value.length() + 2);
     }
 
+    /** 大集合负载，用于验证日志格式化完整遍历结果。 */
     static class LargePayload {
+
+        /** 记录计算属性的访问次数。 */
         private final AtomicInteger visited;
 
         LargePayload(AtomicInteger visited) {
@@ -103,7 +109,10 @@ class VeloJacksonLogAutoConfigurationTests {
         }
     }
 
+    /** 通过 getter 计数的集合元素。 */
     static class CountingPayload {
+
+        /** 记录计算属性的访问次数。 */
         private final AtomicInteger visited;
 
         CountingPayload(AtomicInteger visited) {
@@ -133,18 +142,25 @@ class VeloJacksonLogAutoConfigurationTests {
                         });
     }
 
+    /** 含有可见值和应忽略值的日志负载。 */
     @Getter
     @RequiredArgsConstructor
     static class Payload {
+
+        /** 日志中保留的属性。 */
         private final String value;
+
+        /** 由 Mix-in 忽略的属性。 */
         private final String secret;
     }
 
+    /** 为测试负载声明需要忽略的属性。 */
     abstract static class PayloadMixin {
         @JsonIgnore
         abstract String getSecret();
     }
 
+    /** 序列化失败且禁止通过 {@code toString()} 暴露内容的测试负载。 */
     static class BrokenPayload {
         public String getValue() {
             throw new IllegalArgumentException("broken");

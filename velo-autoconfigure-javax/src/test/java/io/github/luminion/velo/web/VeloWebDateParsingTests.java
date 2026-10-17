@@ -1,5 +1,10 @@
 package io.github.luminion.velo.web;
 
+import java.time.DateTimeException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Date;
+
 import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.xss.converter.XssStringConverter;
 import org.junit.jupiter.api.Test;
@@ -9,14 +14,10 @@ import org.springframework.beans.factory.support.StaticListableBeanFactory;
 import org.springframework.core.convert.ConversionFailedException;
 import org.springframework.format.support.DefaultFormattingConversionService;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.DateTimeException;
-import java.util.Date;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/** 验证 MVC 日期时间转换器的默认时区、格式和输入校验行为。 */
 class VeloWebDateParsingTests {
     @Test
     void shouldUseShanghaiTimeByDefault() {
@@ -61,6 +62,7 @@ class VeloWebDateParsingTests {
         assertThat(service.convert("2024-02-29", LocalDate.class)).isEqualTo(LocalDate.of(2024, 2, 29));
     }
 
+    /** 按给定配置创建并注册 MVC 格式转换器。 */
     private DefaultFormattingConversionService configure(VeloProperties properties) {
         DefaultFormattingConversionService service = new DefaultFormattingConversionService();
         new VeloWebMvcConfigurer(new StaticListableBeanFactory().getBeanProvider(XssStringConverter.class), properties)

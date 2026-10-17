@@ -6,17 +6,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonView;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
-import tools.jackson.databind.PropertyNamingStrategies;
-import tools.jackson.databind.PropertyNamingStrategy;
-import tools.jackson.databind.cfg.MapperConfig;
-import tools.jackson.databind.annotation.JsonNaming;
-import tools.jackson.databind.annotation.JsonSerialize;
-import tools.jackson.databind.introspect.AnnotatedField;
-import tools.jackson.databind.introspect.AnnotatedMethod;
-import tools.jackson.databind.ser.std.ToStringSerializerBase;
-import tools.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
 import io.github.luminion.velo.core.VeloCoreAutoConfiguration;
 import io.github.luminion.velo.jackson.annotation.JsonEncode;
 import io.github.luminion.velo.jackson.annotation.JsonEnum;
@@ -26,6 +15,17 @@ import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.serializer.SerializationException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.PropertyNamingStrategies;
+import tools.jackson.databind.PropertyNamingStrategy;
+import tools.jackson.databind.annotation.JsonNaming;
+import tools.jackson.databind.annotation.JsonSerialize;
+import tools.jackson.databind.cfg.MapperConfig;
+import tools.jackson.databind.introspect.AnnotatedField;
+import tools.jackson.databind.introspect.AnnotatedMethod;
+import tools.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
+import tools.jackson.databind.ser.std.ToStringSerializerBase;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -45,9 +45,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  */
 class JacksonIntegrationRegressionTests {
 
+    /** 同时加载 Velo、Redis 与 Boot 原生 Jackson 自动配置的测试上下文。 */
     private final ApplicationContextRunner runner = new ApplicationContextRunner()
-            .withConfiguration(AutoConfigurations.of(VeloCoreAutoConfiguration.class,
-                    VeloJacksonAutoConfiguration.class, VeloRedisJsonAutoConfiguration.class, JacksonAutoConfiguration.class));
+            .withConfiguration(AutoConfigurations.of(
+                    VeloCoreAutoConfiguration.class,
+                    VeloJacksonAutoConfiguration.class,
+                    VeloRedisJsonAutoConfiguration.class,
+                    JacksonAutoConfiguration.class));
 
     @Test
     void shouldRegisterEnumModuleThroughBoot() {
@@ -63,13 +67,15 @@ class JacksonIntegrationRegressionTests {
 
     @Test
     void shouldKeepBusinessModuleAndEnumModuleTogether() {
-        runner.withBean(tools.jackson.databind.JacksonModule.class, () ->
-                new tools.jackson.databind.module.SimpleModule("business").addSerializer(new PrefixNumberSerializer())).run(context -> {
-            ObjectMapper mapper = context.getBean(ObjectMapper.class);
-            assertThat(mapper.writeValueAsString(1L)).isEqualTo("\"n:1\"");
-            assertThat(mapper.writeValueAsString(new EnumPayload()))
-                    .isEqualTo("{\"status\":1,\"statusName\":\"One\"}");
-        });
+        runner.withBean(tools.jackson.databind.JacksonModule.class,
+                        () -> new tools.jackson.databind.module.SimpleModule("business")
+                                .addSerializer(new PrefixNumberSerializer()))
+                .run(context -> {
+                    ObjectMapper mapper = context.getBean(ObjectMapper.class);
+                    assertThat(mapper.writeValueAsString(1L)).isEqualTo("\"n:1\"");
+                    assertThat(mapper.writeValueAsString(new EnumPayload()))
+                            .isEqualTo("{\"status\":1,\"statusName\":\"One\"}");
+                });
     }
 
     @Test

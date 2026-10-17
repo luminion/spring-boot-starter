@@ -21,6 +21,7 @@ import org.springframework.core.env.SystemEnvironmentPropertySource;
 import org.springframework.core.task.TaskDecorator;
 
 @ExtendWith(OutputCaptureExtension.class)
+/** 验证链路追踪自动配置与日志配置的独立性及属性覆盖。 */
 class VeloTraceAutoConfigurationTest {
     private final ApplicationContextRunner runner =
             new ApplicationContextRunner()

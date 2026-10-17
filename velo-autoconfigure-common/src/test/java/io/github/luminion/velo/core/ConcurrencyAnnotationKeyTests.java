@@ -18,6 +18,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/** 验证并发控制注解的键表达式、前缀和指纹生成。 */
 class ConcurrencyAnnotationKeyTests {
 
     @ParameterizedTest

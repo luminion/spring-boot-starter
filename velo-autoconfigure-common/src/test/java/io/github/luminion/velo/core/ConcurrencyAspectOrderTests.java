@@ -18,6 +18,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/** 验证并发控制切面的执行顺序及拒绝后的资源释放。 */
 class ConcurrencyAspectOrderTests {
 
     @Test

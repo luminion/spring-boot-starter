@@ -3,6 +3,9 @@ package io.github.luminion.velo.web.exception;
 import io.github.luminion.velo.idempotent.exception.IdempotentException;
 import io.github.luminion.velo.lock.exception.LockException;
 import io.github.luminion.velo.ratelimit.exception.RateLimitException;
+import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -15,10 +18,6 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
-
-import java.util.Objects;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * Web 异常处理器基类。
@@ -34,6 +33,12 @@ public class VeloWebExceptionHandler<R> extends AbstractVeloControllerAdvice {
     protected final Function<String, R> failed;
     protected final Function<Throwable, R> error;
 
+    /**
+     * 创建基础 Web 异常处理器。
+     *
+     * @param failed 将请求失败消息转换为响应体
+     * @param error 将未处理异常转换为响应体
+     */
     public VeloWebExceptionHandler(Function<String, R> failed, Function<Throwable, R> error) {
         this.failed = java.util.Objects.requireNonNull(failed);
         this.error = java.util.Objects.requireNonNull(error);
@@ -47,6 +52,9 @@ public class VeloWebExceptionHandler<R> extends AbstractVeloControllerAdvice {
 
     /**
      * Bean Validation 参数校验异常 (@RequestBody)
+     *
+     * @param e 请求体参数校验异常
+     * @return 校验失败对应的响应体
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public R handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
@@ -58,6 +66,9 @@ public class VeloWebExceptionHandler<R> extends AbstractVeloControllerAdvice {
 
     /**
      * 参数绑定异常 (表单/URL参数)
+     *
+     * @param e 请求参数绑定异常
+     * @return 参数绑定失败对应的响应体
      */
     @ExceptionHandler(BindException.class)
     public R handleBindException(BindException e) {

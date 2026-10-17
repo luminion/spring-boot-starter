@@ -24,7 +24,7 @@ import org.springframework.core.Ordered;
 import org.springframework.web.servlet.HandlerMapping;
 
 /**
- * MVC Controller 调用日志切面。
+ * 为 MVC 控制器调用创建统一调用日志，并记录请求和响应头。
  */
 @Aspect
 public class ControllerLogAspect implements Ordered {
@@ -32,15 +32,33 @@ public class ControllerLogAspect implements Ordered {
     @Getter
     private final int order;
 
+    /**
+     * 使用默认的控制器日志切面顺序创建切面。
+     *
+     * @param engine 调用日志引擎
+     */
     public ControllerLogAspect(InvocationLogEngine engine) {
         this(engine, VeloAdvisorOrder.LOG_CONTROLLER);
     }
 
+    /**
+     * 使用指定顺序创建控制器日志切面。
+     *
+     * @param engine 调用日志引擎
+     * @param order 切面执行顺序
+     */
     public ControllerLogAspect(InvocationLogEngine engine, int order) {
         this.engine = engine;
         this.order = order;
     }
 
+    /**
+     * 环绕执行控制器方法，并将请求上下文加入调用日志。
+     *
+     * @param point 当前控制器方法的连接点
+     * @return 控制器方法的执行结果
+     * @throws Throwable 控制器方法执行时抛出的异常
+     */
     @Around("execution(" +
             "public * *(..))"
             + " && (within(@org.springframework.web.bind.annotation.RestController *) "

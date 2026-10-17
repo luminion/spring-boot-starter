@@ -18,6 +18,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/** 验证 Redis 缓存写入器的有效期抖动、关闭开关及写入行为。 */
 class JitterRedisCacheWriterTest {
 
     @Test

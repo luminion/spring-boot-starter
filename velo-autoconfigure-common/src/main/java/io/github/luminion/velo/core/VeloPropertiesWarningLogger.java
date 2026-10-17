@@ -22,206 +22,206 @@ import org.springframework.util.StringUtils;
  */
 public class VeloPropertiesWarningLogger implements InitializingBean {
 
-  private static final Logger log = LoggerFactory.getLogger(VeloPropertiesWarningLogger.class);
+    private static final Logger log = LoggerFactory.getLogger(VeloPropertiesWarningLogger.class);
 
-  private final VeloProperties properties;
+    private final VeloProperties properties;
 
-  public VeloPropertiesWarningLogger(VeloProperties properties) {
-    this.properties = properties;
-  }
-
-  @Override
-  public void afterPropertiesSet() {
-    for (String warning : collectWarnings(properties)) {
-      log.warn("[Velo Starter] 配置告警：{}", warning);
-    }
-  }
-
-  @SuppressWarnings("deprecation")
-  static List<String> collectWarnings(VeloProperties properties) {
-    List<String> warnings = new ArrayList<>();
-    if (properties == null) {
-      return warnings;
+    public VeloPropertiesWarningLogger(VeloProperties properties) {
+        this.properties = properties;
     }
 
-    VeloProperties.IdempotentProperties idempotent = properties.getIdempotent();
-    if (idempotent == null) {
-      warnings.add("velo.idempotent 为空，相关功能可能在运行时失败。当前仅告警。");
-    } else {
-      warnBlankIfEnabled(
-          warnings,
-          "velo.idempotent.prefix",
-          idempotent.isEnabled(),
-          idempotent.getPrefix(),
-          "幂等键可能与其他业务键发生冲突");
-    }
-
-    VeloProperties.RateLimitProperties rateLimit = properties.getRateLimit();
-    if (rateLimit == null) {
-      warnings.add("velo.rate-limit 为空，相关功能可能在运行时失败。当前仅告警。");
-    } else {
-      warnBlankIfEnabled(
-          warnings,
-          "velo.rate-limit.prefix",
-          rateLimit.isEnabled(),
-          rateLimit.getPrefix(),
-          "限流键可能与其他业务键发生冲突");
-    }
-
-    VeloProperties.LockProperties lock = properties.getLock();
-    if (lock == null) {
-      warnings.add("velo.lock 为空，相关功能可能在运行时失败。当前仅告警。");
-    } else if (lock.isEnabled()) {
-      warnBlank(warnings, "velo.lock.prefix", lock.getPrefix(), "锁键可能与其他业务键发生冲突");
-    }
-
-    VeloProperties.CacheProperties cache = properties.getCache();
-    if (cache == null) {
-      warnings.add("velo.cache 为空，缓存自动配置可能在运行时失败。当前仅告警。");
-    } else if (cache.isEnabled()) {
-      warnBlank(warnings, "velo.cache.separator", cache.getSeparator(), "缓存前缀分隔符为空时会回退为 :");
-    }
-
-    VeloProperties.LogProperties logProperties = properties.getLog();
-    if (logProperties == null) {
-      warnings.add("velo.log 为空，日志自动配置可能在运行时失败。当前仅告警。");
-    } else if (logProperties.isEnabled()) {
-      VeloProperties.InvocationDefaults invocation = logProperties.getDefaults();
-      if (invocation == null) {
-        warnings.add("velo.log.defaults 为空，调用日志相关功能可能在运行时失败。当前仅告警。");
-      } else if (invocation.getMaxPayloadLength() != -1 && invocation.getMaxPayloadLength() != 0) {
-        warnings.add(
-            "velo.log.defaults.max-payload-length 当前值为 "
-                + invocation.getMaxPayloadLength()
-                + "，仅支持 -1（完整输出）或 0（关闭载荷），日志引擎启动时会报错。");
-      }
-    }
-
-    VeloProperties.JacksonProperties jackson = properties.getJackson();
-    if (jackson == null) {
-      warnings.add("velo.jackson 为空，Jackson 自动配置可能在运行时失败。当前仅告警。");
-    } else if (jackson.isEnabled() && jackson.isEnumDescEnabled()) {
-      warnBlank(
-          warnings,
-          "velo.jackson.enum-name-suffix",
-          jackson.getEnumNameSuffix(),
-          "枚举描述字段后缀为空时可能覆盖或生成歧义字段");
-      Map<String, String> enumMappings = jackson.getEnumMappings();
-      if (enumMappings != null) {
-        for (Map.Entry<String, String> entry : enumMappings.entrySet()) {
-          if (!StringUtils.hasText(entry.getKey()) || !StringUtils.hasText(entry.getValue())) {
-            warnings.add("velo.jackson.enum-mappings 包含空的代码字段或名称字段，该映射会被跳过。当前仅告警。");
-          }
+    @Override
+    public void afterPropertiesSet() {
+        for (String warning : collectWarnings(properties)) {
+            log.warn("[Velo Starter] 配置告警：{}", warning);
         }
-      }
     }
 
-    VeloProperties.WebProperties web = properties.getWeb();
-    if (web == null) {
-      warnings.add("velo.web 为空，Web 自动配置可能在运行时失败。当前仅告警。");
-    } else {
-      VeloProperties.CorsProperties cors = web.getCors();
-      if (cors == null) {
-        warnings.add("velo.web.cors 为空，CORS 配置可能在运行时失败。当前仅告警。");
-      } else if (cors.isEnabled()) {
-        warnNonEmptyArray(
-            warnings,
-            "velo.web.cors.allowed-origin-patterns",
-            cors.getAllowedOriginPatterns(),
-            "CORS 未配置允许的 Origin");
-        warnNonEmptyArray(
-            warnings,
-            "velo.web.cors.allowed-methods",
-            cors.getAllowedMethods(),
-            "CORS 未配置允许的 HTTP 方法");
-        if (cors.getMaxAge() < 0) {
-          warnings.add(
-              "velo.web.cors.max-age 当前值为 " + cors.getMaxAge() + "，可能导致预检缓存行为不符合预期。当前仅告警。");
+    @SuppressWarnings("deprecation")
+    static List<String> collectWarnings(VeloProperties properties) {
+        List<String> warnings = new ArrayList<>();
+        if (properties == null) {
+            return warnings;
         }
-      }
+
+        VeloProperties.IdempotentProperties idempotent = properties.getIdempotent();
+        if (idempotent == null) {
+            warnings.add("velo.idempotent 为空，相关功能可能在运行时失败。当前仅告警。");
+        } else {
+            warnBlankIfEnabled(
+                    warnings,
+                    "velo.idempotent.prefix",
+                    idempotent.isEnabled(),
+                    idempotent.getPrefix(),
+                    "幂等键可能与其他业务键发生冲突");
+        }
+
+        VeloProperties.RateLimitProperties rateLimit = properties.getRateLimit();
+        if (rateLimit == null) {
+            warnings.add("velo.rate-limit 为空，相关功能可能在运行时失败。当前仅告警。");
+        } else {
+            warnBlankIfEnabled(
+                    warnings,
+                    "velo.rate-limit.prefix",
+                    rateLimit.isEnabled(),
+                    rateLimit.getPrefix(),
+                    "限流键可能与其他业务键发生冲突");
+        }
+
+        VeloProperties.LockProperties lock = properties.getLock();
+        if (lock == null) {
+            warnings.add("velo.lock 为空，相关功能可能在运行时失败。当前仅告警。");
+        } else if (lock.isEnabled()) {
+            warnBlank(warnings, "velo.lock.prefix", lock.getPrefix(), "锁键可能与其他业务键发生冲突");
+        }
+
+        VeloProperties.CacheProperties cache = properties.getCache();
+        if (cache == null) {
+            warnings.add("velo.cache 为空，缓存自动配置可能在运行时失败。当前仅告警。");
+        } else if (cache.isEnabled()) {
+            warnBlank(warnings, "velo.cache.separator", cache.getSeparator(), "缓存前缀分隔符为空时会回退为 :");
+        }
+
+        VeloProperties.LogProperties logProperties = properties.getLog();
+        if (logProperties == null) {
+            warnings.add("velo.log 为空，日志自动配置可能在运行时失败。当前仅告警。");
+        } else if (logProperties.isEnabled()) {
+            VeloProperties.InvocationDefaults invocation = logProperties.getDefaults();
+            if (invocation == null) {
+                warnings.add("velo.log.defaults 为空，调用日志相关功能可能在运行时失败。当前仅告警。");
+            } else if (invocation.getMaxPayloadLength() != -1 && invocation.getMaxPayloadLength() != 0) {
+                warnings.add(
+                        "velo.log.defaults.max-payload-length 当前值为 "
+                                + invocation.getMaxPayloadLength()
+                                + "，仅支持 -1（完整输出）或 0（关闭载荷），日志引擎启动时会报错。");
+            }
+        }
+
+        VeloProperties.JacksonProperties jackson = properties.getJackson();
+        if (jackson == null) {
+            warnings.add("velo.jackson 为空，Jackson 自动配置可能在运行时失败。当前仅告警。");
+        } else if (jackson.isEnabled() && jackson.isEnumDescEnabled()) {
+            warnBlank(
+                    warnings,
+                    "velo.jackson.enum-name-suffix",
+                    jackson.getEnumNameSuffix(),
+                    "枚举描述字段后缀为空时可能覆盖或生成歧义字段");
+            Map<String, String> enumMappings = jackson.getEnumMappings();
+            if (enumMappings != null) {
+                for (Map.Entry<String, String> entry : enumMappings.entrySet()) {
+                    if (!StringUtils.hasText(entry.getKey()) || !StringUtils.hasText(entry.getValue())) {
+                        warnings.add("velo.jackson.enum-mappings 包含空的代码字段或名称字段，该映射会被跳过。当前仅告警。");
+                    }
+                }
+            }
+        }
+
+        VeloProperties.WebProperties web = properties.getWeb();
+        if (web == null) {
+            warnings.add("velo.web 为空，Web 自动配置可能在运行时失败。当前仅告警。");
+        } else {
+            VeloProperties.CorsProperties cors = web.getCors();
+            if (cors == null) {
+                warnings.add("velo.web.cors 为空，CORS 配置可能在运行时失败。当前仅告警。");
+            } else if (cors.isEnabled()) {
+                warnNonEmptyArray(
+                        warnings,
+                        "velo.web.cors.allowed-origin-patterns",
+                        cors.getAllowedOriginPatterns(),
+                        "CORS 未配置允许的 Origin");
+                warnNonEmptyArray(
+                        warnings,
+                        "velo.web.cors.allowed-methods",
+                        cors.getAllowedMethods(),
+                        "CORS 未配置允许的 HTTP 方法");
+                if (cors.getMaxAge() < 0) {
+                    warnings.add(
+                            "velo.web.cors.max-age 当前值为 " + cors.getMaxAge() + "，可能导致预检缓存行为不符合预期。当前仅告警。");
+                }
+            }
+        }
+
+        VeloProperties.SpringConverterProperties springConverter = properties.getSpringConverter();
+        if (springConverter == null) {
+            warnings.add("velo.spring-converter 为空，日期时间转换配置可能在运行时失败。当前仅告警。");
+        }
+        VeloProperties.ExcelProperties excel = properties.getExcel();
+        if (excel == null) {
+            warnings.add("velo.excel 为空，Excel 自动配置可能在运行时失败。当前仅告警。");
+        } else if (excel.getConverters() == null) {
+            warnings.add("velo.excel.converters 为空，Excel 转换器注册可能在运行时失败。当前仅告警。");
+        }
+
+        boolean dateTimeFeatureEnabled = springConverter != null && springConverter.isDateTimeEnabled();
+        dateTimeFeatureEnabled =
+                dateTimeFeatureEnabled
+                        || jackson != null && jackson.isEnabled() && jackson.isDateTimeEnabled();
+        dateTimeFeatureEnabled =
+                dateTimeFeatureEnabled
+                        || excel != null && excel.getConverters() != null && excel.getConverters().isEnabled();
+        if (dateTimeFeatureEnabled) {
+            VeloProperties.DateTimeFormatProperties dateTimeFormat = properties.getDateTimeFormat();
+            if (dateTimeFormat == null) {
+                warnings.add("velo.date-time-format 为空，日期时间转换将在启动时失败。");
+            } else {
+                warnDateTimePattern(warnings, "velo.date-time-format.date", dateTimeFormat.getDate());
+                warnDateTimePattern(warnings, "velo.date-time-format.time", dateTimeFormat.getTime());
+                warnDateTimePattern(
+                        warnings, "velo.date-time-format.date-time", dateTimeFormat.getDateTime());
+                warnTimeZone(warnings, dateTimeFormat.getTimeZone());
+            }
+        }
+        return warnings;
     }
 
-    VeloProperties.SpringConverterProperties springConverter = properties.getSpringConverter();
-    if (springConverter == null) {
-      warnings.add("velo.spring-converter 为空，日期时间转换配置可能在运行时失败。当前仅告警。");
-    }
-    VeloProperties.ExcelProperties excel = properties.getExcel();
-    if (excel == null) {
-      warnings.add("velo.excel 为空，Excel 自动配置可能在运行时失败。当前仅告警。");
-    } else if (excel.getConverters() == null) {
-      warnings.add("velo.excel.converters 为空，Excel 转换器注册可能在运行时失败。当前仅告警。");
+    private static void warnBlankIfEnabled(
+            List<String> warnings, String property, boolean enabled, String value, String consequence) {
+        if (enabled) {
+            warnBlank(warnings, property, value, consequence);
+        }
     }
 
-    boolean dateTimeFeatureEnabled = springConverter != null && springConverter.isDateTimeEnabled();
-    dateTimeFeatureEnabled =
-        dateTimeFeatureEnabled
-            || jackson != null && jackson.isEnabled() && jackson.isDateTimeEnabled();
-    dateTimeFeatureEnabled =
-        dateTimeFeatureEnabled
-            || excel != null && excel.getConverters() != null && excel.getConverters().isEnabled();
-    if (dateTimeFeatureEnabled) {
-      VeloProperties.DateTimeFormatProperties dateTimeFormat = properties.getDateTimeFormat();
-      if (dateTimeFormat == null) {
-        warnings.add("velo.date-time-format 为空，日期时间转换将在启动时失败。");
-      } else {
-        warnDateTimePattern(warnings, "velo.date-time-format.date", dateTimeFormat.getDate());
-        warnDateTimePattern(warnings, "velo.date-time-format.time", dateTimeFormat.getTime());
-        warnDateTimePattern(
-            warnings, "velo.date-time-format.date-time", dateTimeFormat.getDateTime());
-        warnTimeZone(warnings, dateTimeFormat.getTimeZone());
-      }
+    private static void warnBlank(
+            List<String> warnings, String property, String value, String consequence) {
+        if (!StringUtils.hasText(value)) {
+            warnings.add(property + " 为空或仅包含空白，" + consequence + "。当前仅告警。");
+        }
     }
-    return warnings;
-  }
 
-  private static void warnBlankIfEnabled(
-      List<String> warnings, String property, boolean enabled, String value, String consequence) {
-    if (enabled) {
-      warnBlank(warnings, property, value, consequence);
+    private static void warnNonEmptyArray(
+            List<String> warnings, String property, String[] values, String consequence) {
+        if (values == null || values.length == 0) {
+            warnings.add(property + " 为空，" + consequence + "。当前仅告警。");
+            return;
+        }
+        for (int i = 0; i < values.length; i++) {
+            if (!StringUtils.hasText(values[i])) {
+                warnings.add(property + "[" + i + "] 为空或仅包含空白，" + consequence + "。当前仅告警。");
+            }
+        }
     }
-  }
 
-  private static void warnBlank(
-      List<String> warnings, String property, String value, String consequence) {
-    if (!StringUtils.hasText(value)) {
-      warnings.add(property + " 为空或仅包含空白，" + consequence + "。当前仅告警。");
+    private static void warnDateTimePattern(List<String> warnings, String property, String pattern) {
+        if (!StringUtils.hasText(pattern)) {
+            warnings.add(property + " 为空或仅包含空白，日期时间转换将在启动时失败。");
+            return;
+        }
+        try {
+            DateTimeFormatter.ofPattern(pattern);
+        } catch (IllegalArgumentException ex) {
+            warnings.add(property + " 不是有效的 DateTimeFormatter 模式，日期时间转换将在启动时失败。");
+        }
     }
-  }
 
-  private static void warnNonEmptyArray(
-      List<String> warnings, String property, String[] values, String consequence) {
-    if (values == null || values.length == 0) {
-      warnings.add(property + " 为空，" + consequence + "。当前仅告警。");
-      return;
+    private static void warnTimeZone(List<String> warnings, String timeZone) {
+        if (!StringUtils.hasText(timeZone)) {
+            warnings.add("velo.date-time-format.time-zone 为空，日期时间转换将在启动时失败。");
+            return;
+        }
+        try {
+            ZoneId.of(timeZone);
+        } catch (DateTimeException ex) {
+            warnings.add("velo.date-time-format.time-zone 当前值不是有效的 ZoneId，日期时间转换将在启动时失败。");
+        }
     }
-    for (int i = 0; i < values.length; i++) {
-      if (!StringUtils.hasText(values[i])) {
-        warnings.add(property + "[" + i + "] 为空或仅包含空白，" + consequence + "。当前仅告警。");
-      }
-    }
-  }
-
-  private static void warnDateTimePattern(List<String> warnings, String property, String pattern) {
-    if (!StringUtils.hasText(pattern)) {
-      warnings.add(property + " 为空或仅包含空白，日期时间转换将在启动时失败。");
-      return;
-    }
-    try {
-      DateTimeFormatter.ofPattern(pattern);
-    } catch (IllegalArgumentException ex) {
-      warnings.add(property + " 不是有效的 DateTimeFormatter 模式，日期时间转换将在启动时失败。");
-    }
-  }
-
-  private static void warnTimeZone(List<String> warnings, String timeZone) {
-    if (!StringUtils.hasText(timeZone)) {
-      warnings.add("velo.date-time-format.time-zone 为空，日期时间转换将在启动时失败。");
-      return;
-    }
-    try {
-      ZoneId.of(timeZone);
-    } catch (DateTimeException ex) {
-      warnings.add("velo.date-time-format.time-zone 当前值不是有效的 ZoneId，日期时间转换将在启动时失败。");
-    }
-  }
 }

@@ -22,6 +22,7 @@ import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.io.support.SpringFactoriesLoader;
 import org.springframework.mock.env.MockEnvironment;
 
+/** 验证日志环境后处理器的默认值注入与已有配置保留。 */
 class VeloLogEnvironmentPostProcessorTest {
     private final VeloLogEnvironmentPostProcessor processor = new VeloLogEnvironmentPostProcessor();
 

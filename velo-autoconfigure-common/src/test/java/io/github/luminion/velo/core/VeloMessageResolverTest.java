@@ -7,6 +7,7 @@ import java.util.Locale;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/** 验证提示信息在有无 MessageSource 时的解析和回退。 */
 class VeloMessageResolverTest {
 
     @Test

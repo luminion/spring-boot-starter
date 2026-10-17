@@ -1,14 +1,13 @@
 package io.github.luminion.velo.web.exception;
 
+import java.nio.charset.StandardCharsets;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import org.junit.jupiter.api.Test;
-import java.nio.charset.StandardCharsets;
-import org.springframework.http.converter.HttpMessageConverters;
-import org.springframework.http.converter.StringHttpMessageConverter;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.converter.HttpMessageConverters;
+import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.mock.web.MockServletContext;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -17,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -69,9 +69,11 @@ class VeloValidationAdviceMvcTests {
         return MockMvcBuilders.webAppContextSetup(context).build();
     }
 
+    /** 注册 MVC 配置、消息转换器与测试控制器。 */
     @Configuration(proxyBeanMethods = false)
     @EnableWebMvc
     static class WebConfig implements WebMvcConfigurer {
+
         @Override
         public void configureMessageConverters(HttpMessageConverters.ServerBuilder builder) {
             builder.withStringConverter(new StringHttpMessageConverter(StandardCharsets.UTF_8));
@@ -83,8 +85,10 @@ class VeloValidationAdviceMvcTests {
         }
     }
 
+    /** 提供使用默认状态码处理校验异常的测试 Advice。 */
     @Configuration(proxyBeanMethods = false)
     static class LegacyAdvice {
+
         @Bean
         VeloValidationWebExceptionHandler<String> advice() {
             return new VeloValidationWebExceptionHandler<>(message -> "failed:" + message,
@@ -92,8 +96,10 @@ class VeloValidationAdviceMvcTests {
         }
     }
 
+    /** 提供按输入与返回值校验结果设置状态码的测试 Advice。 */
     @Configuration(proxyBeanMethods = false)
     static class StatusAdvice {
+
         @Bean
         VeloStatusWebExceptionHandler<String> advice() {
             return new VeloStatusWebExceptionHandler<>(message -> "failed:" + message,
@@ -101,8 +107,10 @@ class VeloValidationAdviceMvcTests {
         }
     }
 
+    /** 提供输入参数及返回值校验用的 MVC 端点。 */
     @RestController
     static class Controller {
+
         @GetMapping("/input")
         String input(@RequestParam("name") @NotBlank(message = "名称不能为空") String name) {
             return name;

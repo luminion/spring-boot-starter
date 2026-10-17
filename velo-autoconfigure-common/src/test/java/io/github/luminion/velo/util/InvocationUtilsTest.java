@@ -9,6 +9,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/** 验证对象图检查对循环引用集合、映射和数组的处理。 */
 class InvocationUtilsTest {
 
     @Test

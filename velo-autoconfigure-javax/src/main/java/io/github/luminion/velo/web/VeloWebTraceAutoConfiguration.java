@@ -24,6 +24,8 @@ import org.springframework.core.Ordered;
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 @Conditional(TraceEnabledCondition.class)
 public class VeloWebTraceAutoConfiguration {
+
+    /** 创建请求链路过滤器。 */
     @Bean
     @ConditionalOnMissingBean
     public TraceIdFilter traceIdFilter(TraceProperties properties, TraceContextResolver resolver) {

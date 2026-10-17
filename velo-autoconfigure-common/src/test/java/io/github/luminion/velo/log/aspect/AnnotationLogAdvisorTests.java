@@ -28,6 +28,7 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.RestController;
 
+/** 验证日志功能注解的入口选择、继承解析和来源边界。 */
 class AnnotationLogAdvisorTests {
     @ParameterizedTest
     @ValueSource(booleans = {false, true})

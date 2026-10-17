@@ -12,6 +12,7 @@ import java.util.Collections;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/** 验证无侵入模式默认值的启用和配置覆盖规则。 */
 class VeloModeEnvironmentPostProcessorTest {
 
     private static final DeferredLogFactory LOG_FACTORY = supplier -> new NoOpLog();

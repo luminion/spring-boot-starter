@@ -100,13 +100,16 @@ public final class InvocationLogMetadata {
         MergedAnnotations annotations = MergedAnnotations.from(element, MergedAnnotations.SearchStrategy.TYPE_HIERARCHY);
         for (MergedAnnotation<Annotation> annotation : annotations) {
             Class<? extends Annotation> kind = annotation.getType();
-            if (annotation.getDistance() != 0
-                    || !(FEATURES.containsKey(kind) || kind == InvokeLog.class || kind == LogIgnore.class)) {
+            if (!(FEATURES.containsKey(kind) || kind == InvokeLog.class || kind == LogIgnore.class)) {
                 continue;
             }
-            // 不扁平化 InvokeLog 元注解：它只声明套餐，不能盖过配置；业务组合暂不接入。
+            // InvokeLog 只选择可配置套餐；沿此路径出现的功能默认值不能遮蔽配置文件。
+            if (FEATURES.containsKey(kind) && annotation.getMetaTypes().contains(InvokeLog.class)) {
+                continue;
+            }
             Map<Class<? extends Annotation>, Annotation> scope =
                     scopes.computeIfAbsent(annotation.getSource(), ignored -> new LinkedHashMap<>());
+            // Spring 在同一来源内按元注解距离从近到远遍历；保留首项，让直接声明优先。
             scope.putIfAbsent(kind, annotation.synthesize());
         }
     }

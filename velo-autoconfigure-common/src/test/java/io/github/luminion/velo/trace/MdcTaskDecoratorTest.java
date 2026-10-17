@@ -11,6 +11,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.MDC;
 
+/** 验证任务提交时的 MDC 快照传播和工作线程上下文恢复。 */
 class MdcTaskDecoratorTest {
     @AfterEach
     void clear() {

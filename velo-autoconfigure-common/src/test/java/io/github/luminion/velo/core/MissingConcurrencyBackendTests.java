@@ -20,6 +20,7 @@ import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/** 验证指定并发后端缺失时在执行业务方法前失败。 */
 class MissingConcurrencyBackendTests {
 
     @Test

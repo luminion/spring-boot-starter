@@ -44,6 +44,7 @@ class Boot4AutoConfigurationStartupTest {
         }
     }
 
+    /** 提供用于验证自动配置启动流程的最小应用。 */
     @SpringBootConfiguration
     @EnableAutoConfiguration(excludeName = "org.redisson.spring.starter.RedissonAutoConfigurationV4")
     static class TestApplication {

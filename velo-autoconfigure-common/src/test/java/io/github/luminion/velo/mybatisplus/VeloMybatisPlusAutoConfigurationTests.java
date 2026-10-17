@@ -18,6 +18,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/** 验证 MyBatis-Plus 默认拦截器的注册、关闭和用户 Bean 覆盖。 */
 class VeloMybatisPlusAutoConfigurationTests {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()

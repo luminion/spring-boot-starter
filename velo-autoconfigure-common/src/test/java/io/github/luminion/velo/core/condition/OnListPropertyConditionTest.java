@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Configuration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/** 验证列表属性条件对缺失、空列表和有效值的匹配规则。 */
 class OnListPropertyConditionTest {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner();

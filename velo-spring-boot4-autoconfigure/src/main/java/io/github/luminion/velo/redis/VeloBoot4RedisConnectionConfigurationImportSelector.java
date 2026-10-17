@@ -1,11 +1,10 @@
 package io.github.luminion.velo.redis;
 
+import java.util.ArrayList;
+import java.util.List;
 import org.springframework.context.annotation.ImportSelector;
 import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.util.ClassUtils;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * 提前导入 Spring Boot 4 的 Redis 连接工厂配置，使 Velo 模板配置能够在官方模板配置之前看到连接工厂。
@@ -15,9 +14,15 @@ import java.util.List;
  */
 public class VeloBoot4RedisConnectionConfigurationImportSelector implements ImportSelector {
 
+    /**
+     * 选择当前运行环境中可用的 Redis 连接工厂配置。
+     *
+     * @param importingClassMetadata 导入该选择器的配置元数据
+     * @return 可用连接工厂配置的类名
+     */
     @Override
     public String[] selectImports(AnnotationMetadata importingClassMetadata) {
-        String[] candidates = new String[]{
+        String[] candidates = {
                 "org.springframework.boot.data.redis.autoconfigure.LettuceConnectionConfiguration",
                 "org.springframework.boot.data.redis.autoconfigure.JedisConnectionConfiguration"
         };

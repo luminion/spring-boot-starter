@@ -17,15 +17,25 @@ import java.lang.reflect.Array;
  */
 public class NumericArraySerializer<T> extends ArraySerializerBase<T> {
 
+    /** 数组元素对应的 Jackson 类型。 */
     private final JavaType contentType;
+
+    /** 经上下文解析后的数组元素序列化器。 */
     private final ValueSerializer<Object> contentSerializer;
 
+    /**
+     * 创建指定数组类型的数字序列化器。
+     *
+     * @param arrayType 数组类型
+     * @param contentType 数组元素的数字类型
+     */
     public NumericArraySerializer(Class<T> arrayType, Class<? extends Number> contentType) {
         super(arrayType);
         this.contentType = SimpleType.constructUnsafe(contentType);
         this.contentSerializer = null;
     }
 
+    /** 复制数组配置并保留已解析的元素序列化器。 */
     private NumericArraySerializer(NumericArraySerializer<T> source, BeanProperty property,
                                    Boolean unwrapSingle, Object suppressableValue, boolean suppressNulls,
                                    ValueSerializer<Object> contentSerializer) {
@@ -34,6 +44,7 @@ public class NumericArraySerializer<T> extends ArraySerializerBase<T> {
         this.contentSerializer = contentSerializer;
     }
 
+    /** 复制当前实例并应用 Jackson 解析出的属性配置。 */
     @Override
     protected ArraySerializerBase<T> _withResolved(BeanProperty property, Boolean unwrapSingle,
                                                   Object suppressableValue, boolean suppressNulls) {
@@ -41,6 +52,7 @@ public class NumericArraySerializer<T> extends ArraySerializerBase<T> {
                 suppressNulls, contentSerializer);
     }
 
+    /** 为当前属性选择元素序列化器，并保留数组级包含设置。 */
     @Override
     @SuppressWarnings("unchecked")
     public ValueSerializer<?> createContextual(SerializationContext context, BeanProperty property) {
@@ -78,6 +90,7 @@ public class NumericArraySerializer<T> extends ArraySerializerBase<T> {
         return Array.getLength(value) == 1;
     }
 
+    /** 按 Jackson 的单元素展开配置写出数组及其元素。 */
     @Override
     public void serialize(T value, JsonGenerator generator, SerializationContext context) {
         boolean filter = _needToCheckFiltering(context);

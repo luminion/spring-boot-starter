@@ -19,6 +19,7 @@ import org.springframework.boot.test.context.FilteredClassLoader;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.scheduling.annotation.Scheduled;
 
+/** 验证任务日志适配器的默认注册及来源开关。 */
 class VeloSourceLogAutoConfigurationTests {
     private final ApplicationContextRunner runner =
             new ApplicationContextRunner()

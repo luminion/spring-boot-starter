@@ -20,6 +20,7 @@ import org.springframework.boot.jackson.autoconfigure.JsonMapperBuilderCustomize
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.format.datetime.standard.DateTimeFormatterFactory;
 import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.SerializationFeature;
@@ -38,7 +39,6 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import org.springframework.format.datetime.standard.DateTimeFormatterFactory;
 import java.util.TimeZone;
 
 /**
@@ -51,9 +51,17 @@ import java.util.TimeZone;
 @ConditionalOnProperty(prefix = "velo.jackson", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloJacksonAutoConfiguration {
 
+    /** 配置应用 JSON Mapper 使用的 Velo 默认处理规则。 */
     @Configuration(proxyBeanMethods = false)
     static class JsonMapperBuilderCustomizerConfiguration {
 
+        /**
+         * 为 JSON Mapper 注册日期、数字、字符串及枚举处理规则。
+         *
+         * @param properties Velo 配置属性
+         * @param beanFactory 应用 Bean 工厂
+         * @return JSON Mapper 构建定制器
+         */
         @Bean
         @Order(-1)
         public JsonMapperBuilderCustomizer jsonMapperBuilderCustomizer(VeloProperties properties,
@@ -72,9 +80,12 @@ public class VeloJacksonAutoConfiguration {
                     String timeZoneId = properties.getDateTimeFormat().getTimeZone();
                     TimeZone timeZone = TimeZone.getTimeZone(ZoneId.of(timeZoneId));
                     FlexibleDateFormat defaultDateFormat = new FlexibleDateFormat(dateTimeFormat, dateFormat, timeZone);
-                    DateTimeFormatter dateTimeFormatter = new DateTimeFormatterFactory(dateTimeFormat).createDateTimeFormatter();
-                    DateTimeFormatter dateFormatter = new DateTimeFormatterFactory(dateFormat).createDateTimeFormatter();
-                    DateTimeFormatter timeFormatter = new DateTimeFormatterFactory(timeFormat).createDateTimeFormatter();
+                    DateTimeFormatter dateTimeFormatter = new DateTimeFormatterFactory(dateTimeFormat)
+                            .createDateTimeFormatter();
+                    DateTimeFormatter dateFormatter = new DateTimeFormatterFactory(dateFormat)
+                            .createDateTimeFormatter();
+                    DateTimeFormatter timeFormatter = new DateTimeFormatterFactory(timeFormat)
+                            .createDateTimeFormatter();
 
                     builder.defaultDateFormat(defaultDateFormat);
                     builder.defaultTimeZone(timeZone);
@@ -93,10 +104,11 @@ public class VeloJacksonAutoConfiguration {
                     setStringDefault(builder, BigInteger.class);
                     module.addSerializer(long[].class, new NumericArraySerializer<>(long[].class, Long.class));
                 }
-                if (jacksonProperties.isSerializeBigDecimalAsString() || jacksonProperties.isBigDecimalStripTrailingZeros()) {
-                    module.addSerializer(BigDecimal.class, new ConfigurableBigDecimalSerializer(
-                            jacksonProperties.isSerializeBigDecimalAsString(),
-                            jacksonProperties.isBigDecimalStripTrailingZeros()));
+                if (jacksonProperties.isSerializeBigDecimalAsString()
+                        || jacksonProperties.isBigDecimalStripTrailingZeros()) {
+                    module.addSerializer(BigDecimal.class,
+                            new ConfigurableBigDecimalSerializer(jacksonProperties.isSerializeBigDecimalAsString(),
+                                    jacksonProperties.isBigDecimalStripTrailingZeros()));
                 }
                 if (jacksonProperties.isSerializeFloatingAsString()) {
                     setStringDefault(builder, Double.class);
@@ -111,7 +123,8 @@ public class VeloJacksonAutoConfiguration {
                 jsonProcessorProviderObjectProvider.ifAvailable(bean -> {
                     XssCleaner xssCleaner = null;
                     if (properties.getXss().isJacksonEnabled()) {
-                        ObjectProvider<XssCleaner> xssCleanerObjectProvider = beanFactory.getBeanProvider(XssCleaner.class);
+                        ObjectProvider<XssCleaner> xssCleanerObjectProvider = beanFactory
+                                .getBeanProvider(XssCleaner.class);
                         xssCleaner = xssCleanerObjectProvider.getIfAvailable();
                     }
                     // String 处理器始终注册，才能让带 @JsonEncode/@JsonDecode 的字段生效；
@@ -126,6 +139,12 @@ public class VeloJacksonAutoConfiguration {
             };
         }
 
+        /**
+         * 为指定数值类型补充默认字符串序列化格式。
+         *
+         * @param builder JSON Mapper 构建器
+         * @param type 需要配置的数值类型
+         */
         private static void setStringDefault(tools.jackson.databind.json.JsonMapper.Builder builder, Class<?> type) {
             builder.withConfigOverride(type, override -> {
                 JsonFormat.Value defaultFormat = JsonFormat.Value.forShape(JsonFormat.Shape.STRING);

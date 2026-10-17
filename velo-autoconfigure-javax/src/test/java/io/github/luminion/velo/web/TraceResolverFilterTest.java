@@ -1,19 +1,14 @@
 package io.github.luminion.velo.web;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-
 import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.trace.HeaderTraceContextResolver;
 import io.github.luminion.velo.trace.TraceContext;
 import io.github.luminion.velo.trace.TraceContextResolver;
 import io.github.luminion.velo.trace.TraceData;
-
 import java.util.Collections;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.servlet.DispatcherType;
 import javax.servlet.ServletException;
-
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.MDC;
@@ -22,10 +17,18 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+/** 验证链路过滤器在普通、异步及错误派发中的上下文处理。 */
 class TraceResolverFilterTest {
+    /** 用于固定断言的 W3C trace-id。 */
     private static final String ID = "4bf92f3577b34da6a3ce929d0e0e4736";
+
+    /** 与测试 trace-id 对应的 W3C traceparent。 */
     private static final String PARENT = "00-" + ID + "-00f067aa0ba902b7-01";
 
+    /** 清理测试线程中的链路、MDC 和请求上下文。 */
     @AfterEach
     void clear() {
         assertThat(TraceContext.current()).isNull();
@@ -114,7 +117,7 @@ class TraceResolverFilterTest {
                 .isInstanceOf(ServletException.class);
         assertThat(failedResponse.getHeader("X-Trace-Id")).isEqualTo(ID);
         MDC.put("traceId", "dispatch-worker");
-        for (DispatcherType type : new DispatcherType[]{DispatcherType.ASYNC, DispatcherType.ERROR}) {
+        for (DispatcherType type : new DispatcherType[] {DispatcherType.ASYNC, DispatcherType.ERROR}) {
             request.setDispatcherType(type);
             MockHttpServletResponse response = new MockHttpServletResponse();
             response.addHeader("X-Trace-Id", "previous");
@@ -208,7 +211,7 @@ class TraceResolverFilterTest {
 
     @Test
     void rejectsInvalidOrW3cProtocolResponseHeaderNames() {
-        for (String name : new String[]{"", "bad name", "bad\r\nname", "traceparent", "TraceState"}) {
+        for (String name : new String[] {"", "bad name", "bad\r\nname", "traceparent", "TraceState"}) {
             VeloProperties properties = new VeloProperties();
             properties.getLog().getTrace().setResponseHeaderName(name);
             assertThatThrownBy(() -> new TraceIdFilter(properties))

@@ -1,20 +1,20 @@
 package io.github.luminion.velo.autoconfigure;
 
-import io.github.luminion.velo.cache.JitterRedisCacheWriter;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
-import org.springframework.data.redis.cache.RedisCacheConfiguration;
-import org.springframework.data.redis.cache.RedisCacheManager;
-import org.springframework.data.redis.cache.RedisCacheWriter;
-import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.cache.Cache;
 import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import io.github.luminion.velo.cache.JitterRedisCacheWriter;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.springframework.cache.Cache;
+import org.springframework.data.redis.cache.RedisCacheConfiguration;
+import org.springframework.data.redis.cache.RedisCacheManager;
+import org.springframework.data.redis.cache.RedisCacheWriter;
+import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @EnabledIfEnvironmentVariable(named = "VELO_TEST_REDIS_URL", matches = "redis://.+")
 class Boot4CacheJitterIntegrationTest {
+
     @Test
     void shouldJitterSynchronousCacheLoadsInRealRedis() {
         URI uri = URI.create(System.getenv("VELO_TEST_REDIS_URL"));
@@ -33,7 +34,8 @@ class Boot4CacheJitterIntegrationTest {
         String cacheName = "velo:integration:jitter:" + UUID.randomUUID();
         List<String> keys = new ArrayList<>();
         try {
-            RedisCacheWriter writer = JitterRedisCacheWriter.wrap(RedisCacheWriter.nonLockingRedisCacheWriter(factory), 20);
+            RedisCacheWriter writer = JitterRedisCacheWriter.wrap(
+                    RedisCacheWriter.nonLockingRedisCacheWriter(factory), 20);
             RedisCacheManager manager = RedisCacheManager.builder(writer)
                     .cacheDefaults(RedisCacheConfiguration.defaultCacheConfig().entryTtl(Duration.ofSeconds(100)))
                     .build();

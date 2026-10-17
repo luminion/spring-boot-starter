@@ -19,8 +19,13 @@ import lombok.Setter;
 public final class FeignInvocationContext {
     private static final ThreadLocal<Deque<FeignInvocationContext>> CURRENT =
             new ThreadLocal<>();
+    /** 当前 Feign 调用捕获的请求头快照。 */
     private Map<String, List<String>> requestHeaders;
+
+    /** 当前 Feign 调用捕获的响应头快照。 */
     private Map<String, List<String>> responseHeaders;
+
+    /** Feign 客户端解析出的实例地址，供内部上下文使用。 */
     @Setter
     private String instanceAddress;
 

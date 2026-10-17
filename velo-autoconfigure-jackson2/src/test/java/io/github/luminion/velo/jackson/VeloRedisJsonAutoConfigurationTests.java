@@ -172,6 +172,7 @@ class VeloRedisJsonAutoConfigurationTests {
     }
 
     public static final class ObjectPayload {
+        /** 用于验证对象字段的运行时类型可在 Redis 往返后恢复。 */
         public Object value = new Payload();
     }
 
@@ -197,12 +198,21 @@ class VeloRedisJsonAutoConfigurationTests {
     }
 
     public static final class Payload {
+        /** 通过 JSON 属性别名写出的示例名称。 */
         @JsonProperty("title")
         public String name = "example";
+
+        /** 用于验证忽略注解不会暴露该属性。 */
         @JsonIgnore
         public String ignored = "ignored";
+
+        /** 超过 JavaScript 安全整数范围的示例标识。 */
         public long id = 9007199254740993L;
+
+        /** 用于验证 BigDecimal 精度保持不变。 */
         public BigDecimal amount = new BigDecimal("12.3400");
+
+        /** 用于验证 Java 时间类型经 Redis 序列化后可以恢复。 */
         public LocalDateTime createdAt = LocalDateTime.of(2026, 10, 7, 10, 20, 30, 123456789);
     }
 }

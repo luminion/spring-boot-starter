@@ -3,25 +3,25 @@ package io.github.luminion.velo.cache;
 import io.github.luminion.velo.VeloProperties;
 import java.time.Duration;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.boot.cache.autoconfigure.CacheProperties;
-import org.springframework.boot.cache.autoconfigure.RedisCacheManagerBuilderCustomizer;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.cache.autoconfigure.CacheProperties;
+import org.springframework.boot.cache.autoconfigure.RedisCacheManagerBuilderCustomizer;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
-import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.BatchStrategy;
+import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.cache.RedisCacheWriter;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.serializer.RedisSerializer;
-import org.springframework.boot.autoconfigure.AutoConfiguration;
 
 /**
  * Spring Boot 4 缓存增强，保留原生管理器创建与自定义流程。
@@ -41,6 +41,7 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 @ConditionalOnProperty(prefix = "velo.cache", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloCacheAutoConfiguration {
 
+    /** 配置 Redis 缓存的默认值、写入器及管理器构建流程。 */
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnClass({RedisCacheManager.class, RedisCacheManagerBuilderCustomizer.class})
     @ConditionalOnBean(RedisConnectionFactory.class)
@@ -49,6 +50,7 @@ public class VeloCacheAutoConfiguration {
     @EnableConfigurationProperties(CacheProperties.class)
     static class RedisConfiguration {
 
+        /** 根据 Spring Cache 属性和 Velo 配置创建默认 Redis 缓存参数。 */
         @Bean
         @ConditionalOnMissingBean(RedisCacheConfiguration.class)
         RedisCacheConfiguration redisCacheConfiguration(CacheProperties springProperties, VeloProperties properties,
@@ -63,15 +65,18 @@ public class VeloCacheAutoConfiguration {
             if (!redis.isUseKeyPrefix()) {
                 defaults = defaults.disableKeyPrefix();
             }
-            return VeloCacheConfiguration.customizeDefaults(defaults, serializerProvider, redis.getKeyPrefix(), properties);
+            return VeloCacheConfiguration.customizeDefaults(
+                    defaults, serializerProvider, redis.getKeyPrefix(), properties);
         }
 
+        /** 提供按缓存名称读取 TTL 配置的映射器。 */
         @Bean
         @ConditionalOnMissingBean(RedisCacheTimeMapProvider.class)
         RedisCacheTimeMapProvider redisCacheTimeMapProvider(VeloProperties properties) {
             return new RedisCacheTimeMapProvider(properties.getCache().getTtl());
         }
 
+        /** 创建写入语义与其他受支持 Spring Data Redis 版本一致的缓存写入器。 */
         @Bean
         @ConditionalOnMissingBean(RedisCacheWriter.class)
         RedisCacheWriter veloRedisCacheWriter(RedisConnectionFactory factory) {
@@ -81,11 +86,14 @@ public class VeloCacheAutoConfiguration {
                     configurer -> configurer.immediateWrites().batchStrategy(strategy));
         }
 
+        /** 在 Spring Boot 创建 Redis 缓存管理器时应用 Velo 的缓存设置。 */
         @Bean
         @Order(Ordered.HIGHEST_PRECEDENCE)
-        RedisCacheManagerBuilderCustomizer veloRedisCacheManagerBuilderCustomizer(RedisCacheWriter writer,
-                RedisCacheConfiguration defaults, RedisCacheTimeMapProvider timeMapProvider, VeloProperties properties) {
-            return builder -> VeloCacheConfiguration.customizeBuilder(builder, writer, defaults, timeMapProvider, properties);
+        RedisCacheManagerBuilderCustomizer veloRedisCacheManagerBuilderCustomizer(
+                RedisCacheWriter writer, RedisCacheConfiguration defaults,
+                RedisCacheTimeMapProvider timeMapProvider, VeloProperties properties) {
+            return builder -> VeloCacheConfiguration.customizeBuilder(
+                    builder, writer, defaults, timeMapProvider, properties);
         }
     }
 }

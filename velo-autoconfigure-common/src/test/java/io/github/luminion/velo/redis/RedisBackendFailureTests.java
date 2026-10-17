@@ -17,6 +17,7 @@ import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 
+/** 验证 Redis 不可用时不会静默切换到本地后端。 */
 class RedisBackendFailureTests {
 
     @Test

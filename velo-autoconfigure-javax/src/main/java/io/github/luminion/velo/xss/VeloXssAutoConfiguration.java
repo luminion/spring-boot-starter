@@ -4,6 +4,8 @@ import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.xss.cleaner.JsoupXssCleaner;
 import io.github.luminion.velo.xss.cleaner.SpringHtmlEscapeXssCleaner;
 import io.github.luminion.velo.xss.converter.XssStringConverter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -14,8 +16,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplicat
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * XSS 自动配置。
@@ -33,6 +33,7 @@ public class VeloXssAutoConfiguration {
     @Conditional(XssStrategyEnabledCondition.class)
     static class JsoupXssConfiguration {
 
+        /** 注册基于 jsoup 的 XSS 清洗器。 */
         @Bean
         @ConditionalOnMissingBean
         public XssCleaner xssCleaner(VeloProperties properties) {
@@ -45,6 +46,7 @@ public class VeloXssAutoConfiguration {
     @Conditional(XssStrategyEnabledCondition.class)
     static class SpringXssConfiguration {
 
+        /** 在缺少 jsoup 时，根据当前策略提示清洗能力限制。 */
         SpringXssConfiguration(VeloProperties properties) {
             XssStrategy strategy = properties.getXss().getStrategy();
             if (strategy != XssStrategy.NONE && strategy != XssStrategy.ESCAPE) {
@@ -53,6 +55,7 @@ public class VeloXssAutoConfiguration {
             }
         }
 
+        /** 注册 Spring HTML 转义清洗器。 */
         @Bean
         @ConditionalOnMissingBean
         @ConditionalOnProperty(prefix = "velo.xss", name = "strategy", havingValue = "ESCAPE")
@@ -61,6 +64,7 @@ public class VeloXssAutoConfiguration {
         }
     }
 
+    /** 在 Web 环境中注册字符串参数转换器。 */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnBean(XssCleaner.class)

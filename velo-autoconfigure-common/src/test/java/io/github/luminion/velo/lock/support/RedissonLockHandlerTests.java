@@ -10,6 +10,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/** 验证 Redisson 锁的获取、释放和异常传播。 */
 class RedissonLockHandlerTests {
 
     @Test

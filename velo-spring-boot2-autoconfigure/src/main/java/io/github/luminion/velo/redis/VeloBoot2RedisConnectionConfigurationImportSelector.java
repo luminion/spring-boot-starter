@@ -15,6 +15,12 @@ import java.util.List;
  */
 public class VeloBoot2RedisConnectionConfigurationImportSelector implements ImportSelector {
 
+    /**
+     * 选择当前依赖中实际可用的 Redis 客户端连接配置。
+     *
+     * @param importingClassMetadata 导入当前选择器的配置类元数据
+     * @return 可用 Redis 客户端连接配置的类名
+     */
     @Override
     public String[] selectImports(AnnotationMetadata importingClassMetadata) {
         String[] candidates = new String[]{

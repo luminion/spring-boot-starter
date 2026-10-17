@@ -15,6 +15,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 
+/** 验证 WebUtils 对 Servlet 请求上下文的检查与获取行为。 */
 class WebUtilsTests {
 
     @AfterEach

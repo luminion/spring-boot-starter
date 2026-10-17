@@ -18,6 +18,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/** 验证耗时日志策略的继承、独立启用和关闭行为。 */
 class CostLogAspectTests {
     @ParameterizedTest
     @ValueSource(booleans = {false, true})

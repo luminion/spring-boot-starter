@@ -6,6 +6,7 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/** 验证异常处理器使用 Spring 状态码并保留转换后的响应体。 */
 class VeloStatusWebExceptionHandlerTests {
     @Test
     void followsSpringStatusAndKeepsUserResponseBody() {

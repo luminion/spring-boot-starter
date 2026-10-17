@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/** 验证异常处理器不会被宽泛组件扫描自动注册。 */
 class VeloWebExceptionHandlerComponentScanTests {
 
     @Test

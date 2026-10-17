@@ -1,5 +1,10 @@
 package io.github.luminion.velo.autoconfigure;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.Date;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.SpringBootConfiguration;
@@ -8,17 +13,12 @@ import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Import;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
-
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.util.Date;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -32,6 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 class Boot2MockMvcIntegrationTest {
 
+    /** 验证 MVC 上下文中的日期参数转换与跨域响应头。 */
     @Test
     void shouldBindDateTimeFormatsAndCorsInRealMvcContext() throws Exception {
         SpringApplication application = new SpringApplication(TestApplication.class);
@@ -74,22 +75,26 @@ class Boot2MockMvcIntegrationTest {
         }
     }
 
+    /** 提供集成测试所需的应用配置和控制器。 */
     @SpringBootConfiguration
     @EnableAutoConfiguration(excludeName = "org.redisson.spring.starter.RedissonAutoConfigurationV2")
     @Import(TestController.class)
     static class TestApplication {
     }
 
+    /** 接收不同日期类型的测试端点。 */
     @RestController
     static class TestController {
 
+        /** 接收日期参数并返回固定响应，以便验证 MVC 参数绑定。 */
         @GetMapping("/integration/date-time")
-        String dateTime(@RequestParam("date") Date date,
-                        @RequestParam("dateOnly") Date dateOnly,
-                        @RequestParam("formattedDate") @DateTimeFormat(pattern = "yyyy/MM/dd") Date formattedDate,
-                        @RequestParam("localDate") LocalDate localDate,
-                        @RequestParam("localTime") LocalTime localTime,
-                        @RequestParam("localDateTime") LocalDateTime localDateTime) {
+        String dateTime(
+                @RequestParam("date") Date date,
+                @RequestParam("dateOnly") Date dateOnly,
+                @RequestParam("formattedDate") @DateTimeFormat(pattern = "yyyy/MM/dd") Date formattedDate,
+                @RequestParam("localDate") LocalDate localDate,
+                @RequestParam("localTime") LocalTime localTime,
+                @RequestParam("localDateTime") LocalDateTime localDateTime) {
             return "ok";
         }
     }

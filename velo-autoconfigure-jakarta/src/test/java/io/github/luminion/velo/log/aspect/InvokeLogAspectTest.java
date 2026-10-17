@@ -18,6 +18,7 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.aop.aspectj.annotation.AspectJProxyFactory;
 
+/** 验证调用日志切面对方法结果、异常和参数的记录行为。 */
 class InvokeLogAspectTest {
 
   @Test

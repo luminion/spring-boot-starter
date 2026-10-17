@@ -1,5 +1,9 @@
 package io.github.luminion.velo.web;
 
+import java.time.ZoneId;
+import java.util.Arrays;
+import java.util.TimeZone;
+
 import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.xss.converter.XssStringConverter;
 import lombok.RequiredArgsConstructor;
@@ -12,14 +16,9 @@ import org.springframework.format.FormatterRegistry;
 import org.springframework.format.datetime.DateFormatter;
 import org.springframework.format.datetime.DateFormatterRegistrar;
 import org.springframework.format.datetime.standard.DateTimeFormatterRegistrar;
+import org.springframework.format.datetime.standard.DateTimeFormatterFactory;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-
-import org.springframework.format.datetime.standard.DateTimeFormatterFactory;
-
-import java.time.ZoneId;
-import java.util.Arrays;
-import java.util.TimeZone;
 
 /**
  * Web MVC 增强配置。
@@ -33,6 +32,7 @@ public class VeloWebMvcConfigurer implements WebMvcConfigurer {
     private final ObjectProvider<XssStringConverter> xssStringConverterProvider;
     private final VeloProperties properties;
 
+    /** 按配置注册 XSS 字符串转换器和日期时间格式器。 */
     @Override
     public void addFormatters(FormatterRegistry registry) {
         if (properties.getXss().isWebEnabled()) {
@@ -51,7 +51,8 @@ public class VeloWebMvcConfigurer implements WebMvcConfigurer {
             DateTimeFormatterRegistrar registrar = new DateTimeFormatterRegistrar();
             registrar.setTimeFormatter(new DateTimeFormatterFactory(timePattern).createDateTimeFormatter());
             registrar.setDateFormatter(new DateTimeFormatterFactory(datePattern).createDateTimeFormatter());
-            registrar.setDateTimeFormatter(new DateTimeFormatterFactory(dateTimePattern).createDateTimeFormatter());
+            registrar.setDateTimeFormatter(
+                    new DateTimeFormatterFactory(dateTimePattern).createDateTimeFormatter());
             registrar.registerFormatters(registry);
 
             DateFormatterRegistrar dateRegistrar = new DateFormatterRegistrar();
@@ -63,6 +64,7 @@ public class VeloWebMvcConfigurer implements WebMvcConfigurer {
         }
     }
 
+    /** 按 CORS 配置注册跨域映射。 */
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         VeloProperties.WebProperties web = properties.getWeb();
@@ -87,10 +89,12 @@ public class VeloWebMvcConfigurer implements WebMvcConfigurer {
         boolean unrestricted = patterns == null || patterns.length == 0
                 || Arrays.stream(patterns).anyMatch(pattern -> "*".equals(pattern));
         if (unrestricted) {
-            log.warn("[Velo Starter] CORS is enabled with allow-credentials=true but allowed-origin-patterns is " +
-                    "wildcard or empty ({}). This lets any site send credentialed cross-origin requests. " +
-                    "Configure velo.web.cors.allowed-origin-patterns with explicit origins, or set " +
-                    "velo.web.cors.allow-credentials=false.", Arrays.toString(patterns));
+            log.warn(
+                    "[Velo Starter] CORS is enabled with allow-credentials=true but allowed-origin-patterns is "
+                            + "wildcard or empty ({}). This lets any site send credentialed cross-origin requests. "
+                            + "Configure velo.web.cors.allowed-origin-patterns with explicit origins, or set "
+                            + "velo.web.cors.allow-credentials=false.",
+                    Arrays.toString(patterns));
         }
     }
 }

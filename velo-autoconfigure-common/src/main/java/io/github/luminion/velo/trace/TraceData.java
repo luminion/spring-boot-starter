@@ -15,6 +15,7 @@ import lombok.ToString;
 @EqualsAndHashCode
 @ToString
 public final class TraceData {
+    /** 当前作用域使用的 trace 标识。 */
     private final String traceId;
 
     /**

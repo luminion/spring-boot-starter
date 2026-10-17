@@ -1,20 +1,21 @@
 package io.github.luminion.velo.autoconfigure;
 
-import org.junit.jupiter.api.Test;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/** 验证 Spring Boot 4 自动配置导入清单及旧配置类的排除情况。 */
 class Boot4AutoConfigurationImportsTest {
 
     @Test
     void shouldExposeNormalizedAutoConfigurationImports() throws IOException {
         try (InputStream inputStream = Thread.currentThread().getContextClassLoader()
-                .getResourceAsStream("META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports")) {
+                .getResourceAsStream(
+                        "META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports")) {
             assertNotNull(inputStream);
             String imports = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
 

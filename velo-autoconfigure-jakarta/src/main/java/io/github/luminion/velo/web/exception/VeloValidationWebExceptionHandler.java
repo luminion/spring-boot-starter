@@ -2,13 +2,12 @@ package io.github.luminion.velo.web.exception;
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.context.MessageSourceResolvable;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
-
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * 支持 Bean Validation 的 Web 异常处理器。
@@ -26,7 +25,12 @@ public class VeloValidationWebExceptionHandler<R> extends VeloWebExceptionHandle
     }
 
 
-    /** Spring 6.1+ MVC 方法校验；返回值校验失败交给服务器错误转换函数。 */
+    /**
+     * 处理 Spring 6.1+ MVC 方法参数或返回值的校验失败；返回值校验失败交给服务器错误转换函数。
+     *
+     * @param e 方法校验异常
+     * @return 校验失败或服务器错误对应的响应体
+     */
     @ExceptionHandler(HandlerMethodValidationException.class)
     public R handleHandlerMethodValidationException(HandlerMethodValidationException e) {
         if (e.isForReturnValue()) {
@@ -40,6 +44,9 @@ public class VeloValidationWebExceptionHandler<R> extends VeloWebExceptionHandle
 
     /**
      * Bean Validation 参数校验异常 (@RequestParam/@PathVariable)
+     *
+     * @param e 参数校验异常
+     * @return 参数校验失败对应的响应体
      */
     @ExceptionHandler(ConstraintViolationException.class)
     public R handleConstraintViolationException(ConstraintViolationException e) {

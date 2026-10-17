@@ -1,14 +1,20 @@
 package io.github.luminion.velo.jackson.serializer;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import io.github.luminion.velo.VeloProperties;
+import io.github.luminion.velo.jackson.annotation.JsonEnum;
+import io.github.luminion.velo.jackson.support.JsonEnumMetadata;
+import io.github.luminion.velo.jackson.support.JsonEnumMetadataResolver;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.StringUtils;
 import tools.jackson.core.JsonGenerator;
 import tools.jackson.databind.BeanDescription;
 import tools.jackson.databind.JavaType;
-import tools.jackson.databind.ValueSerializer;
-import tools.jackson.databind.PropertyNamingStrategy;
 import tools.jackson.databind.PropertyName;
+import tools.jackson.databind.PropertyNamingStrategy;
 import tools.jackson.databind.SerializationConfig;
 import tools.jackson.databind.SerializationContext;
+import tools.jackson.databind.ValueSerializer;
 import tools.jackson.databind.cfg.HandlerInstantiator;
 import tools.jackson.databind.cfg.MapperConfig;
 import tools.jackson.databind.introspect.AnnotatedClass;
@@ -21,16 +27,10 @@ import tools.jackson.databind.ser.VirtualBeanPropertyWriter;
 import tools.jackson.databind.ser.jdk.StringSerializer;
 import tools.jackson.databind.util.ClassUtil;
 import tools.jackson.databind.util.SimpleBeanPropertyDefinition;
-import io.github.luminion.velo.VeloProperties;
-import io.github.luminion.velo.jackson.annotation.JsonEnum;
-import io.github.luminion.velo.jackson.support.JsonEnumMetadata;
-import io.github.luminion.velo.jackson.support.JsonEnumMetadataResolver;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -43,14 +43,23 @@ import java.util.Set;
 @Slf4j
 public class JsonEnumSerializerModifier extends ValueSerializerModifier {
 
+    /** 负责解析枚举编码与描述的元数据。 */
     private final JsonEnumMetadataResolver metadataResolver;
+
+    /** Jackson 枚举描述相关配置。 */
     private final VeloProperties.JacksonProperties jacksonProperties;
 
+    /**
+     * 创建枚举派生属性序列化修改器。
+     *
+     * @param jacksonProperties Jackson 配置属性
+     */
     public JsonEnumSerializerModifier(VeloProperties.JacksonProperties jacksonProperties) {
         this.jacksonProperties = jacksonProperties;
         this.metadataResolver = new JsonEnumMetadataResolver(jacksonProperties);
     }
 
+    /** 为标注 {@code @JsonEnum} 的源属性追加描述属性。 */
     @Override
     public List<BeanPropertyWriter> changeProperties(SerializationConfig config, BeanDescription.Supplier beanDesc,
                                                      List<BeanPropertyWriter> beanProperties) {
@@ -80,11 +89,13 @@ public class JsonEnumSerializerModifier extends ValueSerializerModifier {
                 continue;
             }
             if (metadata == null) {
-                log.warn("No JsonEnum mapping found for property: {}, enum: {}", writer.getName(), ann.value().getName());
+                log.warn("No JsonEnum mapping found for property: {}, enum: {}",
+                        writer.getName(), ann.value().getName());
                 continue;
             }
 
-            String targetName = targetName(config, writer, definitions.get(writer.getName()), strategy, ann.nameSuffix());
+            String targetName = targetName(
+                    config, writer, definitions.get(writer.getName()), strategy, ann.nameSuffix());
             if (existNames.contains(targetName)) {
                 log.warn("Skip JsonEnum derived property because target property already exists: {}", targetName);
                 continue;
@@ -118,7 +129,8 @@ public class JsonEnumSerializerModifier extends ValueSerializerModifier {
 
     private String targetName(SerializationConfig config, BeanPropertyWriter writer, BeanPropertyDefinition definition,
                               PropertyNamingStrategy strategy, String annotationSuffix) {
-        String suffix = StringUtils.hasText(annotationSuffix) ? annotationSuffix : jacksonProperties.getEnumNameSuffix();
+        String suffix = StringUtils.hasText(annotationSuffix)
+                ? annotationSuffix : jacksonProperties.getEnumNameSuffix();
         String baseName = definition == null || definition.isExplicitlyNamed()
                 ? writer.getName() : definition.getInternalName();
         String logicalName = baseName + StringUtils.capitalize(suffix);
@@ -132,9 +144,22 @@ public class JsonEnumSerializerModifier extends ValueSerializerModifier {
     }
 
     private static class JsonEnumPropertyWriter extends VirtualBeanPropertyWriter {
+
+        /** 被注解的原始属性。 */
         private final SourcePropertyWriter source;
+
+        /** 与原属性关联的枚举描述映射。 */
         private final JsonEnumMetadata metadata;
 
+        /**
+         * 创建枚举描述虚拟属性。
+         *
+         * @param config 序列化配置
+         * @param beanDesc 当前 Bean 描述
+         * @param base 被注解的源属性
+         * @param targetName 派生属性名称
+         * @param metadata 枚举描述元数据
+         */
         JsonEnumPropertyWriter(SerializationConfig config, BeanDescription.Supplier beanDesc, BeanPropertyWriter base,
                                String targetName, JsonEnumMetadata metadata) {
             super(SimpleBeanPropertyDefinition.construct(config, base.getMember(), PropertyName.construct(targetName)),
@@ -145,6 +170,7 @@ public class JsonEnumSerializerModifier extends ValueSerializerModifier {
             this.metadata = metadata;
         }
 
+        /** 根据源字段值查找枚举描述。 */
         @Override
         protected Object value(Object bean, JsonGenerator generator, SerializationContext provider) throws Exception {
             Object value = source.get(bean);
@@ -155,6 +181,7 @@ public class JsonEnumSerializerModifier extends ValueSerializerModifier {
             return name == null ? null : name.toString();
         }
 
+        /** 返回当前虚拟属性实例，其配置在构造时已经确定。 */
         @Override
         public VirtualBeanPropertyWriter withConfig(MapperConfig<?> config, AnnotatedClass declaringClass,
                                                     BeanPropertyDefinition definition, JavaType type) {
@@ -166,10 +193,13 @@ public class JsonEnumSerializerModifier extends ValueSerializerModifier {
      * 沿用原字段已经计算好的包含策略，派生值再交由原生虚拟属性输出。
      */
     private static class SourcePropertyWriter extends BeanPropertyWriter {
+
+        /** 基于源属性的包含策略创建包装器。 */
         SourcePropertyWriter(BeanPropertyWriter source) {
             super(source);
         }
 
+        /** 按源属性的包含策略判断值是否应被省略。 */
         boolean isSuppressed(Object value, SerializationContext provider) throws Exception {
             if (value == null) {
                 return true;

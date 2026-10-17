@@ -20,6 +20,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/** 验证 SpEL 指纹对方法、重载和代理目标类的隔离。 */
 class SpelFingerprinterTests {
 
     private final SpelFingerprinter fingerprinter = new SpelFingerprinter();

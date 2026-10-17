@@ -22,6 +22,7 @@ import java.util.TimeZone;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/** 验证 MVC 日期格式化器和跨域映射的注册条件。 */
 class VeloWebMvcConfigurerTests {
 
     private static ObjectProvider<XssStringConverter> emptyConverterProvider() {

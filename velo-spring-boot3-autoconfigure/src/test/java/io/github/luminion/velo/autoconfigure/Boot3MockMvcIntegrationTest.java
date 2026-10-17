@@ -1,5 +1,9 @@
 package io.github.luminion.velo.autoconfigure;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.Date;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.SpringBootConfiguration;
@@ -14,11 +18,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.WebApplicationContext;
-
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.util.Date;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -74,15 +73,28 @@ class Boot3MockMvcIntegrationTest {
         }
     }
 
+    /** 注册 MVC 集成验证所需的最小 Spring Boot 应用。 */
     @SpringBootConfiguration
     @EnableAutoConfiguration(excludeName = "org.redisson.spring.starter.RedissonAutoConfigurationV2")
     @Import(TestController.class)
     static class TestApplication {
     }
 
+    /** 暴露多种日期时间参数，供 MVC 转换和跨域行为验证使用。 */
     @RestController
     static class TestController {
 
+        /**
+         * 接收日期时间参数并返回固定响应。
+         *
+         * @param date 日期时间参数
+         * @param dateOnly 日期参数
+         * @param formattedDate 使用自定义格式的日期参数
+         * @param localDate 本地日期参数
+         * @param localTime 本地时间参数
+         * @param localDateTime 本地日期时间参数
+         * @return 固定的成功响应
+         */
         @GetMapping("/integration/date-time")
         String dateTime(@RequestParam("date") Date date,
                         @RequestParam("dateOnly") Date dateOnly,

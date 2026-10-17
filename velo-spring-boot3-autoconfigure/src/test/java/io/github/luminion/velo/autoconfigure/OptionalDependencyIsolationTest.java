@@ -10,6 +10,7 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/** 验证可选依赖缺失时相关自动配置会安全跳过。 */
 class OptionalDependencyIsolationTest {
 
     @Test

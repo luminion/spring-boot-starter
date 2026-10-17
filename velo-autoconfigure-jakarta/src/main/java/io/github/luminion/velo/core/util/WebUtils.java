@@ -1,25 +1,22 @@
 package io.github.luminion.velo.core.util;
 
-import jakarta.servlet.ServletContext;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
-import lombok.NoArgsConstructor;
-import lombok.SneakyThrows;
-import org.springframework.web.context.request.RequestAttributes;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.UncheckedIOException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+import org.springframework.web.context.request.RequestAttributes;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 /**
+ * 提供基于当前 Servlet 请求上下文的请求和响应访问方法。
+ *
  * @author luminion
  */
 public abstract class WebUtils {
@@ -30,9 +27,9 @@ public abstract class WebUtils {
      * @return 如果当前请求是Web请求上下文，则返回true，否则返回false
      */
     public static boolean isWebContext() {
-        return RequestContextHolder.getRequestAttributes() != null && RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes;
+        return RequestContextHolder.getRequestAttributes() != null
+                && RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes;
     }
-
 
     /**
      * 获取当前请求的属性对象。
@@ -92,12 +89,11 @@ public abstract class WebUtils {
     }
 
     /**
-     * 设置文件下载的 Response Header (通用核心方法)
-     * 处理了各种浏览器的中文乱码问题和空格变+号问题
+     * 设置文件下载响应头，处理浏览器中文文件名和空格编码兼容问题。
      *
      * @param fileName 文件名（不含后缀，或包含都可以，具体看调用方）
-     * @param suffix   文件后缀 (如 .xlsx, .pdf)
-     * @param mimeType 文件的MIME类型
+     * @param suffix 文件后缀（如 .xlsx、.pdf）
+     * @param mimeType 文件的 MIME 类型
      */
     public static void setDownloadHeader(String fileName, String suffix, String mimeType) {
         HttpServletResponse response = getResponse();
@@ -109,7 +105,10 @@ public abstract class WebUtils {
 
 
     /**
-     * 获取 Excel (xlsx) 输出流
+     * 设置 Excel 文件下载响应头并获取输出流。
+     *
+     * @param fileName 下载文件名
+     * @return 响应输出流
      */
     public static OutputStream getExcelOutputStream(String fileName) {
         setDownloadHeader(fileName, ".xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
@@ -117,7 +116,10 @@ public abstract class WebUtils {
     }
 
     /**
-     * 获取 CSV 输出流
+     * 设置 CSV 文件下载响应头并获取输出流。
+     *
+     * @param fileName 下载文件名
+     * @return 响应输出流
      */
     public static OutputStream getCsvOutputStream(String fileName) {
         setDownloadHeader(fileName, ".csv", "text/csv");
@@ -125,7 +127,10 @@ public abstract class WebUtils {
     }
 
     /**
-     * 获取 Word (docx) 输出流
+     * 设置 Word 文件下载响应头并获取输出流。
+     *
+     * @param fileName 下载文件名
+     * @return 响应输出流
      */
     public static OutputStream getWordOutputStream(String fileName) {
         setDownloadHeader(fileName, ".docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
@@ -133,7 +138,10 @@ public abstract class WebUtils {
     }
 
     /**
-     * 获取 PDF 输出流 (作为附件下载)
+     * 设置 PDF 附件下载响应头并获取输出流。
+     *
+     * @param fileName 下载文件名
+     * @return 响应输出流
      */
     public static OutputStream getPdfOutputStream(String fileName) {
         setDownloadHeader(fileName, ".pdf", "application/pdf");
@@ -141,7 +149,10 @@ public abstract class WebUtils {
     }
 
     /**
-     * 获取 ZIP 压缩包输出流
+     * 设置 ZIP 压缩包下载响应头并获取输出流。
+     *
+     * @param fileName 下载文件名
+     * @return 响应输出流
      */
     public static OutputStream getZipOutputStream(String fileName) {
         setDownloadHeader(fileName, ".zip", "application/zip");
@@ -149,13 +160,15 @@ public abstract class WebUtils {
     }
 
     /**
-     * 获取通用二进制流 (不知道具体文件类型时)
+     * 设置通用二进制文件下载响应头并获取输出流。
+     *
+     * @param fileName 下载文件名
+     * @return 响应输出流
      */
     public static OutputStream getBinaryOutputStream(String fileName) {
         setDownloadHeader(fileName, "", "application/octet-stream");
         return getResponseOutputStream();
     }
-    
 
     /**
      * 获取当前请求的HttpSession对象。
@@ -187,7 +200,7 @@ public abstract class WebUtils {
     }
 
     /**
-     * 获取请求的HTTP方法名称 (GET, POST, etc.)。
+     * 获取请求的 HTTP 方法名称（如 GET、POST）。
      *
      * @return HTTP方法名
      */

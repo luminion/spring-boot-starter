@@ -11,6 +11,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/** 验证 Redisson 幂等处理器的时长转换和令牌安全删除。 */
 class RedissonIdempotentHandlerTests {
 
     @Test

@@ -9,6 +9,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/** 验证按缓存名称覆盖有效期的配置映射。 */
 class RedisCacheTimeMapProviderTest {
 
     @Test

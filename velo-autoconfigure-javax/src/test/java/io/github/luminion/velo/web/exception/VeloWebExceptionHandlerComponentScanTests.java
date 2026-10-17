@@ -12,18 +12,22 @@ import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/** 验证 Web 异常处理器不会被宽泛组件扫描自动注册。 */
 class VeloWebExceptionHandlerComponentScanTests {
 
     @Test
     void shouldNotBeRegisteredByWideComponentScan() {
-        assertThat(VeloWebExceptionHandler.class.isAnnotationPresent(RestControllerAdvice.class)).isFalse();
-        assertThat(VeloValidationWebExceptionHandler.class.isAnnotationPresent(RestControllerAdvice.class)).isFalse();
+        assertThat(VeloWebExceptionHandler.class.isAnnotationPresent(RestControllerAdvice.class))
+                .isFalse();
+        assertThat(VeloValidationWebExceptionHandler.class.isAnnotationPresent(RestControllerAdvice.class))
+                .isFalse();
 
         ClassPathScanningCandidateComponentProvider scanner =
                 new ClassPathScanningCandidateComponentProvider(false);
         scanner.addIncludeFilter(new AnnotationTypeFilter(Component.class, true));
 
-        List<String> candidates = scanner.findCandidateComponents("io.github.luminion.velo.web.exception")
+        List<String> candidates =
+                scanner.findCandidateComponents("io.github.luminion.velo.web.exception")
                 .stream()
                 .map(BeanDefinition::getBeanClassName)
                 .collect(Collectors.toList());

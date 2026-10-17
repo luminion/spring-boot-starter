@@ -22,18 +22,40 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * 每次 HTTP 请求建立 traceId；异步或异常再派发复用请求属性中的同一标识。
  */
 public class TraceIdFilter extends OncePerRequestFilter {
+    /** 请求属性中保存链路快照时使用的键。 */
     private static final String ATTRIBUTE = TraceIdFilter.class.getName() + ".traceId";
+
+    /** 当前请求链路的配置。 */
     private final TraceProperties properties;
+
+    /** 入站链路上下文解析器。 */
     private final TraceContextResolver resolver;
 
+    /**
+     * 使用默认的 W3C 链路上下文解析器创建过滤器。
+     *
+     * @param properties Velo 配置
+     */
     public TraceIdFilter(VeloProperties properties) {
         this(properties, new W3cTraceContextResolver());
     }
 
+    /**
+     * 使用指定的链路上下文解析器创建过滤器。
+     *
+     * @param properties Velo 配置
+     * @param resolver 入站链路上下文解析器
+     */
     public TraceIdFilter(VeloProperties properties, TraceContextResolver resolver) {
         this(properties.getLog().getTrace(), resolver);
     }
 
+    /**
+     * 使用指定的链路配置和解析器创建过滤器。
+     *
+     * @param properties 链路配置
+     * @param resolver 入站链路上下文解析器
+     */
     public TraceIdFilter(TraceProperties properties, TraceContextResolver resolver) {
         this.properties = properties;
         this.resolver = resolver;
@@ -89,6 +111,7 @@ public class TraceIdFilter extends OncePerRequestFilter {
         doFilterInternal(request, response, chain);
     }
 
+    /** 临时绑定 Servlet 请求上下文，以支持依赖请求上下文的解析器。 */
     private TraceData resolve(HttpServletRequest request, HttpServletResponse response, String key) {
         RequestAttributes previous = RequestContextHolder.getRequestAttributes();
         ServletRequestAttributes current = new ServletRequestAttributes(request, response);

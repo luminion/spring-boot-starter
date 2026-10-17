@@ -8,6 +8,7 @@ import java.util.concurrent.TimeUnit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/** 验证 Guava 限流器的键隔离、配额共享和空闲回收。 */
 class GuavaRateLimitHandlerTests {
 
     @Test

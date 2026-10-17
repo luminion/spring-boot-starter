@@ -11,6 +11,7 @@ import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/** 验证 XSS 自动配置在不同策略和 Web 开关下的 Bean 注册行为。 */
 class VeloXssAutoConfigurationTests {
 
     private final WebApplicationContextRunner contextRunner = new WebApplicationContextRunner()

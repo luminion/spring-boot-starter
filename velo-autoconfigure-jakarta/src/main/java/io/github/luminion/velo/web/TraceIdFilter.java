@@ -26,14 +26,31 @@ public class TraceIdFilter extends OncePerRequestFilter {
     private final TraceProperties properties;
     private final TraceContextResolver resolver;
 
+    /**
+     * 使用默认的 W3C 链路上下文解析器创建过滤器。
+     *
+     * @param properties Starter 配置
+     */
     public TraceIdFilter(VeloProperties properties) {
         this(properties, new W3cTraceContextResolver());
     }
 
+    /**
+     * 使用 Starter 配置和指定的链路上下文解析器创建过滤器。
+     *
+     * @param properties Starter 配置
+     * @param resolver 入站链路上下文解析器
+     */
     public TraceIdFilter(VeloProperties properties, TraceContextResolver resolver) {
         this(properties.getLog().getTrace(), resolver);
     }
 
+    /**
+     * 使用链路跟踪配置和指定的解析器创建过滤器。
+     *
+     * @param properties 链路跟踪配置
+     * @param resolver 入站链路上下文解析器
+     */
     public TraceIdFilter(TraceProperties properties, TraceContextResolver resolver) {
         this.properties = properties;
         this.resolver = resolver;
@@ -58,7 +75,10 @@ public class TraceIdFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws ServletException, IOException {
+    protected void doFilterInternal(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain chain) throws ServletException, IOException {
         TraceProperties trace = properties;
         if (!trace.isEnabled()) {
             chain.doFilter(request, response);

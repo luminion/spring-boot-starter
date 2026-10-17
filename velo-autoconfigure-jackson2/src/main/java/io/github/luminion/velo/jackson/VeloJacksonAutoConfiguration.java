@@ -1,7 +1,6 @@
 package io.github.luminion.velo.jackson;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.module.SimpleModule;
@@ -13,12 +12,12 @@ import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalTimeSerializer;
 import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.converter.datetime.FlexibleDateFormat;
-import io.github.luminion.velo.spi.JsonProcessorProvider;
 import io.github.luminion.velo.jackson.deserializer.JacksonStringDeserializer;
 import io.github.luminion.velo.jackson.serializer.ConfigurableBigDecimalSerializer;
 import io.github.luminion.velo.jackson.serializer.JacksonStringSerializer;
 import io.github.luminion.velo.jackson.serializer.JsonEnumSerializerModifier;
 import io.github.luminion.velo.jackson.serializer.NumericArraySerializer;
+import io.github.luminion.velo.spi.JsonProcessorProvider;
 import io.github.luminion.velo.xss.XssCleaner;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.ObjectProvider;
@@ -30,6 +29,7 @@ import org.springframework.boot.autoconfigure.jackson.Jackson2ObjectMapperBuilde
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.format.datetime.standard.DateTimeFormatterFactory;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 
 import java.math.BigDecimal;
@@ -39,11 +39,10 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import org.springframework.format.datetime.standard.DateTimeFormatterFactory;
 import java.util.TimeZone;
 
 /**
- * Jackson 配置。
+ * 配置应用使用的 Jackson 映射器及其扩展能力。
  *
  * @see org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration
  */
@@ -52,10 +51,12 @@ import java.util.TimeZone;
 @ConditionalOnProperty(prefix = "velo.jackson", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloJacksonAutoConfiguration {
 
+    /** 注册 Jackson {@link Jackson2ObjectMapperBuilder} 自定义器及枚举模块。 */
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnClass({Jackson2ObjectMapperBuilder.class})
     static class Jackson2ObjectMapperBuilderCustomizerConfiguration {
 
+        /** 注册枚举描述序列化模块。 */
         @Bean
         public com.fasterxml.jackson.databind.Module veloEnumModule(VeloProperties properties) {
             SimpleModule module = new SimpleModule("velo-enum");
@@ -65,6 +66,7 @@ public class VeloJacksonAutoConfiguration {
             return module;
         }
 
+        /** 根据 Velo 配置调整时间、数值和字符串的 Jackson 处理方式。 */
         @Bean
         @Order(-1)
         public Jackson2ObjectMapperBuilderCustomizer jackson2ObjectMapperBuilderCustomizer(VeloProperties properties,
@@ -84,7 +86,8 @@ public class VeloJacksonAutoConfiguration {
                     String timeZoneId = properties.getDateTimeFormat().getTimeZone();
                     TimeZone timeZone = TimeZone.getTimeZone(ZoneId.of(timeZoneId));
                     FlexibleDateFormat defaultDateFormat = new FlexibleDateFormat(dateTimeFormat, dateFormat, timeZone);
-                    DateTimeFormatter dateTimeFormatter = new DateTimeFormatterFactory(dateTimeFormat).createDateTimeFormatter();
+                    DateTimeFormatter dateTimeFormatter = new DateTimeFormatterFactory(dateTimeFormat)
+                            .createDateTimeFormatter();
                     DateTimeFormatter dateFormatter = new DateTimeFormatterFactory(dateFormat).createDateTimeFormatter();
                     DateTimeFormatter timeFormatter = new DateTimeFormatterFactory(timeFormat).createDateTimeFormatter();
 
@@ -147,6 +150,7 @@ public class VeloJacksonAutoConfiguration {
             };
         }
 
+        /** 为指定数值类型设置字符串形态的默认格式，同时保留已有显式配置。 */
         private static void setStringDefault(ObjectMapper mapper, Class<?> type) {
             JsonFormat.Value current = mapper.configOverride(type).getFormat();
             JsonFormat.Value defaultFormat = JsonFormat.Value.forShape(JsonFormat.Shape.STRING);

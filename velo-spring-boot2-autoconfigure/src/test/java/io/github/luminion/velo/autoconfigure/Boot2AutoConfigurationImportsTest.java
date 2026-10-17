@@ -1,17 +1,19 @@
 package io.github.luminion.velo.autoconfigure;
 
-import org.junit.jupiter.api.Test;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 
+import org.junit.jupiter.api.Test;
+
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/** 验证 Spring Boot 2 模块公开的自动配置条目已使用标准配置类名称。 */
 class Boot2AutoConfigurationImportsTest {
 
+    /** 确认自动配置文件包含预期入口且不包含历史配置类名称。 */
     @Test
     void shouldExposeNormalizedSpringFactoriesEntries() throws IOException {
         try (InputStream inputStream = Thread.currentThread().getContextClassLoader()

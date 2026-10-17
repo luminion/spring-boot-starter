@@ -44,6 +44,7 @@ class Boot3AutoConfigurationStartupTest {
         }
     }
 
+    /** 提供用于启动自动配置上下文的最小测试应用。 */
     @SpringBootConfiguration
     @EnableAutoConfiguration(excludeName = "org.redisson.spring.starter.RedissonAutoConfigurationV2")
     static class TestApplication {

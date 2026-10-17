@@ -2,6 +2,20 @@ package io.github.luminion.velo.cache;
 
 import io.github.luminion.velo.core.VeloCoreAutoConfiguration;
 import io.github.luminion.velo.jackson.VeloRedisJsonAutoConfiguration;
+import java.math.BigDecimal;
+import java.net.URI;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
@@ -19,26 +33,17 @@ import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
-import java.math.BigDecimal;
-import java.net.URI;
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-import java.time.Duration;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
-/** 无需业务类型配置，验证默认 JSON 的类型恢复、动态缓存及原生缓存语义。 */
+/**
+ * 无需业务类型配置，验证默认 JSON 的类型恢复、动态缓存及原生缓存语义。
+ *
+ * @author luminion
+ */
 class Boot3CacheJsonSerializationTest {
+
+    /** 构建启用 Velo JSON 和 Redis 缓存自动配置的测试上下文。 */
     private ApplicationContextRunner runner() {
         return new ApplicationContextRunner().withConfiguration(AutoConfigurations.of(
                 VeloCoreAutoConfiguration.class, VeloRedisJsonAutoConfiguration.class,
@@ -82,6 +87,12 @@ class Boot3CacheJsonSerializationTest {
                 });
     }
 
+    /**
+     * 用于验证纳秒精度日期时间的记录型缓存数据。
+     *
+     * @param name 缓存对象名称
+     * @param createdAt 纳秒精度创建时间
+     */
     public record RecordPayload(String name, LocalDateTime createdAt) {
     }
 
@@ -92,17 +103,20 @@ class Boot3CacheJsonSerializationTest {
                     RedisCacheConfiguration config = ((RedisCache) context.getBean(CacheManager.class)
                             .getCache("mixed")).getCacheConfiguration();
                     List<Payload> values = new ArrayList<>(Arrays.asList(new Payload("list")));
-                    Object list = config.getValueSerializationPair().read(config.getValueSerializationPair().write(values));
+                    Object list = config.getValueSerializationPair()
+                            .read(config.getValueSerializationPair().write(values));
                     assertThat(list).isInstanceOf(List.class);
                     assertThat(((List<?>) list).get(0)).isInstanceOf(Payload.class);
                     assertThat(((Payload) ((List<?>) list).get(0)).name).isEqualTo("list");
                     Map<String, Payload> valuesById = new LinkedHashMap<>();
                     valuesById.put("one", new Payload("map"));
-                    Object map = config.getValueSerializationPair().read(config.getValueSerializationPair().write(valuesById));
+                    Object map = config.getValueSerializationPair()
+                            .read(config.getValueSerializationPair().write(valuesById));
                     assertThat(map).isInstanceOf(Map.class);
                     assertThat(((Map<?, ?>) map).get("one")).isInstanceOf(Payload.class);
                     assertThat(((Payload) ((Map<?, ?>) map).get("one")).name).isEqualTo("map");
-                    assertThat(config.getValueSerializationPair().read(config.getValueSerializationPair().write("text")))
+                    assertThat(config.getValueSerializationPair()
+                            .read(config.getValueSerializationPair().write("text")))
                             .isEqualTo("text");
                 });
     }
@@ -171,15 +185,19 @@ class Boot3CacheJsonSerializationTest {
                 });
     }
 
+    /** 声明本测试使用的缓存服务。 */
     @Configuration(proxyBeanMethods = false)
     @EnableCaching
     static class CachingConfiguration {
+
+        /** 注册带有不同缓存策略的测试服务。 */
         @Bean
         CachedService cachedService() {
             return new CachedService();
         }
     }
 
+    /** 提供带缓存注解的方法以验证返回值的序列化与反序列化。 */
     public static class CachedService {
         final AtomicInteger dtoLoads = new AtomicInteger();
         final AtomicInteger listLoads = new AtomicInteger();
@@ -204,10 +222,19 @@ class Boot3CacheJsonSerializationTest {
         }
     }
 
+    /** 用于验证普通对象、数值精度和日期时间字段恢复的缓存数据。 */
     public static final class Payload {
+
+        /** 缓存对象的名称。 */
         public String name;
+
+        /** 用于验证大整数序列化精度的标识值。 */
         public long id = 9007199254740993L;
+
+        /** 用于验证小数尾随零保留情况的金额值。 */
         public BigDecimal amount = new BigDecimal("12.3400");
+
+        /** 用于验证纳秒精度日期时间恢复的创建时间。 */
         public LocalDateTime createdAt = LocalDateTime.of(2026, 10, 7, 10, 20, 30, 123456789);
 
         public Payload() {

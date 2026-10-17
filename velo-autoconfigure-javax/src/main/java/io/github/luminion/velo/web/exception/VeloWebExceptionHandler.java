@@ -34,11 +34,18 @@ public class VeloWebExceptionHandler<R> extends AbstractVeloControllerAdvice {
     protected final Function<String, R> failed;
     protected final Function<Throwable, R> error;
 
+    /**
+     * 创建 Web 异常处理器。
+     *
+     * @param failed 将业务失败消息转换为响应的函数
+     * @param error 将未预期异常转换为响应的函数
+     */
     public VeloWebExceptionHandler(Function<String, R> failed, Function<Throwable, R> error) {
         this.failed = java.util.Objects.requireNonNull(failed);
         this.error = java.util.Objects.requireNonNull(error);
     }
 
+    /** 汇总参数校验或绑定错误中的默认消息。 */
     private String getBindingResultMessage(BindingResult bindingResult) {
         return bindingResult.getAllErrors().stream()
                 .map(DefaultMessageSourceResolvable::getDefaultMessage)

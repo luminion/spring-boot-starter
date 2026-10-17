@@ -13,9 +13,9 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Conditional;
+import org.springframework.core.KotlinDetector;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializer;
-import org.springframework.core.KotlinDetector;
 import org.springframework.util.ClassUtils;
 
 /**
@@ -28,6 +28,7 @@ import org.springframework.util.ClassUtils;
 @ConditionalOnClass({ObjectMapper.class, RedisSerializer.class})
 public class VeloRedisJsonAutoConfiguration {
 
+    /** 创建供 Redis 通用对象值使用的 Jackson 序列化器。 */
     @Bean
     @Conditional(OnMissingRedisObjectSerializerCondition.class)
     public RedisSerializer<Object> veloRedisSerializer() {
@@ -52,6 +53,7 @@ public class VeloRedisJsonAutoConfiguration {
     private static final class RedisTypeResolverBuilder extends ObjectMapper.DefaultTypeResolverBuilder {
         private static final long serialVersionUID = 1L;
 
+        /** 使用与 Spring Data 通用 JSON 序列化器一致的默认类型策略。 */
         private RedisTypeResolverBuilder() {
             super(ObjectMapper.DefaultTyping.NON_FINAL, LaissezFaireSubTypeValidator.instance);
         }

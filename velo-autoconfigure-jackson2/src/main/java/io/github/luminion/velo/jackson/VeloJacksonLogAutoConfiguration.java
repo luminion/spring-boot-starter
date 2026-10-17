@@ -21,6 +21,8 @@ import org.springframework.context.annotation.Bean;
         before = VeloLogAutoConfiguration.class)
 @ConditionalOnClass(ObjectMapper.class)
 public class VeloJacksonLogAutoConfiguration {
+
+    /** 使用应用现有的 Jackson 映射器格式化调用日志中的值。 */
     @Bean
     @ConditionalOnBean(ObjectMapper.class)
     @ConditionalOnMissingBean(LogValueFormatter.class)

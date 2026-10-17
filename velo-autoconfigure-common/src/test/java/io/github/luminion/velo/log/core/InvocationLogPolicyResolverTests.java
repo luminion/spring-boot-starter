@@ -21,6 +21,7 @@ import java.lang.reflect.Method;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.logging.LogLevel;
 
+/** 验证调用日志策略解析的目标类选择、元数据缓存和配置继承。 */
 class InvocationLogPolicyResolverTests {
     private final VeloProperties properties = new VeloProperties();
     private final InvocationLogPolicyResolver resolver = new InvocationLogPolicyResolver(properties);

@@ -1,19 +1,20 @@
 package io.github.luminion.velo.jackson;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.github.luminion.velo.log.core.InvocationLogSupport;
 import io.github.luminion.velo.log.LogValueFormatter;
+import io.github.luminion.velo.log.core.InvocationLogSupport;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 class VeloJacksonLogAutoConfigurationTests {
     @Test
@@ -92,6 +93,7 @@ class VeloJacksonLogAutoConfigurationTests {
     }
 
     static class LargePayload {
+        /** 统计日志序列化期间被读取的对象数量。 */
         private final AtomicInteger visited;
 
         LargePayload(AtomicInteger visited) {
@@ -104,6 +106,7 @@ class VeloJacksonLogAutoConfigurationTests {
     }
 
     static class CountingPayload {
+        /** 统计当前对象的 getter 调用次数。 */
         private final AtomicInteger visited;
 
         CountingPayload(AtomicInteger visited) {
@@ -136,7 +139,10 @@ class VeloJacksonLogAutoConfigurationTests {
     @Getter
     @RequiredArgsConstructor
     static class Payload {
+        /** 会写入日志 JSON 的普通字段。 */
         private final String value;
+
+        /** 由 mix-in 标记为忽略的敏感字段。 */
         private final String secret;
     }
 

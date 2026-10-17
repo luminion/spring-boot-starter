@@ -9,6 +9,7 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
+/** 提供测试使用的 Feign 客户端注解定义。 */
 public @interface FeignClient {
 
     String value() default "";

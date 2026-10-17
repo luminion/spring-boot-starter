@@ -13,6 +13,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 
+/** 验证调用日志格式化、序列化失败和单行安全处理。 */
 class InvocationLogSupportTest {
     @Test
     void formatsNullAndFullCustomText() {

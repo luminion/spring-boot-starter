@@ -14,6 +14,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+/** 验证 Redis 限流脚本对配额、失败结果和无效参数的处理。 */
 class RedisRateLimitHandlerTests {
 
     @Test

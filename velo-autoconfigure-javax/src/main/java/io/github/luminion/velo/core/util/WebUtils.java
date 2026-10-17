@@ -4,8 +4,6 @@ import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
-import lombok.NoArgsConstructor;
-import lombok.SneakyThrows;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -15,11 +13,11 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.UncheckedIOException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 /**
+ * 提供基于当前 Servlet 请求上下文的常用访问与响应辅助方法。
+ *
  * @author luminion
  */
 public abstract class WebUtils {
@@ -30,7 +28,8 @@ public abstract class WebUtils {
      * @return 如果当前请求是Web请求上下文，则返回true，否则返回false
      */
     public static boolean isWebContext() {
-        return RequestContextHolder.getRequestAttributes() != null && RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes;
+        return RequestContextHolder.getRequestAttributes() != null
+                && RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes;
     }
 
 
@@ -112,7 +111,10 @@ public abstract class WebUtils {
      * 获取 Excel (xlsx) 输出流
      */
     public static OutputStream getExcelOutputStream(String fileName) {
-        setDownloadHeader(fileName, ".xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        setDownloadHeader(
+                fileName,
+                ".xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         return getResponseOutputStream();
     }
 
@@ -128,7 +130,10 @@ public abstract class WebUtils {
      * 获取 Word (docx) 输出流
      */
     public static OutputStream getWordOutputStream(String fileName) {
-        setDownloadHeader(fileName, ".docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+        setDownloadHeader(
+                fileName,
+                ".docx",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
         return getResponseOutputStream();
     }
 
@@ -155,7 +160,7 @@ public abstract class WebUtils {
         setDownloadHeader(fileName, "", "application/octet-stream");
         return getResponseOutputStream();
     }
-    
+
 
     /**
      * 获取当前请求的HttpSession对象。
@@ -225,7 +230,9 @@ public abstract class WebUtils {
     /**
      * 获取客户端真实IP地址。
      * <p>
-     * 此方法会尝试从常见的HTTP代理头中获取真实的客户端IP地址，如 'x-forwarded-for', 'Proxy-Client-IP', 'WL-Proxy-Client-IP', 'X-Real-IP'等。
+     * 此方法会尝试从常见的 HTTP 代理头中获取真实的客户端 IP 地址，如
+     * {@code x-forwarded-for}、{@code Proxy-Client-IP}、{@code WL-Proxy-Client-IP} 和
+     * {@code X-Real-IP}。
      * 如果无法从代理头中获取，则返回直接连接的客户端IP地址。
      * <p>
      * 只有在 Nginx、网关等入口代理已清洗或覆盖外部请求携带的转发头时，该结果才可信；

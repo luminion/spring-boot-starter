@@ -1,18 +1,19 @@
 package io.github.luminion.velo.web;
 
+import java.time.DateTimeException;
+import java.util.Date;
 import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.xss.converter.XssStringConverter;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.support.StaticListableBeanFactory;
 import org.springframework.format.support.DefaultFormattingConversionService;
 
-import java.time.DateTimeException;
-import java.util.Date;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/** 验证 Spring Boot 4 Web 配置的默认时区及自定义时区解析行为。 */
 class Boot4WebDateParsingTests {
+
     @Test
     void shouldApplyShanghaiDefaultAndAcceptZoneIdOffsetsOnSpring7() {
         VeloProperties defaults = new VeloProperties();

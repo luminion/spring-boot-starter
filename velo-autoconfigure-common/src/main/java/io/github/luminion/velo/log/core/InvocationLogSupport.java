@@ -35,8 +35,7 @@ public final class InvocationLogSupport {
     private InvocationLogSupport() {
     }
 
-    public static LogInvocation invocation(
-            ProceedingJoinPoint point, InvocationLogSource source, String target) {
+    public static LogInvocation invocation(ProceedingJoinPoint point, InvocationLogSource source, String target) {
         MethodSignature signature = (MethodSignature) point.getSignature();
         Class<?> type = point.getTarget() == null
                         ? signature.getDeclaringType()
@@ -110,8 +109,7 @@ public final class InvocationLogSupport {
     /**
      * 保留 DTO，避免改写 Jackson 字段语义；流、Servlet 等技术对象不读取内容。
      */
-    private static Object sanitize(
-            Object value, IdentityHashMap<Object, Boolean> visited, int depth) {
+    private static Object sanitize(Object value, IdentityHashMap<Object, Boolean> visited, int depth) {
         if (value == null) {
             return null;
         }

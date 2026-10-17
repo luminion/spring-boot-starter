@@ -9,6 +9,7 @@ import java.lang.reflect.Method;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/** 验证幂等、限流和锁注解的安全默认值。 */
 class ConcurrencyAnnotationDefaultsTest {
 
     @Test

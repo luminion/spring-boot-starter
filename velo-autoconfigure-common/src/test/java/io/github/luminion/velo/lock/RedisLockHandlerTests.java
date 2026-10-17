@@ -26,6 +26,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/** 验证 Redis 锁的默认及自定义 TTL 和释放语义。 */
 class RedisLockHandlerTests {
 
     private StringRedisTemplate template;

@@ -1,16 +1,17 @@
 package io.github.luminion.velo.jackson;
 
-import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.annotation.JsonSetter;
+import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.cfg.CoercionAction;
 import com.fasterxml.jackson.databind.cfg.CoercionInputShape;
-import com.fasterxml.jackson.databind.type.LogicalType;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.databind.type.LogicalType;
 import io.github.luminion.velo.jackson.deserializer.JacksonStringDeserializer;
 import io.github.luminion.velo.xss.XssIgnore;
-import com.fasterxml.jackson.annotation.JsonSetter;
-import com.fasterxml.jackson.annotation.Nulls;
 import org.junit.jupiter.api.Test;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -55,16 +56,24 @@ class JacksonStringDeserializerTests {
     }
 
     static class EmptyPayload {
+        /** 用于验证空值策略的普通字符串。 */
         @JsonSetter(nulls = Nulls.AS_EMPTY)
         public String name;
+
+        /** 同时标记忽略 XSS 清洗的字符串。 */
         @JsonSetter(nulls = Nulls.AS_EMPTY)
         @XssIgnore
         public String ignored;
     }
 
     static class Payload {
+        /** 用于验证数值到字符串的转换结果。 */
         public String name;
+
+        /** 用于确认同一对象中的其他字符串保持原值。 */
         public String role;
+
+        /** 用于验证被忽略清洗属性的反序列化行为。 */
         @XssIgnore
         public String ignored;
     }

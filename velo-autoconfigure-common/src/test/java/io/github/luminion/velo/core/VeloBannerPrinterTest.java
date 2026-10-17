@@ -19,6 +19,7 @@ import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 
 @ExtendWith(OutputCaptureExtension.class)
+/** 验证启动横幅对功能状态和缺失配置的展示处理。 */
 class VeloBannerPrinterTest {
 
     @Test

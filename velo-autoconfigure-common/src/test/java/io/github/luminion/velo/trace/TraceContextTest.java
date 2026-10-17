@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 import org.slf4j.MDC;
 
+/** 验证 trace 标识校验、入站解析和作用域恢复。 */
 class TraceContextTest {
 
     @Test

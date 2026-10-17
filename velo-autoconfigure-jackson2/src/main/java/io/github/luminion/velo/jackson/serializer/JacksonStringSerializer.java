@@ -9,8 +9,8 @@ import com.fasterxml.jackson.databind.jsontype.TypeSerializer;
 import com.fasterxml.jackson.databind.ser.ContextualSerializer;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import com.fasterxml.jackson.databind.ser.std.StringSerializer;
-import io.github.luminion.velo.spi.JsonProcessorProvider;
 import io.github.luminion.velo.jackson.annotation.JsonEncode;
+import io.github.luminion.velo.spi.JsonProcessorProvider;
 
 import java.io.IOException;
 import java.util.function.Function;
@@ -22,11 +22,16 @@ import java.util.function.Function;
  */
 public class JacksonStringSerializer extends StdSerializer<String> implements ContextualSerializer {
 
+    /** 委托原生字符串序列化，保留 Jackson 的转义与类型处理行为。 */
     private static final StringSerializer STRING_SERIALIZER = new StringSerializer();
 
+    /** 提供按属性注解创建字符串转换器的能力。 */
     private final JsonProcessorProvider jsonProcessorProvider;
+
+    /** 当前属性对应的字符串转换函数；为空时直接写出原字符串。 */
     private final Function<String, String> function;
 
+    /** 创建未绑定具体属性转换函数的字符串序列化器。 */
     public JacksonStringSerializer(JsonProcessorProvider jsonProcessorProvider) {
         this(jsonProcessorProvider, null);
     }
@@ -37,6 +42,7 @@ public class JacksonStringSerializer extends StdSerializer<String> implements Co
         this.function = function;
     }
 
+    /** 应用属性转换后委托 Jackson 原生字符串序列化器写出结果。 */
     @Override
     public void serialize(String value, JsonGenerator gen, SerializerProvider provider) throws IOException {
         String result = encode(value);
@@ -47,6 +53,7 @@ public class JacksonStringSerializer extends StdSerializer<String> implements Co
         STRING_SERIALIZER.serialize(result, gen, provider);
     }
 
+    /** 应用属性转换，并由 Jackson 原生序列化器保留多态类型处理。 */
     @Override
     public void serializeWithType(String value, JsonGenerator gen, SerializerProvider provider,
                                   TypeSerializer typeSerializer) throws IOException {
@@ -59,6 +66,7 @@ public class JacksonStringSerializer extends StdSerializer<String> implements Co
         STRING_SERIALIZER.serializeWithType(result, gen, provider, typeSerializer);
     }
 
+    /** 按 Jackson 原生字符串规则判断属性值是否为空。 */
     @Override
     public boolean isEmpty(SerializerProvider provider, String value) {
         return value == null || STRING_SERIALIZER.isEmpty(provider, value);
@@ -68,6 +76,7 @@ public class JacksonStringSerializer extends StdSerializer<String> implements Co
         return value == null || function == null ? value : function.apply(value);
     }
 
+    /** 根据属性上的编码注解创建属性级字符串序列化器。 */
     @Override
     public JsonSerializer<?> createContextual(SerializerProvider prov, BeanProperty property) throws JsonMappingException {
         if (property == null) {

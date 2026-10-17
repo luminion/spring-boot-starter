@@ -6,7 +6,7 @@ import org.springframework.core.convert.converter.Converter;
 import org.springframework.format.annotation.DateTimeFormat;
 
 /**
- * DateTimeFormat注解的转换器
+ * 解析 {@code DateTimeFormat} 注解并执行日期时间转换。
  * 用于兼容@DateTimeFormat注解的日期时间转换
  *
  * @author luminion

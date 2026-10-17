@@ -16,7 +16,10 @@ public class ServiceLoaderModuleFixture extends SimpleModule {
         });
     }
 
+    /** 用于验证是否加载测试模块的简单负载。 */
     public static class DiscoveryPayload {
+
+        /** 未发现测试模块时保留的默认值。 */
         public String value = "native";
     }
 }

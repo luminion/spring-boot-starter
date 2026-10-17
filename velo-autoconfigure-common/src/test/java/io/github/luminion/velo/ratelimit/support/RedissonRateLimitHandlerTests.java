@@ -18,6 +18,7 @@ import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
+/** 验证 Redisson 限流器的配置复用和初始化行为。 */
 class RedissonRateLimitHandlerTests {
 
     @Test

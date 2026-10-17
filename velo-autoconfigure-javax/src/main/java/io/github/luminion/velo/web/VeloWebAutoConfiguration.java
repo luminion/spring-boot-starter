@@ -25,6 +25,7 @@ import org.springframework.context.annotation.Bean;
         matchIfMissing = true)
 public class VeloWebAutoConfiguration {
 
+    /** 注册 MVC 增强配置。 */
     @Bean
     @ConditionalOnMissingBean
     public VeloWebMvcConfigurer veloWebMvcConfigurer(
@@ -32,6 +33,7 @@ public class VeloWebAutoConfiguration {
         return new VeloWebMvcConfigurer(xssStringConverterProvider, properties);
     }
 
+    /** 按日志开关注册 Controller 调用日志切面。 */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnClass(ControllerLogAspect.class)

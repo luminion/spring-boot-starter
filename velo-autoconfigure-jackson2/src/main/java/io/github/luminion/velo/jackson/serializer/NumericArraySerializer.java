@@ -19,9 +19,13 @@ import java.lang.reflect.Array;
  */
 public class NumericArraySerializer<T> extends ArraySerializerBase<T> {
 
+    /** 数组元素的 Jackson 类型信息。 */
     private final JavaType contentType;
+
+    /** 数组元素对应的序列化器；为空时由提供器按需解析。 */
     private final JsonSerializer<Object> contentSerializer;
 
+    /** 创建使用指定数组类型和元素类型的序列化器。 */
     public NumericArraySerializer(Class<T> arrayType, Class<? extends Number> contentType) {
         super(arrayType);
         this.contentType = SimpleType.constructUnsafe(contentType);
@@ -35,11 +39,13 @@ public class NumericArraySerializer<T> extends ArraySerializerBase<T> {
         this.contentSerializer = contentSerializer;
     }
 
+    /** 基于当前属性配置复制数组序列化器。 */
     @Override
     public JsonSerializer<?> _withResolved(BeanProperty property, Boolean unwrapSingle) {
         return new NumericArraySerializer<>(this, property, unwrapSingle, contentSerializer);
     }
 
+    /** 解析当前属性的元素序列化器。 */
     @Override
     @SuppressWarnings("unchecked")
     public JsonSerializer<?> createContextual(SerializerProvider provider, BeanProperty property)
@@ -52,11 +58,13 @@ public class NumericArraySerializer<T> extends ArraySerializerBase<T> {
         return new NumericArraySerializer<>(resolved, property, resolved._unwrapSingle, serializer);
     }
 
+    /** 返回数组元素的 Jackson 类型。 */
     @Override
     public JavaType getContentType() {
         return contentType;
     }
 
+    /** 返回已解析的数组元素序列化器。 */
     @Override
     public JsonSerializer<?> getContentSerializer() {
         return contentSerializer;
@@ -67,16 +75,19 @@ public class NumericArraySerializer<T> extends ArraySerializerBase<T> {
         return this;
     }
 
+    /** 判断数字数组是否没有元素。 */
     @Override
     public boolean isEmpty(SerializerProvider provider, T value) {
         return Array.getLength(value) == 0;
     }
 
+    /** 判断数组是否只包含一个元素。 */
     @Override
     public boolean hasSingleElement(T value) {
         return Array.getLength(value) == 1;
     }
 
+    /** 使用元素序列化器逐项写出数组内容。 */
     @Override
     protected void serializeContents(T value, JsonGenerator generator, SerializerProvider provider) throws IOException {
         JsonSerializer<Object> serializer = contentSerializer;

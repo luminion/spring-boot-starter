@@ -11,6 +11,7 @@ import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/** 验证 XSS 清洗器及 Web 字符串转换器的条件配置。 */
 class VeloXssAutoConfigurationTests {
 
     private final WebApplicationContextRunner contextRunner = new WebApplicationContextRunner()

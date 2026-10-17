@@ -1,26 +1,25 @@
 package io.github.luminion.velo.autoconfigure;
 
+import java.nio.ByteBuffer;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import io.github.luminion.velo.cache.VeloCacheAutoConfiguration;
-import io.github.luminion.velo.jackson.VeloRedisJsonAutoConfiguration;
 import io.github.luminion.velo.core.VeloCoreAutoConfiguration;
 import io.github.luminion.velo.jackson.VeloJacksonAutoConfiguration;
+import io.github.luminion.velo.jackson.VeloRedisJsonAutoConfiguration;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.cache.autoconfigure.CacheAutoConfiguration;
 import org.springframework.boot.jackson2.autoconfigure.Jackson2AutoConfiguration;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.boot.cache.autoconfigure.CacheAutoConfiguration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.serializer.GenericJacksonJsonRedisSerializer;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializer;
-
-import java.nio.ByteBuffer;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -131,8 +130,10 @@ class Boot4CacheSerializerSelectionTest {
         return bytes;
     }
 
+    /** 用于验证缓存序列化器类型恢复的数据样例。 */
     static class RedisPayload {
 
+        /** 用于序列化验证的数据名称。 */
         private String name;
 
         RedisPayload() {

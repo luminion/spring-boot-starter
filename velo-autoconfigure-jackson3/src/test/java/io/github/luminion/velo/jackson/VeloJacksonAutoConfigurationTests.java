@@ -29,10 +29,13 @@ import java.util.Date;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/** 覆盖 Jackson 3 自动配置的日期、数字、枚举及字符串处理行为。 */
 class VeloJacksonAutoConfigurationTests {
 
+    /** 同时加载 JSON 与 Redis 序列化自动配置的测试上下文。 */
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-            .withConfiguration(AutoConfigurations.of(VeloJacksonAutoConfiguration.class, VeloRedisJsonAutoConfiguration.class));
+            .withConfiguration(AutoConfigurations.of(
+                    VeloJacksonAutoConfiguration.class, VeloRedisJsonAutoConfiguration.class));
 
     @Test
     void shouldKeepTheSharedCacheSerializerWhenRedisTemplatesAreDisabled() {
@@ -463,7 +466,9 @@ class VeloJacksonAutoConfigurationTests {
                 .run(context -> {
                     JsonMapper mapper = jsonMapper(context);
                     StringTransformPayload payload = mapper
-                            .readValue("{\"encoded\":\"abc\",\"decoded\":\"ABC\",\"cleaned\":\"<b>safe</b>\",\"ignored\":\"<b>raw</b>\"}",
+                            .readValue(
+                                    "{\"encoded\":\"abc\",\"decoded\":\"ABC\","
+                                            + "\"cleaned\":\"<b>safe</b>\",\"ignored\":\"<b>raw</b>\"}",
                                     StringTransformPayload.class);
                     JsonNode tree = mapper.readTree(mapper.writeValueAsString(payload));
 
@@ -491,7 +496,8 @@ class VeloJacksonAutoConfigurationTests {
                 .run(context -> {
                     JsonMapper mapper = jsonMapper(context);
                     StringTransformPayload payload = mapper.readValue(
-                            "{\"encoded\":\"abc\",\"decoded\":\"ABC\",\"cleaned\":\"<b>safe</b>\",\"ignored\":\"<b>raw</b>\"}",
+                            "{\"encoded\":\"abc\",\"decoded\":\"ABC\","
+                                    + "\"cleaned\":\"<b>safe</b>\",\"ignored\":\"<b>raw</b>\"}",
                             StringTransformPayload.class);
                     JsonNode tree = mapper.readTree(mapper.writeValueAsString(payload));
 

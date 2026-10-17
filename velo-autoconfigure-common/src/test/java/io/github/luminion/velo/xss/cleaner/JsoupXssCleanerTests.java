@@ -6,6 +6,7 @@ import org.springframework.web.util.HtmlUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/** 验证 Jsoup 清洗器对普通文本、实体字符和 HTML 内容的处理。 */
 class JsoupXssCleanerTests {
 
     @Test

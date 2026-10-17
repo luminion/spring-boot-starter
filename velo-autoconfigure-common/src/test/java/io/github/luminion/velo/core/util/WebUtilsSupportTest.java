@@ -7,6 +7,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/** 验证客户端 IP 解析和下载响应头构造等通用 Web 工具行为。 */
 class WebUtilsSupportTest {
 
     private static String resolve(Map<String, String> headers, String remoteAddr) {

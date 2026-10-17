@@ -7,15 +7,15 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.context.MessageSourceResolvable;
-import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindException;
 import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 
 /**
  * 使用 Spring 原生状态码的 MVC 异常处理器。
@@ -24,11 +24,23 @@ public class VeloStatusWebExceptionHandler<R> extends AbstractVeloControllerAdvi
     private final Function<String, R> failed;
     private final Function<Throwable, R> error;
 
+    /**
+     * 创建使用 Spring HTTP 状态码的 MVC 异常处理器。
+     *
+     * @param failed 将可识别的请求失败转换为响应体
+     * @param error 将未识别错误转换为响应体
+     */
     public VeloStatusWebExceptionHandler(Function<String, R> failed, Function<Throwable, R> error) {
         this.failed = Objects.requireNonNull(failed);
         this.error = Objects.requireNonNull(error);
     }
 
+    /**
+     * 将异常映射为包含 Spring 状态码和转换后响应体的响应。
+     *
+     * @param exception MVC 处理期间抛出的异常
+     * @return 带有对应 HTTP 状态码和响应体的结果
+     */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<R> handle(Exception exception) {
         String message = knownFailure(exception);
