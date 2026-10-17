@@ -6,27 +6,31 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import io.github.luminion.velo.VeloProperties;
+import io.github.luminion.velo.log.annotation.CostLog;
+import io.github.luminion.velo.log.annotation.SlowLog;
 import io.github.luminion.velo.log.core.InvocationLogEngine;
-import io.github.luminion.velo.log.core.InvocationLogFeature;
-import io.github.luminion.velo.log.core.InvocationLogRecord;
-import io.github.luminion.velo.log.core.InvocationLogSource;
+import io.github.luminion.velo.log.model.InvocationLogFeature;
+import io.github.luminion.velo.log.model.InvocationLogRecord;
+import io.github.luminion.velo.log.model.InvocationLogSource;
 import io.github.luminion.velo.trace.TraceContext;
 import io.github.luminion.velo.trace.TraceContextResolver;
 import io.github.luminion.velo.trace.TraceData;
 import io.github.luminion.velo.trace.TraceScopeManager;
-
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.MDC;
 
-/** 验证任务日志入口的独立链路根作用域和上下文恢复。 */
+/**
+ * 验证任务日志入口的独立链路根作用域和上下文恢复。
+ */
 class SourceLogAspectSupportTest {
     @AfterEach
     void clear() {
@@ -38,7 +42,7 @@ class SourceLogAspectSupportTest {
         VeloProperties p = new VeloProperties();
         List<InvocationLogRecord> records = new ArrayList<>();
         List<String> traces = new ArrayList<>();
-        p.getLog().getSources().getScheduled().getSlowLog().setThreshold(0L);
+        p.getLog().getSources().getScheduled().setDefaultAnnotation(TimingPreset.class);
         ScheduledLogAspect aspect =
                 new ScheduledLogAspect(
                         p,
@@ -155,5 +159,10 @@ class SourceLogAspectSupportTest {
     static class Task {
         public void execute(String payload) {
         }
+    }
+    @Retention(RetentionPolicy.RUNTIME)
+    @CostLog
+    @SlowLog(threshold = 0)
+    @interface TimingPreset {
     }
 }

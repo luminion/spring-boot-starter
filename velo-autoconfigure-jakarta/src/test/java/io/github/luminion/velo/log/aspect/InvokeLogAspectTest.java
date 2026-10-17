@@ -4,21 +4,23 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.luminion.velo.VeloProperties;
-import io.github.luminion.velo.log.core.InvocationLogEngine;
-import io.github.luminion.velo.log.core.InvocationLogFeature;
-import io.github.luminion.velo.log.core.InvocationLogRecord;
-import io.github.luminion.velo.log.InvocationLogWriter;
-import io.github.luminion.velo.log.LogValueFormatter;
 import io.github.luminion.velo.log.annotation.ExitArgs;
-import io.github.luminion.velo.log.annotation.InvokeLog;
 import io.github.luminion.velo.log.annotation.LogIgnore;
+import io.github.luminion.velo.log.annotation.composed.InvokeLog;
+import io.github.luminion.velo.log.core.InvocationLogEngine;
+import io.github.luminion.velo.log.model.InvocationLogFeature;
+import io.github.luminion.velo.log.model.InvocationLogRecord;
+import io.github.luminion.velo.log.spi.InvocationLogWriter;
+import io.github.luminion.velo.log.spi.LogValueFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.aop.aspectj.annotation.AspectJProxyFactory;
 
-/** 验证调用日志切面对方法结果、异常和参数的记录行为。 */
+/**
+ * 验证调用日志切面对方法结果、异常和参数的记录行为。
+ */
 class InvokeLogAspectTest {
 
   @Test

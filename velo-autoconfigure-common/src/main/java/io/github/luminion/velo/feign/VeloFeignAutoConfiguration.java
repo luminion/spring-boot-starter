@@ -1,9 +1,9 @@
 package io.github.luminion.velo.feign;
 
 import io.github.luminion.velo.VeloProperties;
-import io.github.luminion.velo.log.core.InvocationLogEngine;
 import io.github.luminion.velo.log.config.VeloLogAutoConfiguration;
-import io.github.luminion.velo.log.condition.ConditionalOnInvocationAdapter;
+import io.github.luminion.velo.log.config.condition.ConditionalOnInvocationAdapter;
+import io.github.luminion.velo.log.core.InvocationLogEngine;
 import io.github.luminion.velo.trace.TraceScopeManager;
 import io.github.luminion.velo.trace.VeloTraceAutoConfiguration;
 import org.springframework.beans.factory.ObjectProvider;
@@ -12,6 +12,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
+import org.springframework.core.env.Environment;
 
 /**
  * Feign 调试日志自动配置。
@@ -30,8 +31,8 @@ public class VeloFeignAutoConfiguration {
     @ConditionalOnInvocationAdapter(source = "feign")
     public FeignLogAspect feignLogAspect(VeloProperties properties,
                                          ObjectProvider<InvocationLogEngine> engine,
-                                         ObjectProvider<TraceScopeManager> trace) {
-        return new FeignLogAspect(engine.getIfAvailable(), trace.getIfAvailable(), properties.getAspectOrder().getFeignLog());
+                                         ObjectProvider<TraceScopeManager> trace, Environment environment) {
+        return new FeignLogAspect(engine.getIfAvailable(), trace.getIfAvailable(), properties.getAspectOrder().getFeignLog(), environment);
     }
 
     @Bean

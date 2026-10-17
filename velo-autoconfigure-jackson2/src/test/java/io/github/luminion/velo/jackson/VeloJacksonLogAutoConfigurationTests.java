@@ -1,20 +1,19 @@
 package io.github.luminion.velo.jackson;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.github.luminion.velo.log.LogValueFormatter;
-import io.github.luminion.velo.log.core.InvocationLogSupport;
+import io.github.luminion.velo.log.spi.LogValueFormatter;
+import io.github.luminion.velo.log.support.InvocationLogSupport;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
-
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 class VeloJacksonLogAutoConfigurationTests {
     @Test

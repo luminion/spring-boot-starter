@@ -37,3 +37,5 @@ build/
 AGENTS.md
 CLAUDE.md
 /plans/*
+docs
+CONTEXT.md

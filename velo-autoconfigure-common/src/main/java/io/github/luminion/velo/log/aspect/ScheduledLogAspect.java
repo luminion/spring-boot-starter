@@ -2,7 +2,7 @@ package io.github.luminion.velo.log.aspect;
 
 import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.log.core.InvocationLogEngine;
-import io.github.luminion.velo.log.core.InvocationLogSource;
+import io.github.luminion.velo.log.model.InvocationLogSource;
 import io.github.luminion.velo.trace.TraceScopeManager;
 import io.github.luminion.velo.trace.W3cTraceContextResolver;
 import org.aspectj.lang.ProceedingJoinPoint;

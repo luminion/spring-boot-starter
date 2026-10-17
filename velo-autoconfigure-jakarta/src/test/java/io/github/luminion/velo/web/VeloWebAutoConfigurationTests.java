@@ -7,19 +7,17 @@ import static org.mockito.Mockito.when;
 
 import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.core.VeloCoreAutoConfiguration;
-import io.github.luminion.velo.log.core.InvocationLogEngine;
-import io.github.luminion.velo.log.core.InvocationLogFeature;
-import io.github.luminion.velo.log.core.InvocationLogRecord;
-import io.github.luminion.velo.log.LogValueFormatter;
 import io.github.luminion.velo.log.config.VeloLogAutoConfiguration;
+import io.github.luminion.velo.log.core.InvocationLogEngine;
+import io.github.luminion.velo.log.model.InvocationLogFeature;
+import io.github.luminion.velo.log.model.InvocationLogRecord;
+import io.github.luminion.velo.log.spi.LogValueFormatter;
 import io.github.luminion.velo.trace.HeaderTraceContextResolver;
 import io.github.luminion.velo.trace.VeloTraceAutoConfiguration;
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.ServletException;
-
 import java.util.ArrayList;
 import java.util.List;
-
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.junit.jupiter.api.AfterEach;
@@ -228,7 +226,9 @@ class VeloWebAutoConfigurationTests {
         assertThat(records.get(1).getFeature()).isEqualTo(InvocationLogFeature.EXIT_RESULT);
         assertThat(records.get(1).getTarget()).isEqualTo(records.get(0).getTarget());
         assertThat(records.get(1).getContent()).contains("done");
-        assertThat(records.get(0).getTarget()).contains("GET /users/{id}").doesNotContain("secret");
+        assertThat(records.get(0).getTarget()).isEqualTo("find()");
+        assertThat(records.get(0).getContextContent()).contains("method=GET", "route=/users/{id}")
+                .doesNotContain("secret");
         assertThat(records.get(0).getContent()).contains("id=1");
     }
 

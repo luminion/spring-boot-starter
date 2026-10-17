@@ -1,5 +1,4 @@
-package io.github.luminion.velo.log.core;
-
+package io.github.luminion.velo.log.support;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -10,10 +9,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-
 import org.junit.jupiter.api.Test;
 
-/** 验证调用日志格式化、序列化失败和单行安全处理。 */
+/**
+ * 验证调用日志格式化、序列化失败和单行安全处理。
+ */
 class InvocationLogSupportTest {
     @Test
     void formatsNullAndFullCustomText() {

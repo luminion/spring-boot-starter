@@ -1,11 +1,15 @@
 package io.github.luminion.velo.log.config;
 
-import io.github.luminion.velo.log.core.InvocationLogEngine;
-import io.github.luminion.velo.log.InvocationLogWriter;
-import io.github.luminion.velo.log.LogValueFormatter;
-
 import io.github.luminion.velo.VeloProperties;
-import io.github.luminion.velo.log.support.Slf4JInvocationLogWriter;
+import io.github.luminion.velo.log.core.InvocationLogEngine;
+import io.github.luminion.velo.log.spi.InvocationLogContextFormatter;
+import io.github.luminion.velo.log.spi.InvocationLogHandler;
+import io.github.luminion.velo.log.spi.InvocationLogWriter;
+import io.github.luminion.velo.log.spi.LogValueFormatter;
+import io.github.luminion.velo.log.writer.Slf4JInvocationLogWriter;
+import java.util.List;
+import java.util.stream.Collectors;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -13,7 +17,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 
 /**
- * 共用同步调用日志引擎、对象转换和输出；不负责链路上下文。
+ * 共用调用协调器及扩展接入；按功能、按入口分别替换默认处理器。
  */
 @AutoConfiguration(afterName = {
         "org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration",
@@ -37,25 +41,11 @@ public class VeloLogAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public InvocationLogEngine invocationLogEngine(VeloProperties properties, LogValueFormatter formatter, InvocationLogWriter writer) {
-        int maxPayloadLength = properties.getLog().getDefaults().getMaxPayloadLength();
-        if (maxPayloadLength != -1 && maxPayloadLength != 0) {
-            throw new IllegalArgumentException(
-                    "velo.log.defaults.max-payload-length only supports -1 (unlimited) or 0 (disabled)");
-        }
-        validateThreshold(properties.getLog().getDefaults().getSlowLog());
-        VeloProperties.InvocationSources sources = properties.getLog().getSources();
-        validateThreshold(sources.getController().getSlowLog());
-        validateThreshold(sources.getFeign().getSlowLog());
-        validateThreshold(sources.getAnnotation().getSlowLog());
-        validateThreshold(sources.getScheduled().getSlowLog());
-        validateThreshold(sources.getXxlJob().getSlowLog());
-        return new InvocationLogEngine(properties, formatter, writer);
-    }
-
-    private void validateThreshold(VeloProperties.SlowLogProperties value) {
-        if (value.getThreshold() != null && value.getThreshold() < 0) {
-            throw new IllegalArgumentException("SlowLog threshold must be zero or greater");
-        }
+    public InvocationLogEngine invocationLogEngine(VeloProperties properties, LogValueFormatter formatter,
+            InvocationLogWriter writer, ObjectProvider<InvocationLogHandler> handlers,
+            ObjectProvider<InvocationLogContextFormatter> contexts) {
+        List<InvocationLogHandler> customHandlers = handlers.stream().collect(Collectors.toList());
+        List<InvocationLogContextFormatter> customContexts = contexts.stream().collect(Collectors.toList());
+        return new InvocationLogEngine(properties, formatter, writer, customHandlers, customContexts);
     }
 }

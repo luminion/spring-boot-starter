@@ -14,7 +14,9 @@ import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 
 @ExtendWith(OutputCaptureExtension.class)
-/** 验证配置告警对默认值、禁用功能和无效值的处理。 */
+/**
+ * 验证配置告警对默认值、禁用功能和无效值的处理。
+ */
 class VeloPropertiesWarningLoggerTests {
 
     private final ApplicationContextRunner contextRunner =
@@ -52,7 +54,6 @@ class VeloPropertiesWarningLoggerTests {
         properties.getLock().setPrefix("");
         properties.getCache().setSeparator(" ");
         properties.getLog().getTrace().setMdcKey(" ");
-        properties.getLog().getDefaults().setMaxPayloadLength(-2);
         properties.getJackson().setEnumNameSuffix("");
         properties.getJackson().getEnumMappings().put("", "name");
         properties.getWeb().getCors().setEnabled(true);
@@ -68,7 +69,6 @@ class VeloPropertiesWarningLoggerTests {
                 .anySatisfy(warning -> assertThat(warning).contains("velo.idempotent.prefix"))
                 .anySatisfy(warning -> assertThat(warning).contains("velo.rate-limit.prefix"))
                 .anySatisfy(warning -> assertThat(warning).contains("velo.lock.prefix"))
-                .anySatisfy(warning -> assertThat(warning).contains("velo.log.defaults.max-payload-length"))
                 .anySatisfy(warning -> assertThat(warning).contains("velo.jackson.enum-name-suffix"))
                 .anySatisfy(warning -> assertThat(warning).contains("velo.jackson.enum-mappings"))
                 .anySatisfy(

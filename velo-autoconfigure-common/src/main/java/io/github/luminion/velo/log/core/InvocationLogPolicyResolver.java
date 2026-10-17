@@ -1,216 +1,89 @@
 package io.github.luminion.velo.log.core;
 
-
 import io.github.luminion.velo.VeloProperties;
-import io.github.luminion.velo.log.core.InvocationLogMetadata.FeatureOverride;
-import io.github.luminion.velo.log.core.InvocationLogMetadata.Metadata;
-import java.util.Collections;
+import io.github.luminion.velo.log.annotation.CostLog;
+import io.github.luminion.velo.log.annotation.ErrorLog;
+import io.github.luminion.velo.log.annotation.SlowLog;
+import io.github.luminion.velo.log.annotation.composed.InvokeLog;
+import io.github.luminion.velo.log.model.InvocationLogFeature;
+import io.github.luminion.velo.log.model.InvocationLogPolicy;
+import io.github.luminion.velo.log.model.InvocationLogSource;
+import io.github.luminion.velo.log.model.LogInvocation;
+import java.lang.annotation.Annotation;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.util.EnumMap;
-import java.util.List;
 import java.util.Map;
-
 import lombok.RequiredArgsConstructor;
-import org.springframework.boot.logging.LogLevel;
 
 /**
- * 按目标类缓存静态方法元数据；每次调用重新读取来源和全局配置。
+ * 默认组合与显式完整声明按功能覆盖；配置只控制入口和默认组合选择。
  */
 final class InvocationLogPolicyResolver {
     private final VeloProperties properties;
 
     InvocationLogPolicyResolver(VeloProperties properties) {
         this.properties = properties;
+        validate(properties.getLog().getSources().getController());
+        validate(properties.getLog().getSources().getFeign());
+        validate(properties.getLog().getSources().getScheduled());
+        validate(properties.getLog().getSources().getXxlJob());
+    }
+
+    private void validate(VeloProperties.InvocationAutoSourceProperties source) {
+        Class<? extends Annotation> type = source.getDefaultAnnotation();
+        if (type != null) {
+            InvocationLogMetadata.preset(type);
+        }
     }
 
     Selection resolve(LogInvocation invocation) {
-        Metadata metadata = InvocationLogMetadata.get(invocation.getMethod(), invocation.getTargetClass());
+        InvocationLogMetadata.Metadata metadata =
+                InvocationLogMetadata.get(invocation.getMethod(), invocation.getTargetClass());
         VeloProperties.InvocationSourceProperties source = source(invocation.getSource());
-        boolean ignored = metadata.ignored || !properties.getLog().isEnabled() || !source.isEnabled();
-        Map<InvocationLogFeature, FeaturePolicy> policies = new EnumMap<>(InvocationLogFeature.class);
-        if (!ignored) {
-            for (InvocationLogFeature feature : InvocationLogFeature.values()) {
-                FeatureOverride annotation = metadata.annotations.get(feature);
-                InvocationLogSource baseline = metadata.profile ? InvocationLogSource.CONTROLLER : invocation.getSource();
-                FeatureSettings settings = configured(baseline, feature, source);
-                boolean selected = invocation.getSource() != InvocationLogSource.ANNOTATION
-                        || metadata.profile || annotation != null;
-                if (annotation != null) {
-                    settings.enabled = annotation.enabled;
-                    if (annotation.level != null) {
-                        settings.level = annotation.level;
-                    }
-                    if (annotation.threshold != null) {
-                        settings.threshold = annotation.threshold;
-                    }
-                    if (annotation.allowlist != null) {
-                        settings.allowlist = annotation.allowlist;
-                    }
+        Map<InvocationLogFeature, InvocationLogPolicy> policies = new EnumMap<>(InvocationLogFeature.class);
+        if (!metadata.ignored && properties.getLog().isEnabled() && source.isEnabled()) {
+            if (source instanceof VeloProperties.InvocationAutoSourceProperties) {
+                Class<? extends Annotation> type =
+                        ((VeloProperties.InvocationAutoSourceProperties) source).getDefaultAnnotation();
+                if (type == null) {
+                    boolean httpSource = invocation.getSource() == InvocationLogSource.CONTROLLER
+                            || invocation.getSource() == InvocationLogSource.FEIGN;
+                    type = httpSource ? InvokeLog.class : TaskDefaults.class;
                 }
-                policies.put(feature, new FeaturePolicy(selected && settings.enabled,
-                        settings.level, settings.threshold, settings.allowlist));
+                policies.putAll(InvocationLogMetadata.preset(type));
             }
+            policies.putAll(metadata.annotations);
         }
-        return new Selection(
-                metadata, policies, properties.getLog().getDefaults().getMaxPayloadLength() != 0);
-    }
-
-    private FeatureSettings configured(
-            InvocationLogSource origin,
-            InvocationLogFeature feature,
-            VeloProperties.InvocationSourceProperties source) {
-        VeloProperties.InvocationDefaults defaults = properties.getLog().getDefaults();
-        VeloProperties.LogFeatureProperties local = feature(source, feature);
-        VeloProperties.LogFeatureProperties global = feature(defaults, feature);
-        boolean enabled = builtinEnabled(origin, feature);
-        LogLevel level =
-                feature == InvocationLogFeature.SLOW_LOG || feature == InvocationLogFeature.ERROR_LOG
-                        ? LogLevel.WARN
-                        : LogLevel.INFO;
-        if (global.getEnabled() != null) {
-            enabled = global.getEnabled();
-        }
-        if (global.getLevel() != null) {
-            level = global.getLevel();
-        }
-        if (local.getEnabled() != null) {
-            enabled = local.getEnabled();
-        }
-        if (local.getLevel() != null) {
-            level = local.getLevel();
-        }
-        long threshold = 1000;
-        List<String> allowlist = Collections.emptyList();
-        if (feature == InvocationLogFeature.SLOW_LOG) {
-            Long inherited = ((VeloProperties.SlowLogProperties) global).getThreshold();
-            Long explicit = ((VeloProperties.SlowLogProperties) local).getThreshold();
-            if (inherited != null) {
-                threshold = inherited;
-            }
-            if (explicit != null) {
-                threshold = explicit;
-            }
-        } else if (feature == InvocationLogFeature.REQUEST_HEADERS
-                || feature == InvocationLogFeature.RESPONSE_HEADERS) {
-            List<String> inherited = ((VeloProperties.HeaderCaptureProperties) global).getAllowlist();
-            List<String> explicit = ((VeloProperties.HeaderCaptureProperties) local).getAllowlist();
-            if (inherited != null) {
-                allowlist = inherited;
-            }
-            if (explicit != null) {
-                allowlist = explicit;
-            }
-        }
-        return new FeatureSettings(enabled, level, threshold, allowlist);
-    }
-
-    private boolean builtinEnabled(InvocationLogSource source, InvocationLogFeature feature) {
-        switch (feature) {
-            case ENTRY_ARGS:
-            case EXIT_RESULT:
-                return source == InvocationLogSource.CONTROLLER
-                        || source == InvocationLogSource.FEIGN
-                        || source == InvocationLogSource.ANNOTATION;
-            case COST_LOG:
-            case SLOW_LOG:
-            case ERROR_LOG:
-                return true;
-            default:
-                return false;
-        }
-    }
-
-    private VeloProperties.LogFeatureProperties feature(
-            VeloProperties.InvocationDefaults p, InvocationLogFeature f) {
-        switch (f) {
-            case ENTRY_ARGS:
-                return p.getEntryArgs();
-            case EXIT_ARGS:
-                return p.getExitArgs();
-            case EXIT_RESULT:
-                return p.getExitResult();
-            case COST_LOG:
-                return p.getCostLog();
-            case SLOW_LOG:
-                return p.getSlowLog();
-            case REQUEST_HEADERS:
-                return p.getRequestHeaders();
-            case RESPONSE_HEADERS:
-                return p.getResponseHeaders();
-            default:
-                return p.getErrorLog();
-        }
-    }
-
-    private VeloProperties.LogFeatureProperties feature(
-            VeloProperties.InvocationSourceProperties p, InvocationLogFeature f) {
-        switch (f) {
-            case ENTRY_ARGS:
-                return p.getEntryArgs();
-            case EXIT_ARGS:
-                return p.getExitArgs();
-            case EXIT_RESULT:
-                return p.getExitResult();
-            case COST_LOG:
-                return p.getCostLog();
-            case SLOW_LOG:
-                return p.getSlowLog();
-            case REQUEST_HEADERS:
-                return p.getRequestHeaders();
-            case RESPONSE_HEADERS:
-                return p.getResponseHeaders();
-            default:
-                return p.getErrorLog();
-        }
+        return new Selection(metadata, policies);
     }
 
     private VeloProperties.InvocationSourceProperties source(InvocationLogSource source) {
-        VeloProperties.InvocationSources p = properties.getLog().getSources();
+        VeloProperties.InvocationSources sources = properties.getLog().getSources();
         switch (source) {
             case CONTROLLER:
-                return p.getController();
+                return sources.getController();
             case FEIGN:
-                return p.getFeign();
+                return sources.getFeign();
             case SCHEDULED:
-                return p.getScheduled();
+                return sources.getScheduled();
             case XXL_JOB:
-                return p.getXxlJob();
+                return sources.getXxlJob();
             default:
-                return p.getAnnotation();
+                return sources.getAnnotation();
         }
     }
 
-    private static final class FeatureSettings {
-        boolean enabled;
-        LogLevel level;
-        long threshold;
-        List<String> allowlist;
-
-        FeatureSettings(boolean enabled, LogLevel level, long threshold, List<String> allowlist) {
-            this.enabled = enabled;
-            this.level = level;
-            this.threshold = threshold;
-            this.allowlist = allowlist;
-        }
+    @CostLog
+    @SlowLog
+    @ErrorLog
+    @Retention(RetentionPolicy.RUNTIME)
+    private @interface TaskDefaults {
     }
 
     @RequiredArgsConstructor
     static class Selection {
-        final Metadata metadata;
-        final Map<InvocationLogFeature, FeaturePolicy> policies;
-        final boolean payloadEnabled;
-    }
-
-    static class FeaturePolicy {
-        final boolean enabled;
-        final LogLevel level;
-        final long threshold;
-        final List<String> allowlist;
-
-        FeaturePolicy(boolean enabled, LogLevel level, long threshold, List<String> allowlist) {
-            this.enabled = enabled && level != LogLevel.OFF;
-            this.level = level;
-            this.threshold = threshold;
-            this.allowlist = Collections.unmodifiableList(new java.util.ArrayList<>(allowlist));
-        }
+        final InvocationLogMetadata.Metadata metadata;
+        final Map<InvocationLogFeature, InvocationLogPolicy> policies;
     }
 }

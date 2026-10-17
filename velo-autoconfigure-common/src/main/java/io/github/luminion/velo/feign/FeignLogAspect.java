@@ -2,20 +2,21 @@ package io.github.luminion.velo.feign;
 
 import io.github.luminion.velo.core.VeloAdvisorOrder;
 import io.github.luminion.velo.log.core.InvocationLogEngine;
-import io.github.luminion.velo.log.core.InvocationLogSource;
-import io.github.luminion.velo.log.core.InvocationLogSupport;
-import io.github.luminion.velo.log.core.LogInvocation;
+import io.github.luminion.velo.log.model.InvocationLogContext;
+import io.github.luminion.velo.log.model.InvocationLogSource;
+import io.github.luminion.velo.log.model.LogInvocation;
+import io.github.luminion.velo.log.support.InvocationLogSupport;
 import io.github.luminion.velo.trace.TraceContext;
 import io.github.luminion.velo.trace.TraceScopeManager;
-
 import java.lang.reflect.Method;
-
 import lombok.Getter;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.aop.support.AopUtils;
 import org.springframework.core.Ordered;
+import org.springframework.core.env.Environment;
 import org.springframework.util.ReflectionUtils;
 
 /**
@@ -25,6 +26,7 @@ import org.springframework.util.ReflectionUtils;
 public class FeignLogAspect implements Ordered {
     private final InvocationLogEngine engine;
     private final TraceScopeManager trace;
+    private final Environment environment;
     @Getter
     private final int order;
 
@@ -37,9 +39,14 @@ public class FeignLogAspect implements Ordered {
     }
 
     public FeignLogAspect(InvocationLogEngine engine, TraceScopeManager trace, int order) {
+        this(engine, trace, order, null);
+    }
+
+    public FeignLogAspect(InvocationLogEngine engine, TraceScopeManager trace, int order, Environment environment) {
         this.engine = engine;
         this.trace = trace;
         this.order = order;
+        this.environment = environment;
     }
 
     @Around("execution(" +
@@ -57,12 +64,26 @@ public class FeignLogAspect implements Ordered {
                 return point.proceed();
             }
             FeignRequestMetadata metadata = FeignClientMetadataResolver.resolveRequestMetadata(method);
-            String target = FeignLogSupport.buildInvocationTarget(method, metadata);
+            String target = method.getName() + "()";
+            Class<?> type = point.getTarget() == null ? method.getDeclaringClass() : AopUtils.getTargetClass(point.getTarget());
+            String rawClient = FeignClientMetadataResolver.resolveClientAttribute(type, "name");
+            String client = resolve(rawClient);
+            if (client.isEmpty()) {
+                String rawValue = FeignClientMetadataResolver.resolveClientAttribute(type, "value");
+                client = resolve(rawValue);
+            }
+            String rawContextId = FeignClientMetadataResolver.resolveClientAttribute(type, "contextId");
+            String contextId = resolve(rawContextId);
+            String clientName = client;
+            String clientContextId = contextId.isEmpty() ? client : contextId;
             FeignInvocationContext context = FeignInvocationContext.open();
             try {
                 LogInvocation invocation = InvocationLogSupport.invocation(point, InvocationLogSource.FEIGN, target);
                 LogInvocation.LogInvocationBuilder invocationBuilder = invocation.toBuilder();
                 LogInvocation logInvocation = invocationBuilder
+                        .context(() -> InvocationLogContext.builder().clientName(clientName).contextId(clientContextId)
+                                .httpMethod(metadata.getHttpMethod()).path(metadata.getPath())
+                                .instanceAddress(context.getInstanceAddress()).build())
                         .requestHeaders(context::getRequestHeaders)
                         .responseHeaders(context::getResponseHeaders)
                         .build();
@@ -71,5 +92,8 @@ public class FeignLogAspect implements Ordered {
                 FeignInvocationContext.close();
             }
         }
+    }
+    private String resolve(String value) {
+        return environment == null ? value : environment.resolvePlaceholders(value);
     }
 }

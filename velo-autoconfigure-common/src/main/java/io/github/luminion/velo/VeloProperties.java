@@ -1,5 +1,10 @@
 package io.github.luminion.velo;
 
+import java.util.Date;
+
+import io.github.luminion.velo.log.annotation.composed.InvokeLog;
+import java.lang.annotation.Annotation;
+
 import io.github.luminion.velo.core.VeloAdvisorOrder;
 import io.github.luminion.velo.xss.XssStrategy;
 
@@ -11,7 +16,6 @@ import java.util.Map;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.logging.LogLevel;
 
 /**
  * Velo 的统一配置属性。
@@ -279,7 +283,7 @@ public class VeloProperties {
             private boolean bigDecimalEnabled = true;
 
             /**
-             * 是否启用 java.util.Date 类型的 Excel 转换器。
+             * 是否启用 Date 类型的 Excel 转换器。
              */
             private boolean dateEnabled = true;
 
@@ -366,143 +370,38 @@ public class VeloProperties {
         private boolean enabled = true;
 
         /**
-         * 旧版 trace 配置入口；运行时独立绑定 velo.trace，新配置逐项优先于这里的值。
+         * 旧版 trace 配置入口；运行时独立绑定 velo.trace。
          */
         private TraceProperties trace = new TraceProperties();
 
         /**
-         * 全局默认配置；来源可覆盖，注解优先。
-         */
-        private InvocationDefaults defaults = new InvocationDefaults();
-
-        /**
-         * 各调用入口的日志配置。
+         * 各入口的开关及默认功能组合。
          */
         private InvocationSources sources = new InvocationSources();
     }
 
     @Data
-    public static class LogFeatureProperties {
-        /**
-         * 未配置时继承全局或内置默认值。
-         */
-        private Boolean enabled;
-
-        /**
-         * 未配置时继承全局或内置默认级别。
-         */
-        private LogLevel level;
-    }
-
-    @Data
-    @EqualsAndHashCode(callSuper = true)
-    public static class SlowLogProperties extends LogFeatureProperties {
-        /**
-         * 慢调用阈值，单位毫秒；0 表示记录全部耗时。
-         */
-        private Long threshold;
-    }
-
-    @Data
-    @EqualsAndHashCode(callSuper = true)
-    public static class HeaderCaptureProperties extends LogFeatureProperties {
-        /**
-         * 允许采集的头名称；空列表表示全部头。
-         */
-        private List<String> allowlist;
-    }
-
-    @Data
-    public static class InvocationDefaults {
-
-        /**
-         * 默认 -1 完整输出，0 关闭对象载荷；不支持字符截断，其他值会在日志引擎启动时报错。
-         */
-        private int maxPayloadLength = -1;
-
-        /**
-         * 调用开始时记录方法入参的默认策略。
-         */
-        private LogFeatureProperties entryArgs = new LogFeatureProperties();
-
-        /**
-         * 方法调用完成时记录方法出参的默认策略。
-         */
-        private LogFeatureProperties exitArgs = new LogFeatureProperties();
-
-        /**
-         * 方法正常返回时记录返回值的默认策略。
-         */
-        private LogFeatureProperties exitResult = new LogFeatureProperties();
-
-        /**
-         * 当前调用结束时的耗时日志，默认开启且使用 INFO；不受慢调用阈值影响。
-         */
-        private LogFeatureProperties costLog = defaultCostLog();
-
-        /**
-         * 超过阈值时记录慢调用的默认策略。
-         */
-        private SlowLogProperties slowLog = defaultSlowLog();
-
-        /**
-         * 调用入口提供请求头时，记录请求头的默认策略。
-         */
-        private HeaderCaptureProperties requestHeaders = new HeaderCaptureProperties();
-
-        /**
-         * 调用入口提供响应头时，记录响应头的默认策略。
-         */
-        private HeaderCaptureProperties responseHeaders = new HeaderCaptureProperties();
-
-        /**
-         * 方法抛出异常时记录异常摘要的默认策略。
-         */
-        private LogFeatureProperties errorLog = new LogFeatureProperties();
-
-        private static LogFeatureProperties defaultCostLog() {
-            LogFeatureProperties value = new LogFeatureProperties();
-            value.setEnabled(true);
-            value.setLevel(LogLevel.INFO);
-            return value;
-        }
-
-        private static SlowLogProperties defaultSlowLog() {
-            SlowLogProperties value = new SlowLogProperties();
-            value.setEnabled(true);
-            value.setLevel(LogLevel.WARN);
-            value.setThreshold(1000L);
-            return value;
-        }
-    }
-
-    @Data
     public static class InvocationSources {
-
         /**
-         * Controller 调用日志配置。
+         * Controller 自动入口。
          */
-        private InvocationSourceProperties controller = new InvocationSourceProperties();
-
+        private InvocationAutoSourceProperties controller = new InvocationAutoSourceProperties(InvokeLog.class);
         /**
-         * Feign 调用日志配置。
+         * Feign 自动入口。
          */
-        private InvocationSourceProperties feign = new InvocationSourceProperties();
-
+        private InvocationAutoSourceProperties feign = new InvocationAutoSourceProperties(InvokeLog.class);
         /**
-         * 普通方法注解调用日志配置。
+         * 显式功能注解入口，不隐式附加其他功能。
          */
         private InvocationSourceProperties annotation = new InvocationSourceProperties();
-
         /**
-         * XXL-Job 调用日志配置。
+         * XXL-Job 自动入口；未指定组合时使用任务默认功能。
          */
-        private InvocationSourceProperties xxlJob = new InvocationSourceProperties();
-
+        private InvocationAutoSourceProperties xxlJob = new InvocationAutoSourceProperties();
         /**
-         * Spring 定时任务调用日志配置。
+         * Scheduled 自动入口；未指定组合时使用任务默认功能。
          */
-        private InvocationSourceProperties scheduled = new InvocationSourceProperties();
+        private InvocationAutoSourceProperties scheduled = new InvocationAutoSourceProperties();
     }
 
     @Data
@@ -542,49 +441,25 @@ public class VeloProperties {
     @Data
     public static class InvocationSourceProperties {
         /**
-         * 是否启用来源日志；关闭后注解不能重新开启。
+         * 是否启用来源日志；关闭后功能注解不能重新开启。
          */
         private boolean enabled = true;
+    }
 
+    @Data
+    @EqualsAndHashCode(callSuper = true)
+    public static class InvocationAutoSourceProperties extends InvocationSourceProperties {
         /**
-         * 当前来源调用开始时记录方法入参的策略。
+         * 默认功能组合注解类型；仅使用注解定义值和默认值。
          */
-        private LogFeatureProperties entryArgs = new LogFeatureProperties();
+        private Class<? extends Annotation> defaultAnnotation;
 
-        /**
-         * 当前来源方法调用完成时记录方法出参的策略。
-         */
-        private LogFeatureProperties exitArgs = new LogFeatureProperties();
+        public InvocationAutoSourceProperties() {
+        }
 
-        /**
-         * 当前来源方法正常返回时记录返回值的策略。
-         */
-        private LogFeatureProperties exitResult = new LogFeatureProperties();
-
-        /**
-         * 当前来源的耗时日志设置；未配置时继承全局默认值。
-         */
-        private LogFeatureProperties costLog = new LogFeatureProperties();
-
-        /**
-         * 当前来源超过阈值时记录慢调用的策略。
-         */
-        private SlowLogProperties slowLog = new SlowLogProperties();
-
-        /**
-         * 当前来源具备请求头时记录请求头的策略。
-         */
-        private HeaderCaptureProperties requestHeaders = new HeaderCaptureProperties();
-
-        /**
-         * 当前来源具备响应头时记录响应头的策略。
-         */
-        private HeaderCaptureProperties responseHeaders = new HeaderCaptureProperties();
-
-        /**
-         * 当前来源方法抛出异常时记录异常摘要的策略。
-         */
-        private LogFeatureProperties errorLog = new LogFeatureProperties();
+        public InvocationAutoSourceProperties(Class<? extends Annotation> defaultAnnotation) {
+            this.defaultAnnotation = defaultAnnotation;
+        }
     }
 
     @Data

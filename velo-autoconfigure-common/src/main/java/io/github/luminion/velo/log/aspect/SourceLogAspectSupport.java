@@ -2,8 +2,8 @@ package io.github.luminion.velo.log.aspect;
 
 import io.github.luminion.velo.core.VeloAdvisorOrder;
 import io.github.luminion.velo.log.core.InvocationLogEngine;
-import io.github.luminion.velo.log.core.InvocationLogSource;
-import io.github.luminion.velo.log.core.InvocationLogSupport;
+import io.github.luminion.velo.log.model.InvocationLogSource;
+import io.github.luminion.velo.log.support.InvocationLogSupport;
 import io.github.luminion.velo.trace.TraceContext;
 import io.github.luminion.velo.trace.TraceScopeManager;
 import lombok.Getter;

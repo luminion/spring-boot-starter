@@ -1,21 +1,47 @@
-package io.github.luminion.velo.log.support;
+package io.github.luminion.velo.log.writer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.github.luminion.velo.log.core.InvocationLogFeature;
-import io.github.luminion.velo.log.core.InvocationLogRecord;
-import io.github.luminion.velo.log.core.InvocationLogSource;
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import io.github.luminion.velo.log.model.InvocationLogFeature;
+import io.github.luminion.velo.log.model.InvocationLogRecord;
+import io.github.luminion.velo.log.model.InvocationLogSource;
+import io.github.luminion.velo.log.model.LogPolicyLevel;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-import org.springframework.boot.logging.LogLevel;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 
 @ExtendWith(OutputCaptureExtension.class)
-/** 验证日志输出器的功能记录格式、异常摘要和来源标识。 */
+/**
+ * 验证日志输出器的功能记录格式、异常摘要和来源标识。
+ */
 class Slf4JInvocationLogWriterTest {
+    @ParameterizedTest
+    @EnumSource(value = LogPolicyLevel.class, names = "OFF", mode = EnumSource.Mode.EXCLUDE)
+    void writesEachExplicitLevelThroughSlf4j(LogPolicyLevel level, CapturedOutput output) {
+        String loggerName = getClass().getName() + ".levels";
+        Logger logger = (Logger) LoggerFactory.getLogger(loggerName);
+        Level previousLevel = logger.getLevel();
+        logger.setLevel(Level.TRACE);
+        try {
+            InvocationLogRecord record = record(InvocationLogFeature.COST_LOG);
+            record.setLoggerName(loggerName);
+            record.setLevel(level);
+            record.setContent("explicit-" + level);
+
+            new Slf4JInvocationLogWriter().write(record);
+
+            assertThat(output.getOut()).contains(" " + level + " ", "cost=explicit-" + level);
+        } finally {
+            logger.setLevel(previousLevel);
+        }
+    }
+
     @Test
     void writesOneLinePerFeatureWithoutRepeatedMetadata(CapturedOutput output) {
         Slf4JInvocationLogWriter writer = new Slf4JInvocationLogWriter();
@@ -73,9 +99,21 @@ class Slf4JInvocationLogWriterTest {
     }
 
     @Test
+    void writesPublicBlockBetweenMethodAndFeatureAndEscapesControlCharacters(CapturedOutput output) {
+        InvocationLogRecord record = record(InvocationLogFeature.COST_LOG);
+        record.setSource(InvocationLogSource.CONTROLLER);
+        record.setContextContent("ip=127.0.0.1 route=/users\nforged");
+        record.setContent("5ms");
+        new Slf4JInvocationLogWriter().write(record);
+        assertThat(output.getOut())
+                .contains("[controller] [work()] [ip=127.0.0.1 route=/users\\nforged] <== cost=5ms")
+                .doesNotContain("/users\nforged");
+    }
+
+    @Test
     void offPreventsOutput(CapturedOutput output) {
         InvocationLogRecord record = record(InvocationLogFeature.ENTRY_ARGS);
-        record.setLevel(LogLevel.OFF);
+        record.setLevel(LogPolicyLevel.OFF);
         record.setContent("hidden-payload");
         Slf4JInvocationLogWriter writer = new Slf4JInvocationLogWriter();
         assertThat(writer.isEnabled(record)).isFalse();

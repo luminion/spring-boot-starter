@@ -1,9 +1,7 @@
-package io.github.luminion.velo.log.core;
-
+package io.github.luminion.velo.log.model;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.springframework.boot.logging.LogLevel;
 
 /**
  * 单功能日志的输出数据；内容已完成对象转换，链路标识由 MDC 提供。
@@ -30,9 +28,17 @@ public class InvocationLogRecord {
     /**
      * 当前日志记录的输出级别。
      */
-    private LogLevel level;
+    private LogPolicyLevel level;
     /**
      * 已格式化的日志内容。
      */
     private String content;
+    /**
+     * 当前日志产生时的公共信息快照。
+     */
+    private InvocationLogContext context;
+    /**
+     * 当前入口格式化后的公共块，不包含外层方括号。
+     */
+    private String contextContent;
 }

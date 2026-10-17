@@ -1,14 +1,18 @@
 package io.github.luminion.velo;
 
+import io.github.luminion.velo.log.annotation.composed.InvokeLog;
+import io.github.luminion.velo.xss.XssStrategy;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.github.luminion.velo.core.VeloCoreAutoConfiguration;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
-import org.springframework.boot.logging.LogLevel;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
-/** 验证核心配置属性的默认值与绑定。 */
+/**
+ * 验证核心配置属性的默认值与绑定。
+ */
 class VeloPropertiesDefaultsTest {
 
     private final ApplicationContextRunner contextRunner =
@@ -20,10 +24,6 @@ class VeloPropertiesDefaultsTest {
         VeloProperties properties = new VeloProperties();
 
         assertThat(properties.isOpinionated()).isTrue();
-        assertThat(properties.getLog().getDefaults().getEntryArgs().getLevel()).isNull();
-        assertThat(properties.getLog().getDefaults().getCostLog().getEnabled()).isTrue();
-        assertThat(properties.getLog().getDefaults().getCostLog().getLevel()).isEqualTo(LogLevel.INFO);
-        assertThat(properties.getLog().getDefaults().getSlowLog().getLevel()).isEqualTo(LogLevel.WARN);
         assertThat(properties.getSpringConverter().isDateTimeEnabled()).isTrue();
         assertThat(properties.getExcel().getConverters().isEnabled()).isTrue();
         assertThat(properties.getJackson().isSerializeLongAsString()).isTrue();
@@ -57,8 +57,6 @@ class VeloPropertiesDefaultsTest {
         assertThat(properties.getLog().getTrace().isLoggingPatternEnabled()).isTrue();
         assertThat(properties.getLog().getSources().getController().isEnabled()).isTrue();
         assertThat(properties.getLog().getSources().getFeign().isEnabled()).isTrue();
-        assertThat(properties.getLog().getDefaults().getMaxPayloadLength()).isEqualTo(-1);
-        assertThat(properties.getLog().getDefaults().getSlowLog().getThreshold()).isEqualTo(1000L);
         assertThat(properties.getAspectOrder().getIdempotent())
                 .isLessThan(properties.getAspectOrder().getRateLimit());
         assertThat(properties.getAspectOrder().getRateLimit())
@@ -73,32 +71,23 @@ class VeloPropertiesDefaultsTest {
         assertThat(properties.getWeb().getCors().isEnabled()).isFalse();
         assertThat(properties.getWeb().getCors().isAllowCredentials()).isFalse();
         assertThat(properties.getXss().getStrategy())
-                .isEqualTo(io.github.luminion.velo.xss.XssStrategy.NONE);
+                .isEqualTo(XssStrategy.NONE);
         assertThat(properties.getXss().isWebEnabled()).isTrue();
         assertThat(properties.getXss().isJacksonEnabled()).isFalse();
         assertThat(properties.getFeign().isEnabled()).isTrue();
     }
 
     @Test
-    void shouldBindCostLogAtGlobalAndEachSource() {
+    void shouldBindDefaultCompositionsAndSourceSwitches() {
         contextRunner.withPropertyValues(
-                        "velo.log.defaults.cost-log.enabled=false",
-                        "velo.log.defaults.cost-log.level=DEBUG",
-                        "velo.log.sources.controller.cost-log.enabled=true",
-                        "velo.log.sources.feign.cost-log.level=TRACE",
-                        "velo.log.sources.annotation.cost-log.enabled=false",
-                        "velo.log.sources.scheduled.cost-log.level=WARN",
-                        "velo.log.sources.xxl-job.cost-log.enabled=false")
+                "velo.log.sources.controller.default-annotation=io.github.luminion.velo.log.annotation.composed.InvokeLog",
+                "velo.log.sources.feign.enabled=false")
                 .run(context -> {
                     assertThat(context).hasNotFailed();
                     VeloProperties.LogProperties log = context.getBean(VeloProperties.class).getLog();
-                    assertThat(log.getDefaults().getCostLog().getEnabled()).isFalse();
-                    assertThat(log.getDefaults().getCostLog().getLevel()).isEqualTo(LogLevel.DEBUG);
-                    assertThat(log.getSources().getController().getCostLog().getEnabled()).isTrue();
-                    assertThat(log.getSources().getFeign().getCostLog().getLevel()).isEqualTo(LogLevel.TRACE);
-                    assertThat(log.getSources().getAnnotation().getCostLog().getEnabled()).isFalse();
-                    assertThat(log.getSources().getScheduled().getCostLog().getLevel()).isEqualTo(LogLevel.WARN);
-                    assertThat(log.getSources().getXxlJob().getCostLog().getEnabled()).isFalse();
+                    assertThat(log.getSources().getController().getDefaultAnnotation())
+                            .isEqualTo(InvokeLog.class);
+                    assertThat(log.getSources().getFeign().isEnabled()).isFalse();
                 });
     }
 

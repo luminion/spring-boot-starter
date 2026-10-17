@@ -1,36 +1,75 @@
 package io.github.luminion.velo.log.core;
 
-import io.github.luminion.velo.log.InvocationLogWriter;
-import io.github.luminion.velo.log.LogValueFormatter;
-
 import io.github.luminion.velo.VeloProperties;
-import io.github.luminion.velo.log.core.InvocationLogPolicyResolver.FeaturePolicy;
 import io.github.luminion.velo.log.core.InvocationLogPolicyResolver.Selection;
-
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.UndeclaredThrowableException;
-import java.util.LinkedHashMap;
-import java.util.List;
+import io.github.luminion.velo.log.formatter.DefaultInvocationLogContextFormatter;
+import io.github.luminion.velo.log.handler.DefaultInvocationLogHandlers;
+import io.github.luminion.velo.log.model.InvocationLogContext;
+import io.github.luminion.velo.log.model.InvocationLogEvent;
+import io.github.luminion.velo.log.model.InvocationLogFeature;
+import io.github.luminion.velo.log.model.InvocationLogPolicy;
+import io.github.luminion.velo.log.model.InvocationLogRecord;
+import io.github.luminion.velo.log.model.InvocationLogSource;
+import io.github.luminion.velo.log.model.LogInvocation;
+import io.github.luminion.velo.log.model.LogPolicyLevel;
+import io.github.luminion.velo.log.spi.InvocationLogContextFormatter;
+import io.github.luminion.velo.log.spi.InvocationLogHandler;
+import io.github.luminion.velo.log.spi.InvocationLogWriter;
+import io.github.luminion.velo.log.spi.LogValueFormatter;
+import io.github.luminion.velo.log.support.InvocationLogSupport;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.EnumMap;
+import java.util.HashSet;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
-
+import java.util.Objects;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * 共用的同步方法调用生命周期；不等待异步完成，不管理链路上下文。
+ * 共用调用协调器：业务只执行一次，统一计时和阶段顺序；功能内容由独立处理器生成。
  */
 public class InvocationLogEngine {
     private static final Logger LOGGER = LoggerFactory.getLogger(InvocationLogEngine.class);
     private final LogValueFormatter formatter;
     private final InvocationLogWriter writer;
     private final InvocationLogPolicyResolver resolver;
+    private final Map<InvocationLogFeature, InvocationLogHandler> handlers = new EnumMap<>(InvocationLogFeature.class);
+    private final Map<InvocationLogSource, InvocationLogContextFormatter> contexts = new EnumMap<>(InvocationLogSource.class);
 
     public InvocationLogEngine(VeloProperties properties, LogValueFormatter formatter, InvocationLogWriter writer) {
-        this.formatter = formatter;
-        this.writer = writer;
+        this(properties, formatter, writer, Collections.emptyList(), Collections.emptyList());
+    }
+
+    public InvocationLogEngine(VeloProperties properties, LogValueFormatter formatter, InvocationLogWriter writer,
+            Collection<? extends InvocationLogHandler> customHandlers,
+            Collection<? extends InvocationLogContextFormatter> customContexts) {
+        this.formatter = Objects.requireNonNull(formatter, "formatter");
+        this.writer = Objects.requireNonNull(writer, "writer");
         this.resolver = new InvocationLogPolicyResolver(properties);
+        for (InvocationLogHandler handler : DefaultInvocationLogHandlers.create()) {
+            handlers.put(handler.getFeature(), handler);
+        }
+        Set<InvocationLogFeature> features = new HashSet<>();
+        for (InvocationLogHandler handler : customHandlers) {
+            InvocationLogFeature feature = Objects.requireNonNull(handler.getFeature(), "handler feature");
+            if (!features.add(feature)) {
+                throw new IllegalArgumentException("Multiple custom log handlers for " + feature);
+            }
+            handlers.put(feature, handler);
+        }
+        for (InvocationLogSource source : InvocationLogSource.values()) {
+            contexts.put(source, new DefaultInvocationLogContextFormatter(source));
+        }
+        Set<InvocationLogSource> sources = new HashSet<>();
+        for (InvocationLogContextFormatter context : customContexts) {
+            InvocationLogSource source = Objects.requireNonNull(context.getSource(), "context source");
+            if (!sources.add(source)) {
+                throw new IllegalArgumentException("Multiple custom log context formatters for " + source);
+            }
+            contexts.put(source, context);
+        }
     }
 
     public Object invoke(LogInvocation invocation, InvocationExecution execution) throws Throwable {
@@ -58,7 +97,7 @@ public class InvocationLogEngine {
             Selection selection = resolver.resolve(invocation);
             return selection.policies.isEmpty() ? null : new Session(invocation, selection);
         } catch (RuntimeException error) {
-            LOGGER.warn("Cannot resolve invocation logging policy for {}", invocation.getTarget());
+            LOGGER.warn("Cannot resolve invocation logging policy for {}", invocation.getMethod().getName());
             return null;
         }
     }
@@ -73,151 +112,89 @@ public class InvocationLogEngine {
             this.selection = selection;
         }
 
+        private InvocationLogEvent event(Object result, Throwable error, long elapsed) {
+            return InvocationLogEvent.builder().invocation(invocation)
+                    .parameterNames(selection.metadata.parameterNames).voidResult(selection.metadata.voidResult)
+                    .result(result).error(error).elapsedNanos(elapsed).build();
+        }
+
         private void entry() {
-            arguments(InvocationLogFeature.ENTRY_ARGS);
+            InvocationLogEvent event = event(null, null, 0);
+            emit(InvocationLogFeature.ENTRY_ARGS, event);
             if (invocation.getSource() != InvocationLogSource.FEIGN) {
-                headers(InvocationLogFeature.REQUEST_HEADERS, invocation.getRequestHeaders());
+                emit(InvocationLogFeature.REQUEST_HEADERS, event);
             }
             start = System.nanoTime();
         }
 
-        private void finish(Object value, Throwable error) {
+        private void finish(Object result, Throwable error) {
             long elapsed = System.nanoTime() - start;
-            arguments(InvocationLogFeature.EXIT_ARGS);
+            InvocationLogEvent event = event(result, error, elapsed);
+            emit(InvocationLogFeature.EXIT_ARGS, event);
             if (error == null) {
-                result(value);
+                emit(InvocationLogFeature.EXIT_RESULT, event);
             } else {
-                error(error);
+                emit(InvocationLogFeature.ERROR_LOG, event);
             }
             if (invocation.getSource() == InvocationLogSource.FEIGN) {
-                // 实际请求头在底层请求构建后才可用；记录最终一次尝试，不重复输出。
-                headers(InvocationLogFeature.REQUEST_HEADERS, invocation.getRequestHeaders());
+                // Feign 请求头在请求构建之后才完整，继续只输出最终一次尝试。
+                emit(InvocationLogFeature.REQUEST_HEADERS, event);
             }
-            headers(InvocationLogFeature.RESPONSE_HEADERS, invocation.getResponseHeaders());
-            cost(elapsed);
-            slow(elapsed);
+            emit(InvocationLogFeature.RESPONSE_HEADERS, event);
+            emit(InvocationLogFeature.COST_LOG, event);
+            emit(InvocationLogFeature.SLOW_LOG, event);
         }
 
-        private InvocationLogRecord record(InvocationLogFeature feature) {
-            FeaturePolicy policy = selection.policies.get(feature);
-            if (policy == null || !policy.enabled) {
-                return null;
+        private void emit(InvocationLogFeature feature, InvocationLogEvent event) {
+            InvocationLogPolicy policy = selection.policies.get(feature);
+            if (policy == null || policy.getLevel() == LogPolicyLevel.OFF || policy.getMaxLength() == 0) {
+                return;
             }
             InvocationLogRecord record = new InvocationLogRecord();
-            record.setFeature(feature);
             record.setSource(invocation.getSource());
-            record.setTarget(invocation.getTarget());
+            record.setTarget(invocation.getMethod().getName() + "()");
             record.setLoggerName(invocation.getMethod().getDeclaringClass().getName());
-            record.setLevel(policy.level);
-            return InvocationLogSupport.enabled(writer, record) ? record : null;
-        }
-
-        private void arguments(InvocationLogFeature feature) {
-            InvocationLogRecord record = record(feature);
-            if (record != null && selection.payloadEnabled) {
-                Map<String, Object> values =
-                        InvocationLogSupport.arguments(
-                                selection.metadata.parameterNames, invocation.getArguments());
-                record.setContent(InvocationLogSupport.format(values, formatter));
-                write(record);
-            }
-        }
-
-        private void result(Object value) {
-            InvocationLogRecord record = record(InvocationLogFeature.EXIT_RESULT);
-            if (record != null && selection.payloadEnabled) {
-                String text =
-                        selection.metadata.voidResult
-                                ? InvocationLogSupport.VOID_RESULT
-                                : InvocationLogSupport.formatResult(value, formatter);
-                record.setContent(text);
-                write(record);
-            }
-        }
-
-        private void error(Throwable throwable) {
-            InvocationLogRecord record = record(InvocationLogFeature.ERROR_LOG);
-            if (record != null) {
-                Throwable error = unwrap(throwable);
-                Map<String, Object> content = new LinkedHashMap<>();
-                content.put("type", error.getClass().getName());
-                content.put("message", error.getMessage());
-                record.setContent(InvocationLogSupport.format(content, formatter));
-                write(record);
-            }
-        }
-
-        private void cost(long elapsed) {
-            InvocationLogRecord record = record(InvocationLogFeature.COST_LOG);
-            if (record != null) {
-                // 与慢调用共享同一次计时，正常和异常结束均记录；不受对象载荷开关或 formatter 影响。
-                record.setContent(TimeUnit.NANOSECONDS.toMillis(elapsed) + "ms");
-                write(record);
-            }
-        }
-
-        private void slow(long elapsed) {
-            FeaturePolicy policy = selection.policies.get(InvocationLogFeature.SLOW_LOG);
-            if (policy.threshold < 0
-                    || !InvocationLogSupport.exceedsSlowThresholdNanos(elapsed, policy.threshold)) {
-                return;
-            }
-            InvocationLogRecord record = record(InvocationLogFeature.SLOW_LOG);
-            if (record != null) {
-                // 耗时摘要使用固定格式，毫秒单位跟在数值后，不作为字段名或对象载荷序列化。
-                long cost = TimeUnit.NANOSECONDS.toMillis(elapsed);
-                record.setContent("{cost=" + cost + "ms, threshold=" + policy.threshold + "ms}");
-                write(record);
-            }
-        }
-
-        private void headers(
-                InvocationLogFeature feature, Supplier<Map<String, List<String>>> supplier) {
-            if (supplier == null || !selection.payloadEnabled) {
-                return;
-            }
-            InvocationLogRecord record = record(feature);
-            if (record == null) {
+            record.setFeature(feature);
+            record.setLevel(policy.getLevel());
+            if (!InvocationLogSupport.enabled(writer, record)) {
                 return;
             }
             try {
-                Map<String, List<String>> values = supplier.get();
-                if (values == null) {
+                String content = handlers.get(feature).render(event, policy, formatter);
+                if (content == null) {
                     return;
                 }
-                FeaturePolicy policy = selection.policies.get(feature);
-                Map<String, List<String>> selected = new LinkedHashMap<>();
-                for (Map.Entry<String, List<String>> entry : values.entrySet()) {
-                    if (policy.allowlist.isEmpty()
-                            || policy.allowlist.stream()
-                            .anyMatch(name -> name.equalsIgnoreCase(entry.getKey()))) {
-                        selected.put(entry.getKey(), entry.getValue());
-                    }
-                }
-                record.setContent(InvocationLogSupport.format(selected, formatter));
-            } catch (RuntimeException error) {
-                record.setContent(InvocationLogSupport.SERIALIZATION_FAILED_PAYLOAD);
+                String singleLine = InvocationLogSupport.singleLine(content);
+                String limitedContent = limit(singleLine, policy.getMaxLength());
+                record.setContent(limitedContent);
+            } catch (RuntimeException failure) {
+                LOGGER.warn("Invocation log handler failed for {}: {}", feature, invocation.getMethod().getName());
+                return;
             }
-            write(record);
-        }
-
-        private void write(InvocationLogRecord record) {
+            publicContext(record);
             InvocationLogSupport.safeWrite(writer, record);
         }
 
+        private void publicContext(InvocationLogRecord record) {
+            try {
+                InvocationLogContext context = invocation.getContext() == null ? null : invocation.getContext().get();
+                record.setContext(context);
+                String text = contexts.get(invocation.getSource()).format(invocation, context);
+                record.setContextContent(text);
+            } catch (RuntimeException failure) {
+                LOGGER.warn("Invocation log context formatting failed for {}", invocation.getMethod().getName());
+            }
+        }
     }
 
-    private static Throwable unwrap(Throwable throwable) {
-        Throwable current = throwable;
-        for (int i = 0; i < 8; i++) {
-            boolean wrapper =
-                    current instanceof InvocationTargetException
-                            || current instanceof UndeclaredThrowableException;
-            if (!wrapper || current.getCause() == null || current.getCause() == current) {
-                break;
-            }
-            current = current.getCause();
+    private static String limit(String content, int maxLength) {
+        if (maxLength < 0 || content.length() <= maxLength) {
+            return content;
         }
-        return current;
+        int end = maxLength;
+        if (end > 0 && Character.isHighSurrogate(content.charAt(end - 1))) {
+            end--;
+        }
+        return content.substring(0, end);
     }
 }

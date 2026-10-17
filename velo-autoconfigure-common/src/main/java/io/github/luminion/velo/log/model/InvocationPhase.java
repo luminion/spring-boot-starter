@@ -1,5 +1,4 @@
-package io.github.luminion.velo.log.core;
-
+package io.github.luminion.velo.log.model;
 
 /**
  * 单项日志的方向；不作为正文事件字段输出。

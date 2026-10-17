@@ -3,8 +3,9 @@ package io.github.luminion.velo.web;
 import io.github.luminion.velo.core.VeloAdvisorOrder;
 import io.github.luminion.velo.core.util.WebUtils;
 import io.github.luminion.velo.log.core.InvocationLogEngine;
-import io.github.luminion.velo.log.core.InvocationLogSource;
-import io.github.luminion.velo.log.core.InvocationLogSupport;
+import io.github.luminion.velo.log.model.InvocationLogContext;
+import io.github.luminion.velo.log.model.InvocationLogSource;
+import io.github.luminion.velo.log.support.InvocationLogSupport;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
@@ -32,7 +33,9 @@ public class ControllerLogAspect implements Ordered {
     @Getter
     private final int order;
 
-    /** 使用默认的 Controller 日志切面顺序创建切面。 */
+    /**
+     * 使用默认的 Controller 日志切面顺序创建切面。
+     */
     public ControllerLogAspect(InvocationLogEngine engine) {
         this(engine, VeloAdvisorOrder.LOG_CONTROLLER);
     }
@@ -48,7 +51,9 @@ public class ControllerLogAspect implements Ordered {
         this.order = order;
     }
 
-    /** 记录 Controller 调用，并委托日志引擎执行原调用。 */
+    /**
+     * 记录 Controller 调用，并委托日志引擎执行原调用。
+     */
     @Around(
             "execution(" +
                     "public * *(..))"
@@ -57,24 +62,30 @@ public class ControllerLogAspect implements Ordered {
                     + " || @within(org.springframework.web.bind.annotation.ResponseBody)" +
                     ")")
     public Object logControllerInvocation(ProceedingJoinPoint point) throws Throwable {
-        String target = "";
-        if (WebUtils.isWebContext()) {
-            Object pattern =
-                    WebUtils.getRequest().getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
-            String path = pattern == null ? WebUtils.getRequestURI() : String.valueOf(pattern);
-            target = WebUtils.getRequestIp() + ' ' + WebUtils.getRequestMethod() + ' ' + path;
+        boolean webContext = WebUtils.isWebContext();
+        String path = null;
+        if (webContext) {
+            Object pattern = WebUtils.getRequest().getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
+            path = pattern == null ? WebUtils.getRequestURI() : String.valueOf(pattern);
         }
-        HttpServletRequest request = WebUtils.isWebContext() ? WebUtils.getRequest() : null;
-        HttpServletResponse response = WebUtils.isWebContext() ? WebUtils.getResponse() : null;
+        InvocationLogContext context = InvocationLogContext.builder()
+                .clientIp(webContext ? WebUtils.getRequestIp() : null)
+                .httpMethod(webContext ? WebUtils.getRequestMethod() : null).path(path).build();
+        String target = point.getSignature().getName() + "()";
+        HttpServletRequest request = webContext ? WebUtils.getRequest() : null;
+        HttpServletResponse response = webContext ? WebUtils.getResponse() : null;
         return engine.invoke(
                 InvocationLogSupport.invocation(point, InvocationLogSource.CONTROLLER, target).toBuilder()
+                        .context(() -> context)
                         .requestHeaders(request == null ? null : () -> requestHeaders(request))
                         .responseHeaders(response == null ? null : () -> responseHeaders(response))
                         .build(),
                 point::proceed);
     }
 
-    /** 获取当前请求的全部请求头。 */
+    /**
+     * 获取当前请求的全部请求头。
+     */
     private Map<String, List<String>> requestHeaders(HttpServletRequest request) {
         Map<String, List<String>> headers = new LinkedHashMap<>();
         Enumeration<String> names = request.getHeaderNames();
@@ -85,7 +96,9 @@ public class ControllerLogAspect implements Ordered {
         return headers;
     }
 
-    /** 获取当前响应的全部响应头。 */
+    /**
+     * 获取当前响应的全部响应头。
+     */
     private Map<String, List<String>> responseHeaders(HttpServletResponse response) {
         Map<String, List<String>> headers = new LinkedHashMap<>();
         for (String name : response.getHeaderNames()) {

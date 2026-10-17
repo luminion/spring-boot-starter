@@ -9,16 +9,16 @@ import io.github.luminion.velo.log.annotation.EntryArgs;
 import io.github.luminion.velo.log.annotation.ErrorLog;
 import io.github.luminion.velo.log.annotation.ExitArgs;
 import io.github.luminion.velo.log.annotation.ExitResult;
-import io.github.luminion.velo.log.annotation.InvokeLog;
 import io.github.luminion.velo.log.annotation.LogIgnore;
-import io.github.luminion.velo.log.annotation.LogPolicyLevel;
 import io.github.luminion.velo.log.annotation.RequestHeadersLog;
 import io.github.luminion.velo.log.annotation.ResponseHeadersLog;
 import io.github.luminion.velo.log.annotation.SlowLog;
+import io.github.luminion.velo.log.annotation.composed.InvokeLog;
 import io.github.luminion.velo.log.core.InvocationLogEngine;
-import io.github.luminion.velo.log.core.InvocationLogFeature;
-import io.github.luminion.velo.log.core.InvocationLogRecord;
-import io.github.luminion.velo.log.core.InvocationLogSource;
+import io.github.luminion.velo.log.model.InvocationLogFeature;
+import io.github.luminion.velo.log.model.InvocationLogRecord;
+import io.github.luminion.velo.log.model.InvocationLogSource;
+import io.github.luminion.velo.log.model.LogPolicyLevel;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -28,7 +28,9 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.RestController;
 
-/** 验证日志功能注解的入口选择、继承解析和来源边界。 */
+/**
+ * 验证日志功能注解的入口选择、继承解析和来源边界。
+ */
 class AnnotationLogAdvisorTests {
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
@@ -71,7 +73,7 @@ class AnnotationLogAdvisorTests {
         calls.call("input");
         assertThat(records).singleElement().satisfies(record -> {
             assertThat(record.getFeature()).isEqualTo(InvocationLogFeature.SLOW_LOG);
-            assertThat(record.getLevel()).isEqualTo(org.springframework.boot.logging.LogLevel.DEBUG);
+            assertThat(record.getLevel()).isEqualTo(LogPolicyLevel.DEBUG);
             assertThat(record.getContent()).endsWith("threshold=0ms}");
         });
     }
@@ -136,11 +138,11 @@ class AnnotationLogAdvisorTests {
     }
 
     interface InheritedOperations {
-        @SlowLog(level = LogPolicyLevel.DEBUG)
+        @SlowLog(level = LogPolicyLevel.DEBUG, threshold = 0)
         String call(String input);
     }
 
-    @SlowLog(enabled = false, threshold = 0)
+    @SlowLog(level = LogPolicyLevel.OFF, threshold = 0)
     static class ParentService {
     }
 

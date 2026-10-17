@@ -8,20 +8,25 @@ import static org.mockito.Mockito.when;
 import feign.RequestTemplate;
 import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.core.VeloCoreAutoConfiguration;
-import io.github.luminion.velo.log.core.InvocationLogEngine;
-import io.github.luminion.velo.log.core.InvocationLogFeature;
-import io.github.luminion.velo.log.core.InvocationLogRecord;
-import io.github.luminion.velo.log.core.InvocationLogSource;
-import io.github.luminion.velo.log.annotation.InvokeLog;
 import io.github.luminion.velo.log.annotation.CostLog;
-import io.github.luminion.velo.log.annotation.LogPolicyLevel;
+import io.github.luminion.velo.log.annotation.RequestHeadersLog;
+import io.github.luminion.velo.log.annotation.ResponseHeadersLog;
+import io.github.luminion.velo.log.annotation.composed.InvokeLog;
 import io.github.luminion.velo.log.config.VeloLogAutoConfiguration;
+import io.github.luminion.velo.log.core.InvocationLogEngine;
+import io.github.luminion.velo.log.model.InvocationLogFeature;
+import io.github.luminion.velo.log.model.InvocationLogRecord;
+import io.github.luminion.velo.log.model.InvocationLogSource;
+import io.github.luminion.velo.log.model.LogPolicyLevel;
 import io.github.luminion.velo.trace.TraceContext;
 import io.github.luminion.velo.trace.TraceData;
 import io.github.luminion.velo.trace.TraceScopeManager;
 import io.github.luminion.velo.trace.VeloTraceAutoConfiguration;
 import io.github.luminion.velo.trace.W3cTraceContextResolver;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,7 +43,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 
-/** 验证 Feign 日志适配器、共享引擎及链路传播配置。 */
+/**
+ * 验证 Feign 日志适配器、共享引擎及链路传播配置。
+ */
 class VeloFeignAutoConfigurationTests {
   private final ApplicationContextRunner runner =
       new ApplicationContextRunner()
@@ -103,7 +110,6 @@ class VeloFeignAutoConfigurationTests {
   @Test
   void invocationCreatesTraceAndPropagatesWithoutDuplicateHeaders() throws Throwable {
     VeloProperties p = new VeloProperties();
-    p.getLog().getSources().getAnnotation().getEntryArgs().setEnabled(false);
     List<InvocationLogRecord> records = new ArrayList<>();
     List<String> traces = new ArrayList<>();
     FeignLogAspect aspect =
@@ -129,12 +135,13 @@ class VeloFeignAutoConfigurationTests {
     assertThat(aspect.logFeignInvocation(point)).isEqualTo("done");
     assertThat(records).hasSize(3);
     assertThat(records.get(2).getFeature()).isEqualTo(InvocationLogFeature.COST_LOG);
-    assertThat(records.get(2).getLevel()).isEqualTo(org.springframework.boot.logging.LogLevel.DEBUG);
+    assertThat(records.get(2).getLevel()).isEqualTo(LogPolicyLevel.DEBUG);
     assertThat(records).allSatisfy(record -> assertThat(record.getSource()).isEqualTo(InvocationLogSource.FEIGN));
     assertThat(records.get(2).getContent()).matches("\\d+ms");
     InvocationLogRecord entry = records.get(0);
     assertThat(entry.getFeature()).isEqualTo(InvocationLogFeature.ENTRY_ARGS);
-    assertThat(entry.getTarget()).isEqualTo("find() GET /users/{id}");
+    assertThat(entry.getTarget()).isEqualTo("find()");
+    assertThat(entry.getContextContent()).isEqualTo("client=demo-client contextId=demo-client method=GET route=/users/{id}");
     assertThat(entry.getContent()).contains("id=1");
     assertThat(traces.get(0)).matches("[0-9a-f]{32}");
     assertThat(template.headers().get("traceparent"))
@@ -152,18 +159,7 @@ class VeloFeignAutoConfigurationTests {
   @Test
   void headersAreSeparateAllowlistedRecordsAndContextIsRestored() throws Throwable {
     VeloProperties p = new VeloProperties();
-    p.getLog().getSources().getFeign().getRequestHeaders().setEnabled(true);
-    p.getLog()
-        .getSources()
-        .getFeign()
-        .getRequestHeaders()
-        .setAllowlist(java.util.Collections.singletonList("x-request"));
-    p.getLog().getSources().getFeign().getResponseHeaders().setEnabled(true);
-    p.getLog()
-        .getSources()
-        .getFeign()
-        .getResponseHeaders()
-        .setAllowlist(java.util.Collections.singletonList("x-response"));
+    p.getLog().getSources().getFeign().setDefaultAnnotation(HeadersPreset.class);
     List<InvocationLogRecord> records = new ArrayList<>();
     FeignLogAspect aspect =
         new FeignLogAspect(
@@ -177,11 +173,11 @@ class VeloFeignAutoConfigurationTests {
               call -> {
                 FeignInvocationContext current = FeignInvocationContext.current();
                 current.captureRequestHeaders(
-                    java.util.Collections.singletonMap(
-                        "X-Request", java.util.Collections.singletonList("yes")));
+                    Collections.singletonMap(
+                        "X-Request", Collections.singletonList("yes")));
                 current.captureResponseHeaders(
-                    java.util.Collections.singletonMap(
-                        "X-Response", java.util.Collections.singletonList("ok")));
+                    Collections.singletonMap(
+                        "X-Response", Collections.singletonList("ok")));
                 throw new IllegalStateException("network");
               });
       assertThatThrownBy(() -> aspect.logFeignInvocation(point))
@@ -199,7 +195,7 @@ class VeloFeignAutoConfigurationTests {
       assertThat(records.get(3).getContent()).contains("X-Response", "ok");
       assertThat(records)
           .extracting(InvocationLogRecord::getTarget)
-          .containsOnly("find() GET /users/{id}");
+          .containsOnly("find()");
       assertThat(FeignInvocationContext.current()).isSameAs(outer);
     } finally {
       FeignInvocationContext.close();
@@ -289,11 +285,16 @@ class VeloFeignAutoConfigurationTests {
   }
 
   @FeignClient(name = "demo-client")
-  @InvokeLog
   @RequestMapping("/users")
   interface DemoClient {
     @GetMapping("/{id}")
     @CostLog(level = LogPolicyLevel.DEBUG)
     String find(@PathVariable("id") Long id);
+  }
+  @Retention(RetentionPolicy.RUNTIME)
+  @InvokeLog
+  @RequestHeadersLog(allowlist = "x-request")
+  @ResponseHeadersLog(allowlist = "x-response")
+  @interface HeadersPreset {
   }
 }

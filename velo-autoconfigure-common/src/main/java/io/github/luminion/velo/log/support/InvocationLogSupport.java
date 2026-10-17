@@ -1,10 +1,12 @@
-package io.github.luminion.velo.log.core;
+package io.github.luminion.velo.log.support;
 
-import io.github.luminion.velo.log.InvocationLogWriter;
-import io.github.luminion.velo.log.LogValueFormatter;
-
+import io.github.luminion.velo.log.model.InvocationLogEvent;
+import io.github.luminion.velo.log.model.InvocationLogRecord;
+import io.github.luminion.velo.log.model.InvocationLogSource;
+import io.github.luminion.velo.log.model.LogInvocation;
+import io.github.luminion.velo.log.spi.InvocationLogWriter;
+import io.github.luminion.velo.log.spi.LogValueFormatter;
 import io.github.luminion.velo.util.InvocationUtils;
-
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -12,7 +14,6 @@ import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.slf4j.Logger;
@@ -49,7 +50,7 @@ public final class InvocationLogSupport {
                 .build();
     }
 
-    static Map<String, Object> arguments(String[] names, Object[] args) {
+    public static Map<String, Object> arguments(String[] names, Object[] args) {
         Map<String, Object> values = new LinkedHashMap<>();
         if (args != null) {
             for (int i = 0; i < args.length; i++) {
@@ -57,6 +58,15 @@ public final class InvocationLogSupport {
             }
         }
         return values;
+    }
+
+    /**
+     * 在当前调用阶段格式化入参，入口与退出参数共用同一载荷规则。
+     */
+    public static String formatArguments(InvocationLogEvent event, LogValueFormatter formatter) {
+        Object[] args = event.getInvocation().getArguments();
+        Map<String, Object> values = arguments(event.getParameterNames(), args);
+        return format(values, formatter);
     }
 
     public static String format(Object value, LogValueFormatter formatter) {
@@ -72,7 +82,7 @@ public final class InvocationLogSupport {
     /**
      * HTTP 返回包装只记录 body，保持 Jackson 字段规则，不序列化包装中的技术状态。
      */
-    static String formatResult(Object value, LogValueFormatter formatter) {
+    public static String formatResult(Object value, LogValueFormatter formatter) {
         try {
             if (value != null) {
                 for (Class<?> type = value.getClass(); type != null; type = type.getSuperclass()) {

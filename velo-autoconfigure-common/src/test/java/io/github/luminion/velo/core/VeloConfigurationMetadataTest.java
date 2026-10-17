@@ -10,7 +10,9 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
 
-/** 验证核心配置属性的元数据生成。 */
+/**
+ * 验证核心配置属性的元数据生成。
+ */
 class VeloConfigurationMetadataTest {
 
   @Test
@@ -100,18 +102,12 @@ class VeloConfigurationMetadataTest {
       assertTrue(metadata.contains("velo.trace.response-header-name"));
       assertTrue(metadata.contains("velo.log.trace.feign-propagation-enabled"));
       assertTrue(metadata.contains("velo.log.trace.logging-pattern-enabled"));
-      assertTrue(metadata.contains("velo.log.defaults.max-payload-length"));
-      assertTrue(metadata.contains("velo.log.defaults.entry-args.enabled"));
-      assertTrue(metadata.contains("velo.log.defaults.exit-args.enabled"));
-      assertTrue(metadata.contains("velo.log.defaults.exit-result.enabled"));
-      assertTrue(metadata.contains("velo.log.defaults.cost-log.enabled"));
-      assertTrue(metadata.contains("velo.log.defaults.cost-log.level"));
-      for (String source : new String[]{"controller", "feign", "annotation", "scheduled", "xxl-job"}) {
-        assertTrue(metadata.contains("velo.log.sources." + source + ".cost-log.enabled"));
-        assertTrue(metadata.contains("velo.log.sources." + source + ".cost-log.level"));
+      assertFalse(metadata.contains("velo.log.defaults.max-payload-length"));
+      assertFalse(metadata.contains("velo.log.defaults.slow-log.threshold"));
+      for (String source : new String[]{"controller", "feign", "scheduled", "xxl-job"}) {
+        assertTrue(metadata.contains("velo.log.sources." + source + ".default-annotation"));
+        assertFalse(metadata.contains("velo.log.sources." + source + ".cost-log.enabled"));
       }
-      assertTrue(metadata.contains("velo.log.defaults.slow-log.threshold"));
-      assertFalse(metadata.contains("velo.log.defaults.slow-log.threshold-ms"));
       assertFalse(metadata.contains("velo.log.invocation.sensitive-pattern"));
       assertFalse(metadata.contains("velo.log.invocation.sensitive-fields"));
       assertTrue(metadata.contains("velo.log.sources.controller.enabled"));

@@ -85,16 +85,6 @@ public class VeloPropertiesWarningLogger implements InitializingBean {
         VeloProperties.LogProperties logProperties = properties.getLog();
         if (logProperties == null) {
             warnings.add("velo.log 为空，日志自动配置可能在运行时失败。当前仅告警。");
-        } else if (logProperties.isEnabled()) {
-            VeloProperties.InvocationDefaults invocation = logProperties.getDefaults();
-            if (invocation == null) {
-                warnings.add("velo.log.defaults 为空，调用日志相关功能可能在运行时失败。当前仅告警。");
-            } else if (invocation.getMaxPayloadLength() != -1 && invocation.getMaxPayloadLength() != 0) {
-                warnings.add(
-                        "velo.log.defaults.max-payload-length 当前值为 "
-                                + invocation.getMaxPayloadLength()
-                                + "，仅支持 -1（完整输出）或 0（关闭载荷），日志引擎启动时会报错。");
-            }
         }
 
         VeloProperties.JacksonProperties jackson = properties.getJackson();

@@ -3,13 +3,11 @@ package io.github.luminion.velo.log.aspect;
 import io.github.luminion.velo.core.VeloAdvisorOrder;
 import io.github.luminion.velo.log.core.InvocationLogEngine;
 import io.github.luminion.velo.log.core.InvocationLogMetadata;
-import io.github.luminion.velo.log.core.InvocationLogSource;
-import io.github.luminion.velo.log.core.LogInvocation;
+import io.github.luminion.velo.log.model.InvocationLogSource;
+import io.github.luminion.velo.log.model.LogInvocation;
 import io.github.luminion.velo.trace.TraceContext;
 import io.github.luminion.velo.trace.TraceScopeManager;
-
 import java.lang.reflect.Method;
-
 import lombok.Getter;
 import org.aopalliance.aop.Advice;
 import org.aopalliance.intercept.MethodInterceptor;

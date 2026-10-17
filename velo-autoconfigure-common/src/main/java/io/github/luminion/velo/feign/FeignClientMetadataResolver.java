@@ -4,6 +4,8 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 
 import org.springframework.core.annotation.AnnotatedElementUtils;
+import org.springframework.core.annotation.MergedAnnotation;
+import org.springframework.core.annotation.MergedAnnotations;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,6 +22,12 @@ final class FeignClientMetadataResolver {
 
     static boolean isFeignClientType(Class<?> beanType) {
         return findFeignClientAnnotation(beanType) != null;
+    }
+
+    static String resolveClientAttribute(Class<?> type, String attribute) {
+        MergedAnnotation<Annotation> annotation = MergedAnnotations.from(type,
+                MergedAnnotations.SearchStrategy.TYPE_HIERARCHY).get(FEIGN_CLIENT_ANNOTATION);
+        return annotation.isPresent() ? annotation.getString(attribute) : "";
     }
 
     static FeignRequestMetadata resolveRequestMetadata(Method method) {

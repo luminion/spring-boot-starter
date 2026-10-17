@@ -1,31 +1,30 @@
 package io.github.luminion.velo.log.aspect;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.log.annotation.CostLog;
-import io.github.luminion.velo.log.annotation.LogPolicyLevel;
-import io.github.luminion.velo.log.annotation.InvokeLog;
+import io.github.luminion.velo.log.annotation.composed.InvokeLog;
 import io.github.luminion.velo.log.core.InvocationLogEngine;
-import io.github.luminion.velo.log.core.InvocationLogFeature;
-import io.github.luminion.velo.log.core.InvocationLogRecord;
+import io.github.luminion.velo.log.model.InvocationLogFeature;
+import io.github.luminion.velo.log.model.InvocationLogRecord;
+import io.github.luminion.velo.log.model.InvocationLogSource;
+import io.github.luminion.velo.log.model.LogPolicyLevel;
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.aop.aspectj.annotation.AspectJProxyFactory;
-import org.springframework.boot.logging.LogLevel;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import static org.assertj.core.api.Assertions.assertThat;
-
-/** 验证耗时日志策略的继承、独立启用和关闭行为。 */
+/**
+ * 验证耗时日志策略的继承、独立启用和关闭行为。
+ */
 class CostLogAspectTests {
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
     void classAndMethodCostPoliciesApplyThroughActualProxy(boolean classProxy) {
         VeloProperties properties = new VeloProperties();
-        properties.getLog().getDefaults().setMaxPayloadLength(0);
-        properties.getLog().getSources().getAnnotation().getCostLog().setLevel(LogLevel.ERROR);
         List<InvocationLogRecord> records = new ArrayList<>();
         AspectJProxyFactory factory = new AspectJProxyFactory(new Service());
         factory.setInterfaces(Operations.class);
@@ -40,13 +39,13 @@ class CostLogAspectTests {
         assertThat(proxy.explicit()).isEqualTo("explicit");
         assertThat(records).singleElement().satisfies(record -> {
             assertThat(record.getFeature()).isEqualTo(InvocationLogFeature.COST_LOG);
-            assertThat(record.getLevel()).isEqualTo(LogLevel.DEBUG);
+            assertThat(record.getLevel()).isEqualTo(LogPolicyLevel.DEBUG);
             assertThat(record.getContent()).matches("\\d+ms");
         });
         records.clear();
         assertThat(proxy.defaults()).isEqualTo("defaults");
         assertThat(records).singleElement().satisfies(record ->
-                assertThat(record.getLevel()).isEqualTo(LogLevel.ERROR));
+                assertThat(record.getLevel()).isEqualTo(LogPolicyLevel.INFO));
         records.clear();
         proxy.off();
         assertThat(records).isEmpty();
@@ -69,7 +68,7 @@ class CostLogAspectTests {
         assertThat(proxy.execute()).isEqualTo("done");
         assertThat(records).singleElement().satisfies(record -> {
             assertThat(record.getFeature()).isEqualTo(InvocationLogFeature.COST_LOG);
-            assertThat(record.getSource()).isEqualTo(io.github.luminion.velo.log.core.InvocationLogSource.ANNOTATION);
+            assertThat(record.getSource()).isEqualTo(InvocationLogSource.ANNOTATION);
         });
     }
 
@@ -80,8 +79,7 @@ class CostLogAspectTests {
         void off();
     }
 
-    @InvokeLog
-    @CostLog(enabled = false)
+    @CostLog(level = LogPolicyLevel.OFF)
     static class Service implements Operations {
         @Override
         public String inherited() {

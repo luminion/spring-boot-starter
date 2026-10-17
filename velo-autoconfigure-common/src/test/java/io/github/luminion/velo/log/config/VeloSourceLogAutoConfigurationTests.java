@@ -1,16 +1,17 @@
 package io.github.luminion.velo.log.config;
 
-import io.github.luminion.velo.log.core.InvocationLogEngine;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.github.luminion.velo.core.VeloCoreAutoConfiguration;
-import io.github.luminion.velo.log.annotation.InvokeLog;
-import io.github.luminion.velo.log.annotation.LogIgnore;
 import io.github.luminion.velo.log.annotation.CostLog;
+import io.github.luminion.velo.log.annotation.LogIgnore;
+import io.github.luminion.velo.log.annotation.composed.InvokeLog;
 import io.github.luminion.velo.log.aspect.ScheduledLogAspect;
 import io.github.luminion.velo.log.aspect.XxlJobLogAspect;
+import io.github.luminion.velo.log.core.InvocationLogEngine;
+import io.github.luminion.velo.log.model.LogPolicyLevel;
 import io.github.luminion.velo.trace.VeloTraceAutoConfiguration;
+import java.util.function.Supplier;
 import org.junit.jupiter.api.Test;
 import org.slf4j.MDC;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
@@ -19,7 +20,9 @@ import org.springframework.boot.test.context.FilteredClassLoader;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.scheduling.annotation.Scheduled;
 
-/** 验证任务日志适配器的默认注册及来源开关。 */
+/**
+ * 验证任务日志适配器的默认注册及来源开关。
+ */
 class VeloSourceLogAutoConfigurationTests {
     private final ApplicationContextRunner runner =
             new ApplicationContextRunner()
@@ -105,7 +108,7 @@ class VeloSourceLogAutoConfigurationTests {
     }
 
     static class AtomicContextCalls {
-        @CostLog(enabled = false)
+        @CostLog(level = LogPolicyLevel.OFF)
         public String disabled() { return MDC.get("traceId"); }
 
         @LogIgnore
@@ -115,7 +118,7 @@ class VeloSourceLogAutoConfigurationTests {
     static class ContextCalls {
         @InvokeLog
         @LogIgnore
-        public String invoke(java.util.function.Supplier<String> callback) {
+        public String invoke(Supplier<String> callback) {
             return callback.get();
         }
 

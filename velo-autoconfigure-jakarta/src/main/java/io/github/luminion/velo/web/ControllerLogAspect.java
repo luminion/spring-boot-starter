@@ -3,19 +3,18 @@ package io.github.luminion.velo.web;
 import io.github.luminion.velo.core.VeloAdvisorOrder;
 import io.github.luminion.velo.core.util.WebUtils;
 import io.github.luminion.velo.log.core.InvocationLogEngine;
-import io.github.luminion.velo.log.core.InvocationLogSource;
-import io.github.luminion.velo.log.core.InvocationLogSupport;
-import io.github.luminion.velo.log.core.LogInvocation;
+import io.github.luminion.velo.log.model.InvocationLogContext;
+import io.github.luminion.velo.log.model.InvocationLogSource;
+import io.github.luminion.velo.log.model.LogInvocation;
+import io.github.luminion.velo.log.support.InvocationLogSupport;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
 import lombok.Getter;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -66,17 +65,22 @@ public class ControllerLogAspect implements Ordered {
             + " || @within(org.springframework.web.bind.annotation.ResponseBody)" +
             ")")
     public Object logControllerInvocation(ProceedingJoinPoint point) throws Throwable {
-        String target = "";
-        if (WebUtils.isWebContext()) {
+        boolean webContext = WebUtils.isWebContext();
+        String path = null;
+        if (webContext) {
             Object pattern = WebUtils.getRequest().getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
-            String path = pattern == null ? WebUtils.getRequestURI() : String.valueOf(pattern);
-            target = WebUtils.getRequestIp() + ' ' + WebUtils.getRequestMethod() + ' ' + path;
+            path = pattern == null ? WebUtils.getRequestURI() : String.valueOf(pattern);
         }
-        HttpServletRequest request = WebUtils.isWebContext() ? WebUtils.getRequest() : null;
-        HttpServletResponse response = WebUtils.isWebContext() ? WebUtils.getResponse() : null;
+        InvocationLogContext context = InvocationLogContext.builder()
+                .clientIp(webContext ? WebUtils.getRequestIp() : null)
+                .httpMethod(webContext ? WebUtils.getRequestMethod() : null).path(path).build();
+        String target = point.getSignature().getName() + "()";
+        HttpServletRequest request = webContext ? WebUtils.getRequest() : null;
+        HttpServletResponse response = webContext ? WebUtils.getResponse() : null;
         var logInvocation = InvocationLogSupport.invocation(point, InvocationLogSource.CONTROLLER, target)
                 .toBuilder()
-                .requestHeaders(request == null ? null : () -> requestHeaders(request))
+                .context(() -> context)
+                        .requestHeaders(request == null ? null : () -> requestHeaders(request))
                 .responseHeaders(response == null ? null : () -> responseHeaders(response))
                 .build();
         return engine.invoke(logInvocation, point::proceed);

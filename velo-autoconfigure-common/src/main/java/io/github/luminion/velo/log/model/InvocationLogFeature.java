@@ -1,5 +1,4 @@
-package io.github.luminion.velo.log.core;
-
+package io.github.luminion.velo.log.model;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +18,12 @@ public enum InvocationLogFeature {
     RESPONSE_HEADERS("responseHeaders", InvocationPhase.EXIT),
     ERROR_LOG("error", InvocationPhase.EXIT);
 
+    /**
+     * 功能正文在日志中的标签。
+     */
     private final String label;
+    /**
+     * 默认输出方向所属的调用阶段。
+     */
     private final InvocationPhase phase;
 }

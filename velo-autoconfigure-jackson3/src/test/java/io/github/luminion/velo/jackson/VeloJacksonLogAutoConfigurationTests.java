@@ -1,8 +1,13 @@
 package io.github.luminion.velo.jackson;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import io.github.luminion.velo.log.LogValueFormatter;
-import io.github.luminion.velo.log.core.InvocationLogSupport;
+import io.github.luminion.velo.log.spi.LogValueFormatter;
+import io.github.luminion.velo.log.support.InvocationLogSupport;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.junit.jupiter.api.Test;
@@ -10,12 +15,6 @@ import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
-
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /** 验证 Jackson 3 日志格式化器使用应用 Mapper 的行为。 */
 class VeloJacksonLogAutoConfigurationTests {

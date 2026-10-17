@@ -1,9 +1,7 @@
-package io.github.luminion.velo.log.condition;
+package io.github.luminion.velo.log.config.condition;
 
 import io.github.luminion.velo.trace.TraceEnabledCondition;
-
 import java.util.Map;
-
 import org.springframework.boot.autoconfigure.condition.ConditionOutcome;
 import org.springframework.boot.autoconfigure.condition.SpringBootCondition;
 import org.springframework.context.annotation.ConditionContext;

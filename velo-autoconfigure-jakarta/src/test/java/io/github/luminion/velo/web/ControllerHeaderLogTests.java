@@ -5,32 +5,32 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import io.github.luminion.velo.VeloProperties;
-import io.github.luminion.velo.log.core.InvocationLogEngine;
-import io.github.luminion.velo.log.core.InvocationLogFeature;
-import io.github.luminion.velo.log.core.InvocationLogRecord;
-import io.github.luminion.velo.log.InvocationLogWriter;
+import io.github.luminion.velo.log.annotation.CostLog;
 import io.github.luminion.velo.log.annotation.RequestHeadersLog;
 import io.github.luminion.velo.log.annotation.ResponseHeadersLog;
-import io.github.luminion.velo.log.annotation.InvokeLog;
-import io.github.luminion.velo.log.annotation.CostLog;
-import io.github.luminion.velo.log.annotation.LogPolicyLevel;
+import io.github.luminion.velo.log.annotation.composed.InvokeLog;
 import io.github.luminion.velo.log.aspect.InvokeLogAspect;
-import io.github.luminion.velo.log.core.InvocationLogSource;
-
+import io.github.luminion.velo.log.core.InvocationLogEngine;
+import io.github.luminion.velo.log.model.InvocationLogFeature;
+import io.github.luminion.velo.log.model.InvocationLogRecord;
+import io.github.luminion.velo.log.model.InvocationLogSource;
+import io.github.luminion.velo.log.model.LogPolicyLevel;
+import io.github.luminion.velo.log.spi.InvocationLogWriter;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.junit.jupiter.api.Test;
 import org.springframework.aop.aspectj.annotation.AspectJProxyFactory;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-/** 验证控制器日志收集请求头及注解声明时的日志来源控制。 */
+/**
+ * 验证控制器日志收集请求头及注解声明时的日志来源控制。
+ */
 class ControllerHeaderLogTests {
     @Test
     void capturesAllowlistedHeadersCaseInsensitively() throws Throwable {
@@ -82,7 +82,6 @@ class ControllerHeaderLogTests {
     @Test
     void explicitAnnotationsKeepControllerContextAndNeverDuplicateOrBypassSourceSwitch() {
         VeloProperties properties = new VeloProperties();
-        properties.getLog().getSources().getAnnotation().getEntryArgs().setEnabled(false);
         List<InvocationLogRecord> records = new ArrayList<>();
         InvocationLogEngine engine = new InvocationLogEngine(properties, String::valueOf, records::add);
         AspectJProxyFactory factory = new AspectJProxyFactory(new ProxiedEndpoint());
@@ -99,9 +98,10 @@ class ControllerHeaderLogTests {
             assertThat(endpoint.handle()).isEqualTo("done");
             assertThat(records).hasSize(5).allSatisfy(record -> {
                 assertThat(record.getSource()).isEqualTo(InvocationLogSource.CONTROLLER);
-                assertThat(record.getTarget()).isEqualTo("203.0.113.7 GET /profile");
+                assertThat(record.getTarget()).isEqualTo("handle()");
+                assertThat(record.getContextContent()).isEqualTo("ip=203.0.113.7 method=GET route=/profile");
             });
-            assertThat(records.get(4).getLevel()).isEqualTo(org.springframework.boot.logging.LogLevel.DEBUG);
+            assertThat(records.get(4).getLevel()).isEqualTo(LogPolicyLevel.DEBUG);
             records.clear();
             properties.getLog().getSources().getController().setEnabled(false);
             endpoint.handle();

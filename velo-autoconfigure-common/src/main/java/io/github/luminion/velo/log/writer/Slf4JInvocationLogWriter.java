@@ -1,14 +1,13 @@
-package io.github.luminion.velo.log.support;
+package io.github.luminion.velo.log.writer;
 
-import io.github.luminion.velo.log.core.InvocationLogFeature;
-import io.github.luminion.velo.log.core.InvocationLogRecord;
-import io.github.luminion.velo.log.core.InvocationLogSupport;
-import io.github.luminion.velo.log.InvocationLogWriter;
-import io.github.luminion.velo.log.core.InvocationPhase;
-
+import io.github.luminion.velo.log.model.InvocationLogFeature;
+import io.github.luminion.velo.log.model.InvocationLogRecord;
+import io.github.luminion.velo.log.model.InvocationPhase;
+import io.github.luminion.velo.log.model.LogPolicyLevel;
+import io.github.luminion.velo.log.spi.InvocationLogWriter;
+import io.github.luminion.velo.log.support.InvocationLogSupport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.logging.LogLevel;
 import org.springframework.util.StringUtils;
 
 /**
@@ -17,7 +16,7 @@ import org.springframework.util.StringUtils;
 public class Slf4JInvocationLogWriter implements InvocationLogWriter {
     @Override
     public boolean isEnabled(InvocationLogRecord record) {
-        if (record == null || record.getFeature() == null || record.getLevel() == LogLevel.OFF) {
+        if (record == null || record.getFeature() == null || record.getLevel() == LogPolicyLevel.OFF) {
             return false;
         }
         Logger logger = logger(record);
@@ -29,7 +28,6 @@ public class Slf4JInvocationLogWriter implements InvocationLogWriter {
             case WARN:
                 return logger.isWarnEnabled();
             case ERROR:
-            case FATAL:
                 return logger.isErrorEnabled();
             default:
                 return logger.isInfoEnabled();
@@ -54,7 +52,6 @@ public class Slf4JInvocationLogWriter implements InvocationLogWriter {
                 logger.warn(message);
                 break;
             case ERROR:
-            case FATAL:
                 logger.error(message);
                 break;
             default:
@@ -62,14 +59,14 @@ public class Slf4JInvocationLogWriter implements InvocationLogWriter {
         }
     }
 
-    private LogLevel level(InvocationLogRecord record) {
+    private LogPolicyLevel level(InvocationLogRecord record) {
         if (record.getLevel() != null) {
             return record.getLevel();
         }
         return record.getFeature() == InvocationLogFeature.SLOW_LOG
                 || record.getFeature() == InvocationLogFeature.ERROR_LOG
-                ? LogLevel.WARN
-                : LogLevel.INFO;
+                ? LogPolicyLevel.WARN
+                : LogPolicyLevel.INFO;
     }
 
     private Logger logger(InvocationLogRecord record) {
@@ -80,12 +77,16 @@ public class Slf4JInvocationLogWriter implements InvocationLogWriter {
 
     private String message(InvocationLogRecord record) {
         String source = record.getSource() == null ? "unknown" : record.getSource().getValue();
+        String context = InvocationLogSupport.singleLine(record.getContextContent());
+        String contextBlock = StringUtils.hasText(context) ? " [" + context + "]" : "";
         String prefix =
                 "["
                         + source
                         + "] ["
                         + InvocationLogSupport.singleLine(record.getTarget())
-                        + "] "
+                        + "]"
+                        + contextBlock
+                        + " "
                         + (record.getFeature().getPhase() == InvocationPhase.ENTRY ? "==> " : "<== ")
                         + record.getFeature().getLabel()
                         + "=";
