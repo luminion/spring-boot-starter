@@ -23,7 +23,7 @@ import org.springframework.context.annotation.Bean;
 public class VeloSourceLogAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnInvocationAdapter(source = "invoke")
+    @ConditionalOnInvocationAdapter(source = "annotation")
     public InvokeLogAspect invokeLogAspect(VeloProperties properties, ObjectProvider<InvocationLogEngine> engine, ObjectProvider<TraceScopeManager> trace) {
         return new InvokeLogAspect(engine.getIfAvailable(), trace.getIfAvailable(), properties.getAspectOrder().getInvokeLog());
     }

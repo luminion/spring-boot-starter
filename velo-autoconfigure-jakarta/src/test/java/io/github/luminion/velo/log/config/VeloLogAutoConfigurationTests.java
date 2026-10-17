@@ -135,7 +135,7 @@ class VeloLogAutoConfigurationTests {
         contextRunner
                 .withPropertyValues(
                         "velo.log.sources.controller.entry-args.level=WARN",
-                        "velo.log.sources.invoke.exit-result.enabled=false",
+                        "velo.log.sources.annotation.exit-result.enabled=false",
                         "velo.log.defaults.slow-log.threshold=0")
                 .run(
                         context -> {
@@ -143,7 +143,7 @@ class VeloLogAutoConfigurationTests {
                             VeloProperties properties = context.getBean(VeloProperties.class);
                             assertThat(properties.getLog().getSources().getController().getEntryArgs().getLevel())
                                     .isEqualTo(LogLevel.WARN);
-                            assertThat(properties.getLog().getSources().getInvoke().getExitResult().getEnabled())
+                            assertThat(properties.getLog().getSources().getAnnotation().getExitResult().getEnabled())
                                     .isFalse();
                             assertThat(properties.getLog().getDefaults().getSlowLog().getThreshold()).isZero();
                         });

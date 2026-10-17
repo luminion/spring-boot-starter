@@ -7,7 +7,6 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import org.springframework.boot.logging.LogLevel;
 
 /**
  * HTTP 请求头日志。
@@ -20,9 +19,9 @@ public @interface RequestHeadersLog {
     /** 是否记录 HTTP 请求头。 */
     boolean enabled() default true;
 
-    /** 日志级别。 */
-    LogLevel level() default LogLevel.INFO;
+    /** 日志级别；未指定时逐级继承。 */
+    LogPolicyLevel level() default LogPolicyLevel.INHERIT;
 
-    /** 允许记录的头名称，忽略大小写匹配；空数组表示全部头。 */
-    String[] allowlist() default {};
+    /** 允许记录的头名称，忽略大小写匹配；省略时继承，显式空数组表示全部头。 */
+    String[] allowlist() default {""};
 }

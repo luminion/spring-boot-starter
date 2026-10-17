@@ -447,7 +447,7 @@ public class VeloProperties {
     public static class InvocationSources {
         private InvocationSourceProperties controller = new InvocationSourceProperties();
         private InvocationSourceProperties feign = new InvocationSourceProperties();
-        private InvocationSourceProperties invoke = new InvocationSourceProperties();
+        private InvocationSourceProperties annotation = new InvocationSourceProperties();
         private InvocationSourceProperties xxlJob = new InvocationSourceProperties();
         private InvocationSourceProperties scheduled = new InvocationSourceProperties();
     }
@@ -464,6 +464,16 @@ public class VeloProperties {
          * 日志框架读取 traceId 的 MDC 键。
          */
         private String mdcKey = "traceId";
+
+        /**
+         * 是否在 HTTP 响应头中返回当前请求最终确定的 traceId。
+         */
+        private boolean responseHeaderEnabled = true;
+
+        /**
+         * 返回纯 traceId 的响应头名称，与请求解析和下游传播头独立。
+         */
+        private String responseHeaderName = "X-Trace-Id";
 
         /**
          * 是否将当前 traceId 传播到 Feign 请求。

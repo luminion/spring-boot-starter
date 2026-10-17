@@ -2,134 +2,59 @@ package io.github.luminion.velo.log.core;
 
 
 import io.github.luminion.velo.VeloProperties;
-import io.github.luminion.velo.log.annotation.CostLog;
-import io.github.luminion.velo.log.annotation.EntryArgs;
-import io.github.luminion.velo.log.annotation.ErrorLog;
-import io.github.luminion.velo.log.annotation.ExitArgs;
-import io.github.luminion.velo.log.annotation.ExitResult;
-import io.github.luminion.velo.log.annotation.LogIgnore;
-import io.github.luminion.velo.log.annotation.RequestHeadersLog;
-import io.github.luminion.velo.log.annotation.ResponseHeadersLog;
-import io.github.luminion.velo.log.annotation.SlowLog;
-
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Method;
-import java.util.Arrays;
+import io.github.luminion.velo.log.core.InvocationLogMetadata.FeatureOverride;
+import io.github.luminion.velo.log.core.InvocationLogMetadata.Metadata;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.aop.support.AopUtils;
 import org.springframework.boot.logging.LogLevel;
-import org.springframework.core.DefaultParameterNameDiscoverer;
-import org.springframework.core.annotation.AnnotatedElementUtils;
 
 /**
  * 按目标类缓存静态方法元数据；每次调用重新读取来源和全局配置。
  */
 final class InvocationLogPolicyResolver {
     private final VeloProperties properties;
-    private final ClassValue<MethodMetadataCache> cache =
-            new ClassValue<MethodMetadataCache>() {
-                @Override
-                protected MethodMetadataCache computeValue(Class<?> type) {
-                    return new MethodMetadataCache();
-                }
-            };
 
     InvocationLogPolicyResolver(VeloProperties properties) {
         this.properties = properties;
     }
 
     Selection resolve(LogInvocation invocation) {
-        Method original = invocation.getMethod();
-        Class<?> type = invocation.getTargetClass();
-        if (type == null) {
-            type = original.getDeclaringClass();
-        }
-        Class<?> targetType = type;
-        MethodMetadataCache classCache = cache.get(targetType);
-        Metadata metadata = classCache.methods.computeIfAbsent(
-                original, method -> inspect(method, targetType, classCache.names));
+        Metadata metadata = InvocationLogMetadata.get(invocation.getMethod(), invocation.getTargetClass());
         VeloProperties.InvocationSourceProperties source = source(invocation.getSource());
         boolean ignored = metadata.ignored || !properties.getLog().isEnabled() || !source.isEnabled();
         Map<InvocationLogFeature, FeaturePolicy> policies = new EnumMap<>(InvocationLogFeature.class);
         if (!ignored) {
             for (InvocationLogFeature feature : InvocationLogFeature.values()) {
-                FeaturePolicy annotation = metadata.annotations.get(feature);
-                policies.put(
-                        feature,
-                        annotation == null ? configured(invocation.getSource(), feature, source) : annotation);
+                FeatureOverride annotation = metadata.annotations.get(feature);
+                InvocationLogSource baseline = metadata.profile ? InvocationLogSource.CONTROLLER : invocation.getSource();
+                FeatureSettings settings = configured(baseline, feature, source);
+                boolean selected = invocation.getSource() != InvocationLogSource.ANNOTATION
+                        || metadata.profile || annotation != null;
+                if (annotation != null) {
+                    settings.enabled = annotation.enabled;
+                    if (annotation.level != null) {
+                        settings.level = annotation.level;
+                    }
+                    if (annotation.threshold != null) {
+                        settings.threshold = annotation.threshold;
+                    }
+                    if (annotation.allowlist != null) {
+                        settings.allowlist = annotation.allowlist;
+                    }
+                }
+                policies.put(feature, new FeaturePolicy(selected && settings.enabled,
+                        settings.level, settings.threshold, settings.allowlist));
             }
         }
         return new Selection(
                 metadata, policies, properties.getLog().getDefaults().getMaxPayloadLength() != 0);
     }
 
-    private Metadata inspect(Method original, Class<?> type, DefaultParameterNameDiscoverer names) {
-        Method specific = AopUtils.getMostSpecificMethod(original, type);
-        boolean ignored = find(specific, original, type, LogIgnore.class) != null;
-        Map<InvocationLogFeature, FeaturePolicy> annotations =
-                new EnumMap<>(InvocationLogFeature.class);
-        for (InvocationLogFeature feature : InvocationLogFeature.values()) {
-            Annotation value = find(specific, original, type, annotationType(feature));
-            if (value != null) {
-                annotations.put(feature, fromAnnotation(value));
-            }
-        }
-        String[] parameterNames = names.getParameterNames(specific);
-        if (parameterNames == null) {
-            parameterNames = names.getParameterNames(original);
-        }
-        if (parameterNames == null) {
-            parameterNames = new String[original.getParameterCount()];
-            for (int i = 0; i < parameterNames.length; i++) {
-                parameterNames[i] = "arg" + i;
-            }
-        }
-        return new Metadata(
-                ignored, specific.getReturnType() == Void.TYPE, parameterNames, annotations);
-    }
-
-    private <A extends Annotation> A find(
-            Method specific, Method original, Class<?> type, Class<A> kind) {
-        // Ignore 是范围排除，类级忽略不能被方法上的其他配置覆盖。
-        A found = AnnotatedElementUtils.findMergedAnnotation(specific, kind);
-        if (found == null) {
-            found = AnnotatedElementUtils.findMergedAnnotation(original, kind);
-        }
-        if (found == null) {
-            found = AnnotatedElementUtils.findMergedAnnotation(type, kind);
-        }
-        if (found == null) {
-            found = AnnotatedElementUtils.findMergedAnnotation(original.getDeclaringClass(), kind);
-        }
-        return found;
-    }
-
-    private FeaturePolicy fromAnnotation(Annotation value) {
-        try {
-            Class<? extends Annotation> type = value.annotationType();
-            boolean enabled = (Boolean) type.getMethod("enabled").invoke(value);
-            LogLevel level = (LogLevel) type.getMethod("level").invoke(value);
-            long threshold = value instanceof SlowLog ? ((SlowLog) value).threshold() : 0;
-            List<String> allowlist = Collections.emptyList();
-            if (value instanceof RequestHeadersLog) {
-                allowlist = Arrays.asList(((RequestHeadersLog) value).allowlist());
-            } else if (value instanceof ResponseHeadersLog) {
-                allowlist = Arrays.asList(((ResponseHeadersLog) value).allowlist());
-            }
-            return new FeaturePolicy(enabled, level, threshold, allowlist);
-        } catch (ReflectiveOperationException error) {
-            throw new IllegalStateException("Cannot inspect logging annotation", error);
-        }
-    }
-
-    private FeaturePolicy configured(
+    private FeatureSettings configured(
             InvocationLogSource origin,
             InvocationLogFeature feature,
             VeloProperties.InvocationSourceProperties source) {
@@ -175,7 +100,7 @@ final class InvocationLogPolicyResolver {
                 allowlist = explicit;
             }
         }
-        return new FeaturePolicy(enabled, level, threshold, allowlist);
+        return new FeatureSettings(enabled, level, threshold, allowlist);
     }
 
     private boolean builtinEnabled(InvocationLogSource source, InvocationLogFeature feature) {
@@ -184,34 +109,13 @@ final class InvocationLogPolicyResolver {
             case EXIT_RESULT:
                 return source == InvocationLogSource.CONTROLLER
                         || source == InvocationLogSource.FEIGN
-                        || source == InvocationLogSource.INVOKE;
+                        || source == InvocationLogSource.ANNOTATION;
             case COST_LOG:
             case SLOW_LOG:
             case ERROR_LOG:
                 return true;
             default:
                 return false;
-        }
-    }
-
-    private Class<? extends Annotation> annotationType(InvocationLogFeature feature) {
-        switch (feature) {
-            case ENTRY_ARGS:
-                return EntryArgs.class;
-            case EXIT_ARGS:
-                return ExitArgs.class;
-            case EXIT_RESULT:
-                return ExitResult.class;
-            case COST_LOG:
-                return CostLog.class;
-            case SLOW_LOG:
-                return SlowLog.class;
-            case REQUEST_HEADERS:
-                return RequestHeadersLog.class;
-            case RESPONSE_HEADERS:
-                return ResponseHeadersLog.class;
-            default:
-                return ErrorLog.class;
         }
     }
 
@@ -271,22 +175,22 @@ final class InvocationLogPolicyResolver {
             case XXL_JOB:
                 return p.getXxlJob();
             default:
-                return p.getInvoke();
+                return p.getAnnotation();
         }
     }
 
-    private static final class MethodMetadataCache {
-        private final ConcurrentMap<Method, Metadata> methods = new ConcurrentHashMap<>();
-        // Spring 5 的参数名发现器也缓存 Class，必须随目标类管理生命周期。
-        private final DefaultParameterNameDiscoverer names = new DefaultParameterNameDiscoverer();
-    }
+    private static final class FeatureSettings {
+        boolean enabled;
+        LogLevel level;
+        long threshold;
+        List<String> allowlist;
 
-    @RequiredArgsConstructor
-    static class Metadata {
-        final boolean ignored;
-        final boolean voidResult;
-        final String[] parameterNames;
-        final Map<InvocationLogFeature, FeaturePolicy> annotations;
+        FeatureSettings(boolean enabled, LogLevel level, long threshold, List<String> allowlist) {
+            this.enabled = enabled;
+            this.level = level;
+            this.threshold = threshold;
+            this.allowlist = allowlist;
+        }
     }
 
     @RequiredArgsConstructor

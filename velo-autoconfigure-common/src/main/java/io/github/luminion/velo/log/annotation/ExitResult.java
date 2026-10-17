@@ -7,7 +7,6 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import org.springframework.boot.logging.LogLevel;
 
 /**
  * 正常完成时的返回值日志。
@@ -20,6 +19,6 @@ public @interface ExitResult {
     /** 是否记录正常返回的结果。 */
     boolean enabled() default true;
 
-    /** 日志级别。 */
-    LogLevel level() default LogLevel.INFO;
+    /** 日志级别；未指定时逐级继承。 */
+    LogPolicyLevel level() default LogPolicyLevel.INHERIT;
 }

@@ -2,34 +2,36 @@ package io.github.luminion.velo.log.aspect;
 
 import io.github.luminion.velo.core.VeloAdvisorOrder;
 import io.github.luminion.velo.log.core.InvocationLogEngine;
+import io.github.luminion.velo.log.core.InvocationLogMetadata;
 import io.github.luminion.velo.log.core.InvocationLogSource;
-import io.github.luminion.velo.log.core.InvocationLogSupport;
+import io.github.luminion.velo.log.core.LogInvocation;
 import io.github.luminion.velo.trace.TraceContext;
 import io.github.luminion.velo.trace.TraceScopeManager;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 
 import lombok.Getter;
-import org.aspectj.lang.ProceedingJoinPoint;
-import org.aspectj.lang.annotation.Around;
-import org.aspectj.lang.annotation.Aspect;
-import org.aspectj.lang.reflect.MethodSignature;
+import org.aopalliance.aop.Advice;
+import org.aopalliance.intercept.MethodInterceptor;
+import org.aopalliance.intercept.MethodInvocation;
+import org.springframework.aop.Pointcut;
+import org.springframework.aop.PointcutAdvisor;
 import org.springframework.aop.support.AopUtils;
+import org.springframework.aop.support.StaticMethodMatcherPointcut;
 import org.springframework.core.Ordered;
-import org.springframework.core.annotation.AnnotatedElementUtils;
-import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 普通方法调用日志切面。
+ * 普通方法调用日志入口；静态匹配与策略解析共用缓存，不在每次调用时扫描注解。
  */
-@Aspect
-public class InvokeLogAspect implements Ordered {
+public class InvokeLogAspect implements PointcutAdvisor, Ordered {
     private final InvocationLogEngine engine;
     private final TraceScopeManager trace;
     @Getter
     private final int order;
+    @Getter
+    private final Pointcut pointcut;
+    @Getter
+    private final Advice advice;
 
     public InvokeLogAspect(InvocationLogEngine engine) {
         this(engine, null);
@@ -43,56 +45,36 @@ public class InvokeLogAspect implements Ordered {
         this.engine = engine;
         this.trace = trace;
         this.order = order;
+        this.pointcut = new StaticMethodMatcherPointcut() {
+            @Override
+            public boolean matches(Method method, Class<?> targetClass) {
+                return InvocationLogMetadata.isOrdinaryEntry(method, targetClass);
+            }
+        };
+        this.advice = (MethodInterceptor) this::logInvocation;
     }
 
-    @Around(
-            "@within(io.github.luminion.velo.log.annotation.InvokeLog) || "
-                    + "@annotation(io.github.luminion.velo.log.annotation.InvokeLog)")
-    public Object logInvocation(ProceedingJoinPoint point) throws Throwable {
-        MethodSignature signature = (MethodSignature) point.getSignature();
-        Class<?> type =
-                point.getTarget() == null
-                        ? signature.getDeclaringType()
-                        : AopUtils.getTargetClass(point.getTarget());
-        Method method = AopUtils.getMostSpecificMethod(signature.getMethod(), type);
-        if (AnnotatedElementUtils.hasAnnotation(type, RestController.class)
-                || AnnotatedElementUtils.hasAnnotation(type, ResponseBody.class)
-                || AnnotatedElementUtils.hasAnnotation(method, ResponseBody.class)
-                || hasFeignClient(type)
-                || hasFeignClient(signature.getDeclaringType())
-                || isAutomaticSource(method)) {
-            return point.proceed();
-        }
+    public Object logInvocation(MethodInvocation point) throws Throwable {
+        Method method = point.getMethod();
+        Object target = point.getThis();
+        Class<?> type = target == null ? method.getDeclaringClass() : AopUtils.getTargetClass(target);
         try (TraceContext.Scope scope = trace == null ? null : trace.open()) {
             if (engine == null) {
                 return point.proceed();
             }
-            return engine.invoke(
-                    InvocationLogSupport.invocation(
-                            point, InvocationLogSource.INVOKE, signature.getName() + "()"),
-                    point::proceed);
+            LogInvocation invocation = LogInvocation.builder()
+                    .method(method)
+                    .targetClass(type)
+                    .source(InvocationLogSource.ANNOTATION)
+                    .target(method.getName() + "()")
+                    .arguments(point.getArguments())
+                    .build();
+            return engine.invoke(invocation, point::proceed);
         }
     }
 
-    private boolean hasFeignClient(Class<?> type) {
-        for (Annotation annotation : type.getAnnotations()) {
-            if ("org.springframework.cloud.openfeign.FeignClient"
-                    .equals(annotation.annotationType().getName())) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean isAutomaticSource(Method method) {
-        for (Annotation annotation : method.getAnnotations()) {
-            String name = annotation.annotationType().getName();
-            if (name.equals("org.springframework.scheduling.annotation.Scheduled")
-                    || name.equals("org.springframework.scheduling.annotation.Schedules")
-                    || name.equals("com.xxl.job.core.handler.annotation.XxlJob")) {
-                return true;
-            }
-        }
-        return false;
+    @Override
+    public boolean isPerInstance() {
+        return true;
     }
 }

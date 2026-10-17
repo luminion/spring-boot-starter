@@ -38,7 +38,7 @@ class InvokeLogAspectTest {
         new InvokeLogAspect(new InvocationLogEngine(new VeloProperties(), formatter, writer));
     AspectJProxyFactory proxyFactory = new AspectJProxyFactory(new DemoService());
     proxyFactory.setInterfaces(DemoOperations.class);
-    proxyFactory.addAspect(aspect);
+    proxyFactory.addAdvisor(aspect);
     DemoOperations proxy = proxyFactory.getProxy();
 
     MutableArgument successfulArgument = new MutableArgument("before");

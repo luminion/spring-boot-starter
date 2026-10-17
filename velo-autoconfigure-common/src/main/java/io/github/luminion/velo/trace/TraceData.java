@@ -47,7 +47,10 @@ public final class TraceData {
         return Collections.unmodifiableMap(copy);
     }
 
-    static boolean validHeaderName(String name) {
+    /**
+     * 校验请求、响应及传播头名称是否符合 HTTP token 语法。
+     */
+    public static boolean validHeaderName(String name) {
         if (name == null || name.isEmpty()) {
             return false;
         }

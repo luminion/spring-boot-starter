@@ -93,7 +93,10 @@ class VeloConfigurationMetadataTest {
       assertTrue(metadata.contains("velo.log.trace.enabled"));
       assertFalse(metadata.contains("velo.log.trace.header-name"));
       assertTrue(metadata.contains("velo.log.trace.mdc-key"));
-      assertFalse(metadata.contains("velo.log.trace.response-header-enabled"));
+      assertTrue(metadata.contains("velo.log.trace.response-header-enabled"));
+      assertTrue(metadata.contains("velo.log.trace.response-header-name"));
+      assertTrue(metadata.contains("velo.trace.response-header-enabled"));
+      assertTrue(metadata.contains("velo.trace.response-header-name"));
       assertTrue(metadata.contains("velo.log.trace.feign-propagation-enabled"));
       assertTrue(metadata.contains("velo.log.trace.logging-pattern-enabled"));
       assertTrue(metadata.contains("velo.log.defaults.max-payload-length"));
@@ -102,7 +105,7 @@ class VeloConfigurationMetadataTest {
       assertTrue(metadata.contains("velo.log.defaults.exit-result.enabled"));
       assertTrue(metadata.contains("velo.log.defaults.cost-log.enabled"));
       assertTrue(metadata.contains("velo.log.defaults.cost-log.level"));
-      for (String source : new String[]{"controller", "feign", "invoke", "scheduled", "xxl-job"}) {
+      for (String source : new String[]{"controller", "feign", "annotation", "scheduled", "xxl-job"}) {
         assertTrue(metadata.contains("velo.log.sources." + source + ".cost-log.enabled"));
         assertTrue(metadata.contains("velo.log.sources." + source + ".cost-log.level"));
       }
@@ -112,6 +115,8 @@ class VeloConfigurationMetadataTest {
       assertFalse(metadata.contains("velo.log.invocation.sensitive-fields"));
       assertTrue(metadata.contains("velo.log.sources.controller.enabled"));
       assertTrue(metadata.contains("velo.log.sources.feign.enabled"));
+      assertTrue(metadata.contains("velo.log.sources.annotation.enabled"));
+      assertFalse(metadata.contains("velo.log.sources.invoke."));
       assertFalse(metadata.contains("velo.aspect-order.slow-log"));
       assertFalse(metadata.contains("velo.log.invocation.enabled"));
       assertFalse(metadata.contains("velo.log.invocation.controller.enabled"));

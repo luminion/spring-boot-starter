@@ -12,7 +12,7 @@ import lombok.RequiredArgsConstructor;
 public enum InvocationLogSource {
     CONTROLLER("controller"),
     FEIGN("feign"),
-    INVOKE("invoke"),
+    ANNOTATION("annotation"),
     XXL_JOB("xxl-job"),
     SCHEDULED("scheduled");
 

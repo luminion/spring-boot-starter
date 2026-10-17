@@ -7,10 +7,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.luminion.velo.VeloProperties;
 import io.github.luminion.velo.log.annotation.CostLog;
+import io.github.luminion.velo.log.annotation.LogPolicyLevel;
 import io.github.luminion.velo.log.annotation.EntryArgs;
 import io.github.luminion.velo.log.annotation.ExitArgs;
 import io.github.luminion.velo.log.annotation.ExitResult;
 import io.github.luminion.velo.log.annotation.LogIgnore;
+import io.github.luminion.velo.log.annotation.InvokeLog;
 import io.github.luminion.velo.log.annotation.SlowLog;
 import io.github.luminion.velo.trace.TraceContext;
 
@@ -45,7 +47,7 @@ class InvocationLogEngineTest {
     void defaultsLogArgumentsResultAndCostIndependently() throws Throwable {
         for (InvocationLogSource source :
                 new InvocationLogSource[]{
-                        InvocationLogSource.CONTROLLER, InvocationLogSource.FEIGN, InvocationLogSource.INVOKE
+                        InvocationLogSource.CONTROLLER, InvocationLogSource.FEIGN, InvocationLogSource.ANNOTATION
                 }) {
             records.clear();
             engine.invoke(call(Service.class, "call", source, "input"), () -> "result");
@@ -62,17 +64,17 @@ class InvocationLogEngineTest {
     }
 
     @Test
-    void methodOverridesClassAndSourceAndUsesAnnotationDefaults() throws Throwable {
-        properties.getLog().getSources().getInvoke().getEntryArgs().setEnabled(false);
+    void methodReenablesFeatureAndInheritsClassLevel() throws Throwable {
+        properties.getLog().getSources().getAnnotation().getEntryArgs().setEnabled(false);
         engine.invoke(
-                call(PolicyService.class, "enabled", InvocationLogSource.INVOKE, "input"), () -> "result");
+                call(PolicyService.class, "enabled", InvocationLogSource.ANNOTATION, "input"), () -> "result");
         assertThat(records)
                 .extracting(InvocationLogRecord::getFeature)
                 .containsExactly(InvocationLogFeature.ENTRY_ARGS);
-        assertThat(records.get(0).getLevel()).isEqualTo(LogLevel.INFO);
+        assertThat(records.get(0).getLevel()).isEqualTo(LogLevel.DEBUG);
         records.clear();
         engine.invoke(
-                call(PolicyService.class, "inherited", InvocationLogSource.INVOKE, "input"),
+                call(PolicyService.class, "inherited", InvocationLogSource.ANNOTATION, "input"),
                 () -> "result");
         assertThat(records).isEmpty();
     }
@@ -83,7 +85,7 @@ class InvocationLogEngineTest {
         for (Class<?> type : new Class<?>[]{Ignored.class, Service.class}) {
             String method = type == Ignored.class ? "call" : "ignored";
             engine.invoke(
-                    call(type, method, InvocationLogSource.INVOKE, "input"),
+                    call(type, method, InvocationLogSource.ANNOTATION, "input"),
                     () -> {
                         assertThat(MDC.get("traceId")).isNull();
                         assertThat(TraceContext.current()).isNull();
@@ -131,7 +133,7 @@ class InvocationLogEngineTest {
         assertThatThrownBy(
                 () ->
                         engine.invoke(
-                                call(Service.class, "call", InvocationLogSource.INVOKE, "input"),
+                                call(Service.class, "call", InvocationLogSource.ANNOTATION, "input"),
                                 () -> {
                                     throw original;
                                 }))
@@ -153,7 +155,7 @@ class InvocationLogEngineTest {
             throw new AssertionError("slow summary must not serialize an object payload");
         }, records::add);
         assertThat(logging.invoke(
-                call(Service.class, "call", InvocationLogSource.INVOKE, "input"), () -> "result"))
+                call(Service.class, "call", InvocationLogSource.ANNOTATION, "input"), () -> "result"))
                 .isEqualTo("result");
         assertThat(records).extracting(InvocationLogRecord::getFeature)
                 .containsExactly(InvocationLogFeature.COST_LOG, InvocationLogFeature.SLOW_LOG);
@@ -164,12 +166,12 @@ class InvocationLogEngineTest {
 
     @Test
     void errorCanBeDisabledWithoutChangingException() throws Exception {
-        properties.getLog().getSources().getInvoke().getErrorLog().setEnabled(false);
+        properties.getLog().getSources().getAnnotation().getErrorLog().setEnabled(false);
         RuntimeException error = new RuntimeException("boom");
         assertThatThrownBy(
                 () ->
                         engine.invoke(
-                                call(Service.class, "call", InvocationLogSource.INVOKE, "input"),
+                                call(Service.class, "call", InvocationLogSource.ANNOTATION, "input"),
                                 () -> {
                                     throw error;
                                 }))
@@ -186,7 +188,7 @@ class InvocationLogEngineTest {
                 LogInvocation.builder()
                         .method(method)
                         .targetClass(Service.class)
-                        .source(InvocationLogSource.INVOKE)
+                        .source(InvocationLogSource.ANNOTATION)
                         .target("mutate()")
                         .arguments(new Object[]{value})
                         .build();
@@ -249,7 +251,7 @@ class InvocationLogEngineTest {
         CompletableFuture<String> original = new CompletableFuture<>();
         Object returned =
                 engine.invoke(
-                        call(Service.class, "call", InvocationLogSource.INVOKE, "input"), () -> original);
+                        call(Service.class, "call", InvocationLogSource.ANNOTATION, "input"), () -> original);
         assertThat(returned).isSameAs(original);
         assertThat(original).isNotDone();
         assertThat(original.getNumberOfDependents()).isZero();
@@ -277,7 +279,7 @@ class InvocationLogEngineTest {
         CompletableFuture<String> original = new CompletableFuture<>();
         MDC.put("traceId", "caller-trace");
         logging.invoke(
-                call(Service.class, "call", InvocationLogSource.INVOKE, "input"), () -> original);
+                call(Service.class, "call", InvocationLogSource.ANNOTATION, "input"), () -> original);
         AtomicReference<String> after = new AtomicReference<>();
         Thread worker =
                 new Thread(
@@ -330,10 +332,10 @@ class InvocationLogEngineTest {
                             return "value";
                         },
                         rejecting);
-        logging.invoke(call(Service.class, "call", InvocationLogSource.INVOKE, "input"), () -> "done");
+        logging.invoke(call(Service.class, "call", InvocationLogSource.ANNOTATION, "input"), () -> "done");
         assertThat(formatted).hasValue(0);
         properties.getLog().getDefaults().setMaxPayloadLength(0);
-        engine.invoke(call(Service.class, "call", InvocationLogSource.INVOKE, "input"), () -> "done");
+        engine.invoke(call(Service.class, "call", InvocationLogSource.ANNOTATION, "input"), () -> "done");
         assertThat(records).extracting(InvocationLogRecord::getFeature)
                 .containsExactly(InvocationLogFeature.COST_LOG);
     }
@@ -352,13 +354,13 @@ class InvocationLogEngineTest {
         Object expected = new Object();
         assertThat(
                 logging.invoke(
-                        call(Service.class, "call", InvocationLogSource.INVOKE, "input"), () -> expected))
+                        call(Service.class, "call", InvocationLogSource.ANNOTATION, "input"), () -> expected))
                 .isSameAs(expected);
         RuntimeException error = new RuntimeException("original");
         assertThatThrownBy(
                 () ->
                         logging.invoke(
-                                call(Service.class, "call", InvocationLogSource.INVOKE, "input"),
+                                call(Service.class, "call", InvocationLogSource.ANNOTATION, "input"),
                                 () -> {
                                     throw error;
                                 }))
@@ -376,7 +378,7 @@ class InvocationLogEngineTest {
             records.clear();
             properties.getLog().getDefaults().setMaxPayloadLength(limit);
             assertThatThrownBy(() -> engine.invoke(
-                    call(Service.class, "call", InvocationLogSource.INVOKE, "input"), () -> {
+                    call(Service.class, "call", InvocationLogSource.ANNOTATION, "input"), () -> {
                         throw original;
                     })).isSameAs(original);
             assertThat(records).filteredOn(record -> record.getFeature() == InvocationLogFeature.ERROR_LOG)
@@ -395,7 +397,7 @@ class InvocationLogEngineTest {
                 call(Service.class, "call", InvocationLogSource.CONTROLLER, "input"),
                 () ->
                         engine.invoke(
-                                call(Service.class, "call", InvocationLogSource.INVOKE, "nested"), () -> "done"));
+                                call(Service.class, "call", InvocationLogSource.ANNOTATION, "nested"), () -> "done"));
         assertThat(records).hasSize(3);
         assertThat(MDC.get("traceId")).isNull();
     }
@@ -406,7 +408,7 @@ class InvocationLogEngineTest {
         original.completeExceptionally(new IllegalArgumentException("bad"));
         assertThat(
                 engine.invoke(
-                        call(Service.class, "call", InvocationLogSource.INVOKE, "input"), () -> original))
+                        call(Service.class, "call", InvocationLogSource.ANNOTATION, "input"), () -> original))
                 .isSameAs(original);
         assertThat(records)
                 .extracting(InvocationLogRecord::getFeature)
@@ -421,7 +423,7 @@ class InvocationLogEngineTest {
         assertThatThrownBy(
                 () ->
                         engine.invoke(
-                                call(Service.class, "call", InvocationLogSource.INVOKE, "input"),
+                                call(Service.class, "call", InvocationLogSource.ANNOTATION, "input"),
                                 () -> {
                                     throw original;
                                 }))
@@ -457,18 +459,18 @@ class InvocationLogEngineTest {
         properties.getLog().getDefaults().setMaxPayloadLength(0);
         properties.getLog().getDefaults().getSlowLog().setThreshold(0L);
         properties.getLog().getDefaults().getCostLog().setEnabled(false);
-        engine.invoke(call(Service.class, "call", InvocationLogSource.INVOKE, "input"), () -> "done");
+        engine.invoke(call(Service.class, "call", InvocationLogSource.ANNOTATION, "input"), () -> "done");
         assertThat(records).extracting(InvocationLogRecord::getFeature)
                 .containsExactly(InvocationLogFeature.SLOW_LOG);
         records.clear();
         properties.getLog().getDefaults().getCostLog().setEnabled(true);
         properties.getLog().getDefaults().getCostLog().setLevel(LogLevel.OFF);
-        engine.invoke(call(Service.class, "call", InvocationLogSource.INVOKE, "input"), () -> "done");
+        engine.invoke(call(Service.class, "call", InvocationLogSource.ANNOTATION, "input"), () -> "done");
         assertThat(records).extracting(InvocationLogRecord::getFeature)
                 .containsExactly(InvocationLogFeature.SLOW_LOG);
         records.clear();
-        properties.getLog().getSources().getInvoke().getCostLog().setLevel(LogLevel.DEBUG);
-        engine.invoke(call(Service.class, "call", InvocationLogSource.INVOKE, "input"), () -> "done");
+        properties.getLog().getSources().getAnnotation().getCostLog().setLevel(LogLevel.DEBUG);
+        engine.invoke(call(Service.class, "call", InvocationLogSource.ANNOTATION, "input"), () -> "done");
         assertThat(records).extracting(InvocationLogRecord::getFeature)
                 .containsExactly(InvocationLogFeature.COST_LOG, InvocationLogFeature.SLOW_LOG);
         assertThat(records.get(0).getLevel()).isEqualTo(LogLevel.DEBUG);
@@ -485,6 +487,7 @@ class InvocationLogEngineTest {
                 .build();
     }
 
+    @InvokeLog
     static class Service {
         public String call(String value) {
             return value;
@@ -495,7 +498,7 @@ class InvocationLogEngineTest {
             return value;
         }
 
-        @SlowLog(threshold = 0, level = LogLevel.INFO)
+        @SlowLog(threshold = 0, level = LogPolicyLevel.INFO)
         public String slow(String value) {
             return value;
         }
@@ -505,7 +508,7 @@ class InvocationLogEngineTest {
         }
     }
 
-    @EntryArgs(enabled = false, level = LogLevel.DEBUG)
+    @EntryArgs(enabled = false, level = LogPolicyLevel.DEBUG)
     @ExitResult(enabled = false)
     @CostLog(enabled = false)
     static class PolicyService {

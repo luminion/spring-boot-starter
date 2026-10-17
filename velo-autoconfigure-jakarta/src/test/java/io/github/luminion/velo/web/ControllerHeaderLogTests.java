@@ -11,6 +11,11 @@ import io.github.luminion.velo.log.core.InvocationLogRecord;
 import io.github.luminion.velo.log.InvocationLogWriter;
 import io.github.luminion.velo.log.annotation.RequestHeadersLog;
 import io.github.luminion.velo.log.annotation.ResponseHeadersLog;
+import io.github.luminion.velo.log.annotation.InvokeLog;
+import io.github.luminion.velo.log.annotation.CostLog;
+import io.github.luminion.velo.log.annotation.LogPolicyLevel;
+import io.github.luminion.velo.log.aspect.InvokeLogAspect;
+import io.github.luminion.velo.log.core.InvocationLogSource;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,6 +23,8 @@ import java.util.List;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.junit.jupiter.api.Test;
+import org.springframework.aop.aspectj.annotation.AspectJProxyFactory;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -69,6 +76,47 @@ class ControllerHeaderLogTests {
         assertThat(records.get(3).getContent())
                 .contains("X-Result", "ok")
                 .doesNotContain("X-Private", "private");
+    }
+
+    @Test
+    void explicitAnnotationsKeepControllerContextAndNeverDuplicateOrBypassSourceSwitch() {
+        VeloProperties properties = new VeloProperties();
+        properties.getLog().getSources().getAnnotation().getEntryArgs().setEnabled(false);
+        List<InvocationLogRecord> records = new ArrayList<>();
+        InvocationLogEngine engine = new InvocationLogEngine(properties, String::valueOf, records::add);
+        AspectJProxyFactory factory = new AspectJProxyFactory(new ProxiedEndpoint());
+        factory.addAspect(new ControllerLogAspect(engine));
+        factory.addAdvisor(new InvokeLogAspect(engine));
+        ProxiedEndpoint endpoint = factory.getProxy();
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/profile");
+        request.setRemoteAddr("203.0.113.7");
+        request.addHeader("X-Debug", "visible");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        response.addHeader("X-Result", "ok");
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request, response));
+        try {
+            assertThat(endpoint.handle()).isEqualTo("done");
+            assertThat(records).hasSize(5).allSatisfy(record -> {
+                assertThat(record.getSource()).isEqualTo(InvocationLogSource.CONTROLLER);
+                assertThat(record.getTarget()).isEqualTo("203.0.113.7 GET /profile");
+            });
+            assertThat(records.get(4).getLevel()).isEqualTo(org.springframework.boot.logging.LogLevel.DEBUG);
+            records.clear();
+            properties.getLog().getSources().getController().setEnabled(false);
+            endpoint.handle();
+            assertThat(records).isEmpty();
+        } finally {
+            RequestContextHolder.resetRequestAttributes();
+        }
+    }
+
+    @RestController
+    @InvokeLog
+    static class ProxiedEndpoint {
+        @CostLog(level = LogPolicyLevel.DEBUG)
+        @RequestHeadersLog(allowlist = "X-Debug")
+        @ResponseHeadersLog(allowlist = "X-Result")
+        public String handle() { return "done"; }
     }
 
     static class Endpoint {

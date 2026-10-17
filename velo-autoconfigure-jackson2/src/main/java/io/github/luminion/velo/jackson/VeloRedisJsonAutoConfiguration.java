@@ -1,7 +1,9 @@
 package io.github.luminion.velo.jackson;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
@@ -13,6 +15,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializer;
+import org.springframework.core.KotlinDetector;
+import org.springframework.util.ClassUtils;
 
 /**
  * Jackson 2 的 Redis JSON 适配，与 HTTP Jackson 增强开关和 mapper 隔离。
@@ -34,10 +38,50 @@ public class VeloRedisJsonAutoConfiguration {
         mapper.registerModule(new JavaTimeModule());
         // 默认信任 Redis 及其内容；通用缓存有意按类型元数据回读 POJO，不额外限定业务类型白名单。
         // 需要限制类型时由业务提供定向 serializer 或自定义 RedisSerializer<Object> Bean。
-        mapper.activateDefaultTyping(LaissezFaireSubTypeValidator.instance,
-                ObjectMapper.DefaultTyping.NON_FINAL,
-                JsonTypeInfo.As.PROPERTY);
+        mapper.setDefaultTyping(new RedisTypeResolverBuilder()
+                .init(JsonTypeInfo.Id.CLASS, null)
+                .inclusion(JsonTypeInfo.As.PROPERTY));
         GenericJackson2JsonRedisSerializer.registerNullValueSerializer(mapper, null);
         return new GenericJackson2JsonRedisSerializer(mapper);
+    }
+
+    /**
+     * 沿用 Spring Data Generic JSON 的类型判定，兼容共享模块支持的 Redis 2.x/3.x。
+     * 普通 NON_FINAL 策略会漏掉 final DTO 和 record；Java 标量与日期仍由各自序列化器处理。
+     */
+    private static final class RedisTypeResolverBuilder extends ObjectMapper.DefaultTypeResolverBuilder {
+        private static final long serialVersionUID = 1L;
+
+        private RedisTypeResolverBuilder() {
+            super(ObjectMapper.DefaultTyping.NON_FINAL, LaissezFaireSubTypeValidator.instance);
+        }
+
+        @Override
+        public ObjectMapper.DefaultTypeResolverBuilder withDefaultImpl(Class<?> defaultImpl) {
+            return this;
+        }
+
+        @Override
+        public boolean useForType(JavaType type) {
+            if (type.isJavaLangObject()) {
+                return true;
+            }
+            while (type.isArrayType() || type.isReferenceType()) {
+                if (type.isArrayType()) {
+                    type = type.getContentType();
+                } else {
+                    type = type.getReferencedType();
+                }
+            }
+            Class<?> rawClass = type.getRawClass();
+            if (type.isEnumType() || ClassUtils.isPrimitiveOrWrapper(rawClass)) {
+                return false;
+            }
+            if (type.isFinal() && !KotlinDetector.isKotlinType(rawClass)
+                    && rawClass.getPackage().getName().startsWith("java")) {
+                return false;
+            }
+            return !TreeNode.class.isAssignableFrom(rawClass);
+        }
     }
 }

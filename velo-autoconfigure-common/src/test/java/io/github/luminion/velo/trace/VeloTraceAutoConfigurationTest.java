@@ -47,7 +47,11 @@ class VeloTraceAutoConfigurationTest {
                         "velo.log.trace.enabled=false",
                         "velo.log.trace.mdc-key=legacyId",
                         "velo.log.trace.feign-propagation-enabled=false",
+                        "velo.log.trace.response-header-enabled=false",
+                        "velo.log.trace.response-header-name=X-Legacy-Id",
                         "velo.trace.enabled=true",
+                        "velo.trace.response-header-enabled=true",
+                        "velo.trace.response-header-name=X-Diagnostic-Id",
                         "velo.trace.mdc-key=currentId")
                 .run(
                         context -> {
@@ -56,7 +60,24 @@ class VeloTraceAutoConfigurationTest {
                             assertThat(properties.isEnabled()).isTrue();
                             assertThat(properties.getMdcKey()).isEqualTo("currentId");
                             assertThat(properties.isFeignPropagationEnabled()).isFalse();
+                            assertThat(properties.isResponseHeaderEnabled()).isTrue();
+                            assertThat(properties.getResponseHeaderName()).isEqualTo("X-Diagnostic-Id");
                         });
+    }
+
+    @Test
+    void responseHeaderDefaultsAndLegacyFallbackRemainIndependentOfLogging() {
+        runner.withPropertyValues("velo.log.enabled=false").run(context -> {
+            TraceProperties properties = context.getBean(TraceProperties.class);
+            assertThat(properties.isResponseHeaderEnabled()).isTrue();
+            assertThat(properties.getResponseHeaderName()).isEqualTo("X-Trace-Id");
+        });
+        runner.withPropertyValues("velo.log.trace.response-header-enabled=false",
+                "velo.log.trace.response-header-name=X-Legacy-Id").run(context -> {
+            TraceProperties properties = context.getBean(TraceProperties.class);
+            assertThat(properties.isResponseHeaderEnabled()).isFalse();
+            assertThat(properties.getResponseHeaderName()).isEqualTo("X-Legacy-Id");
+        });
     }
 
     @Test

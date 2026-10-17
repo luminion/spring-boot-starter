@@ -70,6 +70,22 @@ class Boot4CacheJsonSerializationTest {
     }
 
     @Test
+    void shouldRestoreRecordsWithNanosecondJavaTime() {
+        runner().withBean(RedisConnectionFactory.class, () -> mock(RedisConnectionFactory.class))
+                .run(context -> {
+                    RedisCacheConfiguration config = ((RedisCache) context.getBean(CacheManager.class)
+                            .getCache("record")).getCacheConfiguration();
+                    RecordPayload source = new RecordPayload("record",
+                            LocalDateTime.of(2026, 10, 15, 10, 20, 30, 123456789));
+                    ByteBuffer bytes = config.getValueSerializationPair().write(source);
+                    assertThat(config.getValueSerializationPair().read(bytes)).isEqualTo(source);
+                });
+    }
+
+    public record RecordPayload(String name, LocalDateTime createdAt) {
+    }
+
+    @Test
     void shouldRestoreDtoCollectionsAndDifferentValuesInTheSameCache() {
         runner().withBean(RedisConnectionFactory.class, () -> mock(RedisConnectionFactory.class))
                 .run(context -> {

@@ -662,17 +662,21 @@ JDK 锁和 Redis 锁的本地记录只保存活跃调用，不随历史业务 ke
 
 | 注解 | 属性及默认值 | 示例 |
 |---|---|---|
-| `CostLog` | `enabled=true`、`level=INFO` | `@CostLog(level = LogLevel.DEBUG)` |
-| `SlowLog` | `enabled=true`、`level=WARN`、`threshold=1000`（毫秒） | `@SlowLog(threshold = 1000)` |
-| `EntryArgs` / `ExitArgs` / `ExitResult` | `enabled=true`、`level=INFO` | `@EntryArgs(level = LogLevel.DEBUG)` |
-| `ErrorLog` | `enabled=true`、`level=WARN` | `@ErrorLog(level = LogLevel.ERROR)` |
-| `RequestHeadersLog` / `ResponseHeadersLog` | `enabled=true`、`level=INFO`、`allowlist={}` | `@RequestHeadersLog(allowlist = {"X-Trace-Id"})` |
+| `CostLog` | `enabled=true`、`level=INHERIT` | `@CostLog(level = LogPolicyLevel.DEBUG)` |
+| `SlowLog` | `enabled=true`、`level=INHERIT`、`threshold=-1`（继承） | `@SlowLog(threshold = 1000)` |
+| `EntryArgs` / `ExitArgs` / `ExitResult` | `enabled=true`、`level=INHERIT` | `@EntryArgs(level = LogPolicyLevel.DEBUG)` |
+| `ErrorLog` | `enabled=true`、`level=INHERIT` | `@ErrorLog(level = LogPolicyLevel.ERROR)` |
+| `RequestHeadersLog` / `ResponseHeadersLog` | `enabled=true`、`level=INHERIT`、白名单默认继承 | `@RequestHeadersLog(allowlist = {"X-Trace-Id"})` |
 
-`InvokeLog`、`LogIgnore` 保持无属性的标记注解。头部 `allowlist` 为空时表示不限制头名称，非空时仅记录指定头，匹配忽略大小写。
+`InvokeLog` 是无属性的内置组合注解，提供全部功能的可配置默认套餐，初始启闭与 Controller 相同；具体功能注解优先于套餐默认值。`LogIgnore` 保持无属性的排除注解。业务自定义组合本次不作为独立接入能力提供。
+
+注解级别使用 `io.github.luminion.velo.log.annotation.LogPolicyLevel`，支持 `INHERIT/TRACE/DEBUG/INFO/WARN/ERROR/FATAL/OFF`。`INHERIT` 逐级查找实际级别，配置文件和输出器仍使用 Spring Boot `LogLevel`。头部白名单省略时继承；显式 `allowlist={}` 表示全部头，非空名称数组替换上一级白名单，匹配忽略大小写。框架的默认单空字符串数组仅作为继承标记，不与真实名称混写。
 
 注解属性统一约定：稳定的主输入可使用 `value`，配置选项使用具名属性，同一语义只保留一个入口。并发控制的 `value` 表示 SpEL，`JsonEnum` / `JsonEncode` / `JsonDecode` 的 `value` 表示目标类型，`ConditionalOnListProperty.value` 表示列表配置路径且必须显式指定；`ConditionalOnConcurrencyBackend` 使用具名的 `backend`，不再提供 `value`。现有自定义注解不再声明 `@AliasFor`。
 
 升级迁移：旧日志注解的 `value` 简写分别改为 `level`、`threshold`、`allowlist`；`SlowLog.thresholdMs` 改为 `threshold`，配置 `slow-log.threshold-ms` 同步改为 `slow-log.threshold`，单位仍为毫秒。`ConditionalOnConcurrencyBackend.value` 改为 `backend`。这些属性调整不保留兼容别名，应迁移用法并重新编译。
+
+本次日志改造不保留旧行为兼容：普通方法来源及输出前缀由 `invoke` 改为 `annotation`，配置 `velo.log.sources.invoke.*` 改为 `velo.log.sources.annotation.*`，来源枚举改为 `ANNOTATION`。日志注解的 `level` 改用 `LogPolicyLevel`；省略级别、慢阈值或白名单时继承上一级，明确填写则覆盖。单独功能注解现在直接生效，应检查以前未接入的标注。普通入口采用静态 Spring Advisor，手工代理注册使用 `addAdvisor`，自动配置使用方式不变。
 
 实现包按职责整理：`log.annotation`（注解）、`log.aspect`（普通调用与任务适配）、`log.core`（调用生命周期与记录）、`log.config`（自动配置）、`log.support`（输出实现）。`InvocationLogWriter`、`LogValueFormatter` 扩展接口保留在 `log`；链路上下文独立放在 `io.github.luminion.velo.trace`。Controller / Feign 适配仍放在各自协议包。
 
@@ -686,46 +690,50 @@ Controller、Feign、`@InvokeLog` 和任务入口共用一个同步 `InvocationL
 [controller] [127.0.0.1 GET /users/{id}] <== responseHeaders={"X-Result":["ok"]}
 [controller] [127.0.0.1 GET /users/{id}] <== cost=1200ms
 [controller] [127.0.0.1 GET /users/{id}] <== slow={cost=1200ms, threshold=1000ms}
-[invoke] [find()] <== error={"type":"java.lang.IllegalArgumentException","message":"参数无效"}
-[invoke] [find()] <== cost=24ms
+[annotation] [find()] <== error={"type":"java.lang.IllegalArgumentException","message":"参数无效"}
+[annotation] [find()] <== cost=24ms
 [feign] [remote() GET /log/remote] <== exitResult={"message":"hello"}
 [feign] [remote() GET /log/remote] <== cost=24ms
 [scheduled] [run()] <== cost=5ms
 [xxl-job] [run()] <== cost=5ms
 ```
 
-固定结构为 `[入口类型] [调用目标] 箭头 功能名=内容`，各块之间保留一个空格，等号两侧不留空格。入口类型为 `controller/invoke/feign/scheduled/xxl-job`；功能名为 `entryArgs/exitArgs/exitResult/requestHeaders/responseHeaders/cost/slow/error`。常规耗时固定为 `cost=实际耗时ms`，慢调用摘要固定为 `slow={cost=实际耗时ms, threshold=阈值ms}`；两者使用同一次计时，单位跟在数值后，由引擎直接生成，不调用对象 formatter。异常摘要使用独立对象且不附带堆栈。类名由日志框架输出，Invoke、Scheduled 和 XXL-Job 的调用目标只显示方法名。
+固定结构为 `[入口类型] [调用目标] 箭头 功能名=内容`，各块之间保留一个空格，等号两侧不留空格。入口类型为 `controller/annotation/feign/scheduled/xxl-job`；功能名为 `entryArgs/exitArgs/exitResult/requestHeaders/responseHeaders/cost/slow/error`。常规耗时固定为 `cost=实际耗时ms`，慢调用摘要固定为 `slow={cost=实际耗时ms, threshold=阈值ms}`；两者使用同一次计时，单位跟在数值后，由引擎直接生成，不调用对象 formatter。异常摘要使用独立对象且不附带堆栈。类名由日志框架输出，Annotation、Scheduled 和 XXL-Job 的调用目标只显示方法名。
 
 正文不重复打印 `traceId`、`source`、`event`、`invocationId`。默认日志格式通过 MDC 在级别位置显示 traceId。`InvocationLogRecord` 只包含 `source/target/feature/loggerName/level/content` 六个字段，`content` 为已经转换的字符串；不再生成 invocationId，也不复制 traceId。自定义输出器在 `write` 时可读取 MDC；延迟或异步输出时应自行捕获上下文快照。
 
-| 功能注解 | Controller 默认 | Feign 默认 | Invoke 默认 | Scheduled 默认 | XXL-Job 默认 | 默认级别 |
+| 功能注解 | Controller 默认 | Feign 默认 | `@InvokeLog` 默认 | Scheduled 默认 | XXL-Job 默认 | 内置级别 |
 | --- | --- | --- | --- | --- | --- | --- |
 | `EntryArgs` | 开 | 开 | 开 | 关 | 关 | INFO |
 | `ExitArgs` | 关 | 关 | 关 | 关 | 关 | INFO |
 | `ExitResult` | 开 | 开 | 开 | 关 | 关 | INFO |
 | `CostLog` | 开 | 开 | 开 | 开 | 开 | INFO |
 | `SlowLog` | 开 | 开 | 开 | 开 | 开 | WARN |
-| `RequestHeadersLog` | 关 | 关 | 不适用 | 不适用 | 不适用 | INFO |
-| `ResponseHeadersLog` | 关 | 关 | 不适用 | 不适用 | 不适用 | INFO |
+| `RequestHeadersLog` | 关 | 关 | 关 | 关 | 关 | INFO |
+| `ResponseHeadersLog` | 关 | 关 | 关 | 关 | 关 | INFO |
 | `ErrorLog` | 开 | 开 | 开 | 开 | 开 | WARN |
 
 表中“开”表示启用该功能，其输出仍取决于条件和日志框架的级别过滤：`ExitResult` 只在正常返回时输出，`ErrorLog` 只在同步抛出异常时输出，`SlowLog` 默认只在耗时达到 1000ms 时输出。`CostLog` 不设阈值，当前调用正常返回或抛出异常时均记录；慢调用会同时产生 INFO 耗时记录与独立 WARN 告警，不重复采集返回值。各功能开关和级别互不联动，关闭 CostLog 不影响 SlowLog，关闭 SlowLog 不影响 CostLog。
 
-任务入口包括 `@Scheduled` 和 XXL-Job，默认开启常规耗时、慢调用和异常摘要，参数和返回值默认关闭。普通方法需要 `@InvokeLog` 作为切入点；Controller、Feign、任务入口由自己的切面自动接入，重复标注 `@InvokeLog` 不会重复输出。单独标注 `@CostLog` 等功能注解的普通方法不会自动切入。以上默认值以相应适配依赖存在、总开关和来源开关开启为前提。切面基于 Spring AOP，同类内部直接调用、未经过代理的对象、private/final 方法不保证被拦截。
+普通方法单独标注 `@CostLog`、`@SlowLog` 等功能注解即可接入，只显式选择该项，不因配置开启其他功能而自动带出其他日志；已有类级声明继续继承。`@InvokeLog` 则提供完整默认套餐，例如配置开启 `exit-args` 后可以记录退出参数。Controller、Feign、任务入口自动接入，额外标注日志注解只调整策略，来源、调用目标和配置归属不变，不重复输出。
 
-配置优先级：**方法注解 > 类注解 > 来源配置 > 全局配置 > 内置默认值**。注解为完整配置，例如 `@EntryArgs` 自带 `enabled=true, level=INFO`，会覆盖类或 properties 对该功能的配置。没有方法注解才继承类配置。所有注解只支持类和方法，不支持参数、字段、返回类型；不再提供 `CONFIGURED` 或按慢调用/失败联动打印参数的触发策略。
+任务入口包括 `@Scheduled` 和 XXL-Job，未声明套餐时默认开启耗时、慢调用和异常摘要，参数和返回值默认关闭；显式 `@InvokeLog` 选择 Controller 同款默认套餐，仍使用任务来源配置。框架仅为 Controller / Feign 提供 HTTP 头数据，其他入口没有供应器时静默跳过头日志。以上行为以相应适配依赖存在、日志总开关和来源开关开启为前提。入口基于 Spring AOP，同类内部直接调用、未经过代理的对象、private/final 方法不保证被拦截。
+
+参数优先级：**方法明确值 > 类明确值 > 来源配置 > 全局配置 > 内置默认值**。具体功能注解自带 `enabled=true`，出现本身会重新开启该项；级别、阈值和白名单未指定时继续继承。方法局部设置不清空类级其他功能或参数。例如类上 `@SlowLog(enabled=false, threshold=2000)`，方法上 `@SlowLog(level=LogPolicyLevel.DEBUG)`，最终开启慢调用并使用 DEBUG / 2000ms。注解只支持类和方法，不支持参数、字段、返回类型；不提供按慢调用或失败联动打印参数的触发策略。
 
 `@LogIgnore` 排除其所在类或方法的全部调用日志，其他功能注解不能重新开启。它不屏蔽独立的下游调用日志，也不阻断 traceId 传播。`velo.log.enabled=false` 或 `sources.<source>.enabled=false` 是来源总开关，功能注解不能越过总开关。
 
 ```java
+import io.github.luminion.velo.log.annotation.LogPolicyLevel;
+
 @Service
 @InvokeLog
 @EntryArgs(enabled = false)
 public class UserService {
     @EntryArgs
     @ExitResult
-    @CostLog(level = LogLevel.INFO)
-    @SlowLog(threshold = 200, level = LogLevel.WARN)
+    @CostLog(level = LogPolicyLevel.INFO)
+    @SlowLog(threshold = 200, level = LogPolicyLevel.WARN)
     public User find(Long id) { /* 业务实现 */ }
 
     @LogIgnore
@@ -733,7 +741,7 @@ public class UserService {
 }
 ```
 
-每个功能都有独立 `enabled` 和 `level`，支持 Spring Boot `LogLevel`，`OFF` 关闭该功能。常规耗时使用 `CostLog`，慢调用告警使用 `SlowLog`；阈值单位毫秒，应大于等于 0，阈值为 0 时所有调用都满足慢调用条件。此前使用 `SlowLog(threshold = 0, level = INFO)` 记录全部耗时的用法，可改用默认开启的 CostLog，并将 SlowLog 恢复为业务需要的告警阈值；否则两项功能都会全量记录。
+每个功能都有独立 `enabled` 和 `level`，`OFF` 关闭该功能。常规耗时使用 `CostLog`，慢调用告警使用 `SlowLog`；注解阈值 `-1` 表示继承，0 表示所有调用满足条件，正数为明确毫秒阈值，其他负数无效。配置文件阈值必须非负，最终内置默认值为 1000ms。此前使用 `SlowLog(threshold = 0, level = LogPolicyLevel.INFO)` 记录全部耗时的用法，可改用 CostLog；否则两项功能都会全量记录。
 
 耗时从入口日志输出后计到当前方法返回或抛出异常，结束日志本身不计入耗时。返回 `CompletionStage/Future` 也立即记录退出与耗时，不等待、不监听完成，不改变原返回对象或取消行为。ExitResult 表示返回对象而非异步最终结果；此类方法可关闭 ExitResult，或在自定义 formatter 中输出类型摘要。ErrorLog 只记录当前方法抛出的异常，不记录返回 Future 的后续失败。
 
@@ -769,12 +777,14 @@ velo:
         response-headers:
           enabled: true
           allowlist: [X-Trace-Id, Content-Type]
-      invoke:
+      annotation:
         cost-log:
           level: INFO
   trace:
     enabled: true
     mdc-key: traceId
+    response-header-enabled: true
+    response-header-name: X-Trace-Id
     feign-propagation-enabled: true
     logging-pattern-enabled: true
 ```
@@ -807,11 +817,15 @@ public LogValueFormatter logValueFormatter() {
 public ExportResult export(ExportRequest request) { /* 业务实现 */ }
 ```
 
-需要忽略该方法的全部调用日志时使用 `@LogIgnore`；也可通过来源或全局配置关闭对应功能。框架不按字段名称自动脱敏；协议头的空 allowlist 表示全部头，启用采集时应设置需要的白名单。Feign 在底层客户端构建请求后捕获最终一次尝试的真实请求/响应头，因此请求头日志可能出现在完成阶段；逻辑请求目标使用方法名、HTTP 方法和映射路径，入口和完成阶段保持一致。Controller 响应头取当前方法返回或抛出异常时已设置的头，不代表 Servlet 最终提交后的完整响应。
+需要忽略该方法的全部调用日志时使用 `@LogIgnore`；也可通过来源或全局配置关闭对应功能。框架不按字段名称自动脱敏；协议头的显式空 allowlist 表示全部头，启用采集时应设置需要的白名单。Feign 在底层客户端捕获真实请求/响应头，在逻辑调用完成阶段输出已捕获的数据；逻辑请求目标使用方法名、HTTP 方法和映射路径，入口和完成阶段保持一致。Controller 响应头取当前方法返回或抛出异常时已设置的头，不代表 Servlet 最终提交后的完整响应。
+
+头部处理保持原有行为：没有供应器或返回 null 时静默跳过，成功空集合或白名单过滤为空时正常格式化输出；采集异常使用 `serialization-failed`，不增加不支持位置提示。功能关闭、输出器级别过滤或载荷关闭时不调用供应器。
 
 trace 模块通过独立 `VeloTraceAutoConfiguration`、HTTP Filter、Feign 传播配置及入口作用域管理启用。`velo.log.enabled=false` 不影响 trace；`velo.trace.enabled=false` 不影响日志功能。HTTP Filter 保留异步/错误派发复用，TaskDecorator 保留常见执行器传播，两者与 Future 的日志完成监听无关。原公共 Resolver/TraceContext 类型和包名保持不变。
 
-推荐使用 `velo.trace.enabled/mdc-key/feign-propagation-enabled/logging-pattern-enabled`。旧 `velo.log.trace.*` 中这四项仍作为逐项回退值；同一项同时配置时新名称优先。
+已接入的普通方法入口即使只有 `@CostLog(enabled=false)`、日志关闭或被 `@LogIgnore` 排除，trace 开启时仍可建立或复用作用域并在结束后恢复。单独 `@LogIgnore` 不创建新入口。Controller、Feign、任务仍由各自入口管理 trace。
+
+推荐使用 `velo.trace.enabled/mdc-key/response-header-enabled/response-header-name/feign-propagation-enabled/logging-pattern-enabled`。旧 `velo.log.trace.*` 中的同名项仍作为逐项回退值；同一项同时配置时新名称优先。
 
 traceId 获取和生成只有一个无参扩展方法，默认注入 `W3cTraceContextResolver`。它从当前 Spring 请求上下文读取 `traceparent` 和 `tracestate`：合法时沿用 traceId 并保留完整协议字段；缺失、重复或非法时生成新的非零 32 位小写十六进制 traceId 和合法的 `traceparent`，无效的 `tracestate` 只会被丢弃。已有 `X-Trace-Id` 请求头不会参与默认解析。规则参考 [W3C Trace Context](https://www.w3.org/TR/trace-context/)。
 
@@ -844,16 +858,20 @@ public TraceContextResolver traceContextResolver() {
 traceId 生命周期：
 
 - HTTP：每次新请求解析一次，不沿用工作线程残留值。请求属性保存完整快照，异步/错误派发复用；结束后恢复先前 MDC 和框架上下文。
-- Invoke：已有框架上下文直接复用，没有时调用解析器；只有 MDC 标识时由解析器判断是否能沿用。最外层结束后恢复，嵌套调用复用同一快照。自定义多步流程可在外层加 `@InvokeLog`，或用 `try (TraceContext.Scope scope = TraceContext.open("traceId", true, resolver)) { ... }` 包住流程，其中 resolver 为注入的 Bean。两参 `open` 固定使用内置 W3C 实现。
+- Annotation：已有框架上下文直接复用，没有时调用解析器；只有 MDC 标识时由解析器判断是否能沿用。最外层结束后恢复，嵌套调用复用同一快照。自定义多步流程可在外层加 `@InvokeLog`，或用 `try (TraceContext.Scope scope = TraceContext.open("traceId", true, resolver)) { ... }` 包住流程，其中 resolver 为注入的 Bean。两参 `open` 固定使用内置 W3C 实现。
 - Feign：发送快照中的传播头，下游 HTTP 入口使用相同协议即可沿用，实现 A→B 一致。默认透传 `traceparent/tracestate`，保留上游 parent-id 和采样标志，不生成每次调用的 span。没有上层上下文时由 Feign 入口适配建立作用域；仅使用裸拦截器时生成出站头，不给调用线程永久写 MDC。
 - 常见 Spring 执行器：提供 `MdcTaskDecorator` Bean，Boot 支持 TaskDecorator 的自动配置执行器会采用它。提交时复制 MDC 和完整链路快照，任务内复用或调用解析器生成，执行后恢复工作线程。不会复制 Servlet 请求、响应或应用自己的 ThreadLocal。用户已有 TaskDecorator 时保留用户 Bean；自定义线程池需要自行安装该装饰器。
 - Scheduled/XXL-Job：每次执行调用同一个解析器，不沿用 HTTP 请求或调用方 MDC，结束后恢复。内置实现为每次任务生成新值；自定义 ThreadLocal 的独立性由自定义实现保证。
 
 MDC 只存 traceId，不存 spanId；协议中的 parent-id 只作为传播字段保存。这里是 W3C 上下文透传和日志关联，不采集 span，不改变上游采样决定，完整分布式追踪可另行接入。若同时使用其他追踪组件，应选择一个组件负责出站追踪头，避免多个拦截器相互覆盖。前端发送 `traceparent` 时需自行生成合法字段，并在跨域场景允许该请求头及需要读取的响应头。
 
-框架不在 HTTP 响应中自动返回 traceId。链路关联通过请求头向下游传播；响应回传属于应用可选的诊断约定，W3C 处理模型没有要求该步骤。需要向前端提供排查编号时，由网关、应用 Filter 或异常处理器读取 MDC 后返回响应头或响应体。`ResponseHeadersLog` 仍按配置采集业务实际设置的响应头。
+HTTP 响应默认通过 `X-Trace-Id` 返回入口已确定的纯 traceId，在进入业务处理前写入；正常、异常及异步派发复用请求中的同一快照，嵌套错误派发在响应重置后重新写入。回传值不重新读取请求头，也不跟随业务对 MDC 的修改。默认 W3C Resolver、指定头 Resolver 和自定义 Resolver 均使用相同规则；响应头名称不随请求解析或下游传播头自动变化。
 
-`velo.log.trace.header-name`、`velo.log.trace.response-header-enabled` 和 `TraceData.responseHeaders` 已移除；指定请求头通过 `HeaderTraceContextResolver` Bean 选择，构造 `TraceData` 时只传 traceId 和传播头。
+通过 `velo.trace.response-header-enabled=false` 关闭回传，或通过 `velo.trace.response-header-name=X-Request-Id` 改名。开启回传时响应头名称必须符合 HTTP token 语法，且不能使用 `traceparent` / `tracestate`，因为其值是纯 traceId。框架使用 `setHeader` 替换该头的已有值，避免派发时重复追加；网关或业务自行管理同名响应头时应关闭框架回传。关闭 `velo.log.enabled` 不影响回传，关闭 `velo.trace.enabled` 时不再建立上下文或写入该头。
+
+跨域前端需要在应用现有 CORS 配置的 `exposedHeaders` 中允许读取配置指定的响应头；回传不额外修改 CORS 规则。响应体中的排查编号由应用统一响应对象或异常处理器决定。`ResponseHeadersLog` 按配置采集实际响应头，可采集此诊断头；响应回传是 Velo 的诊断约定，不要求调用方通过 W3C 响应头继续追踪。
+
+`velo.log.trace.header-name` 和 `TraceData.responseHeaders` 已移除；指定请求头通过 `HeaderTraceContextResolver` Bean 选择，构造 `TraceData` 时只传 traceId 和传播头。旧 `velo.log.trace.response-header-enabled` 可作为新开关的回退配置。
 
 自定义 Logback/Log4j2 格式需自行加入 MDC 键；默认键对应 `%X{traceId}`，例如 Spring Boot 的 `logging.pattern.level: "%5p [%X{traceId}]"`。自定义 `mdc-key` 后同步更改格式。功能级别仍受对应类 logger 的有效级别限制，例如注解选 DEBUG 而该 logger 为 INFO 时不会输出。
 
@@ -1075,9 +1093,10 @@ velo:
 - 默认注册标准 `RedisSerializer<Object>` Bean（名称为 `veloRedisSerializer`，不标记 `@Primary`），无需通过工厂获取；局部 `RedisSerializer<Dto>` / `RedisSerializer<String>` 不会关闭默认 Bean，也不会作为通用 Object 值序列化器被选择
 - 用户提供一个 `RedisSerializer<Object>` 时直接采用，Bean 名无需固定；多个通用候选须使用 `@Primary` 明确选择，否则按 Spring 原生规则启动报错，不再静默回退另一套格式；也不会以空序列化器触发 RedisTemplate 的 JDK 默认序列化。`@Order` 不决定单个 Bean 的注入优先级
 - 默认普通 Redis 值以 JSON 储存，允许包含 `@class` 或类型包装；通用 Object 模板读回 DTO 时恢复实际类型，集合元素也恢复类型，业务本身写入的 Map 仍读为 Map。无需登记目标类型，遵循 1.3.0 的通用 JSON 使用方式；若明确需要无类型信息的 JSON，可自行提供定向 serializer 或使用 StringRedisTemplate 写入 JSON 字符串
-- 通用 JSON 的集合兼容性遵循当前 Jackson / Spring Data Redis 版本。已验证普通 DTO、record、List 和 LinkedHashMap；当前 Jackson 2 下 `Map.of(...)` 的不可变 Map 读回时可能把 `@class` 留作 Map 项。需要稳定恢复 Map 内容时，建议写入 `LinkedHashMap`，或自行提供适合业务协议的 serializer；Velo 不在写入前转换业务集合，也不在读取后过滤业务字段
+- 通用 JSON 的集合兼容性遵循当前 Jackson / Spring Data Redis 版本。已验证普通 DTO、final DTO、record、ArrayList 和 LinkedHashMap；Jackson 2 的类型判定与 Generic JSON 保持一致，业务 final 类型也保留回读信息，日期时间使用 ISO 表示并保留纳秒精度。不可变集合及其他 JDK 容器不承诺自动恢复，需要稳定恢复内容时建议写入 ArrayList / LinkedHashMap，或自行提供适合业务协议的 serializer；Velo 不在写入前转换业务集合，也不在读取后过滤业务字段
 - HTTP Jackson mapper 不用于默认 Redis 存储；默认序列化器保留日期支持，不增加业务 key 缓存、轮询或定时线程
 - 从此前无类型信息的 Object JSON 切换到默认通用 JSON 时，应清理对应旧条目或更换业务 key 前缀；默认序列化器不会猜测旧 JSON 的 DTO 类型。用户自己注册的模板、局部定向 serializer 和 StringRedisTemplate 保持原有协议
+- 1.3.0 的默认 redisTemplate 可能先由 Spring Boot 创建并使用 JDK 序列化，Velo 的 JSON 配置只作用于其实际创建的模板。当前版本在官方模板配置前创建 Velo 模板；从旧 JDK 数据切换到 JSON 时也应更换业务 key 前缀或重建对应缓存。Boot 3 / 4 对上述常见对象提供相同的使用约定；共享 Redis 数据时仍需验证实际业务类型在两种运行时之间的双向读取，不承诺任意历史 JSON 或全部 Jackson 类型的跨版本兼容
 - Boot 4 项目若选择 Jackson 2，请自行提供 Jackson 2 的 `RedisSerializer<Object>` Bean，普通 RedisTemplate 和 Spring Cache 默认配置会复用该 Bean；也可用用户 builder customizer 显式覆盖。Jackson 2/3 同时存在时不会仅依据类路径猜测用户意图，详细兼容边界见上面的缓存说明
 
 ---

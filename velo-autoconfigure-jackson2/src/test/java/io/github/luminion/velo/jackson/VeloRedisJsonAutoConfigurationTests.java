@@ -158,6 +158,23 @@ class VeloRedisJsonAutoConfigurationTests {
         });
     }
 
+    @Test
+    void shouldRestorePolymorphicValuesAndSpringCacheNullMarker() {
+        runner.run(context -> {
+            RedisSerializer<Object> serializer = context.getBean(RedisSerializer.class);
+            ObjectPayload copy = (ObjectPayload) serializer.deserialize(serializer.serialize(new ObjectPayload()));
+            assertThat(copy.value).isInstanceOf(Payload.class);
+            assertThat(((Payload) copy.value).createdAt).isEqualTo(new Payload().createdAt);
+            Object restored = serializer.deserialize(serializer.serialize(
+                    org.springframework.cache.support.NullValue.INSTANCE));
+            assertThat(restored).isInstanceOf(org.springframework.cache.support.NullValue.class);
+        });
+    }
+
+    public static final class ObjectPayload {
+        public Object value = new Payload();
+    }
+
     @Configuration(proxyBeanMethods = false)
     static class UserObjectSerializer {
         @Bean
@@ -186,6 +203,6 @@ class VeloRedisJsonAutoConfigurationTests {
         public String ignored = "ignored";
         public long id = 9007199254740993L;
         public BigDecimal amount = new BigDecimal("12.3400");
-        public LocalDateTime createdAt = LocalDateTime.of(2026, 10, 7, 10, 20, 30);
+        public LocalDateTime createdAt = LocalDateTime.of(2026, 10, 7, 10, 20, 30, 123456789);
     }
 }

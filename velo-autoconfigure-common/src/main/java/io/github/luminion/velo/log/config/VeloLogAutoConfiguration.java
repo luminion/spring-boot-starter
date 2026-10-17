@@ -47,7 +47,7 @@ public class VeloLogAutoConfiguration {
         VeloProperties.InvocationSources sources = properties.getLog().getSources();
         validateThreshold(sources.getController().getSlowLog());
         validateThreshold(sources.getFeign().getSlowLog());
-        validateThreshold(sources.getInvoke().getSlowLog());
+        validateThreshold(sources.getAnnotation().getSlowLog());
         validateThreshold(sources.getScheduled().getSlowLog());
         validateThreshold(sources.getXxlJob().getSlowLog());
         return new InvocationLogEngine(properties, formatter, writer);

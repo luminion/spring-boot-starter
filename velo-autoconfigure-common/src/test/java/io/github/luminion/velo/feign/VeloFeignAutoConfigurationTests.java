@@ -11,6 +11,10 @@ import io.github.luminion.velo.core.VeloCoreAutoConfiguration;
 import io.github.luminion.velo.log.core.InvocationLogEngine;
 import io.github.luminion.velo.log.core.InvocationLogFeature;
 import io.github.luminion.velo.log.core.InvocationLogRecord;
+import io.github.luminion.velo.log.core.InvocationLogSource;
+import io.github.luminion.velo.log.annotation.InvokeLog;
+import io.github.luminion.velo.log.annotation.CostLog;
+import io.github.luminion.velo.log.annotation.LogPolicyLevel;
 import io.github.luminion.velo.log.config.VeloLogAutoConfiguration;
 import io.github.luminion.velo.trace.TraceContext;
 import io.github.luminion.velo.trace.TraceData;
@@ -98,6 +102,7 @@ class VeloFeignAutoConfigurationTests {
   @Test
   void invocationCreatesTraceAndPropagatesWithoutDuplicateHeaders() throws Throwable {
     VeloProperties p = new VeloProperties();
+    p.getLog().getSources().getAnnotation().getEntryArgs().setEnabled(false);
     List<InvocationLogRecord> records = new ArrayList<>();
     List<String> traces = new ArrayList<>();
     FeignLogAspect aspect =
@@ -123,6 +128,8 @@ class VeloFeignAutoConfigurationTests {
     assertThat(aspect.logFeignInvocation(point)).isEqualTo("done");
     assertThat(records).hasSize(3);
     assertThat(records.get(2).getFeature()).isEqualTo(InvocationLogFeature.COST_LOG);
+    assertThat(records.get(2).getLevel()).isEqualTo(org.springframework.boot.logging.LogLevel.DEBUG);
+    assertThat(records).allSatisfy(record -> assertThat(record.getSource()).isEqualTo(InvocationLogSource.FEIGN));
     assertThat(records.get(2).getContent()).matches("\\d+ms");
     InvocationLogRecord entry = records.get(0);
     assertThat(entry.getFeature()).isEqualTo(InvocationLogFeature.ENTRY_ARGS);
@@ -135,6 +142,10 @@ class VeloFeignAutoConfigurationTests {
     assertThat(template.headers()).doesNotContainKey("tracestate");
     assertThat(MDC.get("traceId")).isNull();
     assertThat(FeignInvocationContext.current()).isNull();
+    records.clear();
+    p.getLog().getSources().getFeign().setEnabled(false);
+    assertThat(aspect.logFeignInvocation(point)).isEqualTo("done");
+    assertThat(records).isEmpty();
   }
 
   @Test
@@ -277,9 +288,11 @@ class VeloFeignAutoConfigurationTests {
   }
 
   @FeignClient(name = "demo-client")
+  @InvokeLog
   @RequestMapping("/users")
   interface DemoClient {
     @GetMapping("/{id}")
+    @CostLog(level = LogPolicyLevel.DEBUG)
     String find(@PathVariable("id") Long id);
   }
 }

@@ -33,14 +33,14 @@ class Slf4JInvocationLogWriterTest {
         }
         assertThat(output.getOut())
                 .contains(
-                        "[invoke] [work()] ==> entryArgs={\"id\":1}",
-                        "[invoke] [work()] <== exitArgs={\"id\":1}",
-                        "[invoke] [work()] <== exitResult={\"id\":1}",
-                        "[invoke] [work()] <== cost=5ms",
-                        "[invoke] [work()] <== slow={cost=5ms, threshold=0ms}",
-                        "[invoke] [work()] ==> requestHeaders=",
-                        "[invoke] [work()] <== responseHeaders=",
-                        "[invoke] [work()] <=="
+                        "[annotation] [work()] ==> entryArgs={\"id\":1}",
+                        "[annotation] [work()] <== exitArgs={\"id\":1}",
+                        "[annotation] [work()] <== exitResult={\"id\":1}",
+                        "[annotation] [work()] <== cost=5ms",
+                        "[annotation] [work()] <== slow={cost=5ms, threshold=0ms}",
+                        "[annotation] [work()] ==> requestHeaders=",
+                        "[annotation] [work()] <== responseHeaders=",
+                        "[annotation] [work()] <=="
                                 + " error={\"type\":\"example.BusinessException\",\"message\":\"bad\"}")
                 .doesNotContain("event=", "source=", "traceId=", "invocationId=", "success=");
     }
@@ -85,7 +85,7 @@ class Slf4JInvocationLogWriterTest {
     private InvocationLogRecord record(InvocationLogFeature feature) {
         InvocationLogRecord record = new InvocationLogRecord();
         record.setFeature(feature);
-        record.setSource(InvocationLogSource.INVOKE);
+        record.setSource(InvocationLogSource.ANNOTATION);
         record.setTarget("work()");
         return record;
     }

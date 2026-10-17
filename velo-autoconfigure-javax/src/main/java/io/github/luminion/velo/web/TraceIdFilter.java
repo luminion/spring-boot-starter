@@ -37,6 +37,14 @@ public class TraceIdFilter extends OncePerRequestFilter {
     public TraceIdFilter(TraceProperties properties, TraceContextResolver resolver) {
         this.properties = properties;
         this.resolver = resolver;
+        String headerName = properties.getResponseHeaderName();
+        if (properties.isEnabled() && properties.isResponseHeaderEnabled()
+                && (!TraceData.validHeaderName(headerName)
+                || "traceparent".equalsIgnoreCase(headerName)
+                || "tracestate".equalsIgnoreCase(headerName))) {
+            throw new IllegalArgumentException(
+                    "velo.trace.response-header-name must be a valid HTTP header name other than traceparent/tracestate");
+        }
     }
 
     @Override
@@ -65,8 +73,20 @@ public class TraceIdFilter extends OncePerRequestFilter {
             request.setAttribute(ATTRIBUTE, data);
         }
         try (TraceContext.Scope scope = TraceContext.install(trace.getMdcKey(), data, true)) {
+            // 始终回传入口快照中的纯 traceId，不重新解析请求头或读取可能变化的 MDC。
+            if (trace.isResponseHeaderEnabled() && !response.isCommitted()) {
+                response.setHeader(trace.getResponseHeaderName(), data.getTraceId());
+            }
             chain.doFilter(request, response);
         }
+    }
+
+    @Override
+    protected void doFilterNestedErrorDispatch(
+            HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+            throws ServletException, IOException {
+        // 容器在原派发未结束时进入错误页，响应可能已重置，重新写入同一个请求标识。
+        doFilterInternal(request, response, chain);
     }
 
     private TraceData resolve(HttpServletRequest request, HttpServletResponse response, String key) {

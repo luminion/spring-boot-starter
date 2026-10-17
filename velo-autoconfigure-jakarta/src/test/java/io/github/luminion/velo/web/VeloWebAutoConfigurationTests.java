@@ -123,7 +123,7 @@ class VeloWebAutoConfigurationTests {
         MDC.put("user", "alice");
         filter.doFilter(
                 request, response, (req, res) -> assertThat(MDC.get("traceId")).isEqualTo("incoming"));
-        assertThat(response.getHeader("X-Trace-Id")).isNull();
+        assertThat(response.getHeader("X-Trace-Id")).isEqualTo("incoming");
         assertThat(MDC.get("traceId")).isEqualTo("caller");
         assertThat(MDC.get("user")).isEqualTo("alice");
     }

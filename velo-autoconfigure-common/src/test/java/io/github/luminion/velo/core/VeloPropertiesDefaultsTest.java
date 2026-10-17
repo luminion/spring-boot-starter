@@ -85,7 +85,7 @@ class VeloPropertiesDefaultsTest {
                         "velo.log.defaults.cost-log.level=DEBUG",
                         "velo.log.sources.controller.cost-log.enabled=true",
                         "velo.log.sources.feign.cost-log.level=TRACE",
-                        "velo.log.sources.invoke.cost-log.enabled=false",
+                        "velo.log.sources.annotation.cost-log.enabled=false",
                         "velo.log.sources.scheduled.cost-log.level=WARN",
                         "velo.log.sources.xxl-job.cost-log.enabled=false")
                 .run(context -> {
@@ -95,7 +95,7 @@ class VeloPropertiesDefaultsTest {
                     assertThat(log.getDefaults().getCostLog().getLevel()).isEqualTo(LogLevel.DEBUG);
                     assertThat(log.getSources().getController().getCostLog().getEnabled()).isTrue();
                     assertThat(log.getSources().getFeign().getCostLog().getLevel()).isEqualTo(LogLevel.TRACE);
-                    assertThat(log.getSources().getInvoke().getCostLog().getEnabled()).isFalse();
+                    assertThat(log.getSources().getAnnotation().getCostLog().getEnabled()).isFalse();
                     assertThat(log.getSources().getScheduled().getCostLog().getLevel()).isEqualTo(LogLevel.WARN);
                     assertThat(log.getSources().getXxlJob().getCostLog().getEnabled()).isFalse();
                 });

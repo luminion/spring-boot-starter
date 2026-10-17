@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import io.github.luminion.velo.core.VeloCoreAutoConfiguration;
 import io.github.luminion.velo.log.annotation.InvokeLog;
 import io.github.luminion.velo.log.annotation.LogIgnore;
+import io.github.luminion.velo.log.annotation.CostLog;
 import io.github.luminion.velo.log.aspect.ScheduledLogAspect;
 import io.github.luminion.velo.log.aspect.XxlJobLogAspect;
 import io.github.luminion.velo.trace.VeloTraceAutoConfiguration;
@@ -86,6 +87,28 @@ class VeloSourceLogAutoConfigurationTests {
                                 MDC.clear();
                             }
                         });
+    }
+
+    @Test
+    void disabledAtomicFeatureStillCreatesTraceAndIgnoreAloneDoesNot() {
+        runner.withConfiguration(AutoConfigurations.of(AopAutoConfiguration.class))
+                .withPropertyValues("velo.log.sources.annotation.enabled=false")
+                .withBean(AtomicContextCalls.class, AtomicContextCalls::new)
+                .run(context -> {
+                    AtomicContextCalls calls = context.getBean(AtomicContextCalls.class);
+                    assertThat(MDC.get("traceId")).isNull();
+                    assertThat(calls.disabled()).matches("[0-9a-f]{32}");
+                    assertThat(MDC.get("traceId")).isNull();
+                    assertThat(calls.ignoreOnly()).isNull();
+                });
+    }
+
+    static class AtomicContextCalls {
+        @CostLog(enabled = false)
+        public String disabled() { return MDC.get("traceId"); }
+
+        @LogIgnore
+        public String ignoreOnly() { return MDC.get("traceId"); }
     }
 
     static class ContextCalls {
