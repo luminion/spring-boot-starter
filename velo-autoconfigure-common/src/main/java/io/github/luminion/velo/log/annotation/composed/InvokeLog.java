@@ -24,7 +24,7 @@ import java.lang.annotation.Target;
 @ExitResult
 @CostLog
 @SlowLog
-@ErrorLog(level = LogPolicyLevel.WARN)
+@ErrorLog
 @RequestHeadersLog(level = LogPolicyLevel.OFF)
 @ResponseHeadersLog(level = LogPolicyLevel.OFF)
 @Inherited

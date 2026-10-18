@@ -10,6 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.NoUniqueBeanDefinitionException;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.autoconfigure.cache.CacheAutoConfiguration;
@@ -88,6 +89,21 @@ class Boot3CacheAutoConfigurationTest {
             assertThat(redisCache(manager.getCache("orders")).getCacheConfiguration().getTtl())
                     .isEqualTo(Duration.ofSeconds(9));
         });
+    }
+
+    @Test
+    void shouldFailWhenNoObjectSerializerExists() {
+        new ApplicationContextRunner()
+                .withConfiguration(AutoConfigurations.of(VeloCoreAutoConfiguration.class,
+                        VeloCacheAutoConfiguration.class, CacheAutoConfiguration.class))
+                .withUserConfiguration(CachingEnabled.class)
+                .withBean(RedisConnectionFactory.class, () -> mock(RedisConnectionFactory.class))
+                .withPropertyValues("spring.cache.type=redis")
+                .run(context -> {
+                    assertThat(context).hasFailed();
+                    assertThat(context.getStartupFailure())
+                            .hasRootCauseInstanceOf(NoSuchBeanDefinitionException.class);
+                });
     }
 
     @Test

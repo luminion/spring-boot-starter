@@ -303,6 +303,7 @@ public UserDTO getById(Long id) {
 - Velo 默认 writer 的普通缓存写入、删除及清空采用同步行为；Boot 4 使用原生 `immediateWrites()` 保持与 Boot 2/3 一致。用户提供 writer 时保留其原生设置，包括同步或异步行为。事务感知开启时，事务内的相关操作仍按 Spring 原生规则延迟到提交后执行；显式异步缓存接口遵循其原生语义
 - Velo 不维护按业务 key 累积的本地缓存或定时清理任务；缓存存储和过期由 Spring Data Redis 与 Redis 提供，CacheManager 仍会按缓存名称持有 Cache 实例
 - Velo 默认缓存配置优先复用容器中的 `RedisSerializer<Object>`；没有用户候选时自动注册 `veloRedisSerializer`（`RedisSerializer<Object>`）Bean，提供带类型信息的原生通用 JSON 序列化器。存在多个候选且 Spring 无法选出唯一主候选时，直接启动报错，避免悄然切换缓存读写格式。用户提供完整缓存配置时，序列化器由该配置明确指定，不再自动选取
+- 如果显式排除 Velo Redis JSON 自动配置，但仍使用 Velo 默认模板或默认缓存配置，需要自行提供 `RedisSerializer<Object>`；缺少时直接启动报错，不会自动切换为 JDK 序列化
 - Redis JSON 使用独立映射器，HTTP 数字、脱敏、`JsonEncode` 等输出规则不会改变存储数据；关闭 `velo.jackson.enabled` 也不影响 Redis JSON 的日期支持。普通 RedisTemplate 与 Spring Cache 默认共用带类型信息的 Generic Jackson JSON，支持 DTO 和集合自动恢复。两者都可复用用户 `RedisSerializer<Object>`；用户自定义 RedisTemplate 的设置不会自动传给 CacheManager
 - Boot 2 / 3 使用 Jackson 2：普通 RedisTemplate 与 Spring Cache 默认均使用 `GenericJackson2JsonRedisSerializer`，保留类型信息
 - Boot 4 使用 Jackson 3：普通 RedisTemplate 与 Spring Cache 默认均使用 `GenericJacksonJsonRedisSerializer`。即使同时存在 Jackson 2，也不会自行切换默认实现
@@ -680,6 +681,8 @@ log
 
 例如，等级枚举为 `log.model.LogPolicyLevel`，处理器扩展接口为 `log.spi.InvocationLogHandler`，默认耗时处理器为 `log.handler.CostLogHandler`。Controller、Feign 的协议适配器继续位于各自的 Web、Feign 包中，共用这些日志接口。
 
+以下为功能注解独立使用时的默认值；组合注解可以显式覆盖这些值。
+
 | 功能注解 | 主要默认值 |
 | --- | --- |
 | `EntryArgs` / `ExitArgs` / `ExitResult` | `level=LogPolicyLevel.INFO`、`maxLength=-1` |
@@ -692,7 +695,7 @@ log
 
 按功能选择声明：**方法 > 类 > 自动入口默认组合**；同一声明位置直接标注优先于组合中的声明，其次选元注解距离较近者。同距离保留 Spring 遍历遇到的首项，应避免冲突；不逐属性拼接多个候选。例如类或组合指定 `@SlowLog(threshold=200)`，方法直接标注 `@SlowLog(level=LogPolicyLevel.DEBUG)`，最终使用 DEBUG / 1000ms。方法只标注 CostLog 不会清空类上的其他功能。
 
-单个普通功能注解只选择自己；`@InvokeLog` 则组合全部八项功能：EntryArgs、ExitResult、CostLog、SlowLog、ErrorLog 默认开，ExitArgs、请求头、响应头默认关。InvokeLog 按普通组合解析，无特殊配置覆盖规则。
+单个普通功能注解只选择自己；`@InvokeLog` 则组合全部八项功能：EntryArgs、ExitResult、CostLog、SlowLog、ErrorLog 默认开，ExitArgs、请求头、响应头默认关。独立 `@ErrorLog`、`@InvokeLog` 及默认 Controller、Feign 入口均以 WARN 输出异常摘要，不自动区分业务异常与系统异常；需要 ERROR 等级时显式标注 `@ErrorLog(level = LogPolicyLevel.ERROR)`。InvokeLog 按普通组合解析，无特殊配置覆盖规则。
 
 ```java
 import io.github.luminion.velo.log.annotation.CostLog;
@@ -739,7 +742,7 @@ velo:
     logging-pattern-enabled: true
 ```
 
-配置只保留日志总开关、来源开关和自动入口默认组合类型，不再配置具体功能的等级、启闭、阈值、长度或白名单。Scheduled、XXL-Job 继续自动接入，默认选择 CostLog / SlowLog / ErrorLog，也支持 `sources.scheduled.default-annotation` 和 `sources.xxl-job.default-annotation`。普通 annotation 入口仅使用显式声明，不提供默认组合配置。
+配置只保留日志总开关、来源开关和自动入口默认组合类型，不再配置具体功能的等级、启闭、阈值、长度或白名单。Scheduled、XXL-Job 继续自动接入，默认选择 CostLog / SlowLog / ErrorLog，等级分别为 INFO / WARN / WARN，也支持 `sources.scheduled.default-annotation` 和 `sources.xxl-job.default-annotation`。普通 annotation 入口仅使用显式声明，不提供默认组合配置。
 
 Controller、Feign、普通注解和任务入口共用同步 `InvocationLogEngine`。入口识别调用并提供公共信息；协调器负责统一计时和输出阶段；功能处理器生成各自内容；输出器拼接公共格式并写入日志。各项记录仍单独一行：
 

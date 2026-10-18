@@ -54,6 +54,7 @@ class AnnotationLogAdvisorTests {
         assertOnly(records, InvocationLogFeature.SLOW_LOG);
         assertThatThrownBy(() -> calls.error("input")).isInstanceOf(IllegalStateException.class)
                 .hasMessage("failed");
+        assertThat(records).extracting(InvocationLogRecord::getLevel).containsExactly(LogPolicyLevel.WARN);
         assertOnly(records, InvocationLogFeature.ERROR_LOG);
         calls.request("input");
         calls.response("input");

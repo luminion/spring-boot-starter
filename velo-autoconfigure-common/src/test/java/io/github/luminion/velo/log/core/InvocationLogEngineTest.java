@@ -75,6 +75,33 @@ class InvocationLogEngineTest {
     }
 
     @Test
+    void automaticSourcesUseWarnForDefaultErrorSummaries() throws Exception {
+        for (InvocationLogSource source : new InvocationLogSource[]{
+                InvocationLogSource.CONTROLLER, InvocationLogSource.FEIGN,
+                InvocationLogSource.SCHEDULED, InvocationLogSource.XXL_JOB}) {
+            records.clear();
+            IllegalStateException original = new IllegalStateException("failed");
+            assertThatThrownBy(() -> engine.invoke(call("plain", source), () -> {
+                throw original;
+            })).isSameAs(original);
+            assertThat(records).filteredOn(record -> record.getFeature() == InvocationLogFeature.ERROR_LOG)
+                    .singleElement().satisfies(record -> assertThat(record.getLevel()).isEqualTo(LogPolicyLevel.WARN));
+        }
+    }
+
+    @Test
+    void explicitErrorLevelOverridesTheWarnDefault() throws Exception {
+        IllegalStateException original = new IllegalStateException("failed");
+        assertThatThrownBy(() -> engine.invoke(call("explicitErrorLevel", InvocationLogSource.ANNOTATION), () -> {
+            throw original;
+        })).isSameAs(original);
+        assertThat(records).singleElement().satisfies(record -> {
+            assertThat(record.getFeature()).isEqualTo(InvocationLogFeature.ERROR_LOG);
+            assertThat(record.getLevel()).isEqualTo(LogPolicyLevel.ERROR);
+        });
+    }
+
+    @Test
     void wrappedErrorsAreUnwrappedOnlyForTheSummary() throws Exception {
         InvocationTargetException wrapper = new InvocationTargetException(new IllegalArgumentException("business"));
         assertThatThrownBy(() -> engine.invoke(call("profile", InvocationLogSource.ANNOTATION), () -> {
@@ -249,6 +276,11 @@ class InvocationLogEngineTest {
     }
 
     static class Service {
+        public Object plain(Object input) { return input; }
+
+        @ErrorLog(level = LogPolicyLevel.ERROR)
+        public Object explicitErrorLevel(Object input) { return input; }
+
         @InvokeLog
         public Object profile(Object input) { return input; }
 
