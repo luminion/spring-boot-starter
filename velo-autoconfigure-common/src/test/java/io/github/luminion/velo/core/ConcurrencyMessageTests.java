@@ -206,7 +206,7 @@ class ConcurrencyMessageTests {
         AspectJProxyFactory factory = new AspectJProxyFactory(target);
         factory.setProxyTargetClass(true);
         for (Object aspect : aspects) {
-            factory.addAspect(aspect);
+            factory.addAdvisor(TestAdvisors.of(aspect));
         }
         return factory.getProxy();
     }

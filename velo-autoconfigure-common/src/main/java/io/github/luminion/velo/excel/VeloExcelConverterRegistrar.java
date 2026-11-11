@@ -1,6 +1,8 @@
 package io.github.luminion.velo.excel;
 
 import io.github.luminion.velo.VeloProperties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.BeanClassLoaderAware;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.EnvironmentAware;
@@ -9,11 +11,15 @@ import org.springframework.core.env.Environment;
 import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.util.ClassUtils;
 
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+
 /**
  * Excel 扩展转换器注册器。
  */
 public class VeloExcelConverterRegistrar
         implements ImportBeanDefinitionRegistrar, EnvironmentAware, BeanClassLoaderAware {
+    private static final Logger log = LoggerFactory.getLogger(VeloExcelConverterRegistrar.class);
 
     /*
      * 三个 Excel 库公开的 registerConverter 只能绑定当前 Reader/Writer Builder，
@@ -41,33 +47,41 @@ public class VeloExcelConverterRegistrar
             return;
         }
 
-        registerIfPresent(EASY_EXCEL_LOADER, () -> EasyExcelHelper.registerConverters(EasyExcelHelper.createExtraConverters(
+        registerIfPresent(EASY_EXCEL_LOADER, () -> EasyExcelHelper.createExtraConverters(
                 properties.getDateTimeFormat().getDate(),
                 properties.getDateTimeFormat().getTime(),
                 properties.getDateTimeFormat().getDateTime(),
                 properties.getDateTimeFormat().getTimeZone(),
-                excelProperties.getConverters())));
+                excelProperties.getConverters()), converters -> EasyExcelHelper.registerConverters(converters));
 
-        registerIfPresent(FAST_EXCEL_LOADER, () -> FastExcelHelper.registerConverters(FastExcelHelper.createExtraConverters(
+        registerIfPresent(FAST_EXCEL_LOADER, () -> FastExcelHelper.createExtraConverters(
                 properties.getDateTimeFormat().getDate(),
                 properties.getDateTimeFormat().getTime(),
                 properties.getDateTimeFormat().getDateTime(),
                 properties.getDateTimeFormat().getTimeZone(),
-                excelProperties.getConverters())));
+                excelProperties.getConverters()), converters -> FastExcelHelper.registerConverters(converters));
 
-        registerIfPresent(FESOD_EXCEL_LOADER, () -> FesodExcelHelper.registerConverters(FesodExcelHelper.createExtraConverters(
+        registerIfPresent(FESOD_EXCEL_LOADER, () -> FesodExcelHelper.createExtraConverters(
                 properties.getDateTimeFormat().getDate(),
                 properties.getDateTimeFormat().getTime(),
                 properties.getDateTimeFormat().getDateTime(),
                 properties.getDateTimeFormat().getTimeZone(),
-                excelProperties.getConverters())));
+                excelProperties.getConverters()), converters -> FesodExcelHelper.registerConverters(converters));
     }
 
-    private void registerIfPresent(String className, Runnable action) {
+    private <T> void registerIfPresent(String className, Supplier<T> converters, Consumer<T> registration) {
         if (beanClassLoader == null || !ClassUtils.isPresent(className, beanClassLoader)) {
             return;
         }
-        action.run();
+        // 转换器创建失败（如日期格式非法）属于配置错误，照常在启动期报错。
+        T created = converters.get();
+        try {
+            registration.accept(created);
+        } catch (Exception | LinkageError error) {
+            // 转换器通过反射调用 Excel 库的内部方法注册；库版本变化导致注册失败时只影响扩展转换器，不阻断启动。
+            log.warn("[Velo Starter] Excel 扩展转换器未注册：{} 的注册方法不可用，日期等格式将使用 Excel 库默认转换。原因：{}",
+                    className, error.toString());
+        }
     }
 
     @Override

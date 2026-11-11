@@ -1,11 +1,14 @@
 package io.github.luminion.velo.log.config;
 
+import org.springframework.beans.factory.config.BeanDefinition;
+import io.github.luminion.velo.core.DeferredInterceptorAdvisor;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.github.luminion.velo.core.VeloCoreAutoConfiguration;
 import io.github.luminion.velo.log.annotation.CostLog;
 import io.github.luminion.velo.log.annotation.LogIgnore;
 import io.github.luminion.velo.log.annotation.composed.InvokeLog;
+import io.github.luminion.velo.log.aspect.InvokeLogAspect;
 import io.github.luminion.velo.log.aspect.ScheduledLogAspect;
 import io.github.luminion.velo.log.aspect.XxlJobLogAspect;
 import io.github.luminion.velo.log.core.InvocationLogEngine;
@@ -60,6 +63,22 @@ class VeloSourceLogAutoConfigurationTests {
                             assertThat(context).doesNotHaveBean(ScheduledLogAspect.class);
                             assertThat(context).doesNotHaveBean(XxlJobLogAspect.class);
                         });
+    }
+
+    @Test
+    void userDefinedInvocationInterceptorReplacesDefaultAndKeepsAdvisor() {
+        InvokeLogAspect aspect = new InvokeLogAspect(null, null);
+        runner.withBean(InvokeLogAspect.class, () -> aspect)
+                .withPropertyValues("velo.aspect-order.invoke-log=42")
+                .run(context -> {
+                    assertThat(context).hasSingleBean(InvokeLogAspect.class);
+                    assertThat(context.getBean(InvokeLogAspect.class)).isSameAs(aspect);
+                    DeferredInterceptorAdvisor advisor =
+                            context.getBean("invokeLogAdvisor", DeferredInterceptorAdvisor.class);
+                    assertThat(advisor.getOrder()).isEqualTo(42);
+                    assertThat(context.getBeanFactory().getBeanDefinition("invokeLogAdvisor").getRole())
+                            .isEqualTo(BeanDefinition.ROLE_INFRASTRUCTURE);
+                });
     }
 
     @Test

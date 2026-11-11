@@ -1,5 +1,6 @@
 package io.github.luminion.velo.log.core;
 
+import org.springframework.aop.support.DefaultPointcutAdvisor;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.github.luminion.velo.VeloProperties;
@@ -74,7 +75,7 @@ class ComposedLogAnnotationTests {
         ProxyFactory factory = new ProxyFactory(new Service());
         factory.setInterfaces(Operations.class);
         factory.setProxyTargetClass(classProxy);
-        factory.addAdvisor(new InvokeLogAspect(engine));
+        factory.addAdvisor(new DefaultPointcutAdvisor(InvokeLogAspect.pointcut(), new InvokeLogAspect(engine)));
         return (Operations) factory.getProxy();
     }
 

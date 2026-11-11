@@ -26,9 +26,4 @@ public @interface ResponseHeadersLog {
      * 最终正文的最大字符数；-1 不截断，0 不输出本项正文日志。
      */
     int maxLength() default -1;
-
-    /**
-     * 允许记录的头名称，忽略大小写；空数组表示全部头。
-     */
-    String[] allowlist() default {};
 }

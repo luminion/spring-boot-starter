@@ -29,11 +29,14 @@ public class RedissonLockHandler implements LockHandler {
     public void unlock(String key) {
         RLock lock = redissonClient.getLock(key);
         try {
-            if (lock.isHeldByCurrentThread()) {
-                lock.unlock();
-            }
+            // 不先调用 isHeldByCurrentThread：该查询同样访问 Redis，查询失败会跳过 unlock，看门狗将持续续期。
+            // 直接 unlock 时，Redisson 无论成功或失败都会停止当前线程的看门狗续期，锁最迟在看门狗超时后过期。
+            lock.unlock();
+        } catch (IllegalMonitorStateException e) {
+            // 锁已过期或不属于当前线程，无需释放。
+            log.debug("Redisson lock already released or not held by current thread for key: {}", key);
         } catch (Exception e) {
-            log.warn("Redisson unlock failed or lock already released for key: {}", key, e);
+            log.warn("Redisson unlock failed for key: {}", key, e);
         }
     }
 

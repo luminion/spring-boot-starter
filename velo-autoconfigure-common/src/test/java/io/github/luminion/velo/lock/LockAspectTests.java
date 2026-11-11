@@ -1,5 +1,6 @@
 package io.github.luminion.velo.lock;
 
+import io.github.luminion.velo.core.TestAdvisors;
 import io.github.luminion.velo.lock.exception.LockException;
 import io.github.luminion.velo.spi.fingerprint.SpelFingerprinter;
 import io.github.luminion.velo.lock.annotation.Lock;
@@ -28,7 +29,7 @@ class LockAspectTests {
         LockAspect aspect = new LockAspect("lock:", new SpelFingerprinter(), capturingLockHandler(capturedKey));
         AspectJProxyFactory proxyFactory = new AspectJProxyFactory(new BlankKeyLockService());
         proxyFactory.setProxyTargetClass(true);
-        proxyFactory.addAspect(aspect);
+        proxyFactory.addAdvisor(TestAdvisors.of(aspect));
 
         BlankKeyLockService proxy = proxyFactory.getProxy();
         proxy.execute();
@@ -43,7 +44,7 @@ class LockAspectTests {
         JdkLockHandler handler = new JdkLockHandler();
         AspectJProxyFactory factory = new AspectJProxyFactory(new FailingLockService());
         factory.setProxyTargetClass(true);
-        factory.addAspect(new LockAspect("lock:", new SpelFingerprinter(), handler));
+        factory.addAdvisor(TestAdvisors.of(new LockAspect("lock:", new SpelFingerprinter(), handler)));
         FailingLockService proxy = factory.getProxy();
         String key = "lock:" + FailingLockService.class.getName() + "#execute(boolean)";
 
@@ -73,7 +74,7 @@ class LockAspectTests {
         SharedLockService target = new SharedLockService();
         AspectJProxyFactory factory = new AspectJProxyFactory(target);
         factory.setProxyTargetClass(true);
-        factory.addAspect(new LockAspect("lock:", new SpelFingerprinter(), handler));
+        factory.addAdvisor(TestAdvisors.of(new LockAspect("lock:", new SpelFingerprinter(), handler)));
         SharedLockService proxy = factory.getProxy();
         CountDownLatch entered = new CountDownLatch(1);
         CountDownLatch release = new CountDownLatch(1);
@@ -108,7 +109,7 @@ class LockAspectTests {
         AsyncLockService target = new AsyncLockService();
         AspectJProxyFactory factory = new AspectJProxyFactory(target);
         factory.setProxyTargetClass(true);
-        factory.addAspect(new LockAspect("lock:", new SpelFingerprinter(), handler));
+        factory.addAdvisor(TestAdvisors.of(new LockAspect("lock:", new SpelFingerprinter(), handler)));
         AsyncLockService proxy = factory.getProxy();
         CompletableFuture<Void> result = proxy.execute();
         assertThat(result).isSameAs(target.pending);

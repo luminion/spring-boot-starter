@@ -1,5 +1,6 @@
 package io.github.luminion.velo.ratelimit;
 
+import io.github.luminion.velo.core.TestAdvisors;
 import io.github.luminion.velo.spi.Fingerprinter;
 import io.github.luminion.velo.spi.fingerprint.SpelFingerprinter;
 import io.github.luminion.velo.ratelimit.annotation.RateLimit;
@@ -39,7 +40,7 @@ class RateLimitAspectTests {
         AspectJProxyFactory proxyFactory = new AspectJProxyFactory(new ClassLevelRateLimitedService());
         proxyFactory.setInterfaces(SampleService.class);
         proxyFactory.setProxyTargetClass(false);
-        proxyFactory.addAspect(aspect);
+        proxyFactory.addAdvisor(TestAdvisors.of(aspect));
 
         SampleService proxy = proxyFactory.getProxy();
         proxy.execute("u-1001");
@@ -61,7 +62,7 @@ class RateLimitAspectTests {
 
         AspectJProxyFactory proxyFactory = new AspectJProxyFactory(new MultiMethodRateLimitedService());
         proxyFactory.setProxyTargetClass(true);
-        proxyFactory.addAspect(aspect);
+        proxyFactory.addAdvisor(TestAdvisors.of(aspect));
 
         MultiMethodRateLimitedService proxy = proxyFactory.getProxy();
         proxy.query("u-1001");

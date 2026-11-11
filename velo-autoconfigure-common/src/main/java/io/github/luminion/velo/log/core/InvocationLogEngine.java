@@ -48,7 +48,7 @@ public class InvocationLogEngine {
         this.formatter = Objects.requireNonNull(formatter, "formatter");
         this.writer = Objects.requireNonNull(writer, "writer");
         this.resolver = new InvocationLogPolicyResolver(properties);
-        for (InvocationLogHandler handler : DefaultInvocationLogHandlers.create()) {
+        for (InvocationLogHandler handler : DefaultInvocationLogHandlers.create(properties.getLog().getMaskedHeaders())) {
             handlers.put(handler.getFeature(), handler);
         }
         Set<InvocationLogFeature> features = new HashSet<>();

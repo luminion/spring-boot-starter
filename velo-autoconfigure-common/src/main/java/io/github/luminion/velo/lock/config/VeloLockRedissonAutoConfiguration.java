@@ -22,7 +22,7 @@ import org.springframework.context.annotation.Bean;
         "org.redisson.spring.starter.RedissonAutoConfigurationV4"})
 @ConditionalOnClass(name = "org.redisson.api.RedissonClient")
 @ConditionalOnConcurrencyBackend(prefix = "velo.lock", backend = ConcurrencyBackend.REDISSON,
-        autoClassNames = {"org.aspectj.weaver.Advice", "org.redisson.api.RedissonClient"})
+        autoClassNames = "org.redisson.api.RedissonClient")
 @ConditionalOnMissingBean(LockHandler.class)
 @ConditionalOnProperty(prefix = "velo.lock", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloLockRedissonAutoConfiguration {

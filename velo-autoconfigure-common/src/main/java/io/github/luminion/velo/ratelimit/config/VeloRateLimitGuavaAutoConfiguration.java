@@ -19,7 +19,7 @@ import org.springframework.context.annotation.Bean;
 })
 @ConditionalOnClass(name = "com.google.common.util.concurrent.RateLimiter")
 @ConditionalOnConcurrencyBackend(prefix = "velo.rate-limit", backend = ConcurrencyBackend.GUAVA,
-        autoClassNames = {"org.aspectj.weaver.Advice", "com.google.common.util.concurrent.RateLimiter"})
+        autoClassNames = "com.google.common.util.concurrent.RateLimiter")
 @ConditionalOnMissingBean(RateLimitHandler.class)
 @ConditionalOnProperty(prefix = "velo.rate-limit", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloRateLimitGuavaAutoConfiguration {

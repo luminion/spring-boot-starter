@@ -18,8 +18,7 @@ import jakarta.servlet.DispatcherType;
 import jakarta.servlet.ServletException;
 import java.util.ArrayList;
 import java.util.List;
-import org.aspectj.lang.ProceedingJoinPoint;
-import org.aspectj.lang.reflect.MethodSignature;
+import org.aopalliance.intercept.MethodInvocation;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.MDC;
@@ -210,15 +209,12 @@ class VeloWebAutoConfigurationTests {
         ControllerLogAspect aspect =
                 new ControllerLogAspect(
                         new InvocationLogEngine(new VeloProperties(), String::valueOf, records::add));
-        ProceedingJoinPoint point = mock(ProceedingJoinPoint.class);
-        MethodSignature signature = mock(MethodSignature.class);
-        when(signature.getMethod()).thenReturn(Endpoint.class.getMethod("find", Long.class));
-        when(signature.getDeclaringType()).thenReturn(Endpoint.class);
-        when(point.getSignature()).thenReturn(signature);
-        when(point.getTarget()).thenReturn(new Endpoint());
-        when(point.getArgs()).thenReturn(new Object[]{1L});
+        MethodInvocation point = mock(MethodInvocation.class);
+        when(point.getMethod()).thenReturn(Endpoint.class.getMethod("find", Long.class));
+        when(point.getThis()).thenReturn(new Endpoint());
+        when(point.getArguments()).thenReturn(new Object[]{1L});
         when(point.proceed()).thenReturn("done");
-        assertThat(aspect.logControllerInvocation(point)).isEqualTo("done");
+        assertThat(aspect.invoke(point)).isEqualTo("done");
         assertThat(records).hasSize(3);
         assertThat(records.get(2).getFeature()).isEqualTo(InvocationLogFeature.COST_LOG);
         assertThat(records.get(2).getContent()).matches("\\d+ms");
@@ -227,7 +223,7 @@ class VeloWebAutoConfigurationTests {
         assertThat(records.get(1).getTarget()).isEqualTo(records.get(0).getTarget());
         assertThat(records.get(1).getContent()).contains("done");
         assertThat(records.get(0).getTarget()).isEqualTo("find()");
-        assertThat(records.get(0).getContextContent()).contains("method=GET", "route=/users/{id}")
+        assertThat(records.get(0).getContextContent()).isEqualTo("127.0.0.1 GET /users/{id}")
                 .doesNotContain("secret");
         assertThat(records.get(0).getContent()).contains("id=1");
     }

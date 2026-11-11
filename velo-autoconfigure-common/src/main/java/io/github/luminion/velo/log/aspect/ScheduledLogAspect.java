@@ -1,18 +1,18 @@
 package io.github.luminion.velo.log.aspect;
 
 import io.github.luminion.velo.VeloProperties;
+import io.github.luminion.velo.core.AnnotatedMethodPointcut;
 import io.github.luminion.velo.log.core.InvocationLogEngine;
 import io.github.luminion.velo.log.model.InvocationLogSource;
 import io.github.luminion.velo.trace.TraceScopeManager;
 import io.github.luminion.velo.trace.W3cTraceContextResolver;
-import org.aspectj.lang.ProceedingJoinPoint;
-import org.aspectj.lang.annotation.Around;
-import org.aspectj.lang.annotation.Aspect;
+import org.springframework.aop.Pointcut;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.scheduling.annotation.Schedules;
 
 /**
  * 任务入口日志适配。
  */
-@Aspect
 public class ScheduledLogAspect extends SourceLogAspectSupport {
     public ScheduledLogAspect(VeloProperties properties, InvocationLogEngine engine) {
         this(engine, new TraceScopeManager(properties.getLog().getTrace(), new W3cTraceContextResolver()));
@@ -22,9 +22,12 @@ public class ScheduledLogAspect extends SourceLogAspectSupport {
         super(engine, trace, InvocationLogSource.SCHEDULED);
     }
 
-    @Around("@annotation(org.springframework.scheduling.annotation.Scheduled) || "
-            + "@annotation(org.springframework.scheduling.annotation.Schedules)")
-    public Object around(ProceedingJoinPoint point) throws Throwable {
-        return log(point);
+    /**
+     * 任务入口切点：方法上声明了 {@link Scheduled} 或 {@link Schedules}。
+     *
+     * @return 静态切点
+     */
+    public static Pointcut pointcut() {
+        return AnnotatedMethodPointcut.forMethods(Scheduled.class, Schedules.class);
     }
 }

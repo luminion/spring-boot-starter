@@ -75,14 +75,14 @@ public class Slf4JInvocationLogWriter implements InvocationLogWriter {
         return LoggerFactory.getLogger(name);
     }
 
+    /**
+     * 格式：{@code [目标方法] [公共块] ==> 功能=正文}；没有公共块时省略第二段。每条日志只含一项功能正文，便于整段复制。
+     */
     private String message(InvocationLogRecord record) {
-        String source = record.getSource() == null ? "unknown" : record.getSource().getValue();
         String context = InvocationLogSupport.singleLine(record.getContextContent());
         String contextBlock = StringUtils.hasText(context) ? " [" + context + "]" : "";
         String prefix =
                 "["
-                        + source
-                        + "] ["
                         + InvocationLogSupport.singleLine(record.getTarget())
                         + "]"
                         + contextBlock

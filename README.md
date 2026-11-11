@@ -157,6 +157,19 @@ Velo 组件可直接从 Maven Central 获取，无需额外仓库配置。示例
 
 以上范围是当前项目的构建和 API 适配边界；未列出的 Spring Boot 小版本不承诺兼容。Boot 2、Boot 3、Boot 4 Starter 分别依赖对应版本的适配模块，引入 Boot 2 Starter 不会因为根 POM 的 `<modules>` 配置而自动引入 Boot 3 或 Boot 4 模块。
 
+### AOP 依赖
+
+并发控制和调用日志基于 Spring 原生 Advisor 实现，**不依赖 AspectJ**。Starter 只依赖 `spring-boot-starter`，不再传递引入 `aspectjweaver`：
+
+- 没有 AspectJ 时，Spring Boot 的 AOP 自动配置会注册基础设施代理创建器，Velo 的 Advisor 照常生效
+- 有 AspectJ 时，同样生效，与业务自己的 `@Aspect` 共存
+
+升级注意：
+
+- 业务代码自己使用 `@Aspect`，且以前依赖 Velo Starter 间接引入 AspectJ 的，升级后需自行添加 `spring-boot-starter-aop`（Boot 4 为 `spring-boot-starter-aspectj`），否则编译报错
+- 设置了 `spring.aop.proxy-target-class=false` 且没有引入 AspectJ 时，Spring Boot 不会自动注册代理创建器。这种情况需引入上述依赖，或由事务管理等其他功能注册代理创建器
+- 设置了 `spring.aop.auto=false` 时，Spring Boot 不注册任何代理创建器，与以前一样需由应用自行注册，例如使用 `@EnableAspectJAutoProxy`
+
 Spring Boot 的 `spring.threads.virtual.enabled` 虚拟线程自动配置从 Boot 3.2.0 开始提供，并且运行时还需要 Java 21 及以上；本 Starter 不会因引入自身而自动开启该配置。详见 [Spring Boot 3.2 系统要求](https://docs.spring.io/spring-boot/docs/3.2.10/reference/htmlsingle/) 和 [Spring Boot 虚拟线程配置说明](https://docs.spring.io/spring-boot/reference/features/spring-application.html)。
 
 
@@ -488,7 +501,7 @@ public void submitOrder(Long userId) {
 - 未指定注解 `prefix` 时，不同方法或重载方法按方法指纹隔离；显式指定相同 `prefix` 后，相同 SpEL 结果可在不同方法、不同类之间共享防重复窗口，例如 `@Idempotent(prefix = "order-submit", value = "#requestId")`
 - 共享防重复窗口适合多个入口代表同一次提交的场景，应使用相同 TTL、请求标识和业务含义。不同操作仅操作同一订单时，应使用不同防重复范围；需要互斥时使用共享资源锁。TTL 由首次成功写入记录的调用决定，后续重复调用不重置
 
-> `value` 为空时不拼接参数，所有调用者共享该范围的防重复窗口。`prefix` 也为空时使用方法指纹，starter 会打印 WARN 提醒；显式 `prefix` 已声明共享资源意图，不再告警。若要按用户或请求分别防重复，请指定 `value`。
+> `value` 为空时不拼接参数，所有调用者共享该范围的防重复窗口。`prefix` 也为空时使用方法指纹，该方法的所有调用共享同一个方法级窗口，starter 不打印提醒。若要按用户或请求分别防重复，请指定 `value`。
 >
 > ```java
 > // 方法级窗口：userId=1 提交后，3 秒内 userId=2 也会被拦截
@@ -639,7 +652,7 @@ JDK 锁和 Redis 锁的本地记录只保存活跃调用，不随历史业务 ke
 
 默认文案仅在配置属性中维护，不在注解或切面中重复定义。普通文本原样保留，注解与全局配置都支持 `{i18n.key}`，只在请求被拒绝时按当前语言解析。
 
-旧代码中显式填写的中文文案仍作为局部覆盖；读取注解默认值的自定义切面需同步处理空串继承规则。手动构造切面时，原构造函数沿用框架默认文案，新增构造函数可传入自定义默认文案。
+旧代码中显式填写的中文文案仍作为局部覆盖；读取注解默认值的自定义切面需同步处理空串继承规则。手动构造拦截器时，三参数、四参数构造函数沿用框架默认文案，五参数构造函数可传入自定义默认文案；执行顺序不再由构造参数决定，见下方“并发控制组合顺序”。
 
 注解资源前缀裁剪首尾空白和末尾冒号，例如 `" order: "` 规范为 `"order"`；空白前缀等同未指定，只有冒号的非空前缀会报错。`value` 总是 SpEL，固定字符串写成 `value = "'all'"`，固定资源范围直接写 `prefix = "order"`。表达式结果支持字符串、数字、布尔值、字符、UUID 和枚举（使用 `name()`）；空值、空白或数组、集合、对象等复杂结果会报错，请明确取业务 ID。表达式结果字符串原样保留，不裁剪首尾空格。解析器只缓存固定声明的表达式和方法标识，每次调用创建独立求值上下文。
 
@@ -656,6 +669,13 @@ JDK 锁和 Redis 锁的本地记录只保存活跃调用，不随历史业务 ke
 这意味着重复提交会最先被拒绝，不消耗限流令牌，也不会尝试加锁；限流失败时不会尝试加锁；只有真正允许执行业务的方法调用才会获取锁。
 
 这些切面使用接近 `Ordered.LOWEST_PRECEDENCE` 的低优先级顺序值，并在三者之间保留较大间隔，便于业务自定义切面通过 `@Order` 插入到合适位置。
+
+内置切面（并发控制与调用日志）采用 Spring 原生的 `Advisor + MethodInterceptor` 模式，与 `@Transactional`、`@Async` 相同：每项功能注册一个只携带切点和顺序的基础设施 Advisor（`idempotentAdvisor`、`rateLimitAdvisor`、`lockAdvisor`、`invokeLogAdvisor`、`controllerLogAdvisor`、`feignLogAdvisor`、`scheduledLogAdvisor`、`xxlJobLogAdvisor`），以及一个执行逻辑的拦截器 Bean（`IdempotentAspect`、`LockAspect`、`InvokeLogAspect` 等）。
+
+- Advisor 不依赖任何业务 Bean，拦截器在容器单例初始化完成后才解析。其他 BeanPostProcessor（例如 Sentinel 的 `sentinelBeanPostProcessor`）注册时，不会连带提前初始化配置属性、日志引擎或 ObjectMapper，启动时也不会出现 `is not eligible for getting processed by all BeanPostProcessors` 告警
+- 顺序通过 `velo.aspect-order.idempotent`、`rate-limit`、`lock`、`invoke-log`、`controller-log`、`feign-log` 配置，在 Advisor 创建时读取
+- 替换实现时定义同类型的拦截器 Bean 即可，对应 Advisor 会自动使用它
+- 升级说明：这些类不再是 `@Aspect`，带 `order` 参数的构造函数已删除，`InvokeLogAspect` 也不再实现 `Advisor`。手动组装代理时改用 `new DefaultPointcutAdvisor(LockAspect.pointcut(), lockAspect)` 这类写法
 
 ### 7. 日志
 
@@ -689,7 +709,7 @@ log
 | `CostLog` | `level=LogPolicyLevel.INFO` |
 | `SlowLog` | `level=LogPolicyLevel.WARN`、`threshold=1000` |
 | `ErrorLog` | `level=LogPolicyLevel.WARN`、`maxLength=-1` |
-| `RequestHeadersLog` / `ResponseHeadersLog` | `level=LogPolicyLevel.INFO`、`allowlist={}`、`maxLength=-1` |
+| `RequestHeadersLog` / `ResponseHeadersLog` | `level=LogPolicyLevel.INFO`、`maxLength=-1`；记录全部头，`velo.log.masked-headers` 中的头值输出为 `***` |
 
 等级使用独立的 `io.github.luminion.velo.log.model.LogPolicyLevel`，只包含 TRACE、DEBUG、INFO、WARN、ERROR、OFF，不依赖第三方等级类型。`level` 同时控制等级和启闭，不再提供 `enabled` 属性；例如 `@CostLog(level = LogPolicyLevel.OFF)` 显式关闭耗时日志，直接标注 `@CostLog` 使用 INFO 开启。注解提供完整默认值，没有 INHERIT 状态：选中的同项声明整体生效，包含省略属性的默认值。
 
@@ -724,6 +744,11 @@ public @interface BusinessLog {
 velo:
   log:
     enabled: true
+    masked-headers:
+      - Authorization
+      - Proxy-Authorization
+      - Cookie
+      - Set-Cookie
     sources:
       controller:
         enabled: true
@@ -742,22 +767,35 @@ velo:
     logging-pattern-enabled: true
 ```
 
-配置只保留日志总开关、来源开关和自动入口默认组合类型，不再配置具体功能的等级、启闭、阈值、长度或白名单。Scheduled、XXL-Job 继续自动接入，默认选择 CostLog / SlowLog / ErrorLog，等级分别为 INFO / WARN / WARN，也支持 `sources.scheduled.default-annotation` 和 `sources.xxl-job.default-annotation`。普通 annotation 入口仅使用显式声明，不提供默认组合配置。
+配置只保留日志总开关、头日志脱敏名单、来源开关和自动入口默认组合类型，不再配置具体功能的等级、启闭、阈值或长度。
+
+头日志不提供白名单：开启后记录全部头，`masked-headers` 中的头（忽略大小写）保留名称、值输出为 `***`，便于确认头是否传递。默认名单为 Authorization、Proxy-Authorization、Cookie、Set-Cookie；配置后整体替换默认名单，配置为空表示不脱敏。注解上的 `allowlist` 属性已删除，升级时需从代码中移除。
+
+Scheduled、XXL-Job 继续自动接入，默认选择 CostLog / SlowLog / ErrorLog，等级分别为 INFO / WARN / WARN，也支持 `sources.scheduled.default-annotation` 和 `sources.xxl-job.default-annotation`。普通 annotation 入口仅使用显式声明，不提供默认组合配置。
 
 Controller、Feign、普通注解和任务入口共用同步 `InvocationLogEngine`。入口识别调用并提供公共信息；协调器负责统一计时和输出阶段；功能处理器生成各自内容；输出器拼接公共格式并写入日志。各项记录仍单独一行：
 
 ```text
-[controller] [find()] [ip=127.0.0.1 method=GET route=/users/{id}] ==> entryArgs={"id":1}
-[controller] [find()] [ip=127.0.0.1 method=GET route=/users/{id}] <== exitResult={"name":"Tom"}
-[controller] [find()] [ip=127.0.0.1 method=GET route=/users/{id}] <== cost=12ms
-[feign] [remote()] [client=users contextId=usersRead method=GET route=/users/{id}] <== cost=24ms
-[annotation] [calculate()] <== slow={cost=1200ms, threshold=1000ms}
-[scheduled] [run()] <== cost=5ms
+[find()] [127.0.0.1 GET /users/{id}] ==> entryArgs={"id":1}
+[find()] [127.0.0.1 GET /users/{id}] <== exitResult={"name":"Tom"}
+[find()] [127.0.0.1 GET /users/{id}] <== cost=12ms
+[remote()] [GET /users/{id}] ==> entryArgs={"id":1}
+[remote()] [GET /users/{id}] <== cost=24ms
+[calculate()] <== slow={cost=1200ms, threshold=1000ms}
+[run()] <== cost=5ms
 ```
 
-固定结构是 `[来源] [方法名] [可选公共块] 方向 功能名=内容`。功能标签为 entryArgs、exitArgs、exitResult、requestHeaders、responseHeaders、cost、slow、error，不重复打印注解类名。来源固定表达入口类别，自定义组合仍归 annotation；Controller / Feign 上的功能声明调整策略，来源及协议信息归属不变，不重复接入。traceId 由 MDC 和日志框架的日志格式显示，正文不重复打印。
+固定结构是 `[方法名] [可选公共块] 方向 功能名=内容`，每条只含一项功能正文，可从 `=` 之后整段复制。功能标签为 entryArgs、exitArgs、exitResult、requestHeaders、responseHeaders、cost、slow、error，与功能注解一一对应，不重复打印注解类名。
 
-IP、HTTP 方法、路径、Feign 客户端及实例信息不提供对应注解，由各入口采集并提供。公共块按入口统一定制。Feign contextId 是客户端配置身份；实际实例地址属于运行时数据，只有底层提供且能够解析时才显示，入口日志可能尚无该字段。框架不为补齐公共块延迟入口日志。请求头、响应头仅由 Controller / Feign 提供；供应器缺失或返回 null 时静默跳过，空集合正常输出，采集失败输出 serialization-failed。
+正文不打印来源标识：Controller、Feign 可由公共块区分，logger 名即目标类（Feign 为客户端接口）。来源仍记录在 `InvocationLogRecord#getSource()` 中，自定义 `InvocationLogWriter` 可按需输出。自定义组合仍归 annotation 来源；Controller / Feign 上的功能声明只调整策略，来源及协议信息归属不变，不重复接入。traceId 由 MDC 和日志框架的日志格式显示，正文不重复打印。
+
+公共块字段不带标签、以空格分隔，不可用的字段省略：
+
+- Controller：`调用方IP HTTP方法 路径`，例如 `127.0.0.1 GET /users/{id}`
+- Feign：`HTTP方法 路径`，例如 `GET /users/{id}`，入口和出口日志一致，按路径即可定位
+- 普通方法（功能注解入口）、Scheduled、XXL-Job：没有公共块
+
+IP、HTTP 方法、路径不提供对应注解，由各入口采集并提供。Feign 的客户端名称、contextId 和实际实例地址不在默认公共块中输出：logger 名已是客户端接口，实例地址取决于底层客户端和负载均衡实现，并不总能获取。这些信息仍保存在 `InvocationLogContext` 中，需要时可通过 Feign 来源的 `InvocationLogContextFormatter` Bean 追加。请求头、响应头仅由 Controller / Feign 提供；供应器缺失或返回 null 时静默跳过，空集合正常输出，采集失败输出 serialization-failed。
 
 自定义单项处理器：声明 `InvocationLogHandler` Bean，`getFeature()` 指定替换的功能，`render(event, policy, formatter)` 返回功能内容，返回 null 跳过。也可以继承默认实现，例如 `CostLogHandler`。每项最多一个业务处理器，重复注册会在启动时报错；其余默认处理器继续使用。处理器不直接输出日志。CostLog 和 SlowLog 共用协调器的一次计时，默认输出固定毫秒摘要，不经过对象 formatter。
 
@@ -1088,7 +1126,8 @@ velo:
 
 - 默认开启
 - 默认打印 Spring 绑定后的入参、返回结果和独立 INFO 耗时；达到阈值打印独立慢调用日志，异常时打印独立 WARN 摘要
-- 每条日志使用 `[controller] [方法名()] [ip=客户端IP method=HTTP方法 route=请求路径]` 前缀；公共块优先使用路由模板，缺失时使用请求 URI，不拼接原始 query string
+- 每条日志使用 `[方法名()] [客户端IP HTTP方法 请求路径]` 前缀；公共块优先使用路由模板，缺失时使用请求 URI，不拼接原始 query string
+- 耗时只统计 Controller 方法本身（AOP 拦截范围），不包含过滤器、拦截器、参数绑定和响应序列化的时间；日志中也没有最终 HTTP 状态码，异常对应的状态由后续异常处理器决定。需要完整访问日志语义（总耗时、状态码）时，请使用 Servlet Filter，或网关、容器的访问日志
 - 通过组合注解或具体功能注解设置 `maxLength`：`-1` 完整输出，`0` 跳过本项，正数截断本项最终正文
 - 功能参数在注解上定义，配置只选择 `default-annotation`；可用 `level=LogPolicyLevel.OFF` 关闭对应功能
 - 公共块通过 Controller 来源的 `InvocationLogContextFormatter` Bean 定制，整体格式通过 `InvocationLogWriter` Bean 定制，示例见前面的日志章节
@@ -1117,7 +1156,7 @@ velo:
 说明：
 
 - 默认开启
-- 前缀为 `[feign] [方法名()] [client=客户端名称 contextId=配置标识 method=HTTP方法 route=接口路径]`；已知实际实例地址时追加 `instance`，暂不可用的字段省略
+- 前缀为 `[方法名()] [HTTP方法 接口路径]`，入口和出口日志一致；客户端名称和实例地址默认不输出，logger 名即 Feign 客户端接口
 - 接口路径取 Spring MVC 映射模板，例如 `/users/{id}`，不展开路径变量或拼接查询参数；无法解析映射时省略缺失部分，保留方法名
 - 默认打印入参、返回结果和独立 INFO 耗时，慢调用和异常各输出独立日志
 - 日志格式和 Controller、`@InvokeLog` 保持一致，便于联调排查

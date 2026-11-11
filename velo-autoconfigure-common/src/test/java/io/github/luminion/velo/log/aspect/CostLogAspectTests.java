@@ -1,5 +1,6 @@
 package io.github.luminion.velo.log.aspect;
 
+import org.springframework.aop.support.DefaultPointcutAdvisor;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.github.luminion.velo.VeloProperties;
@@ -29,9 +30,9 @@ class CostLogAspectTests {
         AspectJProxyFactory factory = new AspectJProxyFactory(new Service());
         factory.setInterfaces(Operations.class);
         factory.setProxyTargetClass(classProxy);
-        factory.addAdvisor(new InvokeLogAspect(new InvocationLogEngine(properties, value -> {
+        factory.addAdvisor(new DefaultPointcutAdvisor(InvokeLogAspect.pointcut(), new InvokeLogAspect(new InvocationLogEngine(properties, value -> {
             throw new AssertionError("Cost must not serialize an object payload.");
-        }, records::add)));
+        }, records::add))));
         Operations proxy = factory.getProxy();
 
         assertThat(proxy.inherited()).isEqualTo("inherited");
@@ -62,8 +63,8 @@ class CostLogAspectTests {
     void costAnnotationAloneActivatesOnlyCostLogging() {
         List<InvocationLogRecord> records = new ArrayList<>();
         AspectJProxyFactory factory = new AspectJProxyFactory(new UnmarkedService());
-        factory.addAdvisor(new InvokeLogAspect(new InvocationLogEngine(new VeloProperties(),
-                String::valueOf, records::add)));
+        factory.addAdvisor(new DefaultPointcutAdvisor(InvokeLogAspect.pointcut(), new InvokeLogAspect(new InvocationLogEngine(new VeloProperties(),
+                String::valueOf, records::add))));
         UnmarkedService proxy = factory.getProxy();
         assertThat(proxy.execute()).isEqualTo("done");
         assertThat(records).singleElement().satisfies(record -> {

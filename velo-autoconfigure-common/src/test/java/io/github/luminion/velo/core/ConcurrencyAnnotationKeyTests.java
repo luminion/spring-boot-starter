@@ -95,15 +95,15 @@ class ConcurrencyAnnotationKeyTests {
         AspectJProxyFactory factory = new AspectJProxyFactory(target);
         factory.setProxyTargetClass(classProxy);
         SpelFingerprinter fingerprinter = new SpelFingerprinter();
-        factory.addAspect(new IdempotentAspect("idempotent:", fingerprinter, (key, token, ttl) -> {
+        factory.addAdvisor(TestAdvisors.of(new IdempotentAspect("idempotent:", fingerprinter, (key, token, ttl) -> {
             calls.add(key);
             return true;
-        }));
-        factory.addAspect(new RateLimitAspect("rate:", fingerprinter, (key, qps) -> {
+        })));
+        factory.addAdvisor(TestAdvisors.of(new RateLimitAspect("rate:", fingerprinter, (key, qps) -> {
             calls.add(key + ':' + qps);
             return true;
-        }));
-        factory.addAspect(new LockAspect("lock:", fingerprinter, new LockHandler() {
+        })));
+        factory.addAdvisor(TestAdvisors.of(new LockAspect("lock:", fingerprinter, new LockHandler() {
             @Override
             public boolean tryLock(String key) {
                 calls.add(key);
@@ -113,7 +113,7 @@ class ConcurrencyAnnotationKeyTests {
             @Override
             public void unlock(String key) {
             }
-        }));
+        })));
         return factory.getProxy();
     }
 

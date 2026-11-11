@@ -9,6 +9,8 @@ import io.github.luminion.velo.core.VeloAdvisorOrder;
 import io.github.luminion.velo.xss.XssStrategy;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -105,7 +107,7 @@ public class VeloProperties {
     private FeignProperties feign = new FeignProperties();
 
     /**
-     * 切面执行顺序配置。
+     * 切面执行顺序配置；各 Advisor 创建时直接从 Environment 读取同名配置，不依赖本属性 Bean 的初始化。
      */
     private AspectOrderProperties aspectOrder = new AspectOrderProperties();
 
@@ -378,6 +380,13 @@ public class VeloProperties {
          * 各入口的开关及默认功能组合。
          */
         private InvocationSources sources = new InvocationSources();
+
+        /**
+         * 请求头和响应头日志中需要脱敏的头名称，忽略大小写；命中的头保留名称，值输出为 ***。
+         * 配置后整体替换默认名单，配置为空表示不脱敏。
+         */
+        private List<String> maskedHeaders = new ArrayList<>(
+                Arrays.asList("Authorization", "Proxy-Authorization", "Cookie", "Set-Cookie"));
     }
 
     @Data

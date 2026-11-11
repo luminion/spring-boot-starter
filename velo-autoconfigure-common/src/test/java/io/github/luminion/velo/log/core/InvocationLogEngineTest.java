@@ -246,9 +246,11 @@ class InvocationLogEngineTest {
             stage.incrementAndGet();
             return "result";
         });
-        assertThat(records.get(0).getContextContent()).isEqualTo("contextId=stock");
-        assertThat(records.get(1).getContextContent()).isEqualTo("contextId=stock instance=10.0.0.1:8080");
+        // 默认公共块不输出客户端标识和实例地址，但出口记录携带调用后更新的上下文快照，供自定义格式化器使用。
+        assertThat(records.get(0).getContextContent()).isEmpty();
+        assertThat(records.get(1).getContextContent()).isEmpty();
         assertThat(records.get(0).getContext().getInstanceAddress()).isNull();
+        assertThat(records.get(1).getContext().getInstanceAddress()).isEqualTo("10.0.0.1:8080");
     }
 
     @Test

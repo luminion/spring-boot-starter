@@ -60,14 +60,14 @@ class Slf4JInvocationLogWriterTest {
         }
         assertThat(output.getOut())
                 .contains(
-                        "[annotation] [work()] ==> entryArgs={\"id\":1}",
-                        "[annotation] [work()] <== exitArgs={\"id\":1}",
-                        "[annotation] [work()] <== exitResult={\"id\":1}",
-                        "[annotation] [work()] <== cost=5ms",
-                        "[annotation] [work()] <== slow={cost=5ms, threshold=0ms}",
-                        "[annotation] [work()] ==> requestHeaders=",
-                        "[annotation] [work()] <== responseHeaders=",
-                        "[annotation] [work()] <=="
+                        "[work()] ==> entryArgs={\"id\":1}",
+                        "[work()] <== exitArgs={\"id\":1}",
+                        "[work()] <== exitResult={\"id\":1}",
+                        "[work()] <== cost=5ms",
+                        "[work()] <== slow={cost=5ms, threshold=0ms}",
+                        "[work()] ==> requestHeaders=",
+                        "[work()] <== responseHeaders=",
+                        "[work()] <=="
                                 + " error={\"type\":\"example.BusinessException\",\"message\":\"bad\"}")
                 .doesNotContain("event=", "source=", "traceId=", "invocationId=", "success=");
     }
@@ -88,25 +88,26 @@ class Slf4JInvocationLogWriterTest {
 
     @ParameterizedTest
     @EnumSource(InvocationLogSource.class)
-    void identifiesEveryEntrySource(InvocationLogSource source, CapturedOutput output) {
+    void omitsSourceTagForEverySource(InvocationLogSource source, CapturedOutput output) {
         InvocationLogRecord record = record(InvocationLogFeature.ENTRY_ARGS);
         record.setSource(source);
         record.setContent("{}");
 
         new Slf4JInvocationLogWriter().write(record);
 
-        assertThat(output.getOut()).contains("[" + source.getValue() + "] [work()] ==> entryArgs={}");
+        assertThat(output.getOut()).contains("[work()] ==> entryArgs={}")
+                .doesNotContain("[" + source.getValue() + "]");
     }
 
     @Test
     void writesPublicBlockBetweenMethodAndFeatureAndEscapesControlCharacters(CapturedOutput output) {
         InvocationLogRecord record = record(InvocationLogFeature.COST_LOG);
         record.setSource(InvocationLogSource.CONTROLLER);
-        record.setContextContent("ip=127.0.0.1 route=/users\nforged");
+        record.setContextContent("127.0.0.1 GET /users\nforged");
         record.setContent("5ms");
         new Slf4JInvocationLogWriter().write(record);
         assertThat(output.getOut())
-                .contains("[controller] [work()] [ip=127.0.0.1 route=/users\\nforged] <== cost=5ms")
+                .contains("[work()] [127.0.0.1 GET /users\\nforged] <== cost=5ms")
                 .doesNotContain("/users\nforged");
     }
 

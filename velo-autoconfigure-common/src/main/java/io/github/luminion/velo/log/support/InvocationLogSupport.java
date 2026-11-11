@@ -8,14 +8,14 @@ import io.github.luminion.velo.log.spi.InvocationLogWriter;
 import io.github.luminion.velo.log.spi.LogValueFormatter;
 import io.github.luminion.velo.util.InvocationUtils;
 import java.lang.reflect.Array;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import org.aspectj.lang.ProceedingJoinPoint;
-import org.aspectj.lang.reflect.MethodSignature;
+import org.aopalliance.intercept.MethodInvocation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.aop.support.AopUtils;
@@ -36,17 +36,25 @@ public final class InvocationLogSupport {
     private InvocationLogSupport() {
     }
 
-    public static LogInvocation invocation(ProceedingJoinPoint point, InvocationLogSource source, String target) {
-        MethodSignature signature = (MethodSignature) point.getSignature();
-        Class<?> type = point.getTarget() == null
-                        ? signature.getDeclaringType()
-                        : AopUtils.getTargetClass(point.getTarget());
+    /**
+     * 按 AOP 调用构造日志调用描述；参数取调用开始时的副本，后续拦截器替换参数不影响日志。
+     *
+     * @param invocation AOP 方法调用
+     * @param source     日志来源
+     * @param target     日志中展示的调用目标
+     * @return 日志调用描述
+     */
+    public static LogInvocation invocation(MethodInvocation invocation, InvocationLogSource source, String target) {
+        Method method = invocation.getMethod();
+        Object targetObject = invocation.getThis();
+        Class<?> type = targetObject == null ? method.getDeclaringClass() : AopUtils.getTargetClass(targetObject);
+        Object[] arguments = invocation.getArguments();
         return LogInvocation.builder()
-                .method(signature.getMethod())
+                .method(method)
                 .targetClass(type)
                 .source(source)
                 .target(target)
-                .arguments(point.getArgs())
+                .arguments(arguments == null ? new Object[0] : arguments.clone())
                 .build();
     }
 

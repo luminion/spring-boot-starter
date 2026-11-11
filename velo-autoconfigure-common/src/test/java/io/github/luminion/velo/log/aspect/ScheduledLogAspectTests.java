@@ -1,5 +1,6 @@
 package io.github.luminion.velo.log.aspect;
 
+import io.github.luminion.velo.core.TestAdvisors;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.github.luminion.velo.VeloProperties;
@@ -28,7 +29,7 @@ class ScheduledLogAspectTests {
         List<InvocationLogRecord> records = new ArrayList<>();
         InvocationLogEngine engine = new InvocationLogEngine(properties, String::valueOf, records::add);
         AspectJProxyFactory factory = new AspectJProxyFactory(new Tasks());
-        factory.addAspect(new ScheduledLogAspect(properties, engine));
+        factory.addAdvisor(TestAdvisors.of(new ScheduledLogAspect(properties, engine)));
         Tasks tasks = factory.getProxy();
         tasks.single();
         tasks.repeated();

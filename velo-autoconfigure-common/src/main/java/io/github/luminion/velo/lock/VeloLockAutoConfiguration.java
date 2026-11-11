@@ -10,11 +10,16 @@ import io.github.luminion.velo.spi.Fingerprinter;
 import io.github.luminion.velo.lock.aspect.LockAspect;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
+import io.github.luminion.velo.core.DeferredInterceptorAdvisor;
+import io.github.luminion.velo.core.VeloAdvisorOrder;
+import org.springframework.beans.factory.config.BeanDefinition;
+import org.springframework.boot.context.properties.bind.Binder;
+import org.springframework.context.annotation.Role;
+import org.springframework.core.env.Environment;
 
 /**
  * 锁自动配置实现。
@@ -24,7 +29,6 @@ import org.springframework.context.annotation.Bean;
         VeloLockRedisConfiguration.class,
         VeloLockJdkAutoConfiguration.class
 })
-@ConditionalOnClass(name = "org.aspectj.weaver.Advice")
 @ConditionalOnProperty(prefix = "velo.lock", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloLockAutoConfiguration {
 
@@ -55,7 +59,19 @@ public class VeloLockAutoConfiguration {
     public LockAspect lockAspect(VeloProperties properties, Fingerprinter fingerprinter, LockHandler lockHandler,
             ObjectProvider<VeloMessageResolver> messageResolver) {
         return new LockAspect(properties.getLock().getPrefix(), fingerprinter, lockHandler,
-                messageResolver.getIfAvailable(), properties.getAspectOrder().getLock(),
+                messageResolver.getIfAvailable(),
                 properties.getLock().getMessage());
+    }
+
+    /**
+     * 只携带切点和顺序的基础设施 Advisor；拦截器在容器单例初始化完成后解析，避免提前创建业务依赖。
+     */
+    @Bean(name = "lockAdvisor")
+    @Role(BeanDefinition.ROLE_INFRASTRUCTURE)
+    @ConditionalOnMissingBean(name = "lockAdvisor")
+    @ConditionalOnBean(LockAspect.class)
+    public static DeferredInterceptorAdvisor lockAdvisor(Environment environment, ObjectProvider<LockAspect> lockAspect) {
+        int order = Binder.get(environment).bind("velo.aspect-order.lock", Integer.class).orElse(VeloAdvisorOrder.CONCURRENCY_LOCK);
+        return new DeferredInterceptorAdvisor(LockAspect.pointcut(), order, lockAspect::getObject);
     }
 }

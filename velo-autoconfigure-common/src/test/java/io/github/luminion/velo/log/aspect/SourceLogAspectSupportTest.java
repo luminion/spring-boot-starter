@@ -22,8 +22,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.aspectj.lang.ProceedingJoinPoint;
-import org.aspectj.lang.reflect.MethodSignature;
+import org.aopalliance.intercept.MethodInvocation;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.MDC;
@@ -55,8 +54,8 @@ class SourceLogAspectSupportTest {
                                 }));
         MDC.put("traceId", "caller");
         MDC.put("user", "alice");
-        aspect.around(point());
-        aspect.around(point());
+        aspect.invoke(point());
+        aspect.invoke(point());
         assertThat(records)
                 .hasSize(4)
                 .allSatisfy(
@@ -86,11 +85,11 @@ class SourceLogAspectSupportTest {
                                     records.add(record);
                                     traces.add(MDC.get("traceId"));
                                 }));
-        ProceedingJoinPoint point = point();
+        MethodInvocation point = point();
         IllegalStateException error = new IllegalStateException("task-failed");
         when(point.proceed()).thenThrow(error);
         MDC.put("traceId", "caller");
-        assertThatThrownBy(() -> aspect.around(point)).isSameAs(error);
+        assertThatThrownBy(() -> aspect.invoke(point)).isSameAs(error);
         assertThat(records).hasSize(2);
         assertThat(records.get(0).getFeature()).isEqualTo(InvocationLogFeature.ERROR_LOG);
         assertThat(records.get(1).getFeature()).isEqualTo(InvocationLogFeature.COST_LOG);
@@ -107,7 +106,7 @@ class SourceLogAspectSupportTest {
         InvocationLogEngine engine = new InvocationLogEngine(properties, String::valueOf, r -> {
         });
         TraceScopeManager trace = new TraceScopeManager(properties.getLog().getTrace(), resolver);
-        ProceedingJoinPoint point = point();
+        MethodInvocation point = point();
         List<String> ids = new ArrayList<>();
         when(point.proceed())
                 .thenAnswer(
@@ -116,8 +115,8 @@ class SourceLogAspectSupportTest {
                             return null;
                         });
         MDC.put("traceId", "caller");
-        new ScheduledLogAspect(engine, trace).around(point);
-        new XxlJobLogAspect(engine, trace).around(point);
+        new ScheduledLogAspect(engine, trace).invoke(point);
+        new XxlJobLogAspect(engine, trace).invoke(point);
         assertThat(ids).containsExactly("task-1", "task-2");
         assertThat(calls).hasValue(2);
         assertThat(MDC.get("traceId")).isEqualTo("caller");
@@ -131,7 +130,7 @@ class SourceLogAspectSupportTest {
         ScheduledLogAspect aspect =
                 new ScheduledLogAspect(p, new InvocationLogEngine(p, String::valueOf, r -> {
                 }));
-        ProceedingJoinPoint point = point();
+        MethodInvocation point = point();
         MDC.put("traceId", "caller");
         when(point.proceed())
                 .thenAnswer(
@@ -139,20 +138,15 @@ class SourceLogAspectSupportTest {
                             assertThat(MDC.get("traceId")).isEqualTo("caller");
                             return null;
                         });
-        aspect.around(point());
+        aspect.invoke(point());
         assertThat(MDC.get("traceId")).isEqualTo("caller");
     }
 
-    private ProceedingJoinPoint point() throws Exception {
-        MethodSignature signature = mock(MethodSignature.class);
-        when(signature.getMethod()).thenReturn(Task.class.getMethod("execute", String.class));
-        when(signature.getDeclaringType()).thenReturn(Task.class);
-        when(signature.getDeclaringTypeName()).thenReturn(Task.class.getName());
-        when(signature.getName()).thenReturn("execute");
-        ProceedingJoinPoint point = mock(ProceedingJoinPoint.class);
-        when(point.getSignature()).thenReturn(signature);
-        when(point.getTarget()).thenReturn(new Task());
-        when(point.getArgs()).thenReturn(new Object[]{"payload"});
+    private MethodInvocation point() throws Exception {
+        MethodInvocation point = mock(MethodInvocation.class);
+        when(point.getMethod()).thenReturn(Task.class.getMethod("execute", String.class));
+        when(point.getThis()).thenReturn(new Task());
+        when(point.getArguments()).thenReturn(new Object[]{"payload"});
         return point;
     }
 

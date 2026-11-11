@@ -1,25 +1,20 @@
 package io.github.luminion.velo.log.aspect;
 
-import io.github.luminion.velo.core.VeloAdvisorOrder;
 import io.github.luminion.velo.log.core.InvocationLogEngine;
 import io.github.luminion.velo.log.model.InvocationLogSource;
 import io.github.luminion.velo.log.support.InvocationLogSupport;
 import io.github.luminion.velo.trace.TraceContext;
 import io.github.luminion.velo.trace.TraceScopeManager;
-import lombok.Getter;
-import org.aspectj.lang.ProceedingJoinPoint;
-import org.aspectj.lang.reflect.MethodSignature;
-import org.springframework.core.Ordered;
+import org.aopalliance.intercept.MethodInterceptor;
+import org.aopalliance.intercept.MethodInvocation;
 
 /**
  * 每次任务执行建立独立 trace 作用域，完成后恢复工作线程上下文。
  */
-public abstract class SourceLogAspectSupport implements Ordered {
+public abstract class SourceLogAspectSupport implements MethodInterceptor {
     private final InvocationLogEngine engine;
     private final InvocationLogSource source;
     private final TraceScopeManager trace;
-    @Getter
-    private final int order = VeloAdvisorOrder.LOG_CONTROLLER;
 
     protected SourceLogAspectSupport(
             InvocationLogEngine engine, TraceScopeManager trace, InvocationLogSource source) {
@@ -28,14 +23,14 @@ public abstract class SourceLogAspectSupport implements Ordered {
         this.trace = trace;
     }
 
-    protected Object log(ProceedingJoinPoint point) throws Throwable {
+    @Override
+    public Object invoke(MethodInvocation invocation) throws Throwable {
         try (TraceContext.Scope scope = trace == null ? null : trace.root()) {
             if (engine == null) {
-                return point.proceed();
+                return invocation.proceed();
             }
-            MethodSignature signature = (MethodSignature) point.getSignature();
-            String target = signature.getName() + "()";
-            return engine.invoke(InvocationLogSupport.invocation(point, source, target), point::proceed);
+            String target = invocation.getMethod().getName() + "()";
+            return engine.invoke(InvocationLogSupport.invocation(invocation, source, target), invocation::proceed);
         }
     }
 }

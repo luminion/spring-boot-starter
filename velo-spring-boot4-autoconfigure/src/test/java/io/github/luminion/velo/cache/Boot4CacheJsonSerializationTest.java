@@ -159,22 +159,22 @@ class Boot4CacheJsonSerializationTest {
                         assertThat(cached.id).isEqualTo(first.id);
                         assertThat(cached.amount).isEqualTo(first.amount);
                         assertThat(cached.createdAt).isEqualTo(first.createdAt);
-                        assertThat(service.dtoLoads.get()).isEqualTo(1);
+                        assertThat(service.dtoLoads()).isEqualTo(1);
                         assertThat(redis.opsForValue().get(keys.get(0))).startsWith("{")
                                 .contains("\"@class\"", Payload.class.getName());
                         assertThat(redis.getExpire(keys.get(0), TimeUnit.MILLISECONDS)).isBetween(1000L, 13000L);
                         service.list("first");
                         assertThat(service.list("first")).hasSize(1).first().isInstanceOf(Payload.class);
-                        assertThat(service.listLoads.get()).isEqualTo(1);
+                        assertThat(service.listLoads()).isEqualTo(1);
                         assertThat(service.dto("empty")).isNull();
                         assertThat(service.dto("empty")).isNull();
-                        assertThat(service.dtoLoads.get()).isEqualTo(2);
+                        assertThat(service.dtoLoads()).isEqualTo(2);
                         Cache cache = context.getBean(CacheManager.class).getCache("dto");
                         assertThat(cache.get("empty")).isNotNull();
                         assertThat(cache.get("empty").get()).isNull();
                         service.dynamic("first");
                         assertThat(service.dynamic("first").name).isEqualTo("first");
-                        assertThat(service.dynamicLoads.get()).isEqualTo(1);
+                        assertThat(service.dynamicLoads()).isEqualTo(1);
                     } finally {
                         redis.delete(keys);
                     }
@@ -202,6 +202,19 @@ class Boot4CacheJsonSerializationTest {
 
         /** 记录动态缓存方法的调用次数。 */
         final AtomicInteger dynamicLoads = new AtomicInteger();
+
+        // service 是 CGLIB 缓存代理：直接读代理的字段拿到的是未初始化的 null，必须通过方法转发到目标对象读取。
+        public int dtoLoads() {
+            return dtoLoads.get();
+        }
+
+        public int listLoads() {
+            return listLoads.get();
+        }
+
+        public int dynamicLoads() {
+            return dynamicLoads.get();
+        }
 
         @Cacheable(cacheNames = "dto", key = "#p0")
         public Payload dto(String key) {

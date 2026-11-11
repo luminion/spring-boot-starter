@@ -30,8 +30,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import org.aspectj.lang.ProceedingJoinPoint;
-import org.aspectj.lang.reflect.MethodSignature;
+import org.aopalliance.intercept.MethodInvocation;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.MDC;
@@ -122,7 +121,7 @@ class VeloFeignAutoConfigurationTests {
                   traces.add(MDC.get("traceId"));
                 }),
             new TraceScopeManager(p.getLog().getTrace(), new W3cTraceContextResolver()));
-    ProceedingJoinPoint point = point();
+    MethodInvocation point = point();
     RequestTemplate template = new RequestTemplate();
     template.header("traceparent", "stale");
     template.header("tracestate", "vendor=stale");
@@ -132,7 +131,7 @@ class VeloFeignAutoConfigurationTests {
               new FeignTraceRequestInterceptor(p).apply(template);
               return "done";
             });
-    assertThat(aspect.logFeignInvocation(point)).isEqualTo("done");
+    assertThat(aspect.invoke(point)).isEqualTo("done");
     assertThat(records).hasSize(3);
     assertThat(records.get(2).getFeature()).isEqualTo(InvocationLogFeature.COST_LOG);
     assertThat(records.get(2).getLevel()).isEqualTo(LogPolicyLevel.DEBUG);
@@ -141,7 +140,7 @@ class VeloFeignAutoConfigurationTests {
     InvocationLogRecord entry = records.get(0);
     assertThat(entry.getFeature()).isEqualTo(InvocationLogFeature.ENTRY_ARGS);
     assertThat(entry.getTarget()).isEqualTo("find()");
-    assertThat(entry.getContextContent()).isEqualTo("client=demo-client contextId=demo-client method=GET route=/users/{id}");
+    assertThat(entry.getContextContent()).isEqualTo("GET /users/{id}");
     assertThat(entry.getContent()).contains("id=1");
     assertThat(traces.get(0)).matches("[0-9a-f]{32}");
     assertThat(template.headers().get("traceparent"))
@@ -152,12 +151,12 @@ class VeloFeignAutoConfigurationTests {
     assertThat(FeignInvocationContext.current()).isNull();
     records.clear();
     p.getLog().getSources().getFeign().setEnabled(false);
-    assertThat(aspect.logFeignInvocation(point)).isEqualTo("done");
+    assertThat(aspect.invoke(point)).isEqualTo("done");
     assertThat(records).isEmpty();
   }
 
   @Test
-  void headersAreSeparateAllowlistedRecordsAndContextIsRestored() throws Throwable {
+  void headersAreSeparateRecordsAndContextIsRestored() throws Throwable {
     VeloProperties p = new VeloProperties();
     p.getLog().getSources().getFeign().setDefaultAnnotation(HeadersPreset.class);
     List<InvocationLogRecord> records = new ArrayList<>();
@@ -167,7 +166,7 @@ class VeloFeignAutoConfigurationTests {
             new TraceScopeManager(p.getLog().getTrace(), new W3cTraceContextResolver()));
     FeignInvocationContext outer = FeignInvocationContext.open();
     try {
-      ProceedingJoinPoint point = point();
+      MethodInvocation point = point();
       when(point.proceed())
           .thenAnswer(
               call -> {
@@ -180,7 +179,7 @@ class VeloFeignAutoConfigurationTests {
                         "X-Response", Collections.singletonList("ok")));
                 throw new IllegalStateException("network");
               });
-      assertThatThrownBy(() -> aspect.logFeignInvocation(point))
+      assertThatThrownBy(() -> aspect.invoke(point))
           .isInstanceOf(IllegalStateException.class)
           .hasMessage("network");
       assertThat(records)
@@ -240,7 +239,7 @@ class VeloFeignAutoConfigurationTests {
         .run(
             context -> {
               try {
-                ProceedingJoinPoint point = point();
+                MethodInvocation point = point();
                 RequestTemplate template = new RequestTemplate();
                 List<String> seen = new ArrayList<>();
                 when(point.proceed())
@@ -251,7 +250,7 @@ class VeloFeignAutoConfigurationTests {
                           assertThat(MDC.get("traceId")).isEqualTo(seen.get(0));
                           return "done";
                         });
-                assertThat(context.getBean(FeignLogAspect.class).logFeignInvocation(point))
+                assertThat(context.getBean(FeignLogAspect.class).invoke(point))
                     .isEqualTo("done");
                 assertThat(seen.get(0)).matches("[0-9a-f]{32}");
                 assertThat(template.headers().get("traceparent"))
@@ -274,13 +273,10 @@ class VeloFeignAutoConfigurationTests {
                     .hasSingleBean(InvocationLogEngine.class));
   }
 
-  private ProceedingJoinPoint point() throws Exception {
-    ProceedingJoinPoint point = mock(ProceedingJoinPoint.class);
-    MethodSignature signature = mock(MethodSignature.class);
-    when(signature.getMethod()).thenReturn(DemoClient.class.getMethod("find", Long.class));
-    when(signature.getDeclaringType()).thenReturn(DemoClient.class);
-    when(point.getSignature()).thenReturn(signature);
-    when(point.getArgs()).thenReturn(new Object[] {1L});
+  private MethodInvocation point() throws Exception {
+    MethodInvocation point = mock(MethodInvocation.class);
+    when(point.getMethod()).thenReturn(DemoClient.class.getMethod("find", Long.class));
+    when(point.getArguments()).thenReturn(new Object[] {1L});
     return point;
   }
 
@@ -293,8 +289,8 @@ class VeloFeignAutoConfigurationTests {
   }
   @Retention(RetentionPolicy.RUNTIME)
   @InvokeLog
-  @RequestHeadersLog(allowlist = "x-request")
-  @ResponseHeadersLog(allowlist = "x-response")
+  @RequestHeadersLog
+  @ResponseHeadersLog
   @interface HeadersPreset {
   }
 }

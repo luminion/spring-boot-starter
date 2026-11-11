@@ -52,15 +52,15 @@ class ConcurrencyAspectOrderTests {
         proxyFactory.setProxyTargetClass(true);
         // Add aspects in @Order ascending sequence (lowest precedence value = outermost layer).
         // AspectJProxyFactory chains advisors in add-order, so the first added wraps the rest.
-        proxyFactory.addAspect(new IdempotentAspect("idempotent:", new SpelFingerprinter(), (key, token, timeout) -> {
+        proxyFactory.addAdvisor(TestAdvisors.of(new IdempotentAspect("idempotent:", new SpelFingerprinter(), (key, token, timeout) -> {
             events.add("idempotent");
             return true;
-        }));
-        proxyFactory.addAspect(new RateLimitAspect("rateLimit:", new SpelFingerprinter(), (key, qps) -> {
+        })));
+        proxyFactory.addAdvisor(TestAdvisors.of(new RateLimitAspect("rateLimit:", new SpelFingerprinter(), (key, qps) -> {
             events.add("rateLimit");
             return rateLimitAccepted;
-        }));
-        proxyFactory.addAspect(new LockAspect("lock:", new SpelFingerprinter(), new LockHandler() {
+        })));
+        proxyFactory.addAdvisor(TestAdvisors.of(new LockAspect("lock:", new SpelFingerprinter(), new LockHandler() {
             @Override
             public boolean tryLock(String key) {
                 events.add("lock");
@@ -71,7 +71,7 @@ class ConcurrencyAspectOrderTests {
             public void unlock(String key) {
                 events.add("unlock");
             }
-        }));
+        })));
         return proxyFactory.getProxy();
     }
 

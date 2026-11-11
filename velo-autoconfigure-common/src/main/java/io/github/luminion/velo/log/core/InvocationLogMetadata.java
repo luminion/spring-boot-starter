@@ -18,7 +18,6 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
@@ -40,7 +39,17 @@ import org.springframework.web.bind.annotation.RestController;
  * 入口与策略解析共享的静态注解元数据；按完整功能声明覆盖并随目标类释放缓存。
  */
 public final class InvocationLogMetadata {
+    private static final String FEIGN_CLIENT = "org.springframework.cloud.openfeign.FeignClient";
+    private static final String SCHEDULED = "org.springframework.scheduling.annotation.Scheduled";
+    private static final String SCHEDULES = "org.springframework.scheduling.annotation.Schedules";
+    private static final String XXL_JOB = "com.xxl.job.core.handler.annotation.XxlJob";
     private static final Map<Class<? extends Annotation>, InvocationLogFeature> FEATURES = features();
+    private static final ClassValue<TypeMetadata> TYPES = new ClassValue<TypeMetadata>() {
+        @Override
+        protected TypeMetadata computeValue(Class<?> type) {
+            return new TypeMetadata(type);
+        }
+    };
     private static final ClassValue<MethodCache> CACHE = new ClassValue<MethodCache>() {
         @Override
         protected MethodCache computeValue(Class<?> type) {
@@ -60,10 +69,42 @@ public final class InvocationLogMetadata {
 
     /**
      * 功能组合可建立普通入口；自动来源和单独的 Ignore 不重复建立入口。
+     * <p>
+     * 供切点在启动期对容器内全部方法做静态匹配：类型级信息每个类只解析一次，方法级只做一次注解扫描，
+     * 不合成注解、不解析参数名；完整元数据推迟到方法首次被调用时再解析。
      */
     public static boolean isOrdinaryEntry(Method method, Class<?> targetClass) {
-        Metadata metadata = get(method, targetClass);
-        return !metadata.automaticSource && !metadata.annotations.isEmpty();
+        Class<?> type = targetClass == null ? method.getDeclaringClass() : targetClass;
+        TypeMetadata target = TYPES.get(type);
+        TypeMetadata declaring = TYPES.get(method.getDeclaringClass());
+        if (target.controller || target.feign || declaring.feign) {
+            return false;
+        }
+        Method specific = AopUtils.getMostSpecificMethod(method, type);
+        MergedAnnotations specificAnnotations =
+                MergedAnnotations.from(specific, MergedAnnotations.SearchStrategy.TYPE_HIERARCHY);
+        MergedAnnotations originalAnnotations = specific == method ? null
+                : MergedAnnotations.from(method, MergedAnnotations.SearchStrategy.TYPE_HIERARCHY);
+        boolean features = target.features || declaring.features || hasFeature(specificAnnotations)
+                || (originalAnnotations != null && hasFeature(originalAnnotations));
+        if (!features) {
+            return false;
+        }
+        if (specificAnnotations.isPresent(ResponseBody.class)
+                || (originalAnnotations != null && originalAnnotations.isPresent(ResponseBody.class))) {
+            return false;
+        }
+        return !specificAnnotations.isPresent(SCHEDULED) && !specificAnnotations.isPresent(SCHEDULES)
+                && !specificAnnotations.isPresent(XXL_JOB);
+    }
+
+    private static boolean hasFeature(MergedAnnotations annotations) {
+        for (MergedAnnotation<Annotation> annotation : annotations) {
+            if (FEATURES.containsKey(annotation.getType())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     static Metadata get(Method method, Class<?> targetClass) {
@@ -174,18 +215,7 @@ public final class InvocationLogMetadata {
         Object length = AnnotationUtils.getValue(value, "maxLength");
         int maxLength = length == null ? -1 : (Integer) length;
         long threshold = value instanceof SlowLog ? ((SlowLog) value).threshold() : 1000;
-        List<String> allowlist = Collections.emptyList();
-        if (value instanceof RequestHeadersLog) {
-            allowlist = Arrays.asList(((RequestHeadersLog) value).allowlist());
-        } else if (value instanceof ResponseHeadersLog) {
-            allowlist = Arrays.asList(((ResponseHeadersLog) value).allowlist());
-        }
-        for (String header : allowlist) {
-            if (header.isEmpty()) {
-                throw new IllegalArgumentException("Header allowlist names must not be empty");
-            }
-        }
-        return new InvocationLogPolicy(level, threshold, allowlist, maxLength);
+        return new InvocationLogPolicy(level, threshold, maxLength);
     }
 
     private static boolean automaticSource(Method specific, Method original, Class<?> type) {
@@ -195,16 +225,11 @@ public final class InvocationLogMetadata {
                 || AnnotatedElementUtils.hasAnnotation(original, ResponseBody.class)) {
             return true;
         }
-        String feign = "org.springframework.cloud.openfeign.FeignClient";
-        if (MergedAnnotations.from(type, MergedAnnotations.SearchStrategy.TYPE_HIERARCHY).isPresent(feign)
-                || MergedAnnotations.from(original.getDeclaringClass(),
-                        MergedAnnotations.SearchStrategy.TYPE_HIERARCHY).isPresent(feign)) {
+        if (TYPES.get(type).feign || TYPES.get(original.getDeclaringClass()).feign) {
             return true;
         }
         MergedAnnotations annotations = MergedAnnotations.from(specific, MergedAnnotations.SearchStrategy.TYPE_HIERARCHY);
-        return annotations.isPresent("org.springframework.scheduling.annotation.Scheduled")
-                || annotations.isPresent("org.springframework.scheduling.annotation.Schedules")
-                || annotations.isPresent("com.xxl.job.core.handler.annotation.XxlJob");
+        return annotations.isPresent(SCHEDULED) || annotations.isPresent(SCHEDULES) || annotations.isPresent(XXL_JOB);
     }
 
     private static Map<Class<? extends Annotation>, InvocationLogFeature> features() {
@@ -218,6 +243,22 @@ public final class InvocationLogMetadata {
         features.put(RequestHeadersLog.class, InvocationLogFeature.REQUEST_HEADERS);
         features.put(ResponseHeadersLog.class, InvocationLogFeature.RESPONSE_HEADERS);
         return features;
+    }
+
+    /**
+     * 类型级注解信息，每个类只扫描一次。
+     */
+    private static final class TypeMetadata {
+        private final boolean controller;
+        private final boolean feign;
+        private final boolean features;
+
+        private TypeMetadata(Class<?> type) {
+            MergedAnnotations annotations = MergedAnnotations.from(type, MergedAnnotations.SearchStrategy.TYPE_HIERARCHY);
+            this.controller = annotations.isPresent(RestController.class) || annotations.isPresent(ResponseBody.class);
+            this.feign = annotations.isPresent(FEIGN_CLIENT);
+            this.features = hasFeature(annotations);
+        }
     }
 
     private static final class MethodCache {

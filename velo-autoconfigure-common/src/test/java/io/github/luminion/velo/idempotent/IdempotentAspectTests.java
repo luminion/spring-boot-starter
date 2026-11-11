@@ -1,5 +1,6 @@
 package io.github.luminion.velo.idempotent;
 
+import io.github.luminion.velo.core.TestAdvisors;
 import io.github.luminion.velo.idempotent.annotation.Idempotent;
 import io.github.luminion.velo.idempotent.aspect.IdempotentAspect;
 import io.github.luminion.velo.idempotent.exception.IdempotentException;
@@ -29,7 +30,7 @@ class IdempotentAspectTests {
         });
         AspectJProxyFactory proxyFactory = new AspectJProxyFactory(new DefaultKeyIdempotentService());
         proxyFactory.setProxyTargetClass(true);
-        proxyFactory.addAspect(aspect);
+        proxyFactory.addAdvisor(TestAdvisors.of(aspect));
 
         DefaultKeyIdempotentService proxy = proxyFactory.getProxy();
         proxy.submit("u-1001");
@@ -50,7 +51,7 @@ class IdempotentAspectTests {
         });
         AspectJProxyFactory proxyFactory = new AspectJProxyFactory(new ExplicitKeyIdempotentService());
         proxyFactory.setProxyTargetClass(true);
-        proxyFactory.addAspect(aspect);
+        proxyFactory.addAdvisor(TestAdvisors.of(aspect));
 
         ExplicitKeyIdempotentService proxy = proxyFactory.getProxy();
         proxy.submit("order-1");
@@ -79,7 +80,7 @@ class IdempotentAspectTests {
         });
         AspectJProxyFactory proxyFactory = new AspectJProxyFactory(new TwoMethodIdempotentService());
         proxyFactory.setProxyTargetClass(true);
-        proxyFactory.addAspect(aspect);
+        proxyFactory.addAdvisor(TestAdvisors.of(aspect));
 
         TwoMethodIdempotentService proxy = proxyFactory.getProxy();
         proxy.methodA("same-id");
@@ -102,8 +103,8 @@ class IdempotentAspectTests {
     void sharedSubmissionWindowShouldRejectAnotherMethodAndAllowDifferentRequest() {
         AspectJProxyFactory factory = new AspectJProxyFactory(new SharedSubmissionService());
         factory.setProxyTargetClass(true);
-        factory.addAspect(new IdempotentAspect("idempotent:", new SpelFingerprinter(),
-                new CaffeineIdempotentHandler()));
+        factory.addAdvisor(TestAdvisors.of(new IdempotentAspect("idempotent:", new SpelFingerprinter(),
+                new CaffeineIdempotentHandler())));
         SharedSubmissionService proxy = factory.getProxy();
         proxy.submit("one", false);
         assertThatThrownBy(() -> proxy.importSubmission("one")).isInstanceOf(IdempotentException.class);
@@ -117,8 +118,8 @@ class IdempotentAspectTests {
         AsyncSubmissionService target = new AsyncSubmissionService();
         AspectJProxyFactory factory = new AspectJProxyFactory(target);
         factory.setProxyTargetClass(true);
-        factory.addAspect(new IdempotentAspect("idempotent:", new SpelFingerprinter(),
-                new CaffeineIdempotentHandler()));
+        factory.addAdvisor(TestAdvisors.of(new IdempotentAspect("idempotent:", new SpelFingerprinter(),
+                new CaffeineIdempotentHandler())));
         AsyncSubmissionService proxy = factory.getProxy();
         CompletableFuture<Void> result = proxy.submit();
         assertThat(result).isSameAs(target.pending);

@@ -1,5 +1,6 @@
 package io.github.luminion.velo.log.aspect;
 
+import org.springframework.aop.support.DefaultPointcutAdvisor;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -41,7 +42,7 @@ class InvokeLogAspectTest {
         new InvokeLogAspect(new InvocationLogEngine(new VeloProperties(), formatter, writer));
     AspectJProxyFactory proxyFactory = new AspectJProxyFactory(new DemoService());
     proxyFactory.setInterfaces(DemoOperations.class);
-    proxyFactory.addAdvisor(aspect);
+    proxyFactory.addAdvisor(new DefaultPointcutAdvisor(InvokeLogAspect.pointcut(), aspect));
     DemoOperations proxy = proxyFactory.getProxy();
 
     MutableArgument successfulArgument = new MutableArgument("before");

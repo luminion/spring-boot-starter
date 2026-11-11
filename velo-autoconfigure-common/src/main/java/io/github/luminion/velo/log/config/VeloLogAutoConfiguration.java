@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -24,7 +23,6 @@ import org.springframework.context.annotation.Bean;
         "org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration",
         "io.github.luminion.velo.jackson.VeloJacksonLogAutoConfiguration"
 })
-@ConditionalOnClass(name = "org.aspectj.weaver.Advice")
 @ConditionalOnProperty(prefix = "velo.log", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloLogAutoConfiguration {
     @Bean

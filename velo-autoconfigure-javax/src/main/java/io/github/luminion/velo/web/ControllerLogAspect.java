@@ -1,10 +1,11 @@
 package io.github.luminion.velo.web;
 
-import io.github.luminion.velo.core.VeloAdvisorOrder;
+import io.github.luminion.velo.core.AnnotatedMethodPointcut;
 import io.github.luminion.velo.core.util.WebUtils;
 import io.github.luminion.velo.log.core.InvocationLogEngine;
 import io.github.luminion.velo.log.model.InvocationLogContext;
 import io.github.luminion.velo.log.model.InvocationLogSource;
+import io.github.luminion.velo.log.model.LogInvocation;
 import io.github.luminion.velo.log.support.InvocationLogSupport;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -14,54 +15,44 @@ import java.util.List;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import lombok.Getter;
-import org.aspectj.lang.ProceedingJoinPoint;
-import org.aspectj.lang.annotation.Around;
-import org.aspectj.lang.annotation.Aspect;
-import org.springframework.core.Ordered;
+import org.aopalliance.intercept.MethodInterceptor;
+import org.aopalliance.intercept.MethodInvocation;
+import org.springframework.aop.Pointcut;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.HandlerMapping;
 
 /**
- * MVC Controller 调用日志切面。
- *
- * <p>记录 Controller 调用及其请求、响应头，并将实际调用交由日志引擎执行。</p>
+ * MVC Controller 调用日志拦截器。
+ * <p>
+ * 记录 Controller 调用及其请求、响应头，并将实际调用交由日志引擎执行。
+ * 耗时只统计 Controller 方法本身，不包含过滤器、拦截器和响应序列化；日志中也没有最终 HTTP 状态码。
  */
-@Aspect
-public class ControllerLogAspect implements Ordered {
+public class ControllerLogAspect implements MethodInterceptor {
     private final InvocationLogEngine engine;
 
-    @Getter
-    private final int order;
-
     /**
-     * 使用默认的 Controller 日志切面顺序创建切面。
+     * 创建 Controller 调用日志拦截器。
+     *
+     * @param engine 调用日志引擎
      */
     public ControllerLogAspect(InvocationLogEngine engine) {
-        this(engine, VeloAdvisorOrder.LOG_CONTROLLER);
+        this.engine = engine;
     }
 
     /**
-     * 使用指定的日志引擎和切面顺序创建切面。
+     * Controller 入口切点：类型或方法上声明了 {@link ResponseBody}（含 {@code @RestController}）的 public 方法。
      *
-     * @param engine 调用日志引擎
-     * @param order 切面执行顺序
+     * @return 静态切点
      */
-    public ControllerLogAspect(InvocationLogEngine engine, int order) {
-        this.engine = engine;
-        this.order = order;
+    public static Pointcut pointcut() {
+        return AnnotatedMethodPointcut.forPublicMethodsOrTypes(ResponseBody.class);
     }
 
     /**
      * 记录 Controller 调用，并委托日志引擎执行原调用。
      */
-    @Around(
-            "execution(" +
-                    "public * *(..))"
-                    + " && (within(@org.springframework.web.bind.annotation.RestController *) "
-                    + "|| @annotation(org.springframework.web.bind.annotation.ResponseBody)"
-                    + " || @within(org.springframework.web.bind.annotation.ResponseBody)" +
-                    ")")
-    public Object logControllerInvocation(ProceedingJoinPoint point) throws Throwable {
+    @Override
+    public Object invoke(MethodInvocation invocation) throws Throwable {
         boolean webContext = WebUtils.isWebContext();
         String path = null;
         if (webContext) {
@@ -71,16 +62,16 @@ public class ControllerLogAspect implements Ordered {
         InvocationLogContext context = InvocationLogContext.builder()
                 .clientIp(webContext ? WebUtils.getRequestIp() : null)
                 .httpMethod(webContext ? WebUtils.getRequestMethod() : null).path(path).build();
-        String target = point.getSignature().getName() + "()";
+        String target = invocation.getMethod().getName() + "()";
         HttpServletRequest request = webContext ? WebUtils.getRequest() : null;
         HttpServletResponse response = webContext ? WebUtils.getResponse() : null;
-        return engine.invoke(
-                InvocationLogSupport.invocation(point, InvocationLogSource.CONTROLLER, target).toBuilder()
-                        .context(() -> context)
-                        .requestHeaders(request == null ? null : () -> requestHeaders(request))
-                        .responseHeaders(response == null ? null : () -> responseHeaders(response))
-                        .build(),
-                point::proceed);
+        LogInvocation logInvocation = InvocationLogSupport.invocation(invocation, InvocationLogSource.CONTROLLER, target)
+                .toBuilder()
+                .context(() -> context)
+                .requestHeaders(request == null ? null : () -> requestHeaders(request))
+                .responseHeaders(response == null ? null : () -> responseHeaders(response))
+                .build();
+        return engine.invoke(logInvocation, invocation::proceed);
     }
 
     /**

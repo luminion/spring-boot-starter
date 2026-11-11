@@ -1,5 +1,8 @@
 package io.github.luminion.velo.log.aspect;
 
+import org.springframework.aop.support.DefaultPointcutAdvisor;
+import org.springframework.aop.Advisor;
+import io.github.luminion.velo.core.DeferredInterceptorAdvisor;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -20,7 +23,15 @@ import io.github.luminion.velo.log.model.InvocationLogRecord;
 import io.github.luminion.velo.log.model.InvocationLogSource;
 import io.github.luminion.velo.log.model.LogPolicyLevel;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.aop.framework.ProxyFactory;
@@ -32,6 +43,51 @@ import org.springframework.web.bind.annotation.RestController;
  * 验证日志功能注解的入口选择、继承解析和来源边界。
  */
 class AnnotationLogAdvisorTests {
+    @Test
+    void deferredAdvisorResolvesInterceptorOnceForConcurrentInvocations() throws Exception {
+        List<InvocationLogRecord> records = Collections.synchronizedList(new ArrayList<>());
+        InvocationLogEngine engine = new InvocationLogEngine(new VeloProperties(), String::valueOf, records::add);
+        AtomicInteger resolutions = new AtomicInteger();
+        DeferredInterceptorAdvisor advisor = new DeferredInterceptorAdvisor(InvokeLogAspect.pointcut(), 42, () -> {
+            resolutions.incrementAndGet();
+            return new InvokeLogAspect(engine);
+        });
+        ProxyFactory factory = new ProxyFactory(new AtomicService());
+        factory.setInterfaces(Operations.class);
+        factory.addAdvisor(advisor);
+        Operations calls = (Operations) factory.getProxy();
+
+        // 读取顺序和创建代理都不解析拦截器。
+        assertThat(advisor.getOrder()).isEqualTo(42);
+        assertThat(resolutions).hasValue(0);
+
+        int workerCount = 8;
+        CountDownLatch ready = new CountDownLatch(workerCount);
+        CountDownLatch start = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(workerCount);
+        try {
+            List<Future<String>> results = new ArrayList<>();
+            for (int i = 0; i < workerCount; i++) {
+                results.add(executor.submit(() -> {
+                    ready.countDown();
+                    start.await();
+                    return calls.cost("input");
+                }));
+            }
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+            for (Future<String> result : results) {
+                assertThat(result.get(5, TimeUnit.SECONDS)).isEqualTo("input");
+            }
+        } finally {
+            start.countDown();
+            executor.shutdownNow();
+        }
+
+        assertThat(resolutions).hasValue(1);
+        assertThat(records).hasSize(workerCount);
+    }
+
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
     void everyAtomicAnnotationSelectsOnlyItsOwnFeature(boolean classProxy) {
@@ -93,8 +149,10 @@ class AnnotationLogAdvisorTests {
         assertThat(records).isEmpty();
     }
 
-    private InvokeLogAspect advisor(List<InvocationLogRecord> records) {
-        return new InvokeLogAspect(new InvocationLogEngine(new VeloProperties(), String::valueOf, records::add));
+    private Advisor advisor(List<InvocationLogRecord> records) {
+        InvokeLogAspect aspect =
+                new InvokeLogAspect(new InvocationLogEngine(new VeloProperties(), String::valueOf, records::add));
+        return new DefaultPointcutAdvisor(InvokeLogAspect.pointcut(), aspect);
     }
 
     private void assertOnly(List<InvocationLogRecord> records, InvocationLogFeature feature) {

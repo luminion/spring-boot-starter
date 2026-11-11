@@ -24,7 +24,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnClass(name = "org.springframework.data.redis.core.RedisTemplate")
 @ConditionalOnConcurrencyBackend(prefix = "velo.idempotent", backend = ConcurrencyBackend.REDIS,
-        autoClassNames = {"org.aspectj.weaver.Advice", "org.springframework.data.redis.core.RedisTemplate"})
+        autoClassNames = "org.springframework.data.redis.core.RedisTemplate")
 @ConditionalOnMissingBean(IdempotentHandler.class)
 @ConditionalOnProperty(prefix = "velo.idempotent", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VeloIdempotentRedisConfiguration {
